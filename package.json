@@ -1,12 +1,12 @@
 {
     "name": "@conet-project/seguro-gateway",
-    "version": "0.2.0",
+    "version": "0.2.1",
     "license": "UNLICENSED",
     "files": [
         "./build"
     ],
     "main": "./build/index.js",
-    "types": "./build/types/index.d.ts",
+    "types": "./build/index.d.ts",
     "scripts": {
         "lint": "eslint . --ext .ts",
         "test": "jest",
