@@ -1,5 +1,21 @@
 # `seguro-gateway` CHANGELOG
 
+## `0.3.1`
+
+### Additions
+
+- None.
+
+### Changes
+
+- None.
+
+### Fixes
+
+- Add missing `async` package.
+
+---
+
 ## `0.3.0`
 
 ### Additions
