@@ -1,5 +1,21 @@
 # `seguro-gateway` CHANGELOG
 
+## `0.4.1`
+
+### Additions
+
+- None.
+
+### Changes
+
+- Change `/hello` API endpoint to return JSON format.
+
+### Fixes
+
+- None.
+
+---
+
 ## `0.4.0`
 
 ### Additions

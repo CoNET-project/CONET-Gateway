@@ -115,7 +115,7 @@ class LocalServer {
         })
 
         app.get('/hello', (req, res) => {
-            res.send('Hello world, from Seguro gateway!')
+            res.json('Hello world, from Seguro gateway!')
         })
 
         app.post ( '/update', upload.single ( 'app_data' ),
