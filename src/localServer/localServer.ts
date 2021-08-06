@@ -25,7 +25,7 @@ class LocalServer {
     private connect_peer_pool: any [] = []
     constructor ( private PORT = 3000, private appsPath: string ) {
 		console.log ( appsPath )
-		this.appsPath = appsPath || join ( __dirname ) 
+		this.appsPath = appsPath || join ( __dirname )
 		console.log ( this.appsPath )
         this.initialize()
     }
@@ -84,7 +84,7 @@ class LocalServer {
 
         const app = express()
 
-        
+
         app.use( cors ())
 		app.use ( express.static ( staticFolder ))
         app.use ( express.static ( launcherFolder ))
@@ -112,6 +112,10 @@ class LocalServer {
         app.once ( 'error', ( err: any ) => {
             console.log ( err )
             return process.exit (1)
+        })
+
+        app.get('/hello', (req, res) => {
+            res.send('Hello world, from Seguro gateway!')
         })
 
         app.post ( '/update', upload.single ( 'app_data' ),
@@ -296,20 +300,20 @@ class LocalServer {
 						this.connect_peer_pool.push ( data?.imapPeer )
 
 					}
-					
-	
+
+
 					ws.once ( 'close', () => {
-	
+
 						return data?.imapPeer.closePeer (() => {
 							const index = this.connect_peer_pool.findIndex ( n => n.serialID === serialID )
 							if ( index > -1 ) {
 								this.connect_peer_pool.splice ( index, 1 )
 							}
-	
-							
+
+
 							return console.log ( `WS [${ serialID }] on close` )
 						})
-	
+
 					})
 
 					if ( data ) {
@@ -317,12 +321,12 @@ class LocalServer {
 						console.log ( inspect ( data, false, 3, true ))
 						return ws.send ( JSON.stringify ( data ))
 					}
-                    
+
                 })
 
 				return
 
-                
+
 
             })
 
