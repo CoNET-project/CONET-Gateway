@@ -12,6 +12,16 @@ const mainWorkDoCommand = ( cmd: worker_command, mainWorker: launchAllWorkers ) 
             })
         }
 
+        case 'helloWorld': {
+            const helloPath = self.name + 'hello'
+            return fetch(helloPath).then (
+                response => response.json()
+            ).then (data =>{
+                cmd.data = data
+                return returnCommand ( cmd )
+            })
+        }
+
         default: {
             cmd.err = 'InvalidCommand'
             return returnCommand ( cmd )

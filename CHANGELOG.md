@@ -1,5 +1,21 @@
 # `seguro-gateway` CHANGELOG
 
+## `0.5.0`
+
+### Additions
+
+- Add `hello world` command to worker.
+
+### Changes
+
+- None.
+
+### Fixes
+
+- None.
+
+---
+
 ## `0.4.1`
 
 ### Additions
