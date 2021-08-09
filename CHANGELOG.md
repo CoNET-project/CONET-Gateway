@@ -1,5 +1,21 @@
 # `seguro-gateway` CHANGELOG
 
+## `0.6.0`
+
+### Additions
+
+- Add `startSeguroGateway` function to `/src/index.ts/`.
+
+### Changes
+
+- None.
+
+### Fixes
+
+- None.
+
+---
+
 ## `0.5.0`
 
 ### Additions
