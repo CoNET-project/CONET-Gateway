@@ -1,23 +1,47 @@
 #! /usr/bin/env node
+import LocalServer from './localServer/localServer';
+const yargs = require('yargs')
+const argv = yargs(process.argv.slice(2))
+    .usage('Usage: yarn run seguro-gateway --port [number] --path [string]')
+    .help('h')
+    .alias('h', 'help')
+    .describe('port', 'Run Seguro Gateway on this port.')
+    .describe('path', 'Read worker files on this path.')
+    .example('seguro-gateway --port 3001', 'Run Seguro Gateway on PORT 3001')
+    .example('seguro-gateway --path ./', 'Read worker files on current directory.')
+    .example('seguro-gateway --port 3001 --path ./', 'Read worker files on current directory & run Seguro Gateway on PORT 3001.')
+    .check(function (argv: any) {
+        if (argv.port) {
+            if (typeof argv.port !== 'number') {
+                console.log('Invalid port argument.')
+                process.exit(1)
+            }
+        }
 
-import LocalServer from './localServer/localServer'
+        if (argv.path) {
+            if (typeof argv.path !== 'string') {
+                console.log('Invalid path argument.')
+                process.exit(1)
+            }
+        }
+
+        return true;
+    })
+    .argv;
 
 let PORT = 3001
 let PATH = ''
-if (process.argv.includes('--port')) {
-    const idx = process.argv.indexOf('--port')
-    const port = process.argv[idx + 1]
-    PATH = process.argv[idx + 2];
-    try {
-        PORT = parseInt(port)
-    } catch {
-        console.log('Invalid port')
+
+export const launchSeguroGateway = (port = PORT, path = PATH) => {
+    new LocalServer ( port, path )
+}
+
+if (argv.port || argv.path) {
+    PATH = argv.path
+    if (typeof argv.port === 'number') {
+        PORT = argv.port
+    } else {
+        console.log('Invalid PORT, running on PORT 3001.')
     }
+    launchSeguroGateway()
 }
-
-const startSeguroGateway = () => {
-    new LocalServer ( PORT, PATH )
-}
-
-startSeguroGateway();
-

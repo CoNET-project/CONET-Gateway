@@ -13,11 +13,27 @@ yarn add @conet-project/seguro-gateway
 Import from the package:
 
 ```ts
-import { Person, getGreeting } from '@conet-project/seguro-gateway'
+import { launchSeguroGateway } from '@conet-project/seguro-gateway'
 
-const person: Person = { name: 'John' }
+// Launch with default port of 3001 and path of ''
+launchSeguroGateway()
 
-console.log(getGreeting(person))
+// Launch on port 3005 and path of './'
+launchSeguroGateway(3005, './')
+```
+
+Run CLI command:
+
+```bash
+yarn run seguro-gateway [--port] [port] [--path] [./path/to/workers]
+
+Examples:
+
+// Run with default port 3001 and empty path
+yarn run seguro-gateway
+
+// Run with port 3005 and current path
+Ex: yarn run seguro-gateway --port 3005 --path ./
 ```
 
 ## Development

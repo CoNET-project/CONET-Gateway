@@ -1,5 +1,21 @@
 # `seguro-gateway` CHANGELOG
 
+## `0.7.0`
+
+### Additions
+
+- Add CLI commands to start Seguro Gateway.
+
+### Changes
+
+- None.
+
+### Fixes
+
+- None.
+
+---
+
 ## `0.6.0`
 
 ### Additions

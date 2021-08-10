@@ -24,9 +24,7 @@ class LocalServer {
 
     private connect_peer_pool: any [] = []
     constructor ( private PORT = 3000, private appsPath: string ) {
-		console.log ( appsPath )
 		this.appsPath = appsPath || join ( __dirname )
-		console.log ( this.appsPath )
         this.initialize()
     }
 
@@ -97,12 +95,10 @@ class LocalServer {
 
         app.get ('/', async ( req: express.Request, res: express.Response) => {
             // res.sendStatus(200)
-            console.log ( this.appsPath )
             const launcherHTMLPath = join (
                 this.appsPath  + '/launcher/index.html'
             );
             const hasLauncher = await fse.pathExists(launcherHTMLPath);
-            console.log (launcherHTMLPath)
             if (hasLauncher) {
                 return res.status(200).sendFile(launcherHTMLPath);
             }
@@ -379,12 +375,16 @@ class LocalServer {
         })
 
         this.localserver.on ( 'upgrade', ( request, socket, head ) => {
+            // @ts-ignore
             if ( /\/connectToSeguro/.test ( request.url )) {
+                // @ts-ignore
                 return wsServerConnect.handleUpgrade ( request, socket, head, ws => {
                     return wsServerConnect.emit ( 'connection', ws, request )
                 })
             }
+            // @ts-ignore
             if ( /\/peerToPeerConnecting/.test ( request.url )) {
+                // @ts-ignore
                 return wsServerConnect.handleUpgrade ( request, socket, head, ws => {
                     return wsServerConnect.emit ( 'peerToPeerConnecting', ws, request )
                 })
