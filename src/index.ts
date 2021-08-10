@@ -24,7 +24,6 @@ const argv = yargs(process.argv.slice(2))
                 process.exit(1)
             }
         }
-
         return true;
     })
     .argv;
@@ -43,5 +42,6 @@ if (argv.port || argv.path) {
     } else {
         console.log('Invalid PORT, running on PORT 3001.')
     }
-    launchSeguroGateway()
 }
+
+launchSeguroGateway()

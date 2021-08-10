@@ -4,6 +4,22 @@
 
 ### Additions
 
+- None.
+
+### Changes
+
+- None.
+
+### Fixes
+
+- Fix call to `launchSeguroGateway` to work even without CLI arguments.
+
+---
+
+## `0.7.0`
+
+### Additions
+
 - Add CLI commands to start Seguro Gateway.
 
 ### Changes
