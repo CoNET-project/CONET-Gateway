@@ -1,5 +1,21 @@
 # `seguro-gateway` CHANGELOG
 
+## `0.8.2`
+
+### Additions
+
+- None.
+
+### Changes
+
+- None.
+
+### Fixes
+
+- Add missing `launchSeguroGateway` arguments.
+
+---
+
 ## `0.8.1`
 
 ### Additions
