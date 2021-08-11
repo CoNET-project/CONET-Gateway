@@ -43,6 +43,4 @@ if (argv.port || argv.path) {
         console.log('Invalid PORT, running on PORT 3001.')
     }
     launchSeguroGateway()
-} else {
-    launchSeguroGateway()
 }
