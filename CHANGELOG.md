@@ -1,5 +1,37 @@
 # `seguro-gateway` CHANGELOG
 
+## `0.8.0`
+
+### Additions
+
+- None.
+
+### Changes
+
+- None.
+
+### Fixes
+
+- Fix call to `launchSeguroGateway` to work even without CLI arguments.
+
+---
+
+## `0.7.1`
+
+### Additions
+
+- None.
+
+### Changes
+
+- None.
+
+### Fixes
+
+- Fix call to `launchSeguroGateway` to work even without CLI arguments.
+
+---
+
 ## `0.7.0`
 
 ### Additions

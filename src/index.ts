@@ -31,8 +31,8 @@ const argv = yargs(process.argv.slice(2))
 let PORT = 3001
 let PATH = ''
 
-export const launchSeguroGateway = (port = PORT, path = PATH) => {
-    new LocalServer ( port, path )
+export const launchSeguroGateway = () => {
+    new LocalServer ( PORT, PATH )
 }
 
 if (argv.port || argv.path) {
@@ -42,6 +42,7 @@ if (argv.port || argv.path) {
     } else {
         console.log('Invalid PORT, running on PORT 3001.')
     }
+    launchSeguroGateway()
+} else {
+    launchSeguroGateway()
 }
-
-launchSeguroGateway()
