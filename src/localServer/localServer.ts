@@ -76,7 +76,7 @@ class LocalServer {
     private initialize = () => {
 
         const staticFolder = join ( this.appsPath,'workers' )
-        const launcherFolder = join ( this.appsPath, 'launcher' )
+        const launcherFolder = join ( this.appsPath, '../launcher' )
 		console.dir ({ staticFolder: staticFolder, launcherFolder: launcherFolder })
         const wsServerConnect = new WsServer ({ noServer: true })
 
@@ -96,7 +96,7 @@ class LocalServer {
         app.get ('/', async ( req: express.Request, res: express.Response) => {
             // res.sendStatus(200)
             const launcherHTMLPath = join (
-                this.appsPath  + '/launcher/index.html'
+                this.appsPath  + '../launcher/index.html'
             );
             const hasLauncher = await fse.pathExists(launcherHTMLPath);
             if (hasLauncher) {
@@ -111,6 +111,7 @@ class LocalServer {
         })
 
         app.get('/hello', (req, res) => {
+            console.log('Hello!')
             res.json('Hello world, from Seguro gateway!')
         })
 

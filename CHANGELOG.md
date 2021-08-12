@@ -1,5 +1,21 @@
 # `seguro-gateway` CHANGELOG
 
+## `0.9.0`
+
+### Additions
+
+- Setup static platform files to be pulled from GitHub `seguro-platform` repository.
+
+### Changes
+
+- None.
+
+### Fixes
+
+- None.
+
+---
+
 ## `0.8.2`
 
 ### Additions
