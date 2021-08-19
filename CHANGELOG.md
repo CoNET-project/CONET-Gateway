@@ -1,5 +1,21 @@
 # `seguro-gateway` CHANGELOG
 
+## `0.10.1`
+
+### Additions
+
+- None.
+
+### Changes
+
+- None.
+
+### Fixes
+
+- Fix `seguro-platform` dep at `0.3.0` for the time being.
+
+---
+
 ## `0.10.0`
 
 ### Additions
