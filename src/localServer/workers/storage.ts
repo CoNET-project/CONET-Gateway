@@ -27,7 +27,7 @@ const initStorage = () => {
 			return console.dir ( ex )
 		}
         if ( !workerReady ) {
-            cmd.err = 'Worker have not ready'
+            cmd.err = 'NOT_READY'
             return returnCommand ( cmd )
         }
         return storageWorkDoCommand ( cmd )
@@ -38,10 +38,7 @@ const initStorage = () => {
 const checkStorage = ( ) => {
     const db = new PouchDB('SEGURO')
     const cmd: worker_command = {
-        cmd: 'ready',
-        uuid: '',
-        data: '',
-        err: ''
+        cmd: 'READY'
     }
     db.get ( 'init' ).then (( doc: Object ) => {
         cmd.data = doc

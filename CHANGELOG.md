@@ -1,5 +1,37 @@
 # `seguro-gateway` CHANGELOG
 
+## `0.10.0`
+
+### Additions
+
+- Add `seguro-platform` to build.
+
+### Changes
+
+- None.
+
+### Fixes
+
+- None.
+
+---
+
+## `0.9.1`
+
+### Additions
+
+- None.
+
+### Changes
+
+- None.
+
+### Fixes
+
+- Fixed iOS Safari Worker issue.
+
+---
+
 ## `0.9.0`
 
 ### Additions

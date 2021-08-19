@@ -2,7 +2,7 @@
 const encryptWorkerDoCommand = ( cmd: worker_command ) => {
 
     switch ( cmd.cmd ) {
-        case 'initSeguroData': {
+        case 'encrypt_InitSeguroData': {
             return initSeguroData ( cmd, data => {
                 return returnCommand ( data )
             })
@@ -31,7 +31,7 @@ const initEncrypt = () => {
 			return console.dir ( ex )
 		}
         if ( !workerReady ) {
-            cmd.err = 'Worker have not ready'
+            cmd.err = 'NOT_READY'
             return returnCommand ( cmd )
         }
 
@@ -40,8 +40,7 @@ const initEncrypt = () => {
 
 
     const _cmd: worker_command = {
-        cmd: 'ready',
-        uuid: ''
+        cmd: 'READY'
     }
 
     returnCommand ( _cmd )

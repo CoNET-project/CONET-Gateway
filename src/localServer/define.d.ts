@@ -1,4 +1,6 @@
 
+declare const openpgp
+declare const buffer: any
 
 interface imapConnect {
 	imapServer: string
@@ -53,18 +55,36 @@ interface Window {
 }
 
 interface keyPair {
-	
 	publicKeyArmor: string
 	privateKeyArmor: string
 
 }
+
+declare type WorkerCommandError = 'NOT_READY'|'INVALID_DATA'|'NO_UUID'|'INVALID_COMMAND'|'OPENPGP_RUNNING_ERROR'|
+'PouchDB_ERROR'
+
+declare type WorkerCommand = 'helloWorld'|'READY'|'storage_StoreContainerData'|'encrypt_InitSeguroData'
+
 interface worker_command {
-	cmd: string
+	cmd: WorkerCommand
 	data?: any
 	uuid?: string
-	err?: string
+	err?: WorkerCommandError
 }
 
-declare const openpgp
-declare const PouchDB
-declare const buffer: any
+interface initSeguroDataResolve {
+	containerData: ContainerData
+	seguroKeyChain: {
+		deviceKeyPair: keyPair
+		seguroAccountKeyPair: keyPair
+	}
+	
+}
+
+
+interface ContainerData {
+	ContainerKeyPair: keyPair
+	containerDummyPassword?: string
+	_id?:string
+	_rev?: string
+}

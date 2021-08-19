@@ -1,15 +1,12 @@
-
 import express from 'express'
 import type { Server } from 'http'
 import { Server as WsServer } from 'ws'
 import { readKey, readMessage } from 'openpgp'
-import { normalize, join } from 'path'
-import * as jszip from 'jszip'
+import { join } from 'path'
 import * as fse from 'fs-extra'
 import { imapAccountTest } from './utilities/Imap'
 import { inspect } from 'util'
 import { testImapServer, getInformationFromSeguro, buildConnect } from './utilities/network'
-const upload = require ( 'multer' )()
 const cors = require('cors')
 
 const getEncryptedMessagePublicKeyID = async ( encryptedMessage: string, CallBack: ( err?: Error|null, data?: string[]) => void ) => {
@@ -26,36 +23,6 @@ class LocalServer {
     constructor ( private PORT = 3000, private appsPath: string ) {
 		this.appsPath = appsPath || join ( __dirname )
         this.initialize()
-    }
-
-    private unzipApplication = async ( buffer: Buffer ) => {
-        return jszip
-            .loadAsync(buffer)
-            .then(( zip ) => {
-                return zip.forEach ( async ( relativePath, file ) => {
-                    if ( file.dir ) {
-                        const dirPath = normalize (
-                            this.appsPath + relativePath
-                        )
-                        try {
-                            return await fse.mkdir ( dirPath )
-                        } catch ( err ) {
-                            return
-                        }
-                    }
-
-                    return file.async('nodebuffer').then ( async (data) => {
-                        const filePath = normalize(
-                            this.appsPath + relativePath
-                        )
-                        await fse.writeFile (filePath, data )
-                    })
-
-                })
-            })
-            .catch ( err => {
-                throw err
-            })
     }
 
     public end () {
@@ -94,7 +61,7 @@ class LocalServer {
         })
 
         app.get ('/', async ( req: express.Request, res: express.Response) => {
-            // res.sendStatus(200)
+
             const launcherHTMLPath = join (
                 this.appsPath  + '../launcher/index.html'
             );
@@ -114,31 +81,6 @@ class LocalServer {
             console.log('Hello!')
             res.json('Hello world, from Seguro gateway!')
         })
-
-        app.post ( '/update', upload.single ( 'app_data' ),
-            ( req: express.Request, res: express.Response ) => {
-                const { app_id } = req.body
-                const { file } = req.body
-                if ( file.mimetype !== 'application/zip' ) {
-                    res.sendStatus ( 400 )
-                    return res.end()
-                }
-
-                const rootFolder = normalize ( this.appsPath + '/' + app_id )
-                fse.remove( rootFolder, ( err: any ) => {
-                    if ( err ) {
-                        return res.sendStatus(400)
-                    }
-                    this.unzipApplication( file.buffer )
-                        .then(() => {
-                            res.sendStatus(200)
-                        })
-                        .catch((err) => {
-                            res.sendStatus(400)
-                        })
-                })
-            }
-        )
 
         app.post ( '/testImap', ( req: express.Request, res: express.Response ) => {
             const { body } = req
@@ -393,7 +335,6 @@ class LocalServer {
             console.log (`unallowed ${ request.url } `)
             return socket.destroy()
         })
-
 
     }
 }
