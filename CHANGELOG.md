@@ -1,5 +1,20 @@
 # `seguro-gateway` CHANGELOG
 
+## `0.11.1`
+
+### Additions
+
+- None.
+
+### Changes
+
+- None.
+
+### Fixes
+
+- Fixed lock issue
+
+
 ## `0.11.0`
 
 ### Additions
@@ -12,13 +27,13 @@
 
 ### Fixes
 
-- 
+- None.
 
 ## `0.10.1`
 
 ### Additions
 
-- 
+- None.
 
 ### Changes
 

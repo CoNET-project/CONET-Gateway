@@ -45,7 +45,7 @@ const encryptWorkerDoCommand = ( cmd: worker_command ) => {
                 profiles: []
             }]
             
-            returnCommand (cmd)
+            return returnCommand (cmd)
         }
 
         default: {
