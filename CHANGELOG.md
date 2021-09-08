@@ -1,10 +1,10 @@
 # `seguro-gateway` CHANGELOG
 
-## `0.10.1`
+## `0.11.0`
 
 ### Additions
 
-- None.
+- LOCK
 
 ### Changes
 
@@ -12,15 +12,32 @@
 
 ### Fixes
 
-- Fix `seguro-platform` dep at `0.3.0` for the time being.
+- 
 
----
+## `0.10.1`
+
+### Additions
+
+- 
+
+### Changes
+
+- None.
+
+### Fixes
+
+- Fixed createPasscode have not store data issue.
+
 
 ## `0.10.0`
 
 ### Additions
 
-- Add `seguro-platform` to build.
+- testPasscord
+
+- createPasscode
+
+- initContainerData
 
 ### Changes
 
@@ -29,8 +46,6 @@
 ### Fixes
 
 - None.
-
----
 
 ## `0.9.1`
 

@@ -77,7 +77,7 @@ class LocalServer {
             return process.exit (1)
         })
 
-        app.get('/hello', (req, res) => {
+        app.get('/hello', (req, res ) => {
             console.log('Hello!')
             res.json('Hello world, from Seguro gateway!')
         })

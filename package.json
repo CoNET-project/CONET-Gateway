@@ -1,6 +1,6 @@
 {
     "name": "@conet-project/seguro-gateway",
-    "version": "0.10.1",
+    "version": "0.11.0",
     "license": "UNLICENSED",
     "files": [
         "./build"
@@ -10,42 +10,42 @@
     "scripts": {
         "lint": "jest",
         "test": "jest",
-        "build": "tsc --project ./tsconfig.build.json && cp -r node_modules/@conet-project/seguro-platform/build ./build/launcher",
+        "buildAndy": "tsc --project ./tsconfig.build.json && cp -r node_modules/@conet-project/seguro-platform/build ./build/launcher",
+        "build": "tsc --project ./tsconfig.build.json; cp src/localServer/workers/utilities/openpgp.*  build/localServer/workers/utilities/",
         "clean": "rm -rf ./node_modules ./build",
         "local": "node build/localServer/index"
     },
     "dependencies": {
-        "@conet-project/seguro-platform": "0.3.0",
         "async": "^3.2.1",
         "cors": "^2.8.5",
         "express": "^4.17.1",
         "fs-extra": "^10.0.0",
-        "multer": "^1.4.2",
-        "openpgp": "^5.0.0-5",
+        "multer": "^1.4.3",
+        "openpgp": "^5.0.0-6",
         "uuid": "^8.3.2",
-        "ws": "^8.0.0",
-        "yargs": "^17.1.0"
+        "ws": "^8.2.1",
+        "yargs": "^17.1.1"
     },
     "devDependencies": {
         "@types/async": "^3.2.7",
         "@types/express": "^4.17.13",
         "@types/fs-extra": "^9.0.12",
-        "@types/jest": "^26.0.23",
-        "@types/node": "^16.0.0",
+        "@types/jest": "^27.0.1",
+        "@types/node": "^16.7.10",
         "@types/pouchdb": "^6.4.0",
         "@types/uuid": "^8.3.1",
         "@types/ws": "^7.4.7",
-        "@typescript-eslint/eslint-plugin": "^4.28.1",
-        "@typescript-eslint/parser": "^4.28.1",
-        "eslint": "^7.29.0",
+        "@typescript-eslint/eslint-plugin": "^4.30.0",
+        "@typescript-eslint/parser": "^4.30.0",
+        "eslint": "^7.32.0",
         "eslint-config-airbnb-base": "^14.2.1",
         "eslint-config-prettier": "^8.3.0",
-        "eslint-plugin-import": "^2.23.4",
-        "eslint-plugin-jest": "^24.3.6",
-        "jest": "^27.0.6",
-        "ts-jest": "^27.0.3",
-        "ts-node": "^10.2.0",
-        "typescript": "^4.3.4"
+        "eslint-plugin-import": "^2.24.2",
+        "eslint-plugin-jest": "^24.4.0",
+        "jest": "^27.1.0",
+        "ts-jest": "^27.0.5",
+        "ts-node": "^10.2.1",
+        "typescript": "^4.4.2"
     },
     "bin": {
         "seguro-gateway": "./build/index.js"
