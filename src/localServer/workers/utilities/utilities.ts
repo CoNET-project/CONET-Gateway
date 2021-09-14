@@ -2,7 +2,7 @@ const returnCommand = ( cmd: worker_command ) => {
     self.postMessage ( JSON.stringify ( cmd ))
 }
 
-let workerReady = false
+
 
 const logger = (...argv: any ) => {
     const date = new Date ()
@@ -206,3 +206,21 @@ const encryptWithContainerKey = ( text: string, CallBack: ( err: Error|null, enc
         })
 
 }
+
+
+const localServerGetJSON = (command: string, method: string, CallBack: ( err: number|null, payload: any) => void ) => {
+    const xhr = new XMLHttpRequest()
+    const url = self.name + command
+    xhr.open( method, url, true )
+    xhr.withCredentials = false
+    xhr.onload = () => {
+        const status = xhr.status
+        if (status === 200) {
+            return CallBack(null, xhr.response)
+        }
+        return CallBack (status, xhr.response)
+    }
+    return xhr.send()
+}
+
+const UuidV4Check = /^[0-9A-F]{8}-[0-9A-F]{4}-4[0-9A-F]{3}-[89AB][0-9A-F]{3}-[0-9A-F]{12}$/

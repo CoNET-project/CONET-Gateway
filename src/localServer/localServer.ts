@@ -4,7 +4,7 @@ import { Server as WsServer } from 'ws'
 import { readKey, readMessage } from 'openpgp'
 import { join } from 'path'
 import * as fse from 'fs-extra'
-import { imapAccountTest } from './utilities/Imap'
+import { imapAccountTest, logger } from './utilities/Imap'
 import { inspect } from 'util'
 import { testImapServer, getInformationFromSeguro, buildConnect } from './utilities/network'
 const cors = require('cors')
@@ -56,7 +56,7 @@ class LocalServer {
         app.use ( express.json() )
 
         app.once ( 'error', ( err: any ) => {
-            console.log ( err )
+            logger (err)
             return process.exit (1)
         })
 
@@ -73,7 +73,7 @@ class LocalServer {
         });
 
         app.once ( 'error', ( err: any ) => {
-            console.log ( err )
+            logger (err)
             return process.exit (1)
         })
 
@@ -101,7 +101,16 @@ class LocalServer {
                 }
                 res.sendStatus (200)
                 return res.end()
-            });
+            })
+        })
+
+        /**
+         *          Create 
+         */
+
+        app.post ('/Invitation', ( req: express.Request, res: express.Response ) => {
+            logger (inspect (req.body, false, 3, true))
+            res.end ()
         })
 
         /**
@@ -213,6 +222,20 @@ class LocalServer {
             return res.end ()
         })
 
+        wsServerConnect.on ('connectToImapAccount', ws => {
+            ws.on ( 'message', ( message: string ) => {
+                let kk: connect_imap_reqponse
+
+                try {
+                    kk = JSON.parse ( message )
+                } catch ( ex ) {
+                    ws.send ( JSON.stringify ({ status: `Data format error! [${ message }]` }) )
+                    return ws.close ()
+                }
+                kk.imap_account
+            })
+        })
+
         wsServerConnect.on ( 'connection', ws => {
 
             ws.on ( 'message', ( message: string ) => {
@@ -272,7 +295,7 @@ class LocalServer {
         })
 
         wsServerConnect.on ( 'peerToPeerConnecting', ws => {
-            console.log (`wsServerConnect on peerToPeerConnecting`)
+            logger (`wsServerConnect on peerToPeerConnecting`)
             return ws.on ( 'message', async ( message: string ) => {
 
                 let kk: connectRequest
@@ -332,7 +355,15 @@ class LocalServer {
                     return wsServerConnect.emit ( 'peerToPeerConnecting', ws, request )
                 })
             }
-            console.log (`unallowed ${ request.url } `)
+            // @ts-ignore
+            if ( /\/connectToImapAccount/.test ( request.url )) {
+                // @ts-ignore
+                return wsServerConnect.handleUpgrade ( request, socket, head, ws => {
+                    return wsServerConnect.emit ( 'connectToImapAccount', ws, request )
+                })
+            }
+
+            logger (`wsServerConnect unknow URL ${ request.url } `)
             return socket.destroy()
         })
 

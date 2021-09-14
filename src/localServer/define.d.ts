@@ -85,7 +85,7 @@ declare type WorkerCommandError = 'NOT_READY'|'INVALID_DATA'|'NO_UUID'|'INVALID_
 'PouchDB_ERROR'|'GENERATE_PASSCODE_ERROR'|'FAILURE'|'COUNTDOWN'
 
 declare type WorkerCommand = 'helloWorld'|'READY'|
-	'encrypt_TestPasscord'|'encrypt_createPasscode'|'encrypt_lock'
+	'encrypt_TestPasscode'|'encrypt_createPasscode'|'encrypt_lock'|'invitation'|'encrypt_deletePasscode'
 
 type worker_command = {
 	cmd: WorkerCommand
@@ -102,8 +102,8 @@ interface profile extends keyPair {
 }
 
 type ColorTheme = 'LIGHT' | 'DARK'
-type Language = 'en-CA ' | 'fr-CA' | 'ja-JP' | 'zh-CN' | 'zh-TW'
-type PasscodeStatus = 'LOCKED' | 'UNLOCKED' | 'UNDEFINED'
+type Language = 'en-CA' | 'fr-CA' | 'ja-JP' | 'zh-CN' | 'zh-TW'
+type PasscodeStatus = 'LOCKED' | 'UNLOCKED' | 'NOT_SET'
 
 type encrypt_keys_object = {
     containerKeyPair: keyPair
@@ -117,9 +117,9 @@ type encrypt_keys_object = {
 	encryptedString: string
 }
 
-type Passcord = {
+type Passcode = {
     status: PasscodeStatus
-    testPasscord: null
+    testPasscode: null
     createPasscode: null
 }
 
@@ -131,5 +131,5 @@ interface Preferences {
 interface systemInitialization {
 	preferences: Preferences
 	profiles: profile []
-	passcord: Passcord
+	passcode: Passcode
 }

@@ -1,3 +1,23 @@
+const returnInitNull = (cmd: worker_command) => {
+    const data: systemInitialization = {
+        preferences: {
+            colorTheme: 'LIGHT',
+            language: 'en-CA'
+        },
+        passcode: {
+            testPasscode: null,
+            createPasscode: null,
+            status: 'NOT_SET'
+        },
+        profiles: []
+    }
+    cmd.data = [data]
+    systemInitialization = data
+    systemInitialization_UUID = ''
+    pass = SeguroKeyChain = null
+    returnCommand ( cmd )
+}
+
 const checkStorage = () => {
     database = new PouchDB('SEGURO', { auto_compaction: true })
     const cmd: worker_command = {
@@ -5,40 +25,22 @@ const checkStorage = () => {
         data: []
     }
     
-    const initNull = () => {
-        const data: systemInitialization = {
-            preferences: {
-                colorTheme: 'LIGHT',
-                language: 'en-CA '
-            },
-            passcord: {
-                testPasscord: null,
-                createPasscode: null,
-                status: 'UNDEFINED'
-            },
-            profiles: []
-        }
-        cmd.data = [data]
-        systemInitialization = data
-        returnCommand ( cmd )
-    }
-
-    workerReady = true
-
+    invitation (cmd)
     database.get ('init').then ((doc: any) => {
         
         try {
             cmd.data = [JSON.parse ( buffer.Buffer.from (doc.title,'base64').toString ())]
         } catch ( ex ) {
             logger (`checkStorage JSON.parse error`, buffer.Buffer.from (doc.title,'base64').toString ())
-            return initNull ()
+            return returnInitNull (cmd)
         }
         const initData = cmd.data[0]
-        if ( systemInitialization_UUID  = initData.uuid ) {
+        if ( systemInitialization_UUID = initData.uuid ) {
             return getUUIDFragments (cmd.data[0].uuid, ( err, data: any ) => {
                 if ( err ) {
+                    cmd.err = 'PouchDB_ERROR'
                     logger (`checkStorage getUUIDFragments [${ cmd.data[0] }] ERROR`, err )
-                    return initNull ()
+                    return returnInitNull (cmd)
                 }
                 
                 SeguroKeyChain = {
@@ -64,8 +66,8 @@ const checkStorage = () => {
                 const initLocked = () => {
                     const data: systemInitialization = {
                         preferences: initData.preferences,
-                        passcord: {
-                            testPasscord: null,
+                        passcode: {
+                            testPasscode: null,
                             createPasscode: null,
                             status: 'LOCKED'
                         },
@@ -78,16 +80,17 @@ const checkStorage = () => {
                 return initLocked ()
             })
         }
-        return initNull ()
-    }).catch ((ex: Error ) => initNull ())
+        return returnInitNull (cmd)
+    }).catch ((ex: Error ) => {
+        cmd.err = 'PouchDB_ERROR'
+        return returnInitNull (cmd)
+    })
 }
 
 let database: PouchDB.Database|null = null
 
 const storeContainer = ( preferencesUUID: string, CallBack: ( err?: Error ) => void ) => {
-    if ( !database ) {
-        database = new PouchDB('SEGURO', { auto_compaction: true })
-    }
+
     if (!SeguroKeyChain) {
         return CallBack (new Error ('have no SeguroKeyChain!'))
     }
@@ -101,9 +104,13 @@ const storeContainer = ( preferencesUUID: string, CallBack: ( err?: Error ) => v
             preferences: systemInitialization?.preferences
         })).toString ('base64')
     }
+    if ( !database ) {
+        database = new PouchDB('SEGURO', { auto_compaction: true })
+    }
     return database.get ('init')
     .then(res => database?.remove (res))
     .then(() => database?.put(putData))
+    .then (() => database?.compact())
     .then(() => CallBack())
     .catch ( ex => {
         database?.put(putData)
@@ -118,7 +125,7 @@ const getUUIDFragments = ( uuid: string, CallBack: ( ex: Error|null, data?: Pouc
     if ( !database ) {
         database = new PouchDB('SEGURO', { auto_compaction: true })
     }
-    database?.get (uuid)
+    database.get (uuid)
     .then ((data: any ) => {
         return CallBack ( null, data.title )
     })
@@ -135,7 +142,7 @@ const storeUUID_Fragments = ( encrypted: string, CallBack: ( ex: Error|null, dat
         title: encrypted
     }
     
-    database?.post( putData )
+    database.post( putData )
     .then( data => CallBack ( null, data ))
     .catch ( ex => CallBack ( ex ))
 }
@@ -151,6 +158,7 @@ const deleteUUID_DFragments = (uuid: string, CallBack: (ex: Error|null) => void 
     }
     return database.get (uuid)
         .then ( res => database?.remove (res))
+        .then (() => database?.compact())
         .then (() => CallBack(null))
         .catch(ex => CallBack (ex))
 }
@@ -185,39 +193,54 @@ const storage_StoreContainerData = (cmd: worker_command) => {
 
 const returnSeguroInitializationData = (cmd: worker_command) => {
     delete cmd.err
-        if ( !systemInitialization || !SeguroKeyChain ) {
-            cmd.err = 'NOT_READY'
-            logger (`storage_StoreContainerData !systemInitialization Error!`)
-            return returnCommand ( cmd )
-        }
-        const preferences = systemInitialization.preferences
-        const profile = SeguroKeyChain.keyChain.profiles
-        const _profile: profile[] = []
-        profile.forEach ( n => {
-            const ret: profile = {
-                keyOpenPGP_obj: null,
-                publicKeyArmor: '',
-                keyID: n.keyID,
-                privateKeyArmor: '',
-                nickname: n.nickname || '',
-                tags: n.tags || [],
-                alias: n.alias || ''
-            }
-            _profile.push (ret)
-        })
-        const data: systemInitialization = {
-            preferences: {
-                colorTheme: preferences.colorTheme,
-                language: preferences.language
-            },
-            passcord: {
-                testPasscord: null,
-                createPasscode: null,
-                status: 'UNLOCKED'
-            },
-            profiles: _profile
-        }
-        cmd.data = [data]
-        logger (`storage_StoreContainerData SUCCESS!`)
+    if ( !systemInitialization || !SeguroKeyChain ) {
+        cmd.err = 'NOT_READY'
+        logger (`storage_StoreContainerData !systemInitialization Error!`)
         return returnCommand ( cmd )
+    }
+    const preferences = systemInitialization.preferences
+    const profile = SeguroKeyChain.keyChain.profiles
+    const _profile: profile[] = []
+    profile.forEach ( n => {
+        const ret: profile = {
+            keyOpenPGP_obj: null,
+            publicKeyArmor: '',
+            keyID: n.keyID,
+            privateKeyArmor: '',
+            nickname: n.nickname || '',
+            tags: n.tags || [],
+            alias: n.alias || ''
+        }
+        _profile.push (ret)
+    })
+    const data: systemInitialization = {
+        preferences: {
+            colorTheme: preferences.colorTheme,
+            language: preferences.language
+        },
+        passcode: {
+            testPasscode: null,
+            createPasscode: null,
+            status: 'UNLOCKED'
+        },
+        profiles: _profile
+    }
+    cmd.data = [data]
+    logger (`storage_StoreContainerData SUCCESS!`)
+    return returnCommand ( cmd )
+}
+
+const encrypt_deletePasscode = (cmd: worker_command) => {
+    if ( !database ) {
+        database = new PouchDB('SEGURO', { auto_compaction: true })
+    }
+    delete cmd.err
+    cmd.data = []
+    database.destroy()
+    .then (() => returnInitNull (cmd))
+    .catch ( err => {
+        logger (`encrypt_deletePasscode ERROR`, err )
+        cmd.err = 'PouchDB_ERROR'
+        return returnCommand (cmd)
+    })
 }

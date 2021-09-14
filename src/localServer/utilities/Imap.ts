@@ -27,10 +27,15 @@ import { Buffer } from 'buffer'
 import { inspect }  from 'util'
 import type { TLSSocket } from 'tls'
 
+export const logger = (...argv: any ) => {
+    const date = new Date ()
+    let dateStrang = `[${ date.getHours() }:${ date.getMinutes() }:${ date.getSeconds() }:${ date.getMilliseconds ()}] `
+    return console.log ( dateStrang, ...argv )
+}
 
 const MAX_INT = 9007199254740992
 const debug = true
-
+const NoopWaitintTimeout = 100
 const NoopLoopWaitingTime = 1000 * 1
 
 export const saveLog = ( log: string, _console: boolean = true ) => {
@@ -40,7 +45,8 @@ export const saveLog = ( log: string, _console: boolean = true ) => {
 }
 
 const debugOut = ( text: string, isIn: boolean, serialID: string ) => {
-    const log = `【${ new Date().toISOString()}】【${ serialID }】${ isIn ? '<=' : '=>'} 【${ text }】`
+    const date = new Date ()
+    const log = `【${ date.getHours() }:${ date.getMinutes() }:${ date.getSeconds() }:${ date.getMilliseconds ()}】【${ serialID }】${ isIn ? '<=' : '=>'} 【${ text }】`
     console.log ( log )
 
 }
@@ -66,14 +72,15 @@ class ImapServerSwitchStream extends Transform {
     public doCommandCallback: ( Err?: Error| null , commandLine?: string ) => void = () => {}
     private _login = false
     private first = true
-    public waitLogoutCallBack = null
+    public waitLogout = null
+    public waitLogoutCallBack: any
     public idleResponsrTime: NodeJS.Timer | null = null
     private ready = false
     public appendWaitResponsrTimeOut: NodeJS.Timer|null = null
     public runningCommand = ''
     //private nextRead = true
     public idleNextStop: NodeJS.Timer|null = null
-
+    private idleCallBack: any
     private reNewCount = 0
     private isImapUserLoginSuccess = false
 
@@ -83,33 +90,33 @@ class ImapServerSwitchStream extends Transform {
 	private needLoginout_Callback: () => void = () => {}
     private fetchEmptyBody = false
     private isFetchBodyFinished = false
+    private idleDoingDone = false
+    private MicrosoftExchange = false
+    public canDoLogout = false
+    private currentUid = 0
 
-    private idleDoingDown () {
-        if ( !this.doingIdle || this.runningCommand !== 'idle' ) {
-            return //console.dir (`idleDoingDown stop because this.doingIdle === false!`)
+    public idleDoingDown () {
+        if ( this.idleNextStop ) {
+		clearTimeout ( this.idleNextStop )
         }
-        this.doingIdle = false
-		if ( this.idleNextStop ) {
-			clearTimeout ( this.idleNextStop )
+		if ( this.idleDoingDone || this.runningCommand !== 'idle') {
+			return logger (`idleDoingDown but this.idleDoingDone = [${ this.idleDoingDone }] or this.runningCommand !== 'idle' ${ this.runningCommand }`) 
 		}
-        
-
-        if ( this.writable ) {
-
-            this.debug ? debugOut ( `DONE`, false, this.imapServer.listenFolder || this.imapServer.imapSerialID ) : null
+		if ( this.writable ) {
+			this.idleDoingDone = true
+			this.debug ? debugOut ( `DONE`, false, this.imapServer.listenFolder || this.imapServer.imapSerialID ) : null
             console.log('')
-            return this.push (`DONE\r\n`)
-        }
-        /**
-         *
-         */
-        return this.imapServer.destroyAll ( null )
+			return this.push (`DONE\r\n`)
+		}
+		return this.imapServer.destroyAll ( null )
+		
+	}
 
-    }
 
     constructor ( public imapServer: qtGateImap, private exitWithDeleteBox: boolean, public debug: boolean  ) {
         super ()
     }
+
 
     private doCapability ( capability: string ) {
         this.imapServer.serverSupportTag = capability
@@ -121,76 +128,92 @@ class ImapServerSwitchStream extends Transform {
         return this.imapServer.fetchAddCom = `(${ ii ? 'X-GM-THRID X-GM-MSGID X-GM-LABELS ': '' }${ ii1 ? 'MODSEQ ' : ''}BODY[])`
     }
 
-    public preProcessCommane ( commandLine: string, _next: () => void, callback: () => void ) {
-        //commandLine = commandLine.replace( /^ +/g,'').replace (/^IDLE\*/, '*')
+    public preProcessCommane ( commandLine: string, _next:() => void, callback:() => void ) {
+		
+		commandLine = commandLine.replace( /^ +/g,'').replace (/^IDLE\*/, '*')
+		
         const cmdArray = commandLine.split (' ')
-
-        this.debug ? debugOut ( `${commandLine}`, true, this.imapServer.listenFolder || this.imapServer.imapSerialID ) : null
+        this.debug ? debugOut ( `${ commandLine }`, true, this.imapServer.listenFolder || this.imapServer.imapSerialID ) : null
 
         if ( this._login ) {
             switch ( commandLine[0] ) {
 
                 case '+':                                    /////       +
-                case ' ':
+                case 'C':
                 case '*': {                                  /////       *
+					
                     return this.commandProcess ( commandLine, cmdArray, _next, callback )
                 }
-
+				
                 case 'I':           //  IDLE
                 case 'D':           //  NODE
-                case 'N':           //  NOOP
-                case 'O': 			//	OK
-                case 'A': {                                  /////       A
-					if ( this.appendWaitResponsrTimeOut ) {
-						clearTimeout ( this.appendWaitResponsrTimeOut )
-					}
-                    if ( this.idleResponsrTime ) {
-						clearTimeout ( this.idleResponsrTime )
-					}
-                    
+				case 'N':           //  NOOP
+				case 'O':			//	OK
+                case 'A': {                                 /////       A
+                    if ( this.appendWaitResponsrTimeOut ) {
+                        clearTimeout ( this.appendWaitResponsrTimeOut )
+                    }
+                    if ( this.idleResponsrTime) {
+                        clearTimeout ( this.idleResponsrTime )
+                    }
+					
+					//console.log (`preProcessCommane 【 OK 】`)
                     this.runningCommand = ''
-
-
+                    
                     if ( /^ok$/i.test ( cmdArray[1] ) || /^ok$/i.test ( cmdArray[0] )) {
-						if ( this.doCommandCallback ) {
-							this.doCommandCallback ( null, commandLine )
-						}
+                        if ( this.doCommandCallback ) {
+                            this.doCommandCallback ( null, commandLine )
+                        }
                         
                         return callback ()
-                    }
-                    if ( this.Tag !== cmdArray[0] ) {
+					}
+					if ( this.Tag !== cmdArray[0] ) {
                         return this.serverCommandError ( new Error ( `this.Tag[${ this.Tag }] !== cmdArray[0] [${ cmdArray[0] }]\ncommandLine[${ commandLine }]` ), callback )
                     }
-                    //console.log (`IMAP preProcessCommane on NO Tag!`, commandLine )
                     const errs = cmdArray.slice (2).join(' ')
+
+                    if ( /IDLE/i.test( commandLine )) {
+                        this.end ()
+                    }
                     this.doCommandCallback ( new Error ( errs ))
+
                     return callback ()
 
                 }
                 default: {
-                    return this.serverCommandError ( new Error (`_commandPreProcess got switch default error!\ncommandLine[0] = ${ commandLine[0] }` ), callback )
-                }
-
+					return this.serverCommandError ( new Error (`_commandPreProcess got switch default error! command = [${ this.Tag }] commandLine = ${ commandLine }` ), callback )
+				}
+                    
             }
-        }
+		}
+
+		if ( /Microsoft Exchange/i.test ( commandLine )) {
+
+			this.MicrosoftExchange = true
+
+			console.log (`*************** Microsoft Exchange mail server!! ********************`)
+		}
         return this.login ( commandLine, cmdArray, _next, callback )
     }
 
     public checkFetchEnd () {
-        //console.log (`checkFetchEnd\n\n_buffer.length = [${ this._buffer.length }]`)
-
-        if ( this._buffer.length < this.imapServer.fetching ) {
-            //console.log (` this._buffer.length [${  this._buffer.length }] <= this.imapServer.fetching [${ this.imapServer.fetching  }]`)
+        if ( this._buffer.length <= this.imapServer.fetching ) {
             return null
         }
-        //console.log (this._buffer.toString ('hex'))
-        //console.log (this._buffer.toString ())
+        
         const body = this._buffer.slice ( 0, this.imapServer.fetching )
-        this._buffer = this._buffer.slice ( this.imapServer.fetching )
+        const uu = this._buffer.slice ( this.imapServer.fetching )
+        
+        let index1 = uu.indexOf ('\r\n* ')
+        let index = uu.indexOf ('\r\nA') 
+
+        index = index < 0 || index1 > 0 && index > index1 ? index1 : index
+
+        if ( index < 0 )
+            return null
+
+        this._buffer = uu.slice ( index + 2 )
         this.imapServer.fetching = 0
-        if ( /^\)\r\n/.test ( this._buffer.toString ()) ) {
-            this._buffer = this._buffer.slice (3)
-        }
         return body
 
     }
@@ -227,29 +250,29 @@ class ImapServerSwitchStream extends Transform {
     }
 
     private doLine ( next: () => void ) {
-        if ( this.imapServer.fetching ) {
-            //console.log ('************************************** ImapServerSwitchStream _transform chunk **************************************')
-            //console.log ( this._buffer.toString ())
-            //console.log ('************************************** ImapServerSwitchStream _transform chunk **************************************')
-            const _buf1 = this.checkFetchEnd ()
+		if ( this.imapServer.fetching ) {
+			//console.log ('************************************** ImapServerSwitchStream _transform chunk **************************************')
+			//console.log ( this._buffer.toString ())
+			//console.log ('************************************** ImapServerSwitchStream _transform chunk **************************************')
+			const _buf1 = this.checkFetchEnd ()
+			
+			//  have no fill body must goto  next chunk
+			if ( ! _buf1 ) {
+				
+				this.callback = true
+				return next ()
+			}
+			
+			//console.log ('************************************** ImapServerSwitchStream _transform chunk **************************************')
+			//console.log ( `\n\n_buf1.length = [${ _buf1.length }]\n\n` )
+			//console.log ( _buf1.toString ())
+			
+			this.isFetchBodyFinished = true 
+			this.imapServer.newMail ( _buf1 )
+			
+		}
 
-            //  have no fill body must goto  next chunk
-            if ( ! _buf1 ) {
-
-                this.callback = true
-                return next ()
-            }
-
-            //console.log ('************************************** ImapServerSwitchStream _transform chunk **************************************')
-            //console.log ( `\n\n_buf1.length = [${ _buf1.length }]\n\n` )
-            //console.log ( _buf1.toString ())
-
-            this.isFetchBodyFinished = true
-            this.imapServer.newMail ( _buf1 )
-
-        }
-
-        return this.checkLine ( next )
+		return this.checkLine ( next )
     }
 
     public _transform ( chunk: Buffer, encoding: string, next: () => void ) {
@@ -265,47 +288,35 @@ class ImapServerSwitchStream extends Transform {
     private capability () {
 
         this.doCommandCallback = ( err ) => {
-
+			if (err) {
+				logger (inspect(`capability error`))
+				return this.imapServer.destroyAll (err)
+			}
             if ( this.imapServer.listenFolder ) {
-
-                return this.createBox ( true, this.imapServer.listenFolder, ( err?: Error| null| undefined , newMail?: boolean, UID?: string ) => {
-
+                
+                return this.openBox ( true, ( err, newMail ) => {
+                    
                     if ( err ) {
-                        console.log (`========================= [${ this.imapServer.listenFolder || this.imapServer.imapSerialID }] openBox Error do this.end ()`, err )
+                        console.log (`********************************this.openBox CallBack err= [${ err }] ***************************************\n\n`)
                         return this.imapServer.destroyAll( err )
-                    }
-                    /*
-                    if ( this.isWaitLogout ) {
-                        console.log (`capability this.waitLogout = true doing logout_process ()`)
-                        return this.logout_process ( this.waitLogoutCallBack )
-                    }
-                    */
+					}
+					this.imapServer.emit ( 'openBoxReady' )
                     if ( /^inbox$/i.test ( this.imapServer.listenFolder )) {
-                        console.log (`capability open inbox !`)
-                        this.ready = true
-                        return this.imapServer.emit ( 'ready' )
+                        
+                        return this.canDoLogout = this.ready = true
                     }
 
-                    if ( this.imapServer.skipOldMail ) {
-                        return this.skipAllUnreadMail ()
-                    }
-
-                    if ( newMail && typeof this.imapServer.newMail === 'function') {
-
-                        //this.imapServer.emit ( 'ready' )
-                        //console.log (`[${ this.imapServer.imapSerialID }]capability doing newMail = true`)
-                        return this.doNewMail ( UID )
-                    }
-
-                    if ( typeof this.imapServer.newMail === 'function' ) {
-                        this.idleNoop ()
-                    }
-                    this.ready = true
-                    this.imapServer.emit ( 'ready' )
+                    if ( newMail ) {
+                        return this.doNewMail ()
+					}
+					
+					this.canDoLogout = true
+					
+                    return this.idleNoop (null)
                 })
             }
-
-            this.ready = true
+            
+            this.canDoLogout = this.ready = true
             this.imapServer.emit ( 'ready' )
         }
 
@@ -320,7 +331,7 @@ class ImapServerSwitchStream extends Transform {
                     return callback ()
                 }
                 default:
-                    return callback ()
+                return callback ()
             }
         }
 
@@ -331,8 +342,8 @@ class ImapServerSwitchStream extends Transform {
         if ( this.writable ) {
             return this.push ( this.cmd + '\r\n')
         }
-
-        return this.imapServer.destroyAll( null)
+        console.log (`\n\n*************************** imap capability error! this.writable === false doing destroyAll ()*************************** \n\n`)
+        return this.imapServer.destroyAll (null)
     }
 
     private skipAllUnreadMail () {
@@ -347,20 +358,24 @@ class ImapServerSwitchStream extends Transform {
                 ], err => {
                     this.runningCommand = ''
                     this.imapServer.emit ( 'ready' )
-                    return this.idleNoop()
+                    return this.idleNoop(null)
                 })
             }
             this.runningCommand = ''
             this.imapServer.emit ( 'ready' )
-            return this.idleNoop()
+            return this.idleNoop(null)
         })
     }
 
     public doNewMail ( UID: string = '' ) {
 
         this.reNewCount --
+		this.canDoLogout = true
+		this.newSwitchRet = false
+                
+		this.canDoLogout = false
+		this.runningCommand = 'doNewMail'
 
-        this.runningCommand = 'doNewMail'
         return this.seachUnseen (( err?: Error| null, newMailIds?: string, havemore?: boolean ) => {
             if ( err ) {
                 console.log (`===============> seachUnseen got error. destore imap connect!`, err )
@@ -369,164 +384,229 @@ class ImapServerSwitchStream extends Transform {
 				return 
             }
 
+            if (! newMailIds || ! newMailIds.length ) {
+				
+				this.runningCommand = ''
+				return this.idleNoop(null)
+			}
+
             let haveMoreNewMail = false
 
-            const getNewMail = ( _fatchID: string, CallBack: () => void ) => {
 
-                return waterfall ([
-                    ( next: () => void ) => this.fetch ( _fatchID, next ),
-                    ( _moreNew: boolean, next: () => void ) => {
-                        haveMoreNewMail = _moreNew
-                        return this.flagsDeleted ( _fatchID, next )
-                    },
-                    ( next: () => void ) => {
-                        this.expunge ( next )
-						return 
-                    }
-                ], CallBack )
-            }
+			const uids = newMailIds.split (',')
+			const newMail: number[] = []
+			uids.forEach (n => {
+				const nn = parseInt (n)
+				if ( nn > this.currentUid ) {
+					newMail.push (nn)
+					this.currentUid = nn
+				}
+			})
 
-            if ( newMailIds || ( newMailIds = UID )) {
-                const uids = newMailIds.split (',')
-                eachSeries ( uids, ( n: string ,next ) => {
-                    const _uid = n
-                    if ( parseInt( _uid ) > 0 ) {
-                        return getNewMail ( _uid, next )
-                    }
-                    return next ()
-                }, err => {
-                    console.log (`doNewMail Async.eachSeries getNewMail callback!`)
-                    this.runningCommand = ''
-                    if ( err ) {
-                        console.log (`doNewMail Async.eachSeries getNewMail error`, err )
-                        debug ? saveLog ( `ImapServerSwitchStream [${ this.imapServer.listenFolder || this.imapServer.imapSerialID }] doNewMail ERROR! [${ err }]`) : null
+			eachSeries ( newMail, ( n ,next ) => this.fetch ( n.toString(), next )
+			, err => {
+				return series ([
+					next => this.flagsDeleted ( newMailIds, next ),
+					next => this.expunge ( next )
+				], ( err, newM ) => {
+					//console.log (`\n\ndoNewMail success!\n\n`)
+					this.runningCommand = ''
+					if ( err ) {
+						saveLog ( `ImapServerSwitchStream [${ this.imapServer.listenFolder }] doNewMail ERROR! [${ err.message }]`)
+						return this.imapServer.destroyAll ( err )
+					}
 
-                        return this.imapServer.destroyAll ( err )
-                    }
-
-                    if ( this.needLoginout ) {
-                        console.log (`this.needLoginout === true!`)
-                        return this.idleNoop ()
-                    }
-
-                    if ( haveMoreNewMail || havemore || this.newSwitchRet ) {
-
-                        return this.doNewMail ()
-                    }
-
-                    return this.idleNoop ( )
-                })
-				return
-            }
-
-            this.runningCommand = ''
-            this.imapServer.emit ( 'ready' )
-            return this.idleNoop()
+					if ( haveMoreNewMail || havemore || this.newSwitchRet || newM ) {
+						console.log (`\n\ndoNewMail again!\n\n`)
+						return this.doNewMail ()
+					}
+					//console.log (`\n\ndoNewMail call idleNoop() !\n\n`)
+					return this.idleNoop( null )
+				})
+				
+			})
         })
     }
 
-    private idleNoop () {
-        if ( this.needLoginout ) {
-            return this._logoutWithoutCheck ( this.needLoginout_Callback )
+    public _logout ( callabck: () => void) {
+        if ( !this.isImapUserLoginSuccess ) {
+            return callabck ()
         }
-        this.newSwitchRet = false
-        this.doingIdle = true
-        this.runningCommand = 'idle'
-        if ( ! this.ready ) {
-            this.ready = true
-            this.imapServer.emit ( 'ready' )
+        
+        this.doCommandCallback = callabck
+        if ( this.idleResponsrTime ) {
+            clearTimeout ( this.idleResponsrTime )
         }
+       
 
-        this.doCommandCallback = ( err => {
+        this.commandProcess = ( text: string, cmdArray: string[], next, _callback ) => {
+            this.isImapUserLoginSuccess = false
+            return _callback ()
 
-
-            if ( err ) {
-                console.log (`IDLE doCommandCallback! error`, err )
-                return this.imapServer.destroyAll ( err )
-            }
-
-            this.runningCommand = ''
-            if ( this.needLoginout ) {
-                return this._logoutWithoutCheck (() => {
-                    this.needLoginout_Callback ()
-                })
-            }
-
-            //console.log(`IDLE DONE newSwitchRet = [${newSwitchRet}] nextRead = [${this.nextRead}]`)
-            if ( this.newSwitchRet || this.reNewCount > 0 ) {
-                return this.doNewMail ()
-            }
-
-            if ( this.imapServer.idleSupport ) {
-                return this.idleNoop ()
-            }
-            /**
-             * NOOP support
-             */
-            setTimeout (() => {
-                if ( !this.runningCommand ) {
-                    return this.idleNoop ()
-                }
-
-            },  NoopLoopWaitingTime )
-
-        })
-
-        this.commandProcess = (  text: string, cmdArray: string[], next, callback ) => {
-            //console.log (`idleNoop commandProcess coming ${ text }\n${ cmdArray }`)
-            switch ( cmdArray[0] ) {
-                case `${ this.Tag }*`:
-                case '+':
-                case '*': {
-					if ( this.idleResponsrTime ) {
-						clearTimeout ( this.idleResponsrTime )
-					}
-                    
-                    /**
-                     * 			Seupport Microsoft Exchange IMAP4
-                     */
-                    if ( /BYE Connection closed/i.test ( cmdArray[0] )) {
-                        return this.imapServer.destroyAll ( new Error (`ERROR: BYE Connection closed `))
-                    }
-
-                    if ( /^RECENT$|^EXISTS$/i.test ( cmdArray[2] )) {
-                        this.newSwitchRet = true
-
-                        if ( this.imapServer.idleSupport ) {
-                            this.idleDoingDown()
-                        }
-
-                    }
-
-
-                    return callback ()
-                }
-                default:
-                    return callback ()
-            }
         }
 
-        const name = this.Tag = this.imapServer.idleSupport ? 'IDLE' : 'NOOP'
-
-        this.cmd = `${ this.Tag } ${ name }`
-
+        this.Tag = `A${ this.imapServer.TagCount1() }`
+        this.cmd = `${ this.Tag } LOGOUT`
         this.debug ? debugOut ( this.cmd, false, this.imapServer.listenFolder || this.imapServer.imapSerialID ) : null
-
+        
         if ( this.writable ) {
-
-            this.idleNextStop = this.imapServer.idleSupport
-                ? setTimeout (() => {
-                    this.idleDoingDown()
-                }, idleInterval )
-                : null
-
             return this.push ( this.cmd + '\r\n')
         }
-        this.doingIdle = false
+        if ( callabck && typeof callabck === 'function') {
+            
+            return callabck()
+        }
+        
+    }
 
+    public logout_process () {
+		
+		const CallBack = () => {
+			if ( this.waitLogoutCallBack && typeof this.waitLogoutCallBack === 'function') {
+                return this.waitLogoutCallBack ()
+            }
+		}
 
-        return this.imapServer.destroyAll ( null )
+        if ( ! this.writable ) {
+            console.trace ( `logout_process [! this.writable] run return callback ()`)
+            return CallBack ()
+            
+        }
+            
+        const doLogout = () => {
+            return this._logout ( CallBack )
+		}
+		
+        if ( this.imapServer.listenFolder && this.runningCommand ) {
+            saveLog  (`logout_process [this.imapServer.listenFolder && this.runningCommand], doing this.idleStop ()`)
+            this.idleCallBack = doLogout
+            return this.idleDoingDown ()
+        }
 
+        doLogout ()
+	}
+
+    public idleNoop ( CallBack: any ) {
+		if ( this.waitLogout || this.imapServer.exit_when_idle ) {
+			console.log (`\n\n******************** idleNoop this.waitLogout === [true] ***********************\n\n` )
+			return this.logout_process ()
+		}
+
+		this.idleDoingDone = false
+        this.canDoLogout = true
+
+		this.newSwitchRet = false
+		this.runningCommand = 'idle'
+		
+		if ( ! this.ready ) {
+			this.ready = true
+			this.imapServer.emit ( 'ready' )
+		}
+		if ( CallBack ) {
+            this.idleCallBack = CallBack
+        }
+
+		this.doCommandCallback = ( err => {
+
+			if ( err ) {
+				console.log (`this.doCommandCallback error`, err )
+				return this.imapServer.destroyAll ( null )
+			}
+			//this.debug ? debugOut ( 'IDLE this.doCommandCallback', false, this.imapServer.IMapConnect.imapUserName ) : null
+			this.runningCommand = ''
+			
+			if ( this.idleCallBack ) {
+				logger (`idleNoop ----->     this.idleCallBack!!!`)
+				this.idleCallBack ()
+				return this.idleCallBack = null
+			}
+
+			//console.log(`IDLE DONE newSwitchRet = [${newSwitchRet}] nextRead = [${this.nextRead}]`)
+			if ( this.newSwitchRet || this.reNewCount > 0 ) {
+                if ( CallBack ) {
+                    return CallBack ()
+                    
+                }
+                return this.doNewMail ()
+			}
+			//      support microsoft IDLE issue!
+			if ( this.imapServer.idleSupport ) {
+                if ( this.MicrosoftExchange ) {
+				    return this.logout_process ()
+                }
+                return this.idleNoop (null)
+			}
+			
+			setTimeout (() => {
+				if ( !this.runningCommand ) {
+					return this.idleNoop (null)
+				}
+				
+			}, NoopWaitintTimeout )
+
+		})
+
+        if ( !CallBack ) {
+            this.idleNextStop = this.imapServer.idleSupport
+			? setTimeout (() => {
+				this.idleDoingDown ()
+			}, idleInterval )
+			: null
+        }
+		
+			
+		this.commandProcess = (  text: string, cmdArray: string[], next, callback ) => {
+			
+			let kk = cmdArray[0]
+			if ( kk.length > 1 ) {
+				kk = kk[ length - 1 ]
+			}
+			//console.log (`IDLE commandProcess ! =====================> cmdArray[0] [${ cmdArray[0] }] kk [${ kk }]`)
+			switch ( kk ) {
+				
+				case '+':
+				case '*': {
+					/**
+					 * 			Seupport Microsoft Exchange IMAP4
+					 */
+					if ( /BYE Connection closed/i.test ( cmdArray[0] )) {
+						return this.imapServer.destroyAll ( new Error (`ERROR: BYE Connection closed `))
+					}
+                    if ( this.idleResponsrTime ) {
+                        clearTimeout ( this.idleResponsrTime )
+                    }
+					
+					if ( /^RECENT$|^FETCH$|^EXISTS$|^EXPUNGE$/i.test ( cmdArray[2] )) {
+						
+						this.newSwitchRet = true
+					}
+					if ( /^RECENT$|^EXISTS$|^FETCH$/i.test ( cmdArray[2] ) || this.waitLogout ) {
+						if ( this.imapServer.idleSupport ) {
+							this.idleDoingDown()
+						}
+						
+					}
+					
+					return callback ()
+				}
+				default:
+				return callback ()
+			}
+		}
+		
+		const name = this.imapServer.idleSupport ? 'IDLE' : 'NOOP'
+		this.Tag = `${ name }`
+		this.cmd = `${ this.Tag } ${ name }`
+		
+		//const cc = Crypto.randomBytes (10).toString('base64')
+		
+		this.debug ? debugOut ( this.cmd, false, this.imapServer.listenFolder || this.imapServer.imapSerialID) : null
+		if ( this.writable ) {
+			return this.push ( this.cmd + '\r\n')
+		}
+		
+		return this.imapServer.destroyAll ( null )
+        
     }
 
     public loginoutWithCheck ( CallBack: () => void ) {
@@ -547,29 +627,33 @@ class ImapServerSwitchStream extends Transform {
 
     private login ( text: string, cmdArray: string[], next: ( Err?: Error| null, cmd?: string ) => void, _callback: () => void ) {
 
-        this.doCommandCallback = ( err?: Error| null ) => {
-
+        //console.log ( `login process!` )
+		let loginTimeOut: NodeJS.Timeout
+		const loginTime = 1000 * 30
+        this.doCommandCallback = ( err ) => {
+            clearTimeout ( loginTimeOut )
             if ( ! err ) {
                 this.isImapUserLoginSuccess = true
                 return this.capability ()
             }
-            console.log (`ImapServerSwitchStream class login error `, err )
+            
             return this.imapServer.destroyAll ( err )
         }
 
         this.commandProcess = (  text: string, cmdArray: string[], next, callback ) => {
+			
             switch ( cmdArray[0] ) {
                 case '+':
                 case '*': {
                     return callback ()
                 }
                 default:
-                    return callback ()
+                return callback ()
             }
         }
-
+        
         switch ( cmdArray[0] ) {
-
+            
             case '*': {                                  /////       *
                 //          check imap server is login ok
                 if ( /^ok$/i.test ( cmdArray [1]) && this.first ) {
@@ -579,17 +663,23 @@ class ImapServerSwitchStream extends Transform {
                     this.debug ? debugOut ( this.cmd, false, this.imapServer.listenFolder || this.imapServer.imapSerialID ) : null
                     this.callback = this._login = true
                     if ( this.writable ) {
-                        return next ( null, this.cmd + '\r\n' )
-                    }
-
-                    this.imapServer.destroyAll ( null )
+						loginTimeOut = setTimeout (() => {
+							logger (inspect(`loginTimeOut ERROR! this.imapServer.destroyAll ( new Error ('Login timeout!') )`, false, 3, true ))
+							return this.doCommandCallback (new Error ('login timeout!'))
+						}, loginTime )
+						return next ( null, this.cmd + '\r\n' )
+					}
+                    
+                    return next (new Error ('!writable'))
                 }
                 //
                 return _callback ()
             }
-            default:
-
-                return this.serverCommandError ( new Error ( `login switch default ERROR!` ), _callback )
+            default:{
+				return this.serverCommandError ( new Error ( `login switch default ERROR!` ), _callback )
+			}
+            
+            
         }
 
     }
@@ -597,73 +687,91 @@ class ImapServerSwitchStream extends Transform {
     public createBox ( openBox: boolean, folderName: string, CallBack: (err?: Error| null| undefined , newMail?: boolean, UID?: string ) => void ) {
 
         this.doCommandCallback = ( err ) => {
+			
             if ( err ) {
-                if ( err.message && !/exists/i.test ( err.message )) {
-                    return CallBack ( err )
+                const err1 = err.message
+				if ( /exists/i.test ( err1 )) {
+					if ( openBox ) {
+						return this.openBox ( false, CallBack )
+					}
+                    return CallBack ()
                 }
-
-            }
-
+				/**
+				 * 		support iCloud mail server
+				 * 		The Box success created but still return UNAVAILABLE ERROR
+				 */
+				if ( /UNAVAILABLE/i.test ( err1 )) {
+					if ( openBox ) {
+						return this.openBox ( false, CallBack )
+					}
+					return CallBack ()
+				}
+				return CallBack ( err )
+			}
+            
             if ( openBox ) {
-                return this.openBoxV1 ( folderName, CallBack )
+                return this.openBox ( false, CallBack )
             }
             return CallBack ()
-        }
-
+		}
+		
         this.commandProcess = ( text: string, cmdArray: string[], next, callback ) => {
+
             return callback ()
         }
-
         this.Tag = `A${ this.imapServer.TagCount1() }`
         this.cmd = `${ this.Tag } CREATE "${ folderName }"`
-        this.debug ? debugOut ( this.cmd, false, this.imapServer.listenFolder || this.imapServer.imapSerialID ) : null
+        this.debug ? debugOut ( this.cmd, false, folderName || this.imapServer.imapSerialID ) : null
         if ( this.writable ) {
-            this.push ( this.cmd + '\r\n')
-			return
+            return this.push ( this.cmd + '\r\n')
         }
-
+        
         return this.imapServer.destroyAll ( null )
 
     }
 
-
-    public openBoxV1 ( folder: string, CallBack: ( err?: Error| null| undefined , newMail?: boolean, UID?: string ) => void) {
+    public openBox ( create: boolean, CallBack:( err?: Error| null| undefined , newMail?: boolean, UID?: string ) => void ) {
         this.newSwitchRet = false
-        let UID = ''
+
         this.doCommandCallback = ( err ) => {
             if ( err ) {
+				if ( /exist|not found|unknown folder/i.test ( err.message )) {
+					if ( create ) {
+						return this.createBox ( true, this.imapServer.listenFolder, CallBack )
+					}
+				}
+                
                 return CallBack ( err )
+                
             }
-            CallBack ( null, this.newSwitchRet, UID )
+            return CallBack ( null, this.newSwitchRet )
         }
 
         this.commandProcess = ( text: string, cmdArray: string[], next, _callback ) => {
             switch ( cmdArray[0] ) {
                 case '*': {
-                    if ( /^EXISTS$|^UIDNEXT$|UNSEEN/i.test ( cmdArray [2])) {
-                        const _num = text.split ('UNSEEN ')[1]
-                        if ( _num ) {
-
-                            UID = _num.split (']')[0]
+                    if ( /^EXISTS$/i.test ( cmdArray [2])) {
+                        if ( parseInt ( cmdArray[1])) {
+                            this.newSwitchRet = true
                         }
-                        this.newSwitchRet = true
-
                     }
                     return _callback ()
                 }
                 default:
-                    return _callback ()
+                return _callback ()
             }
         }
 
         const conText = this.imapServer.condStoreSupport ? ' (CONDSTORE)' : ''
-
+        
         this.Tag = `A${ this.imapServer.TagCount1() }`
-        this.cmd = `${ this.Tag } SELECT "${ folder }"${ conText }`
-        this.debug ? debugOut ( this.cmd, false, folder || this.imapServer.imapSerialID ) : null
-        if ( this.writable )
+        this.cmd = `${ this.Tag } SELECT "${ this.imapServer.listenFolder }"${ conText }`
+        this.debug ? debugOut ( this.cmd, false, this.imapServer.listenFolder || this.imapServer.imapSerialID ) : null
+        if ( this.writable ) {
             return this.push ( this.cmd + '\r\n')
-        this.imapServer.destroyAll ( new Error ( 'imapServer un-writeable' ))
+        }
+        
+        this.imapServer.destroyAll ( null )
     }
 
     public _logoutWithoutCheck ( CallBack: ( err?: Error| null ) => void ) {
@@ -849,7 +957,7 @@ class ImapServerSwitchStream extends Transform {
 
         this.appendWaitResponsrTimeOut = setTimeout (() => {
 
-            return this.doCommandCallback( new Error ('appendStreamV3 mail serrver write timeout!'))
+            return this.doCommandCallback( new Error ('appendStreamV4 mail serrver write timeout!'))
 
         }, _time )
 
@@ -1072,6 +1180,7 @@ class ImapServerSwitchStream extends Transform {
 
             return CallBack ( err, this.newSwitchRet )
         }
+
         this.commandProcess = ( text: string, cmdArray: string[], next , _callback ) => {
             switch ( cmdArray[0] ) {
                 case '*': {
@@ -1082,8 +1191,10 @@ class ImapServerSwitchStream extends Transform {
                     }
                     return _callback ()
                 }
-                default:
+                default: {
                     return _callback ()
+                }
+                    
             }
         }
 
@@ -1143,16 +1254,19 @@ export class qtGateImap extends EventEmitter {
     public literalPlus = false
     public fetchAddCom = ''
     public imapEnd = false
-
     public imapSerialID = ''
 
 
     private port = 0
+
     public TagCount1 () {
-        if ( ++ this.tagcount < MAX_INT )
+        if ( ++ this.tagcount < MAX_INT ) {
             return this.tagcount
+        }
+            
         return this.tagcount = 0
     }
+
     private connectTimeOut: any
 
     private connect () {
@@ -1201,7 +1315,7 @@ export class qtGateImap extends EventEmitter {
 
     }
 
-    constructor ( public IMapConnect: imapConnect, public listenFolder = '', public deleteBoxWhenEnd: boolean, public writeFolder: string, private debug: boolean, public newMail: ( mail: Buffer ) => void| null, public skipOldMail = false ) {
+    constructor ( public IMapConnect: imapConnect, public listenFolder = '', public deleteBoxWhenEnd: boolean, public writeFolder: string, private debug: boolean, public newMail: ( mail: Buffer ) => void| null, public skipOldMail = false, public exit_when_idle = false ) {
         super ()
         this.domainName = IMapConnect.imapUserName.split ('@')[1]
         this.imapSerialID = createHash ( 'md5' ).update ( JSON.stringify( IMapConnect) ).digest ('hex').toUpperCase()
@@ -1264,7 +1378,200 @@ export class qtGateImap extends EventEmitter {
 
 }
 
+export const getImapSmtpHost = function ( _email: string ) {
+	const email = _email.toLowerCase()
+	const yahoo = function ( _domain: string[] ) {
+		const domain = _domain[1]
+		if ( /yahoo.co.jp$/i.test ( domain ))
+			return 'yahoo.co.jp';
+			
+		if ( /((.*\.){0,1}yahoo|yahoogroups|yahooxtra|yahoogruppi|yahoogrupper)(\..{2,3}){1,2}$/.test ( domain )) {
+			return 'yahoo.com'
+		}
+			
+		
+		if ( /(^hotmail|^outlook|^live|^msn)(\..{2,3}){1,2}$/.test ( domain )) {
+			return 'hotmail.com'
+		}
+			
+			
+		if ( /^(me|^icould|^mac)\.com/.test ( domain )) {
+			return 'me.com'
+		}
 
+		if ( /kloak\.io/.test ( domain )) {
+			if ( /zoho/.test (_domain[0])) {
+				return 'zoho.com'
+			}
+			return 'mail.yahoo.com'
+		}
+
+		if ( /kloak\.app/.test ( domain )) {
+			return 'outlook.office365.com'
+		}
+
+		if ( /conettech\.ca/.test ( domain ) ) {
+			return 'ionos.com'
+		}
+
+		if (/kloak-io\.awsapps\.com/.test (domain)) {
+			return 'mail.us-east-1.awsapps.com'
+		}
+
+		
+			
+		return domain
+	}
+
+	const emailSplit = email.split ( '@' )
+	
+	if ( emailSplit.length !== 2 ) {
+		return null
+	}
+		
+		
+	const domain = yahoo ( emailSplit )
+	
+	const ret = {
+		imap: 'imap.' + domain,
+		smtp: 'smtp.' + domain,
+		SmtpPort: [465,587,994],
+		ImapPort: 993,
+		imapSsl: true,
+		smtpSsl: true,
+		haveAppPassword: false,
+		ApplicationPasswordInformationUrl: ['']
+	}
+	
+	switch ( domain ) {
+		//		yahoo domain have two different 
+		//		the yahoo.co.jp is different other yahoo.*
+		case 'yahoo.co.jp': {
+			ret.imap = 'imap.mail.yahoo.co.jp'
+			ret.smtp = 'smtp.mail.yahoo.co.jp'
+			break
+		}
+		
+
+		//			gmail
+		case 'google.com':
+		case 'googlemail.com':
+		case 'gmail': {
+			ret.haveAppPassword = true;
+			ret.ApplicationPasswordInformationUrl = [
+				'https://support.google.com/accounts/answer/185833?hl=zh-Hans',
+				'https://support.google.com/accounts/answer/185833?hl=ja',
+				'https://support.google.com/accounts/answer/185833?hl=en'
+			]
+			break
+		}
+		
+
+        case 'gandi.net': {
+			ret.imap = ret.smtp = 'mail.gandi.net'
+        	break
+		}
+            
+		
+		//				yahoo.com
+		case 'rocketmail.com':
+		case 'y7mail.com':
+		case 'ymail.com':
+		case 'yahoo.com': {
+			ret.imap = 'imap.mail.yahoo.com'
+			ret.smtp = (/^bizmail.yahoo.com$/.test(emailSplit[1]))
+				? 'smtp.bizmail.yahoo.com'
+				: 'smtp.mail.yahoo.com'
+			ret.haveAppPassword = true;
+			ret.ApplicationPasswordInformationUrl = [
+				'https://help.yahoo.com/kb/SLN15241.html',
+				'https://help.yahoo.com/kb/SLN15241.html',
+				'https://help.yahoo.com/kb/SLN15241.html'
+			]
+			break
+		}
+		
+
+        case 'mail.ee': {
+			ret.smtp = 'mail.ee'
+            ret.imap = 'mail.inbox.ee'
+        	break
+		}
+            
+
+		
+        //		gmx.com
+        case 'gmx.co.uk':
+        case 'gmx.de':
+		case 'gmx.us':
+		case 'gmx.com' : {
+            ret.smtp = 'mail.gmx.com'
+			ret.imap = 'imap.gmx.com'
+			break
+        }
+		
+		//		aim.com
+		case 'aim.com': {
+			ret.imap = 'imap.aol.com'
+			break
+		}
+		
+		
+		//	outlook.com
+		case 'windowslive.com':
+		case 'hotmail.com': 
+		case 'outlook.com': {
+			ret.imap = 'imap-mail.outlook.com'
+			ret.smtp = 'smtp-mail.outlook.com'
+			break
+		}
+		
+		
+		//			apple mail
+        case 'icloud.com':
+        case 'mac.com':
+		case 'me.com': {
+			ret.imap = 'imap.mail.me.com'
+			ret.smtp = 'smtp.mail.me.com'
+			break
+		}
+		
+		
+		//			163.com
+		case '126.com':
+		case '163.com': {
+			ret.imap = 'appleimap.' + domain
+			ret.smtp = 'applesmtp.' + domain
+			break
+		}
+		
+		
+		case 'sina.com':
+		case 'yeah.net': {
+			ret.smtpSsl = false
+			break
+		}
+
+		case 'outlook.office365.com': {
+			ret.imap = 'outlook.office365.com'
+			break
+		}
+
+		case 'getseguro.io': {
+			ret.imap = 'mail.privateemail.com'
+			break
+		}
+
+		case 'zoho.com': {
+			ret.imap = 'imappro.zoho.com'
+		}
+		
+		
+	}
+	
+	return ret
+	
+}
 
 
 export class qtGateImapRead extends qtGateImap {
@@ -1340,11 +1647,8 @@ export const imapAccountTest = ( IMapConnect: imapConnect, CallBack: (  err?: Er
 
     let rImap = new qtGateImapRead ( IMapConnect, listenFolder, debug, mail => {
         rImap.logout ()
-
     })
-
     rImap.once ( 'ready', () => {
-
         rImap.logout ()
 
     })
@@ -1368,4 +1672,46 @@ export const imapGetMediaFile = ( IMapConnect: imapConnect, fileName: string, Ca
         const retText = getMailAttachedBase64 ( mail )
         return CallBack ( null, retText )
     })
+}
+export const seneMessageToFolder = ( IMapConnect: imapConnect, writeFolder: string, message: string, subject: string, createFolder: boolean, CallBack: (err: any) => void) => {
+	const wImap = new qtGateImap ( IMapConnect, '', false, writeFolder, debug, () => {} )
+	let _callback = false 
+	//console.log ( `seneMessageToFolder !!! ${ subject }`)
+	wImap.once ( 'error', err => {
+		logger (inspect (`wImap.once ( 'error')`, false, 3, true ), err )
+		wImap.destroyAll ( err )
+		if ( !_callback ) {
+			CallBack ( err )
+			return _callback = true 
+		}
+	})
+
+	wImap.once ( 'ready', () => {
+		return series ([
+			next => {
+                if ( !createFolder ) {
+                    return next ()
+                }
+                return wImap.imapStream?.createBox ( false, writeFolder, next )
+            },
+			next => wImap.imapStream?.appendStreamV4( message, subject, writeFolder, next ),
+			next => wImap.imapStream?._logoutWithoutCheck ( next )
+		], err => {
+			logger (inspect (`seneMessageToFolder series error!`, false, 3, true ), err )
+			_callback = true
+			if ( err ) {
+				wImap.destroyAll ( err )
+			}
+			return CallBack ( err )
+		})
+	})
+
+	wImap.once ('end', err => {
+		if (err) {
+			logger (`seneMessageToFolder on end had ERROR try again`, err )
+			return seneMessageToFolder (IMapConnect, writeFolder, message, subject, createFolder, CallBack)
+		}
+		logger (`seneMessageToFolder on end have no ERROR!`)
+	})
+	return 
 }

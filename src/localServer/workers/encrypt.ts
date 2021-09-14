@@ -21,8 +21,8 @@ const encryptWorkerDoCommand = ( cmd: worker_command ) => {
             
         }
 
-        case 'encrypt_TestPasscord': {
-            return encrypt_TestPasscord (cmd)
+        case 'encrypt_TestPasscode': {
+            return encrypt_TestPasscode (cmd)
         }
 
         case 'encrypt_lock': {
@@ -35,10 +35,11 @@ const encryptWorkerDoCommand = ( cmd: worker_command ) => {
                     publicKeyObj: null
                 }
             }
+            
             cmd.data = [{
                 preferences: systemInitialization?.preferences,
-                passcord: {
-                    testPasscord: null,
+                passcode: {
+                    testPasscode: null,
                     createPasscode: null,
                     status: 'LOCKED'
                 },
@@ -46,6 +47,14 @@ const encryptWorkerDoCommand = ( cmd: worker_command ) => {
             }]
             
             return returnCommand (cmd)
+        }
+
+        case 'invitation': {
+            return invitation (cmd)
+        }
+
+        case 'encrypt_deletePasscode': {
+            return encrypt_deletePasscode (cmd)
         }
 
         default: {
@@ -69,7 +78,8 @@ const initEncryptWorker = () => {
     self.importScripts ( baseUrl + 'utilities.js' )
     self.importScripts ( baseUrl + 'generatePassword.js' )
     self.importScripts ( baseUrl + 'storage.js' )
-
+    self.importScripts ( baseUrl + 'seguroSetup.js' )
+    workerReady = true
     onmessage = e => {
         const jsonData = buffer.Buffer.from ( e.data ).toString()
 		let cmd: worker_command
@@ -85,6 +95,7 @@ const initEncryptWorker = () => {
 
         return encryptWorkerDoCommand ( cmd )
     }
+    
     return checkStorage ()
 }
 
@@ -92,6 +103,7 @@ let SeguroKeyChain: encrypt_keys_object | null = null
 let systemInitialization: systemInitialization|null = null
 let pass: passInit| null = null
 let systemInitialization_UUID = ''
+let workerReady = false
 
 const initSeguroData = ( cmd: worker_command ) => {
     
@@ -321,7 +333,7 @@ const createKey = ( passwd: string, name: string, email: string ) => {
 	return openpgp.generateKey ( option )
 }
 
-const encrypt_TestPasscord = (cmd: worker_command) => {
+const encrypt_TestPasscode = (cmd: worker_command) => {
     if ( !cmd.data?.length || !pass ) {
         cmd.err = 'INVALID_DATA'
         return returnCommand (cmd)
@@ -337,6 +349,22 @@ const encrypt_TestPasscord = (cmd: worker_command) => {
 
         return storage_StoreContainerData (cmd)
     })
+}
+
+const invitation = (cmd: worker_command) => {
+    const code: string = cmd.data [0]
+    // if (!UuidV4Check.test (code)) {
+    //     cmd.err = 'NO_UUID'
+    //     return returnCommand (cmd)
+    // }
+    // return async.waterfall ([
+    //     (next: any ) => localServerGetJSON ('testImapServer', 'GET', next )
+    // ], (err, data ) => {
+    //     if ( err ) {
+    //         return logger (`invitation getJSON ('testImap') Error`, err )
+    //     }
+    //     return logger (data)
+    // })
 }
 
 initEncryptWorker ()

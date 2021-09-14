@@ -1,5 +1,21 @@
 # `seguro-gateway` CHANGELOG
 
+## `0.12.0`
+
+### Additions
+
+- deletePasscode
+
+### Changes
+
+- None.
+
+### Fixes
+
+- Fixed 'passcord' word
+
+
+
 ## `0.11.1`
 
 ### Additions
