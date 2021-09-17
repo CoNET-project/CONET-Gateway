@@ -1,6 +1,6 @@
 {
     "name": "@conet-project/seguro-gateway",
-    "version": "0.12.0",
+    "version": "0.12.1",
     "license": "UNLICENSED",
     "files": [
         "./build"
@@ -20,10 +20,10 @@
         "cors": "^2.8.5",
         "express": "^4.17.1",
         "fs-extra": "^10.0.0",
-        "multer": "^1.4.3",
-        "openpgp": "^5.0.0-6",
+        "openpgp": "^5.0.0",
+        "stripe": "^8.175.0",
         "uuid": "^8.3.2",
-        "ws": "^8.2.1",
+        "ws": "^8.2.2",
         "yargs": "^17.1.1"
     },
     "devDependencies": {

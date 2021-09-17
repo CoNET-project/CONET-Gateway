@@ -1,5 +1,20 @@
 # `seguro-gateway` CHANGELOG
 
+## `0.12.1`
+
+### Additions
+
+- Node
+
+### Changes
+
+- None.
+
+### Fixes
+
+- Fixed runtime error!
+
+
 ## `0.12.0`
 
 ### Additions

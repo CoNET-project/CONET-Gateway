@@ -1,15 +1,19 @@
 const returnInitNull = (cmd: worker_command) => {
     const data: systemInitialization = {
         preferences: {
-            colorTheme: 'LIGHT',
-            language: 'en-CA'
+            preferences: {
+                colorTheme: 'LIGHT',
+                language: 'en-CA'
+            }
         },
         passcode: {
             testPasscode: null,
             createPasscode: null,
             status: 'NOT_SET'
         },
-        profiles: []
+        profile: {
+            profiles: []
+        }
     }
     cmd.data = [data]
     systemInitialization = data
@@ -25,7 +29,7 @@ const checkStorage = () => {
         data: []
     }
     
-    invitation (cmd)
+    //invitation (cmd)
     database.get ('init').then ((doc: any) => {
         
         try {
@@ -38,7 +42,7 @@ const checkStorage = () => {
         if ( systemInitialization_UUID = initData.uuid ) {
             return getUUIDFragments (cmd.data[0].uuid, ( err, data: any ) => {
                 if ( err ) {
-                    cmd.err = 'PouchDB_ERROR'
+                    cmd.err = ['PouchDB_ERROR']
                     logger (`checkStorage getUUIDFragments [${ cmd.data[0] }] ERROR`, err )
                     return returnInitNull (cmd)
                 }
@@ -62,16 +66,21 @@ const checkStorage = () => {
                     },
                     isReady: false
                 }
+
                 pass = initData.id
                 const initLocked = () => {
                     const data: systemInitialization = {
-                        preferences: initData.preferences,
+                        preferences: {
+                            preferences: initData.preferences,
+                        },
                         passcode: {
                             testPasscode: null,
                             createPasscode: null,
                             status: 'LOCKED'
                         },
-                        profiles: []
+                        profile: {
+                            profiles: []
+                        }
                     }
                     cmd.data = [systemInitialization = data]
                     returnCommand ( cmd )
@@ -82,7 +91,7 @@ const checkStorage = () => {
         }
         return returnInitNull (cmd)
     }).catch ((ex: Error ) => {
-        cmd.err = 'PouchDB_ERROR'
+        cmd.err = ['PouchDB_ERROR']
         return returnInitNull (cmd)
     })
 }
@@ -101,7 +110,7 @@ const storeContainer = ( preferencesUUID: string, CallBack: ( err?: Error ) => v
             container: container.containerKeyPair,
             id: pass,
             uuid: preferencesUUID,
-            preferences: systemInitialization?.preferences
+            preferences: systemInitialization?.preferences.preferences
         })).toString ('base64')
     }
     if ( !database ) {
@@ -114,7 +123,7 @@ const storeContainer = ( preferencesUUID: string, CallBack: ( err?: Error ) => v
     .then(() => CallBack())
     .catch ( ex => {
         database?.put(putData)
-        .then(() => CallBack() )
+        .then(() => CallBack())
         .catch ( ex => {
             CallBack ( ex )
         })
@@ -184,7 +193,7 @@ const storage_StoreContainerData = (cmd: worker_command) => {
     ], err => {
         if ( err ) {
             logger (`storage_StoreContainerData ERROR!`, err )
-            cmd.err = 'PouchDB_ERROR'
+            cmd.err = ['PouchDB_ERROR']
             return returnCommand ( cmd )
         }
         return returnSeguroInitializationData (cmd)
@@ -194,7 +203,7 @@ const storage_StoreContainerData = (cmd: worker_command) => {
 const returnSeguroInitializationData = (cmd: worker_command) => {
     delete cmd.err
     if ( !systemInitialization || !SeguroKeyChain ) {
-        cmd.err = 'NOT_READY'
+        cmd.err = ['NOT_READY']
         logger (`storage_StoreContainerData !systemInitialization Error!`)
         return returnCommand ( cmd )
     }
@@ -203,31 +212,36 @@ const returnSeguroInitializationData = (cmd: worker_command) => {
     const _profile: profile[] = []
     profile.forEach ( n => {
         const ret: profile = {
-            keyOpenPGP_obj: null,
             publicKeyArmor: '',
             keyID: n.keyID,
             privateKeyArmor: '',
+            keyOpenPGP_obj: null,
             nickname: n.nickname || '',
             tags: n.tags || [],
             alias: n.alias || ''
         }
+        
         _profile.push (ret)
     })
     const data: systemInitialization = {
         preferences: {
-            colorTheme: preferences.colorTheme,
-            language: preferences.language
+            preferences: {
+                colorTheme: preferences.preferences.colorTheme,
+                language: preferences.preferences.language
+            }
         },
         passcode: {
             testPasscode: null,
             createPasscode: null,
             status: 'UNLOCKED'
         },
-        profiles: _profile
+        profile: {
+            profiles: _profile
+        }
     }
     cmd.data = [data]
-    logger (`storage_StoreContainerData SUCCESS!`)
-    return returnCommand ( cmd )
+    return returnCommand (cmd)
+    
 }
 
 const encrypt_deletePasscode = (cmd: worker_command) => {
@@ -240,7 +254,7 @@ const encrypt_deletePasscode = (cmd: worker_command) => {
     .then (() => returnInitNull (cmd))
     .catch ( err => {
         logger (`encrypt_deletePasscode ERROR`, err )
-        cmd.err = 'PouchDB_ERROR'
+        cmd.err = ['PouchDB_ERROR']
         return returnCommand (cmd)
     })
 }

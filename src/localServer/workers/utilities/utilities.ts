@@ -151,7 +151,7 @@ const encrypt_Seguro_INIT_data_ToPGP = ( cmd: worker_command ) => {
 
     if ( !SeguroKeyChain || !systemInitialization ) {
         logger (`encrypt.js encrypt_InitSeguroDataToPGP error: !SeguroKeyChain?.toStoreObj || !systemInitialization`, cmd )
-        cmd.err = 'INVALID_DATA'
+        cmd.err = ['INVALID_DATA']
         return returnCommand(cmd)
     }
     
@@ -163,7 +163,7 @@ const encrypt_Seguro_INIT_data_ToPGP = ( cmd: worker_command ) => {
     return encryptWithContainerKey(JSON.stringify (encryptObj), (err, encryptedText) => {
         if ( err ) {
             logger(`encrypt.js encryptWithContainerKey OpenPGP error`, err)
-            cmd.err = 'OPENPGP_RUNNING_ERROR'
+            cmd.err = ['OPENPGP_RUNNING_ERROR']
             return returnCommand(cmd)
         }
         if ( encryptedText && SeguroKeyChain) {
@@ -207,20 +207,104 @@ const encryptWithContainerKey = ( text: string, CallBack: ( err: Error|null, enc
 
 }
 
-
-const localServerGetJSON = (command: string, method: string, CallBack: ( err: number|null, payload: any) => void ) => {
+const localServerGetJSON = (command: string, method: string, postJSON: string, CallBack: (err: number|null, payload?: any) => void ) => {
     const xhr = new XMLHttpRequest()
     const url = self.name + command
     xhr.open( method, url, true )
     xhr.withCredentials = false
+    xhr.setRequestHeader("Content-Type", "application/json;charset=UTF-8")
     xhr.onload = () => {
         const status = xhr.status
         if (status === 200) {
-            return CallBack(null, xhr.response)
+            if ( !xhr.response ) {
+                return CallBack(null, '')
+            }
+            let ret = ''
+            try {
+                ret = JSON.parse (xhr.response)
+            } catch (ex) {
+                logger (`localServerGetJSON JSON.parse (xhr.response) ERROR`)
+                return CallBack (999)
+            }
+            return CallBack(null, ret)
         }
+        logger (`localServerGetJSON LOCALSERVER return status[${status}] !== 200 ERROR`)
         return CallBack (status, xhr.response)
     }
-    return xhr.send()
+    return xhr.send(postJSON)
+}
+
+const testNetwork = (CallBack: (err?: netWorkError|null, data?: testImapResult[]) => void) => {
+    let ret: netWorkError
+    return localServerGetJSON ( 'testImapServer', 'GET', '', (err, data: testImapResult[]) => {
+        if (err) {
+            ret = 'LOCALSERVER_ERROR'
+            return CallBack (ret)
+        }
+        const errServer = data.filter ( n => n.error !== null )
+        // if ( !errServer.length ) {
+        //     return CallBack ( null, data )
+        // }
+        if ( errServer.length > 4 ) {
+            ret = 'NOT_INTERNET'
+            return CallBack ( ret )
+        }
+        // const ret: netWorkError[] = []
+        const stripe = errServer.filter ( n => n.n.server === 'api.stripe.com')
+        if ( stripe.length ) {
+            ret = 'NOT_STRIPE'
+            return CallBack (ret)
+        }
+        // const office365 = errServer.filter ( n => n.n.server === 'outlook.office365.com')
+        // if ( office365.length ) {
+        //     ret.push ('NOT_OFFICE365')
+        // }
+        // const me = errServer.filter ( n => n.n.server === 'imap.mail.me.com')
+        // if (me.length) {
+        //     ret.push ('NOT_ME_COM')
+        // }
+        // const zoho = errServer.filter ( n => n.n.server === 'imap.zoho.com')
+        // if ( zoho.length ) {
+        //     ret.push ('NOT_ZOHO')
+        // }
+        // const yahoo = errServer.filter ( n => n.n.server === 'imap.mail.yahoo.com')
+        // if ( yahoo.length ) {
+        //     ret.push ('NOT_YAHOO')
+        // }
+        // const gmail = errServer.filter ( n => n.n.server === 'imap.gmail.com')
+        // if ( gmail.length ) {
+        //     ret.push ('NOT_GMAIL')
+        // }
+        return CallBack ( null, data )
+    })
 }
 
 const UuidV4Check = /^[0-9A-F]{8}-[0-9A-F]{4}-4[0-9A-F]{3}-[89AB][0-9A-F]{3}-[0-9A-F]{12}$/
+
+const chooseFirstSeguroIMAP = (testData: testImapResult[]) => {
+    const errServer = testData.filter ( n => n.error !== null )
+    let gotoEnd = false
+    const imapLength = seguroSetup.publicImapAccounts.length
+    // @ts-ignore
+    const getOne = (n: number) => {
+        const imap = seguroSetup.publicImapAccounts [n]
+        const isBlock = errServer.filter ( _n => _n.n.server === imap.imapServer )
+        if ( isBlock.length ) {
+            logger (`isBlock`)
+            n ++
+            if ( n < imapLength ) {
+                return getOne (n)
+            } else {
+                if ( gotoEnd ) {
+                    logger (`chooseFirstSeguroIMAP all Seguro account can not use!`)
+                    return null
+                }
+                gotoEnd = true
+                return getOne(0)
+            }
+        } else {
+            return imap
+        }
+    }
+    return getOne (Math.round (Math.random()*(seguroSetup.publicImapAccounts.length -1)))
+}

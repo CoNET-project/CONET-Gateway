@@ -72,7 +72,7 @@ class ImapServerSwitchStream extends Transform {
     public doCommandCallback: ( Err?: Error| null , commandLine?: string ) => void = () => {}
     private _login = false
     private first = true
-    public waitLogout = null
+    public waitLogout = false
     public waitLogoutCallBack: any
     public idleResponsrTime: NodeJS.Timer | null = null
     private ready = false
@@ -97,7 +97,7 @@ class ImapServerSwitchStream extends Transform {
 
     public idleDoingDown () {
         if ( this.idleNextStop ) {
-		clearTimeout ( this.idleNextStop )
+		    clearTimeout ( this.idleNextStop )
         }
 		if ( this.idleDoingDone || this.runningCommand !== 'idle') {
 			return logger (`idleDoingDown but this.idleDoingDone = [${ this.idleDoingDone }] or this.runningCommand !== 'idle' ${ this.runningCommand }`) 
@@ -459,9 +459,30 @@ class ImapServerSwitchStream extends Transform {
         
     }
 
+    public logout ( callback: () => void ) {
+        
+        this.waitLogoutCallBack = callback
+
+        if ( this.waitLogout ) {
+            return 
+        }
+            
+		this.waitLogout = true
+		
+		if ( !this.imapServer.listenFolder ) {
+			return this.logout_process ()
+		}
+		return this.idleDoingDown ()
+    }
+
     public logout_process () {
 		
 		const CallBack = () => {
+            if ( typeof this.imapServer.socket?.destroy === 'function') {
+                logger (`logout_process this.imapServer.socket.destroy()!`)
+                this.imapServer.socket.destroy()
+            }
+            
 			if ( this.waitLogoutCallBack && typeof this.waitLogoutCallBack === 'function') {
                 return this.waitLogoutCallBack ()
             }
@@ -1281,8 +1302,10 @@ export class qtGateImap extends EventEmitter {
 				this.socket.setKeepAlive ( true )
 				if ( this.imapStream ) {
 					this.socket.pipe ( this.imapStream ).pipe ( this.socket ).once ( 'error', err => {
+                        logger (`imapStream pipe line once 'error'`, err )
 						return this.destroyAll ( err )
 					}).once ( 'end', () => {
+                        logger (`imapStream pipe line once 'end'`)
 						return this.destroyAll ( null )
 					})
 				}
@@ -1581,7 +1604,7 @@ export class qtGateImapRead extends qtGateImap {
     constructor ( IMapConnect: imapConnect, listenFolder: string, deleteBoxWhenEnd: boolean, newMail: ( mail: Buffer ) => void, skipOldMail = false ) {
 
         super ( IMapConnect, listenFolder, deleteBoxWhenEnd, '', debug, newMail, skipOldMail )
-        this.once ( 'ready', () => {
+        this.once ( 'openBoxReady', () => {
             this.openBox = true
         })
     }
@@ -1612,18 +1635,6 @@ export const getMailSubject = ( email: Buffer ) => {
     }
     return yy.split(/^subject\: +/i)[1]
 }
-
-export const getMailAttachedBase64 = ( email: Buffer ) => {
-
-    const attachmentStart = email.indexOf ('\r\n\r\n')
-    if ( attachmentStart < 0 ) {
-        console.log ( `getMailAttached error! can't faind mail attahced start!`)
-        return null
-    }
-    const attachment = email.slice ( attachmentStart + 4 )
-    return attachment.toString()
-}
-
 
 export const imapAccountTest = ( IMapConnect: imapConnect, CallBack: (  err?: Error, ret?: () => void ) => void ) => {
     debug ? saveLog ( `start test imap [${ IMapConnect.imapUserName }]`, true ) : null
@@ -1669,10 +1680,11 @@ export const imapAccountTest = ( IMapConnect: imapConnect, CallBack: (  err?: Er
 export const imapGetMediaFile = ( IMapConnect: imapConnect, fileName: string, CallBack: ( err: null,retText: string|null ) => void ) => {
     let rImap = new qtGateImapRead ( IMapConnect, fileName, debug, mail => {
         rImap.logout ()
-        const retText = getMailAttachedBase64 ( mail )
+        const retText = getMailAttached ( mail )
         return CallBack ( null, retText )
     })
 }
+
 export const seneMessageToFolder = ( IMapConnect: imapConnect, writeFolder: string, message: string, subject: string, createFolder: boolean, CallBack: (err: any) => void) => {
 	const wImap = new qtGateImap ( IMapConnect, '', false, writeFolder, debug, () => {} )
 	let _callback = false 

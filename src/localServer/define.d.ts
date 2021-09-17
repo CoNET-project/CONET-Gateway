@@ -58,7 +58,7 @@ interface Window {
 type keyOpenPGP_obj = {
 	publicKeyObj: any
 	privateKeyObj: any
-}
+} 
 
 interface keyPair {
 	publicKeyArmor: string
@@ -82,7 +82,12 @@ interface passInit {
 }
 
 declare type WorkerCommandError = 'NOT_READY'|'INVALID_DATA'|'NO_UUID'|'INVALID_COMMAND'|'OPENPGP_RUNNING_ERROR'|
-'PouchDB_ERROR'|'GENERATE_PASSCODE_ERROR'|'FAILURE'|'COUNTDOWN'
+'PouchDB_ERROR'|'GENERATE_PASSCODE_ERROR'|'FAILURE'|'COUNTDOWN'| netWorkError | verification
+
+declare type netWorkError = 'NOT_INTERNET'|'NOT_STRIPE'|'ALL_EMAIL_SERVER_CAN_NOT_CONNECTING'|'LOCALSERVER_ERROR'|'WAITING_SEGURO_RESPONSE_TIMEOUT'|
+'EMAIL_ACCOUNT_AUTH_ERROR'
+
+declare type verification = 'INCORRECT_CODE'
 
 declare type WorkerCommand = 'helloWorld'|'READY'|
 	'encrypt_TestPasscode'|'encrypt_createPasscode'|'encrypt_lock'|'invitation'|'encrypt_deletePasscode'
@@ -91,7 +96,7 @@ type worker_command = {
 	cmd: WorkerCommand
 	data: any[]
 	uuid?: string
-	err?: WorkerCommandError
+	err?: WorkerCommandError[]
 }
 
 interface profile extends keyPair {
@@ -128,8 +133,34 @@ interface Preferences {
     language: Language
 }
 
-interface systemInitialization {
+interface profileObj {
+	profiles: profile[]
+	
+}
+
+interface PreferencesObj {
 	preferences: Preferences
-	profiles: profile []
+}
+
+interface systemInitialization {
+	preferences: PreferencesObj
+	profile: profileObj
 	passcode: Passcode
+}
+
+interface testImapResult {
+	error: string
+	n: {
+		server: string
+		port: number
+	}
+	time: number
+}
+
+interface SeguroInvitation {
+	imapConnect: imapConnect
+	client_folder_name: string
+	device_publicKeyArmor: string
+	seguropublicKeyArmor: string
+	invitation: string
 }

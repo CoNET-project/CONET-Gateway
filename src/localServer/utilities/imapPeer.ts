@@ -1,8 +1,8 @@
 import { EventEmitter } from 'events'
-import { getMailSubject, getMailAttached, saveLog, qtGateImap, qtGateImapRead } from './Imap'
+import { getMailSubject, getMailAttached, saveLog, qtGateImap, qtGateImapRead, logger } from './Imap'
 import { series } from 'async'
 import { v4 } from 'uuid'
-import { inspect } from 'util'
+import { callbackify, inspect } from 'util'
 
 const resetConnectTimeLength = 1000 * 60 * 10
 const pingPongTimeOut = 1000 * 10
@@ -330,4 +330,32 @@ export class imapPeer extends EventEmitter {
         return seneMessageToFolder ( this.imapData, writeBox, data, subject, !this.connected, CallBack )
     }
 
+}
+
+export const waitSeguroResponse = (IMapConnect: imapConnect, client_folder_name: string, CallBack: (err: Error|null, data?: string) => void) => {
+    const mail = (mes: Buffer) => {
+        const subject = getMailSubject ( mes )
+        const attr = getMailAttached ( mes )
+        clearTimeout (timeout)
+        CallBack (null, attr)
+        return rImap.logout (() => {
+            return logger (`rImap.logout SUCCESS`)
+        })
+    }
+    const rImap = new qtGateImapRead ( IMapConnect, client_folder_name, debug, mail )
+
+    const timeout = setTimeout (() => {
+        logger (`waitSeguroResponse timeout!`)
+        return rImap.imapStream?.logout (() => {
+            return CallBack (new Error('timeout'))
+        })
+    }, 1000 * 15 )
+
+    rImap.once ( 'error', err => {
+        debug ? saveLog ( `rImap on Error [${ err.message }]`, true ): null
+        if ( err && err.message && /auth|login|log in|Too many simultaneous|UNAVAILABLE/i.test ( err.message )) {
+            return CallBack (new Error('auth'))
+        }
+        return CallBack (err)
+    })
 }

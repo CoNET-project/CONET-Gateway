@@ -6,36 +6,41 @@ import { seneMessageToFolder, imapPeer } from './imapPeer'
 
 import { inspect } from 'util'
 
-const connerver = ( imapServer: string, CallBack: ( err?: Error|null, time?: number ) => void ) => {
-	let err = null
-	let time
+const connerver = ( imapServer: string, port: number, CallBack: ( err?: string|null, time?: number ) => void ) => {
+	let err = ''
+	let time = 0
+    const timeOut = setTimeout (() => {
+        err = 'timeout'
+        if ( typeof conn.destroy === 'function') {
+			conn.destroy ()
+		}
+        return CallBack (err)
+    }, 3000 )
 
 	const _connect = () => {
+        clearTimeout (timeOut)
 		time = new Date ().getTime () - startTime
 		conn.end ()
-		return CallBack ( null, time )
+        if ( !conn.authorized ) {
+            const err = conn.authorizationError
+            return CallBack ( err.message, time)
+        }
+		return CallBack (null, time)
 	}
+    
 
 	const startTime = new Date ().getTime ()
-	const conn = connect ( { host: imapServer, servername: imapServer, port: 993 }, _connect )
+	const conn = connect ( { host: imapServer, servername: imapServer, port: port }, _connect )
 
 	conn.once ( 'error', _err => {
-		err = _err
-		if ( typeof conn.destroy === 'function') {
-			conn.destroy ()
-		}
-		CallBack ( err )
-	})
 
-	conn.once ( 'timeout', () => {
-		err = new Error ('timeout')
 		if ( typeof conn.destroy === 'function') {
 			conn.destroy ()
 		}
-		CallBack ( err )
 	})
 
 }
+
 
 /**
  * Test network online
@@ -49,14 +54,37 @@ const connerver = ( imapServer: string, CallBack: ( err?: Error|null, time?: num
  * }
  */
 export const testImapServer = ( CallBack: ( err: null, {}) => void ) => {
-	const imapServers = ['imap.gmail.com', 'imap.mail.yahoo.com','imap.mail.me.com','outlook.office365.com','imap.zoho.com']
+	const imapServers = [ 
+		{
+			server: 'imap.gmail.com',
+			port: 993
+		}, 
+		{
+			server: 'imap.mail.yahoo.com',
+			port: 993
+		}, 
+		{
+			server: 'imap.mail.me.com',
+			port: 993
+		},
+		{
+			server: 'outlook.office365.com',
+			port: 993
+		},
+		{
+			server: 'imap.zoho.com',
+			port: 993
+		},
+		{
+			server: 'api.stripe.com',
+			port: 443
+		}
+	]
 	const ret: {}[] = []
-	each ( imapServers, ( n, next ) => {
-		return connerver ( n, ( err: Error | null | undefined, data: any ) => {
-			ret.push ({ name: n, error: err, time: data })
-			next ()
-		})
-	}, () => {
+	return each ( imapServers, ( n, next ) => connerver ( n.server, n.port,( err: string | null | undefined, data: any ) => {
+        ret.push ({ n, error: err, time: data })
+        return next ()
+    }), () => {
 		return CallBack ( null, ret )
 	})
 }

@@ -3,7 +3,7 @@ const encryptWorkerDoCommand = ( cmd: worker_command ) => {
     switch ( cmd.cmd ) {
         case 'encrypt_createPasscode': {
             if ( !cmd.data || cmd.data.length < 2) {
-                cmd.err = 'INVALID_DATA'
+                cmd.err = ['INVALID_DATA']
                 return returnCommand ( cmd )
             }
             delete cmd.err
@@ -12,7 +12,7 @@ const encryptWorkerDoCommand = ( cmd: worker_command ) => {
             
             return createNumberPasscode ( cmd, ( err, _pass ) => {
                 if ( err ) {
-                    cmd.err = 'GENERATE_PASSCODE_ERROR'
+                    cmd.err = ['GENERATE_PASSCODE_ERROR']
                     return returnCommand (cmd)
                 }
                 pass = _pass
@@ -58,7 +58,7 @@ const encryptWorkerDoCommand = ( cmd: worker_command ) => {
         }
 
         default: {
-            cmd.err = 'INVALID_COMMAND'
+            cmd.err = ['INVALID_COMMAND']
             returnCommand (cmd)
             return console.log (`encryptWorkerDoCommand unknow command!`)
         }
@@ -89,7 +89,7 @@ const initEncryptWorker = () => {
 			return console.dir ( ex )
 		}
         if ( !workerReady ) {
-            cmd.err = 'NOT_READY'
+            cmd.err = ['NOT_READY']
             return returnCommand ( cmd )
         }
 
@@ -104,6 +104,7 @@ let systemInitialization: systemInitialization|null = null
 let pass: passInit| null = null
 let systemInitialization_UUID = ''
 let workerReady = false
+let Seguro_PublickeyObj:any = null
 
 const initSeguroData = ( cmd: worker_command ) => {
     
@@ -174,7 +175,7 @@ const initSeguroData = ( cmd: worker_command ) => {
         ], err => {
             if (err) {
                 logger (`initEncryptObject ERROR`, err )
-                cmd.err = 'OPENPGP_RUNNING_ERROR'
+                cmd.err = ['OPENPGP_RUNNING_ERROR']
                 return returnCommand (cmd)
             }
 
@@ -182,11 +183,44 @@ const initSeguroData = ( cmd: worker_command ) => {
         })
     })
     .catch (( ex: any ) => {
-        cmd.err = 'OPENPGP_RUNNING_ERROR'
+        cmd.err = ['OPENPGP_RUNNING_ERROR']
         cmd.data = []
         logger (`initSeguroData on ERROR`, ex)
         return returnCommand ( cmd )
     })
+}
+
+const encrypt_with_Seguro = (text: string, CallBack: (err?: WorkerCommandError|null, encryptedText?: string ) => void ) => {
+    const encrypte = () => {
+        const encryptObj = {
+            message: '',
+            encryptionKeys: Seguro_PublickeyObj,
+            signingKeys: SeguroKeyChain?.keyChain.seguroAccountKeyPair.keyOpenPGP_obj?.privateKeyObj
+        }
+        openpgp.createMessage({ text: buffer.Buffer.from (text).toString('base64') })
+        .then ((n: any)=> {
+            encryptObj.message = n
+            return openpgp.encrypt(encryptObj)
+        })
+        .then((n:string)=> {
+            return CallBack (null, n)
+        })
+        .catch ((ex: Error) => {
+            const ret: WorkerCommandError = 'OPENPGP_RUNNING_ERROR'
+            return CallBack ( ret )
+        })
+    }
+    if ( !Seguro_PublickeyObj ) {
+        return makePublicKeyOBJ (seguroSetup.seguroPublicKey, (err, obj )=> {
+            if ( err ) {
+                const ret: WorkerCommandError = 'OPENPGP_RUNNING_ERROR'
+                return CallBack (ret)
+            }
+            Seguro_PublickeyObj = obj
+            return encrypte ()
+        })
+    }
+    return encrypte ()
 }
 
 const createEncryptObject = ( CallBack: (err: Error|null) => void ) => {
@@ -307,7 +341,7 @@ const initEncryptObject = (cmd: worker_command, CallBack: (err?: Error|null) => 
         return decodePasscode (cmd, (err) => {
             if ( err ) {
                 logger (`initEncryptObject decodePasscode ERROR!`, err )
-                cmd.err = 'FAILURE'
+                cmd.err = ['FAILURE']
                 return returnCommand (cmd)
             }
             return unlockContainerKeyPair ()
@@ -335,7 +369,7 @@ const createKey = ( passwd: string, name: string, email: string ) => {
 
 const encrypt_TestPasscode = (cmd: worker_command) => {
     if ( !cmd.data?.length || !pass ) {
-        cmd.err = 'INVALID_DATA'
+        cmd.err = ['INVALID_DATA']
         return returnCommand (cmd)
     }
     
@@ -343,7 +377,7 @@ const encrypt_TestPasscode = (cmd: worker_command) => {
 
     return initEncryptObject (cmd, ( err )=> {
         if ( err ) {
-            cmd.err = 'FAILURE'
+            cmd.err = ['FAILURE']
             return returnCommand ( cmd )
         }
 
@@ -354,17 +388,64 @@ const encrypt_TestPasscode = (cmd: worker_command) => {
 const invitation = (cmd: worker_command) => {
     const code: string = cmd.data [0]
     // if (!UuidV4Check.test (code)) {
-    //     cmd.err = 'NO_UUID'
+    //     cmd.err = ['NO_UUID']
     //     return returnCommand (cmd)
     // }
-    // return async.waterfall ([
-    //     (next: any ) => localServerGetJSON ('testImapServer', 'GET', next )
-    // ], (err, data ) => {
-    //     if ( err ) {
-    //         return logger (`invitation getJSON ('testImap') Error`, err )
-    //     }
-    //     return logger (data)
-    // })
+    let kk: SeguroInvitation|null = null
+    return async.waterfall ([
+        (next: any ) => testNetwork ( next ),
+        ( data: testImapResult[], next: any ) => {
+            const imap = chooseFirstSeguroIMAP (data)
+            if ( !imap ) {
+                const ret: netWorkError = 'ALL_EMAIL_SERVER_CAN_NOT_CONNECTING'
+                return next (ret)
+            }
+            if ( !SeguroKeyChain?.keyChain) {
+                const ret: WorkerCommandError = 'NOT_READY'
+                return next ( ret )
+            }
+
+            kk = {
+                device_publicKeyArmor: SeguroKeyChain.keyChain.deviceKeyPair.publicKeyArmor,
+                seguropublicKeyArmor: SeguroKeyChain.keyChain.seguroAccountKeyPair.publicKeyArmor,
+                imapConnect: imap,
+                client_folder_name: getUUIDv4(),
+                invitation: code
+            }
+            return encrypt_with_Seguro (JSON.stringify (kk), next)
+        }
+        //, ( encryptedText: string, next: any ) => localServerGetJSON ('sendToStripe','POST', JSON.stringify({postData: encryptedText }), next)
+        , (data: any, next: any ) => localServerGetJSON ('waitSeguroResponse','POST',
+            JSON.stringify({imapConnect: kk?.imapConnect, client_folder_name: kk?.client_folder_name }), (err, data) => {
+            if ( err ) {
+                let ret: netWorkError 
+                switch (err) {
+                    //      Auth error
+                    case 401: {
+                        ret = 'EMAIL_ACCOUNT_AUTH_ERROR'
+                    }
+                    //      Timeout
+                    case 402: {
+                        ret = 'WAITING_SEGURO_RESPONSE_TIMEOUT'
+                    }
+                    default: {
+                        
+                    }
+                }
+                // @ts-ignore
+                return next (ret)
+            }
+            
+        })
+    ], (err: any, data ) => {
+        if ( err ) {
+            cmd.err = [err]
+            return logger (`invitation getJSON ('testImap') Error`, err )
+        }
+        return logger (data)
+    })
 }
+
+
 
 initEncryptWorker ()

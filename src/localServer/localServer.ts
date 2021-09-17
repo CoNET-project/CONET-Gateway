@@ -5,13 +5,33 @@ import { readKey, readMessage } from 'openpgp'
 import { join } from 'path'
 import * as fse from 'fs-extra'
 import { imapAccountTest, logger } from './utilities/Imap'
+import { waitSeguroResponse } from './utilities/imapPeer'
 import { inspect } from 'util'
+import { v4 } from 'uuid'
 import { testImapServer, getInformationFromSeguro, buildConnect } from './utilities/network'
 const cors = require('cors')
+
 
 const getEncryptedMessagePublicKeyID = async ( encryptedMessage: string, CallBack: ( err?: Error|null, data?: string[]) => void ) => {
     const encryptObj = await readMessage({ armoredMessage: encryptedMessage })
     return CallBack ( null, encryptObj.getEncryptionKeyIDs().map ( n => n.toHex().toUpperCase()))
+}
+
+const stripeAuth = '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'
+
+const makeMetadata = ( text: string ) => {
+    let ret = '{'
+    let n = 0
+    const makeObj = (text: string) => {
+        ret += `${n === 0?'':','}"st${n++}":"${text}"`
+    }
+    while ( text.length ) {
+        const uu = text.substr (0, 500)
+        text = text.substr (500)
+        makeObj (uu)
+    }
+    ret += '}'
+    return ret
 }
 
 
@@ -57,7 +77,8 @@ class LocalServer {
 
         app.once ( 'error', ( err: any ) => {
             logger (err)
-            return process.exit (1)
+            logger (`Local server on ERROR, try restart!`)
+            return this.initialize ()
         })
 
         app.get ('/', async ( req: express.Request, res: express.Response) => {
@@ -70,11 +91,6 @@ class LocalServer {
                 return res.status(200).sendFile(launcherHTMLPath);
             }
             return res.status(200).send("<p style='font-family: Arial, Helvetica, sans-serif;'>Oh no! You don't have the Kloak Platform Launcher!</p>")
-        });
-
-        app.once ( 'error', ( err: any ) => {
-            logger (err)
-            return process.exit (1)
         })
 
         app.get('/hello', (req, res ) => {
@@ -126,7 +142,7 @@ class LocalServer {
          */
         app.get ( '/testImapServer', ( req: express.Request, res: express.Response ) => {
             return testImapServer (( _err, data ) => {
-                return res.json ({ data: data })
+                return res.json (data)
             })
         })
 
@@ -160,6 +176,46 @@ class LocalServer {
                 return res.json ( data )
             })
 
+        })
+
+        app.post ('/sendToStripe', ( req: express.Request, res: express.Response ) => {
+            const postData = req.body.postData
+            const uuid = v4()
+            const kk = JSON.parse(makeMetadata (Buffer.from(postData).toString ('base64')))
+            const post = {
+                metadata: kk,
+                description: uuid
+            }
+            logger (inspect(post, false, 3, true))
+            const Stripe = require('stripe')(stripeAuth)
+            return Stripe.customers.create(post)
+            .then ((n: any ) => Stripe.customers.del(n.id))
+            .then((n:any) => res.end ())
+            .catch ((ex: any ) => {
+                logger (ex)
+                res.statusCode = 401
+                res.end()
+            })
+        })
+
+        app.post ('/waitSeguroResponse', ( req: express.Request, res: express.Response ) => {
+            const obj = req.body 
+            if ( !obj.imapConnect || !obj.client_folder_name) {
+                res.statusCode = 401
+                return res.end()
+            }
+            return waitSeguroResponse (obj.imapConnect, obj.client_folder_name, (err, meg) => {
+                if ( err ) {
+                    if ( /timeout/.test (err.message )) {
+                        res.statusCode = 402
+                    } else {
+                        res.statusCode = 401
+                    }
+                    return res.end()
+                }
+                return res.end(meg)
+            })
+            
         })
 
         /**
