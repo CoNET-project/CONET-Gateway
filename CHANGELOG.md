@@ -1,5 +1,19 @@
 # `seguro-gateway` CHANGELOG
 
+## `0.13.0`
+
+### Additions
+
+- storePreferences
+
+### Changes
+
+- None.
+
+### Fixes
+
+- None.
+
 ## `0.12.1`
 
 ### Additions

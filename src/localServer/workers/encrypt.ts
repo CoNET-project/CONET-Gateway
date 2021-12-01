@@ -57,6 +57,10 @@ const encryptWorkerDoCommand = ( cmd: worker_command ) => {
             return encrypt_deletePasscode (cmd)
         }
 
+        case 'storePreferences': {
+            return storePreferences (cmd)
+        }
+
         default: {
             cmd.err = 'INVALID_COMMAND'
             returnCommand (cmd)

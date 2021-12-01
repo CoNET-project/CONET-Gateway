@@ -89,8 +89,8 @@ declare type netWorkError = 'NOT_INTERNET'|'NOT_STRIPE'|'ALL_EMAIL_SERVER_CAN_NO
 
 declare type verification = 'INCORRECT_CODE'
 
-declare type WorkerCommand = 'helloWorld'|'READY'|
-	'encrypt_TestPasscode'|'encrypt_createPasscode'|'encrypt_lock'|'invitation'|'encrypt_deletePasscode'
+declare type WorkerCommand = 'READY'|
+	'encrypt_TestPasscode'|'encrypt_createPasscode'|'encrypt_lock'|'invitation'|'encrypt_deletePasscode'|'storePreferences'
 
 type worker_command = {
 	cmd: WorkerCommand
@@ -126,10 +126,6 @@ type Passcode = {
     status: PasscodeStatus
 }
 
-interface Preferences {
-    colorTheme: ColorTheme
-    language: Language
-}
 
 interface profileObj {
 	profiles: profile[]
@@ -137,7 +133,7 @@ interface profileObj {
 }
 
 interface PreferencesObj {
-	preferences: Preferences
+	preferences: any
 }
 type SeguroNetworkStatus = 
 'TIMEOUT_EMAIL_SERVER' | 'TIMEOUT_SEGURO_NETWORK' |

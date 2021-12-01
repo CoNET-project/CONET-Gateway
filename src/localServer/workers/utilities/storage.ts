@@ -1,10 +1,9 @@
-const returnInitNull = (cmd: worker_command) => {
+let database: PouchDB.Database|null = null
+
+const initNullSystemInitialization = () => {
     const data: systemInitialization = {
         preferences: {
-            preferences: {
-                colorTheme: 'LIGHT',
-                language: 'en-CA'
-            }
+            preferences: null
         },
         passcode: {
             status: 'NOT_SET'
@@ -13,10 +12,13 @@ const returnInitNull = (cmd: worker_command) => {
             profiles: []
         }
     }
-    cmd.data = [data]
     systemInitialization = data
     systemInitialization_UUID = ''
     pass = SeguroKeyChain = null
+    return data
+}
+const returnInitNull = (cmd: worker_command) => {
+    cmd.data = [initNullSystemInitialization()]
     returnCommand ( cmd )
 }
 
@@ -28,7 +30,7 @@ const checkStorage = () => {
     }
     
     //invitation (cmd)
-    database.get ('init')
+    return database.get ('init')
     .then ((doc: any) => {
         try {
             cmd.data = [JSON.parse ( buffer.Buffer.from (doc.title,'base64').toString ())]
@@ -92,9 +94,7 @@ const checkStorage = () => {
     })
 }
 
-let database: PouchDB.Database|null = null
-
-const storeContainer = ( preferencesUUID: string, CallBack: ( err?: Error ) => void ) => {
+const storeContainer = ( CallBack: ( err?: Error ) => void ) => {
 
     if (!SeguroKeyChain) {
         return CallBack (new Error ('have no SeguroKeyChain!'))
@@ -105,7 +105,7 @@ const storeContainer = ( preferencesUUID: string, CallBack: ( err?: Error ) => v
         title: buffer.Buffer.from(JSON.stringify ({
             container: container.containerKeyPair,
             id: pass,
-            uuid: preferencesUUID,
+            uuid: systemInitialization_UUID,
             preferences: systemInitialization?.preferences.preferences
         })).toString ('base64')
     }
@@ -184,7 +184,7 @@ const storage_StoreContainerData = (cmd: worker_command) => {
         ( data: any, next: any )  => {
             logger (`storeUUIDFragments SUCCESS UUID = [${ data.id }]`)
             systemInitialization_UUID = data.id
-            return storeContainer ( data.id, next )
+            return storeContainer ( next )
         },
     ], err => {
         if ( err ) {
@@ -219,12 +219,10 @@ const returnSeguroInitializationData = (cmd: worker_command) => {
         
         _profile.push (ret)
     })
+
     const data: systemInitialization = {
         preferences: {
-            preferences: {
-                colorTheme: preferences.preferences.colorTheme,
-                language: preferences.preferences.language
-            }
+            preferences: preferences.preferences
         },
         passcode: {
             status: 'UNLOCKED'
@@ -234,6 +232,7 @@ const returnSeguroInitializationData = (cmd: worker_command) => {
         },
         
     }
+
     cmd.data = [data]
     return returnCommand (cmd)
     
@@ -252,4 +251,22 @@ const encrypt_deletePasscode = (cmd: worker_command) => {
         cmd.err = 'PouchDB_ERROR'
         return returnCommand (cmd)
     })
+}
+
+const storePreferences = (cmd: worker_command) => {
+    if ( !cmd.data || !cmd.data.length || !systemInitialization || !SeguroKeyChain) {
+        logger (`storePreferences ERROR have not attach preferences DATA`)
+        cmd.err = 'INVALID_DATA'
+        return returnCommand (cmd)
+    }
+    systemInitialization.preferences.preferences = cmd.data[0]
+    return storeContainer( err => {
+        if ( err) {
+            logger (`storePreferences Database Error`, err)
+            cmd.err = 'PouchDB_ERROR'
+            return returnCommand (cmd)
+        }
+        return returnCommand (cmd)
+    })
+
 }
