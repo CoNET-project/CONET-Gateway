@@ -151,19 +151,20 @@ const encrypt_Seguro_INIT_data_ToPGP = ( cmd: worker_command ) => {
 
     if ( !SeguroKeyChain || !systemInitialization ) {
         logger (`encrypt.js encrypt_InitSeguroDataToPGP error: !SeguroKeyChain?.toStoreObj || !systemInitialization`, cmd )
-        cmd.err = ['INVALID_DATA']
+        cmd.err = 'INVALID_DATA'
         return returnCommand(cmd)
     }
     
     const encryptObj = {
         SeguroKeyChain: SeguroKeyChain.toStoreObj(),
-        Preferences: systemInitialization
+        Preferences: systemInitialization,
+        SeguroNetwork: seguroSetup
     }
     
     return encryptWithContainerKey(JSON.stringify (encryptObj), (err, encryptedText) => {
         if ( err ) {
             logger(`encrypt.js encryptWithContainerKey OpenPGP error`, err)
-            cmd.err = ['OPENPGP_RUNNING_ERROR']
+            cmd.err = 'OPENPGP_RUNNING_ERROR'
             return returnCommand(cmd)
         }
         if ( encryptedText && SeguroKeyChain) {
@@ -238,7 +239,7 @@ const testNetwork = (CallBack: (err?: netWorkError|null, data?: testImapResult[]
     let ret: netWorkError
     return localServerGetJSON ( 'testImapServer', 'GET', '', (err, data: testImapResult[]) => {
         if (err) {
-            ret = 'LOCALSERVER_ERROR'
+            ret = 'LOCAL_SERVER_ERROR'
             return CallBack (ret)
         }
         const errServer = data.filter ( n => n.error !== null )

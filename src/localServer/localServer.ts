@@ -62,7 +62,7 @@ class LocalServer {
 
     private initialize = () => {
 
-        const staticFolder = join ( this.appsPath,'workers' )
+        const staticFolder = join ( this.appsPath, 'workers' )
         const launcherFolder = join ( this.appsPath, '../launcher' )
 		console.dir ({ staticFolder: staticFolder, launcherFolder: launcherFolder })
         const wsServerConnect = new WsServer ({ noServer: true })

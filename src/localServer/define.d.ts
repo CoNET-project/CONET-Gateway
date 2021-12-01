@@ -84,7 +84,7 @@ interface passInit {
 declare type WorkerCommandError = 'NOT_READY'|'INVALID_DATA'|'NO_UUID'|'INVALID_COMMAND'|'OPENPGP_RUNNING_ERROR'|
 'PouchDB_ERROR'|'GENERATE_PASSCODE_ERROR'|'FAILURE'|'COUNTDOWN'| netWorkError | verification
 
-declare type netWorkError = 'NOT_INTERNET'|'NOT_STRIPE'|'ALL_EMAIL_SERVER_CAN_NOT_CONNECTING'|'LOCALSERVER_ERROR'|'WAITING_SEGURO_RESPONSE_TIMEOUT'|
+declare type netWorkError = 'NOT_INTERNET'|'NOT_STRIPE'|'ALL_EMAIL_SERVER_CAN_NOT_CONNECTING'|'LOCAL_SERVER_ERROR'|'WAITING_SEGURO_RESPONSE_TIMEOUT'|
 'EMAIL_ACCOUNT_AUTH_ERROR'
 
 declare type verification = 'INCORRECT_CODE'
@@ -96,7 +96,7 @@ type worker_command = {
 	cmd: WorkerCommand
 	data: any[]
 	uuid?: string
-	err?: WorkerCommandError[]
+	err?: WorkerCommandError
 }
 
 interface profile extends keyPair {
@@ -124,8 +124,6 @@ type encrypt_keys_object = {
 
 type Passcode = {
     status: PasscodeStatus
-    testPasscode: null
-    createPasscode: null
 }
 
 interface Preferences {
@@ -141,11 +139,20 @@ interface profileObj {
 interface PreferencesObj {
 	preferences: Preferences
 }
+type SeguroNetworkStatus = 
+'TIMEOUT_EMAIL_SERVER' | 'TIMEOUT_SEGURO_NETWORK' |
+'NO_INTERNET' | 'CONNECTING_ACCESS_POINT' | 'WAITING_SEGURO_RESPONSE'|
+'CONNECTING_SEGURO_NETWORK'
+
+interface SeguroNetwork {
+	SeguroStatus: SeguroNetworkStatus
+}
 
 interface systemInitialization {
 	preferences: PreferencesObj
 	profile: profileObj
 	passcode: Passcode
+	SeguroNetwork?: SeguroNetwork
 }
 
 interface testImapResult {

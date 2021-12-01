@@ -3,7 +3,7 @@ const encryptWorkerDoCommand = ( cmd: worker_command ) => {
     switch ( cmd.cmd ) {
         case 'encrypt_createPasscode': {
             if ( !cmd.data || cmd.data.length < 2) {
-                cmd.err = ['INVALID_DATA']
+                cmd.err = 'INVALID_DATA'
                 return returnCommand ( cmd )
             }
             delete cmd.err
@@ -12,7 +12,7 @@ const encryptWorkerDoCommand = ( cmd: worker_command ) => {
             
             return createNumberPasscode ( cmd, ( err, _pass ) => {
                 if ( err ) {
-                    cmd.err = ['GENERATE_PASSCODE_ERROR']
+                    cmd.err = 'GENERATE_PASSCODE_ERROR'
                     return returnCommand (cmd)
                 }
                 pass = _pass
@@ -58,7 +58,7 @@ const encryptWorkerDoCommand = ( cmd: worker_command ) => {
         }
 
         default: {
-            cmd.err = ['INVALID_COMMAND']
+            cmd.err = 'INVALID_COMMAND'
             returnCommand (cmd)
             return console.log (`encryptWorkerDoCommand unknow command!`)
         }
@@ -89,7 +89,7 @@ const initEncryptWorker = () => {
 			return console.dir ( ex )
 		}
         if ( !workerReady ) {
-            cmd.err = ['NOT_READY']
+            cmd.err = 'NOT_READY'
             return returnCommand ( cmd )
         }
 
@@ -175,7 +175,7 @@ const initSeguroData = ( cmd: worker_command ) => {
         ], err => {
             if (err) {
                 logger (`initEncryptObject ERROR`, err )
-                cmd.err = ['OPENPGP_RUNNING_ERROR']
+                cmd.err = 'OPENPGP_RUNNING_ERROR'
                 return returnCommand (cmd)
             }
 
@@ -183,7 +183,7 @@ const initSeguroData = ( cmd: worker_command ) => {
         })
     })
     .catch (( ex: any ) => {
-        cmd.err = ['OPENPGP_RUNNING_ERROR']
+        cmd.err = 'OPENPGP_RUNNING_ERROR'
         cmd.data = []
         logger (`initSeguroData on ERROR`, ex)
         return returnCommand ( cmd )
@@ -341,7 +341,7 @@ const initEncryptObject = (cmd: worker_command, CallBack: (err?: Error|null) => 
         return decodePasscode (cmd, (err) => {
             if ( err ) {
                 logger (`initEncryptObject decodePasscode ERROR!`, err )
-                cmd.err = ['FAILURE']
+                cmd.err = 'FAILURE'
                 return returnCommand (cmd)
             }
             return unlockContainerKeyPair ()
@@ -369,15 +369,16 @@ const createKey = ( passwd: string, name: string, email: string ) => {
 
 const encrypt_TestPasscode = (cmd: worker_command) => {
     if ( !cmd.data?.length || !pass ) {
-        cmd.err = ['INVALID_DATA']
+        cmd.err = 'INVALID_DATA'
         return returnCommand (cmd)
     }
     
     pass.password = cmd.data[0]
 
     return initEncryptObject (cmd, ( err )=> {
+        if ( err === undefined)
         if ( err ) {
-            cmd.err = ['FAILURE']
+            cmd.err = 'FAILURE'
             return returnCommand ( cmd )
         }
 
@@ -414,7 +415,7 @@ const invitation = (cmd: worker_command) => {
             }
             return encrypt_with_Seguro (JSON.stringify (kk), next)
         }
-        //, ( encryptedText: string, next: any ) => localServerGetJSON ('sendToStripe','POST', JSON.stringify({postData: encryptedText }), next)
+        , ( encryptedText: string, next: any ) => localServerGetJSON ('sendToStripe','POST', JSON.stringify({postData: encryptedText }), next)
         , (data: any, next: any ) => localServerGetJSON ('waitSeguroResponse','POST',
             JSON.stringify({imapConnect: kk?.imapConnect, client_folder_name: kk?.client_folder_name }), (err, data) => {
             if ( err ) {
@@ -423,13 +424,17 @@ const invitation = (cmd: worker_command) => {
                     //      Auth error
                     case 401: {
                         ret = 'EMAIL_ACCOUNT_AUTH_ERROR'
+                        break
                     }
                     //      Timeout
                     case 402: {
                         ret = 'WAITING_SEGURO_RESPONSE_TIMEOUT'
+                        break
                     }
                     default: {
-                        
+                        logger (`invitation localServerGetJSON get unknow response number [${ err }]!`)
+                        ret = 'LOCAL_SERVER_ERROR'
+                        break
                     }
                 }
                 // @ts-ignore
@@ -437,15 +442,14 @@ const invitation = (cmd: worker_command) => {
             }
             
         })
-    ], (err: any, data ) => {
+    ], (err: any, data) => {
         if ( err ) {
-            cmd.err = [err]
-            return logger (`invitation getJSON ('testImap') Error`, err )
+            cmd.err = err
+            logger (`invitation getJSON ('testImap') Error`, err )
         }
-        return logger (data)
+        cmd.data = [data]
+        return returnCommand (cmd)
     })
 }
-
-
 
 initEncryptWorker ()

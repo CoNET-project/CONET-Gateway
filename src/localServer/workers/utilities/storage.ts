@@ -7,8 +7,6 @@ const returnInitNull = (cmd: worker_command) => {
             }
         },
         passcode: {
-            testPasscode: null,
-            createPasscode: null,
             status: 'NOT_SET'
         },
         profile: {
@@ -30,11 +28,12 @@ const checkStorage = () => {
     }
     
     //invitation (cmd)
-    database.get ('init').then ((doc: any) => {
-        
+    database.get ('init')
+    .then ((doc: any) => {
         try {
             cmd.data = [JSON.parse ( buffer.Buffer.from (doc.title,'base64').toString ())]
         } catch ( ex ) {
+            cmd.err = 'PouchDB_ERROR'
             logger (`checkStorage JSON.parse error`, buffer.Buffer.from (doc.title,'base64').toString ())
             return returnInitNull (cmd)
         }
@@ -42,7 +41,7 @@ const checkStorage = () => {
         if ( systemInitialization_UUID = initData.uuid ) {
             return getUUIDFragments (cmd.data[0].uuid, ( err, data: any ) => {
                 if ( err ) {
-                    cmd.err = ['PouchDB_ERROR']
+                    cmd.err = 'PouchDB_ERROR'
                     logger (`checkStorage getUUIDFragments [${ cmd.data[0] }] ERROR`, err )
                     return returnInitNull (cmd)
                 }
@@ -74,8 +73,6 @@ const checkStorage = () => {
                             preferences: initData.preferences,
                         },
                         passcode: {
-                            testPasscode: null,
-                            createPasscode: null,
                             status: 'LOCKED'
                         },
                         profile: {
@@ -91,7 +88,6 @@ const checkStorage = () => {
         }
         return returnInitNull (cmd)
     }).catch ((ex: Error ) => {
-        cmd.err = ['PouchDB_ERROR']
         return returnInitNull (cmd)
     })
 }
@@ -193,7 +189,7 @@ const storage_StoreContainerData = (cmd: worker_command) => {
     ], err => {
         if ( err ) {
             logger (`storage_StoreContainerData ERROR!`, err )
-            cmd.err = ['PouchDB_ERROR']
+            cmd.err = 'PouchDB_ERROR'
             return returnCommand ( cmd )
         }
         return returnSeguroInitializationData (cmd)
@@ -203,7 +199,7 @@ const storage_StoreContainerData = (cmd: worker_command) => {
 const returnSeguroInitializationData = (cmd: worker_command) => {
     delete cmd.err
     if ( !systemInitialization || !SeguroKeyChain ) {
-        cmd.err = ['NOT_READY']
+        cmd.err = 'NOT_READY'
         logger (`storage_StoreContainerData !systemInitialization Error!`)
         return returnCommand ( cmd )
     }
@@ -231,13 +227,12 @@ const returnSeguroInitializationData = (cmd: worker_command) => {
             }
         },
         passcode: {
-            testPasscode: null,
-            createPasscode: null,
             status: 'UNLOCKED'
         },
         profile: {
             profiles: _profile
-        }
+        },
+        
     }
     cmd.data = [data]
     return returnCommand (cmd)
@@ -254,7 +249,7 @@ const encrypt_deletePasscode = (cmd: worker_command) => {
     .then (() => returnInitNull (cmd))
     .catch ( err => {
         logger (`encrypt_deletePasscode ERROR`, err )
-        cmd.err = ['PouchDB_ERROR']
+        cmd.err = 'PouchDB_ERROR'
         return returnCommand (cmd)
     })
 }
