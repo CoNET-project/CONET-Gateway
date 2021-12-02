@@ -1,5 +1,20 @@
 # `seguro-gateway` CHANGELOG
 
+## `0.14.0`
+
+### Additions
+
+- Added newProfile, storeProfile
+
+### Changes
+
+- None.
+
+### Fixes
+
+- None.
+
+
 ## `0.13.0`
 
 ### Additions

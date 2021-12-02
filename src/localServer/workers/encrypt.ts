@@ -61,6 +61,14 @@ const encryptWorkerDoCommand = ( cmd: worker_command ) => {
             return storePreferences (cmd)
         }
 
+        case 'newProfile': {
+            return newProfile (cmd)
+        }
+
+        case 'storeProfile': {
+            return storeProfile (cmd)
+        }
+
         default: {
             cmd.err = 'INVALID_COMMAND'
             returnCommand (cmd)
@@ -287,7 +295,7 @@ const initEncryptObject = (cmd: worker_command, CallBack: (err?: Error|null) => 
                 encryptedString: ''
             }
             _SeguroKeyChain.keyChain.profiles.forEach ( n => {
-                const key = { publicKeyArmor: n.publicKeyArmor, privateKeyArmor: n.privateKeyArmor, keyID: n.keyID, keyOpenPGP_obj: null }
+                const key = { publicKeyArmor: n.publicKeyArmor, privateKeyArmor: n.privateKeyArmor, keyID: n.keyID, keyOpenPGP_obj: null, alias: n.alias, nickname: n.nickname, tags: n.tags, nicknameMark: n.nicknameMark }
                 kk.keyChain.profiles.push ( key )
             })
             return kk
@@ -454,6 +462,65 @@ const invitation = (cmd: worker_command) => {
         cmd.data = [data]
         return returnCommand (cmd)
     })
+}
+
+const newProfile = (cmd: worker_command) => {
+    const profile: profile = cmd.data[0]
+    const ret: profile = {
+        publicKeyArmor: '',
+        privateKeyArmor: '',
+        keyOpenPGP_obj: null,
+        alias: profile.alias,
+        nickname: profile.nickname,
+        keyID: '',
+        tags: profile.tags,
+        nicknameMark: profile.nicknameMark
+    }
+    return createKey('','','')
+    .then((n: any) => {
+        ret.privateKeyArmor = n.privateKey
+        ret.publicKeyArmor = n.publicKey
+        return makeKeypairOBJ (ret, '', err => {
+            if ( err ) {
+                logger (`newProfile makeKeypairOBJ ERROR`, err )
+                cmd.err = 'OPENPGP_RUNNING_ERROR'
+                return returnCommand (cmd)
+            }
+            SeguroKeyChain?.keyChain.profiles.push (ret)
+            return encrypt_Seguro_INIT_data_ToPGP ( cmd )
+        })
+    })
+    .catch (( ex: any ) => {
+        cmd.err = 'OPENPGP_RUNNING_ERROR'
+        cmd.data = []
+        logger (`initSeguroData on ERROR`, ex)
+        return returnCommand ( cmd )
+    })
+}
+
+const storeProfile = (cmd: worker_command) => {
+    const profile: profile[]  = cmd.data[0]
+    if ( !profile || !profile.length ) {
+        logger (`storeProfile have no profile data ERROR!` )
+        cmd.err = 'INVALID_DATA'
+        return returnCommand (cmd)
+    }
+    
+    profile.forEach ( n => {
+        if ( !SeguroKeyChain ) {
+            return 
+        }
+        const index = SeguroKeyChain.keyChain.profiles.findIndex ( _n => _n.keyID === n.keyID)
+        if ( index < 0 ) {
+            return
+        }
+        const current = SeguroKeyChain.keyChain.profiles[index]
+        current.alias = n.alias
+        current.nickname = n.nickname
+        current.nicknameMark = n.nicknameMark
+        current.tags = n.tags
+    })
+    return encrypt_Seguro_INIT_data_ToPGP ( cmd )
 }
 
 initEncryptWorker ()

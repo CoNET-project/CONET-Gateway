@@ -214,7 +214,8 @@ const returnSeguroInitializationData = (cmd: worker_command) => {
             keyOpenPGP_obj: null,
             nickname: n.nickname || '',
             tags: n.tags || [],
-            alias: n.alias || ''
+            alias: n.alias || '',
+            nicknameMark: n.nicknameMark||''
         }
         
         _profile.push (ret)

@@ -90,7 +90,7 @@ declare type netWorkError = 'NOT_INTERNET'|'NOT_STRIPE'|'ALL_EMAIL_SERVER_CAN_NO
 declare type verification = 'INCORRECT_CODE'
 
 declare type WorkerCommand = 'READY'|
-	'encrypt_TestPasscode'|'encrypt_createPasscode'|'encrypt_lock'|'invitation'|'encrypt_deletePasscode'|'storePreferences'
+	'encrypt_TestPasscode'|'encrypt_createPasscode'|'encrypt_lock'|'invitation'|'encrypt_deletePasscode'|'storePreferences'|'newProfile'|'storeProfile'
 
 type worker_command = {
 	cmd: WorkerCommand
@@ -104,6 +104,7 @@ interface profile extends keyPair {
     keyID?: string
     tags?: string[]
 	alias?: string
+	nicknameMark?: string
 }
 
 type ColorTheme = 'LIGHT' | 'DARK'
