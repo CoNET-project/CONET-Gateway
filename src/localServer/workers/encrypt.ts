@@ -295,7 +295,7 @@ const initEncryptObject = (cmd: worker_command, CallBack: (err?: Error|null) => 
                 encryptedString: ''
             }
             _SeguroKeyChain.keyChain.profiles.forEach ( n => {
-                const key = { publicKeyArmor: n.publicKeyArmor, privateKeyArmor: n.privateKeyArmor, keyID: n.keyID, keyOpenPGP_obj: null, alias: n.alias, nickname: n.nickname, tags: n.tags, nicknameMark: n.nicknameMark }
+                const key = { publicKeyArmor: n.publicKeyArmor, privateKeyArmor: n.privateKeyArmor, keyID: n.keyID, keyOpenPGP_obj: null, alias: n.alias, nickname: n.nickname, tags: n.tags, bio: n.bio }
                 kk.keyChain.profiles.push ( key )
             })
             return kk
@@ -474,7 +474,7 @@ const newProfile = (cmd: worker_command) => {
         nickname: profile.nickname,
         keyID: '',
         tags: profile.tags,
-        nicknameMark: profile.nicknameMark
+        bio: profile.bio
     }
     return createKey('','','')
     .then((n: any) => {
@@ -517,7 +517,7 @@ const storeProfile = (cmd: worker_command) => {
         const current = SeguroKeyChain.keyChain.profiles[index]
         current.alias = n.alias
         current.nickname = n.nickname
-        current.nicknameMark = n.nicknameMark
+        current.bio = n.bio
         current.tags = n.tags
     })
     return encrypt_Seguro_INIT_data_ToPGP ( cmd )

@@ -1,5 +1,19 @@
 # `seguro-gateway` CHANGELOG
 
+## `0.14.1`
+
+### Additions
+
+- None.
+
+### Changes
+
+- None.
+
+### Fixes
+
+- Changed nicknameMark to bio 
+
 ## `0.14.0`
 
 ### Additions

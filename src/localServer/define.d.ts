@@ -104,7 +104,7 @@ interface profile extends keyPair {
     keyID?: string
     tags?: string[]
 	alias?: string
-	nicknameMark?: string
+	bio?: string
 }
 
 type ColorTheme = 'LIGHT' | 'DARK'
