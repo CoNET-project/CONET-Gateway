@@ -66,6 +66,7 @@ interface keyPair {
 	keyID?: string
 	keyOpenPGP_obj: keyOpenPGP_obj | null
 	_id?: string
+	isPrimary?: boolean
 }
 
 

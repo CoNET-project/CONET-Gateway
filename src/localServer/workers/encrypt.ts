@@ -177,7 +177,7 @@ const initSeguroData = ( cmd: worker_command ) => {
             privateKeyArmor: data.privateKey,
             keyID: '',
             keyOpenPGP_obj: null,
-            
+            isPrimary: true
         }
         ret.keyChain.profiles.push(_key)
         SeguroKeyChain = ret

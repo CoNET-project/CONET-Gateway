@@ -1,5 +1,19 @@
 # `seguro-gateway` CHANGELOG
 
+## `0.14.2`
+
+### Additions
+
+- None.
+
+### Changes
+
+- None.
+
+### Fixes
+
+- set isPrimary true when createPasscode 
+
 ## `0.14.1`
 
 ### Additions
