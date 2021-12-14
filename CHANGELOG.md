@@ -12,7 +12,7 @@
 
 ### Fixes
 
-- Changed nicknameMark to bio 
+- Changed nicknameMark to bio, Added profileImg, isPrimary
 
 ## `0.14.0`
 

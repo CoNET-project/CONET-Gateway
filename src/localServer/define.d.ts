@@ -105,6 +105,8 @@ interface profile extends keyPair {
     tags?: string[]
 	alias?: string
 	bio?: string
+    isPrimary?: boolean
+    profileImg?: string
 }
 
 type ColorTheme = 'LIGHT' | 'DARK'

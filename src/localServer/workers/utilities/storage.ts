@@ -215,7 +215,9 @@ const returnSeguroInitializationData = (cmd: worker_command) => {
             nickname: n.nickname || '',
             tags: n.tags || [],
             alias: n.alias || '',
-            bio: n.bio||''
+            bio: n.bio||'',
+            isPrimary: n.isPrimary||false,
+            profileImg: n.profileImg||''
         }
         
         _profile.push (ret)

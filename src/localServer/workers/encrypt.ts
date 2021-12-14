@@ -176,7 +176,8 @@ const initSeguroData = ( cmd: worker_command ) => {
             publicKeyArmor: data.publicKey,
             privateKeyArmor: data.privateKey,
             keyID: '',
-            keyOpenPGP_obj: null
+            keyOpenPGP_obj: null,
+            
         }
         ret.keyChain.profiles.push(_key)
         SeguroKeyChain = ret
@@ -295,7 +296,7 @@ const initEncryptObject = (cmd: worker_command, CallBack: (err?: Error|null) => 
                 encryptedString: ''
             }
             _SeguroKeyChain.keyChain.profiles.forEach ( n => {
-                const key = { publicKeyArmor: n.publicKeyArmor, privateKeyArmor: n.privateKeyArmor, keyID: n.keyID, keyOpenPGP_obj: null, alias: n.alias, nickname: n.nickname, tags: n.tags, bio: n.bio }
+                const key = { publicKeyArmor: n.publicKeyArmor, privateKeyArmor: n.privateKeyArmor, keyID: n.keyID, keyOpenPGP_obj: null, alias: n.alias, nickname: n.nickname, tags: n.tags, bio: n.bio, isPrimary: n.isPrimary, profileImg: n.profileImg }
                 kk.keyChain.profiles.push ( key )
             })
             return kk
@@ -474,7 +475,9 @@ const newProfile = (cmd: worker_command) => {
         nickname: profile.nickname,
         keyID: '',
         tags: profile.tags,
-        bio: profile.bio
+        bio: profile.bio,
+        isPrimary: profile.isPrimary,
+        profileImg: profile.profileImg
     }
     return createKey('','','')
     .then((n: any) => {
