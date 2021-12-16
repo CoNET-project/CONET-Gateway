@@ -1,5 +1,21 @@
 # `seguro-gateway` CHANGELOG
 
+
+## `0.14.3`
+
+### Additions
+
+- None.
+
+### Changes
+
+- None.
+
+### Fixes
+
+- Fixed isPrimary & profileImg have not store
+
+
 ## `0.14.2`
 
 ### Additions

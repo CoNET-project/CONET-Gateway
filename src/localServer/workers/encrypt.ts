@@ -522,6 +522,8 @@ const storeProfile = (cmd: worker_command) => {
         current.nickname = n.nickname
         current.bio = n.bio
         current.tags = n.tags
+        current.isPrimary = n.isPrimary
+        current.profileImg = n.profileImg
     })
     return encrypt_Seguro_INIT_data_ToPGP ( cmd )
 }
