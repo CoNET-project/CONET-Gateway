@@ -13,21 +13,5 @@ iEJ8AP9i3ZyodVd7wUnI8e1zuMO4hfImjsXMfp28qXQ6yBHHLQEApdtrLmxHEbwm
 iUatG/EQn9VLAanhlsOMmZApsHnIxwc=
 =u6x5
 -----END PGP PUBLIC KEY BLOCK-----
-`,
-    publicImapAccounts: [
-        {
-            imapPortNumber: 993,
-            imapServer: 'imap.mail.me.com',
-            imapSsl: true,
-            imapUserName: 'qtgate_test2@icloud.com',
-            imapUserPassword: 'hrro-clvo-utjm-dtbx'
-        },
-        {
-            imapPortNumber: 993,
-            imapServer: 'outlook.office365.com',
-            imapSsl: true,
-            imapUserName: 'connect1@kloak.app',
-            imapUserPassword: 'fdvkgpmhnnqbwjpw'
-        }
-    ]
+`
 }

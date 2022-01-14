@@ -86,7 +86,12 @@ declare type WorkerCommandError = 'NOT_READY'|'INVALID_DATA'|'NO_UUID'|'INVALID_
 'PouchDB_ERROR'|'GENERATE_PASSCODE_ERROR'|'FAILURE'|'COUNTDOWN'| netWorkError | verification
 
 declare type netWorkError = 'NOT_INTERNET'|'NOT_STRIPE'|'ALL_EMAIL_SERVER_CAN_NOT_CONNECTING'|'LOCAL_SERVER_ERROR'|'WAITING_SEGURO_RESPONSE_TIMEOUT'|
-'EMAIL_ACCOUNT_AUTH_ERROR'
+'EMAIL_ACCOUNT_AUTH_ERROR'|'UNKNOW_ERROR'|'LOCAL_RESPONE_NO_JSON_DATA'
+declare type seguroError = 'TIMEOUT_EMAIL_SERVER' | 'TIMEOUT_SEGURO_NETWORK' |
+'NO_INTERNET' | 'CONNECTING_ACCESS_POINT' |
+'CONNECTING_SEGURO_NETWORK'|'INIT'|'NOT_STRIPE'|
+'LOCAL_SERVER_ERROR'|'Invitation_code_error'|'SEGURO_DATA_FORMAT_ERROR'
+'SEGURO_ERROR'
 
 declare type verification = 'INCORRECT_CODE'
 
@@ -130,29 +135,36 @@ type Passcode = {
     status: PasscodeStatus
 }
 
-
-interface profileObj {
-	profiles: profile[]
-	
+interface imap_connect {
+    imap_username: string
+    imap_user_password: string
+    imap_port_number: string
+    imap_server: string
 }
+
 
 interface PreferencesObj {
 	preferences: any
 }
+
 type SeguroNetworkStatus = 
 'TIMEOUT_EMAIL_SERVER' | 'TIMEOUT_SEGURO_NETWORK' |
 'NO_INTERNET' | 'CONNECTING_ACCESS_POINT' | 'WAITING_SEGURO_RESPONSE'|
-'CONNECTING_SEGURO_NETWORK'
+'CONNECTING_SEGURO_NETWORK'|
+'INIT'
 
-interface SeguroNetwork {
+interface ISeguroNetwork {
 	SeguroStatus: SeguroNetworkStatus
+	SeguroObject: webEndpointConnect| {}
 }
 
 interface systemInitialization {
 	preferences: PreferencesObj
-	profile: profileObj
+	profile: {
+		profiles: profile[]
+	}
 	passcode: Passcode
-	SeguroNetwork?: SeguroNetwork
+	SeguroNetwork: ISeguroNetwork
 }
 
 interface testImapResult {
@@ -165,9 +177,23 @@ interface testImapResult {
 }
 
 interface SeguroInvitation {
-	imapConnect: imapConnect
-	client_folder_name: string
-	device_publicKeyArmor: string
-	seguropublicKeyArmor: string
+	imapTest: string
+	device_publickey_armor: string
+	seguro_key_armor: string
+	client_folder_name?: string
+	sharedDeviceInvitation?: string[]
+	shardInvitation?: string[]
 	invitation: string
+	imap_connect?: imap_connect
+}
+
+interface webEndpointConnect {
+	imap_connect: imap_connect
+	server_listening_folder: string
+	client_listening_folder: string
+	shardInvitation: string[]
+	sharedDeviceInvitation: string[]
+	endPoints: string[]
+	nextNoticeBlock: string
+	NoticeBody: string
 }

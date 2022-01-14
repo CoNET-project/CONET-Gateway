@@ -14,6 +14,34 @@ const isAllNumbers = ( text: string ) => {
     return ! /\D/.test ( text )
 }
 
+const UuidV4Check = /^[0-9A-F]{8}-[0-9A-F]{4}-4[0-9A-F]{3}-[89AB][0-9A-F]{3}-[0-9A-F]{12}$/
+
+const imapServers = [ 
+    {
+        server: 'imap.gmail.com',
+        port: 993
+    }, 
+    {
+        server: 'imap.mail.yahoo.com',
+        port: 993
+    }, 
+    {
+        server: 'imap.mail.me.com',
+        port: 993
+    },
+    {
+        server: 'outlook.office365.com',
+        port: 993
+    },
+    {
+        server: 'imap.zoho.com',
+        port: 993
+    },
+    {
+        server: 'api.stripe.com',
+        port: 443
+    }
+]
 
 const makePublicKeyOBJ = (publickeyArmor: string, CallBack: (err: Error|null, keyObj?: any) => void ) => {
     if  (!publickeyArmor) {
@@ -75,7 +103,7 @@ const makeKeypairOBJ = (keypair: keyPair, password: string, CallBack: (err:Error
                 return CallBack (err)
             }
             keyOpenPGP_obj.publicKeyObj  = n
-            keypair.keyID = n.getKeyIDs()[1].toHex ().toUpperCase ()
+            keypair.keyID = n.getKeyID().toHex().toUpperCase ()
             return privateObj ()
         })
     }
@@ -147,6 +175,34 @@ const decryptWithContainerKey = ( encryptedMessage: string, CallBack: (err: Erro
     })
 }
 
+const decryptWithDeviceKey = (encryptedMessage: string, CallBack: (err: Error|null, text?: string) => void) => {
+    let ret = ''
+    return openpgp.readMessage({armoredMessage: encryptedMessage})
+    .then ((message: any) => {
+        if ( !SeguroKeyChain?.keyChain.deviceKeyPair.keyOpenPGP_obj?.privateKeyObj ) {
+            const err = 'decryptWithDeviceKey have no SeguroKeyChain?.keyChain.deviceKeyPair.keyOpenPGP_obj?.privateKeyObj ERROR!'
+            
+            CallBack (new Error (err))
+            return Promise.reject (new Error(err))
+        }
+        return openpgp.decrypt({
+            message,
+            verificationKeys: Seguro_PublickeyObj,
+            decryptionKeys:SeguroKeyChain?.keyChain.deviceKeyPair.keyOpenPGP_obj?.privateKeyObj
+        })
+    })
+    .then((n: any) => {
+        ret = n.data
+        return n.verified
+    })
+    .then (() => {
+        return CallBack (null, ret )
+    })
+    .catch ((ex: Error) => {
+        logger (ex)
+    })
+}
+
 const encrypt_Seguro_INIT_data_ToPGP = ( cmd: worker_command ) => {
 
     if ( !SeguroKeyChain || !systemInitialization ) {
@@ -157,8 +213,7 @@ const encrypt_Seguro_INIT_data_ToPGP = ( cmd: worker_command ) => {
     
     const encryptObj = {
         SeguroKeyChain: SeguroKeyChain.toStoreObj(),
-        Preferences: systemInitialization,
-        SeguroNetwork: seguroSetup
+        Preferences: systemInitialization
     }
     
     return encryptWithContainerKey(JSON.stringify (encryptObj), (err, encryptedText) => {
@@ -208,29 +263,59 @@ const encryptWithContainerKey = ( text: string, CallBack: ( err: Error|null, enc
 
 }
 
-const localServerGetJSON = (command: string, method: string, postJSON: string, CallBack: (err: number|null, payload?: any) => void ) => {
+const localServerErrorBridge = ( status: number, CallBack : ( err: netWorkError|seguroError|null, payload?: any ) => void ) => {
+    switch (status) {
+        case 404: {
+            return CallBack ('LOCAL_SERVER_ERROR')
+        }
+        case 405: {
+            return CallBack ('NOT_STRIPE')
+        }
+        case 402: {
+            return CallBack ('Invitation_code_error')
+        }
+        case 406: {
+            return CallBack ('SEGURO_DATA_FORMAT_ERROR')
+        }
+        case 452: {
+            return CallBack ('WAITING_SEGURO_RESPONSE_TIMEOUT')
+        }
+        default: {
+            CallBack ('UNKNOW_ERROR')
+        }
+    }
+}
+
+const timeoutSetup = 30000
+const localServerGetJSON = (command: string, method: string, postJSON: string, CallBack: (err: netWorkError|seguroError|null, payload?: any) => void ) => {
     const xhr = new XMLHttpRequest()
     const url = self.name + command
     xhr.open( method, url, true )
     xhr.withCredentials = false
-    xhr.setRequestHeader("Content-Type", "application/json;charset=UTF-8")
+
+    const timeout = setTimeout (()=> {
+        return CallBack('LOCAL_SERVER_ERROR')
+    }, timeoutSetup )
+
+    xhr.setRequestHeader ("Content-Type", "application/json;charset=UTF-8")
     xhr.onload = () => {
+        clearTimeout(timeout)
         const status = xhr.status
-        if (status === 200) {
+        if ( status === 200) {
             if ( !xhr.response ) {
-                return CallBack(null, '')
+                return CallBack( null, '')
             }
             let ret = ''
             try {
                 ret = JSON.parse (xhr.response)
             } catch (ex) {
                 logger (`localServerGetJSON JSON.parse (xhr.response) ERROR`)
-                return CallBack (999)
+                return CallBack ('LOCAL_RESPONE_NO_JSON_DATA')
             }
             return CallBack(null, ret)
         }
-        logger (`localServerGetJSON LOCALSERVER return status[${status}] !== 200 ERROR`)
-        return CallBack (status, xhr.response)
+        logger (`localServerGetJSON [${ command }] response status[${ status }] !== 200 ERROR`)
+        return localServerErrorBridge ( status, CallBack )
     }
     return xhr.send(postJSON)
 }
@@ -280,32 +365,9 @@ const testNetwork = (CallBack: (err?: netWorkError|null, data?: testImapResult[]
     })
 }
 
-const UuidV4Check = /^[0-9A-F]{8}-[0-9A-F]{4}-4[0-9A-F]{3}-[89AB][0-9A-F]{3}-[0-9A-F]{12}$/
-
-const chooseFirstSeguroIMAP = (testData: testImapResult[]) => {
-    const errServer = testData.filter ( n => n.error !== null )
-    let gotoEnd = false
-    const imapLength = seguroSetup.publicImapAccounts.length
-    // @ts-ignore
-    const getOne = (n: number) => {
-        const imap = seguroSetup.publicImapAccounts [n]
-        const isBlock = errServer.filter ( _n => _n.n.server === imap.imapServer )
-        if ( isBlock.length ) {
-            logger (`isBlock`)
-            n ++
-            if ( n < imapLength ) {
-                return getOne (n)
-            } else {
-                if ( gotoEnd ) {
-                    logger (`chooseFirstSeguroIMAP all Seguro account can not use!`)
-                    return null
-                }
-                gotoEnd = true
-                return getOne(0)
-            }
-        } else {
-            return imap
-        }
-    }
-    return getOne (Math.round (Math.random()*(seguroSetup.publicImapAccounts.length -1)))
+const getNewNotice = ( connect: webEndpointConnect, CallBack ) => {
+    connect.nextNoticeBlock = connect.nextNoticeBlock || connect.client_listening_folder
+    const url = `${ connect.endPoints[0] }/${ connect.client_listening_folder }/${ connect.nextNoticeBlock }`
+    return localServerGetJSON('newNotice', 'GET', '', CallBack)
 }
+

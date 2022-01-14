@@ -1,5 +1,19 @@
 # `seguro-gateway` CHANGELOG
 
+## `0.14.3`
+
+### Additions
+
+- invitation.
+
+### Changes
+
+- None.
+
+### Fixes
+
+- None
+
 
 ## `0.14.3`
 

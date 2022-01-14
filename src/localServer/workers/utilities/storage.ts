@@ -10,6 +10,10 @@ const initNullSystemInitialization = () => {
         },
         profile: {
             profiles: []
+        },
+        SeguroNetwork: {
+            SeguroStatus: 'INIT',
+            SeguroObject: {}
         }
     }
     systemInitialization = data
@@ -79,6 +83,10 @@ const checkStorage = () => {
                         },
                         profile: {
                             profiles: []
+                        },
+                        SeguroNetwork: {
+                            SeguroStatus: 'INIT',
+                            SeguroObject: {}
                         }
                     }
                     cmd.data = [systemInitialization = data]
@@ -233,7 +241,7 @@ const returnSeguroInitializationData = (cmd: worker_command) => {
         profile: {
             profiles: _profile
         },
-        
+        SeguroNetwork: systemInitialization.SeguroNetwork
     }
 
     cmd.data = [data]

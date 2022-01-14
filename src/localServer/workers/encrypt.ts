@@ -107,7 +107,7 @@ const initEncryptWorker = () => {
 
         return encryptWorkerDoCommand ( cmd )
     }
-    
+
     return checkStorage ()
 }
 
@@ -325,7 +325,7 @@ const initEncryptObject = (cmd: worker_command, CallBack: (err?: Error|null) => 
                     if ( err ) {
                         return CallBack (err)
                     }
-                    let sysInit = null
+                    let sysInit
                         const _data = buffer.Buffer.from (data,'base64').toString()
                         try {
                             sysInit = JSON.parse (_data)
@@ -337,7 +337,8 @@ const initEncryptObject = (cmd: worker_command, CallBack: (err?: Error|null) => 
                         if ( SeguroKeyChain) {
                             SeguroKeyChain.keyChain = sysInit.SeguroKeyChain.keyChain
                         }
-                        
+                        //@ts-ignore
+                        systemInitialization.SeguroNetwork = sysInit.Preferences.SeguroNetwork
                         return createEncryptObject ( err => {
                             if ( err ) {
                                 return CallBack (err)
@@ -389,7 +390,7 @@ const encrypt_TestPasscode = (cmd: worker_command) => {
     pass.password = cmd.data[0]
 
     return initEncryptObject (cmd, ( err )=> {
-        if ( err === undefined)
+        
         if ( err ) {
             cmd.err = 'FAILURE'
             return returnCommand ( cmd )
@@ -401,69 +402,50 @@ const encrypt_TestPasscode = (cmd: worker_command) => {
 
 const invitation = (cmd: worker_command) => {
     const code: string = cmd.data [0]
-    // if (!UuidV4Check.test (code)) {
-    //     cmd.err = ['NO_UUID']
-    //     return returnCommand (cmd)
-    // }
+
     let kk: SeguroInvitation|null = null
+    let SeguroObject = null
     return async.waterfall ([
         (next: any ) => testNetwork ( next ),
         ( data: testImapResult[], next: any ) => {
-            const imap = chooseFirstSeguroIMAP (data)
-            if ( !imap ) {
-                const ret: netWorkError = 'ALL_EMAIL_SERVER_CAN_NOT_CONNECTING'
-                return next (ret)
-            }
+            
             if ( !SeguroKeyChain?.keyChain) {
                 const ret: WorkerCommandError = 'NOT_READY'
                 return next ( ret )
             }
 
             kk = {
-                device_publicKeyArmor: SeguroKeyChain.keyChain.deviceKeyPair.publicKeyArmor,
-                seguropublicKeyArmor: SeguroKeyChain.keyChain.seguroAccountKeyPair.publicKeyArmor,
-                imapConnect: imap,
-                client_folder_name: getUUIDv4(),
+                device_publickey_armor: SeguroKeyChain.keyChain.deviceKeyPair.publicKeyArmor,
+                seguro_key_armor: SeguroKeyChain.keyChain.seguroAccountKeyPair.privateKeyArmor,
+                imapTest: JSON.stringify(data),
                 invitation: code
             }
             return encrypt_with_Seguro (JSON.stringify (kk), next)
-        }
-        , ( encryptedText: string, next: any ) => localServerGetJSON ('sendToStripe','POST', JSON.stringify({postData: encryptedText }), next)
-        , (data: any, next: any ) => localServerGetJSON ('waitSeguroResponse','POST',
-            JSON.stringify({imapConnect: kk?.imapConnect, client_folder_name: kk?.client_folder_name }), (err, data) => {
-            if ( err ) {
-                let ret: netWorkError 
-                switch (err) {
-                    //      Auth error
-                    case 401: {
-                        ret = 'EMAIL_ACCOUNT_AUTH_ERROR'
-                        break
-                    }
-                    //      Timeout
-                    case 402: {
-                        ret = 'WAITING_SEGURO_RESPONSE_TIMEOUT'
-                        break
-                    }
-                    default: {
-                        logger (`invitation localServerGetJSON get unknow response number [${ err }]!`)
-                        ret = 'LOCAL_SERVER_ERROR'
-                        break
-                    }
-                }
-                // @ts-ignore
-                return next (ret)
+        }, 
+        ( encryptedText: string, next: any ) => localServerGetJSON ('sendToStripe','POST', JSON.stringify({ postData: encryptedText }), next ),
+        ( encrypted: string, next: any ) => decryptWithDeviceKey(encrypted, next),
+        ( data: string, next: any) => {
+            try {
+                SeguroObject = JSON.parse (data)
+            } catch (ex) {
+                return next (ex)
             }
-            
-        })
-    ], (err: any, data) => {
+            //@ts-ignore
+            systemInitialization.SeguroNetwork.SeguroObject = SeguroObject
+            //@ts-ignore
+            systemInitialization.SeguroNetwork.SeguroStatus = 'CONNECTING_SEGURO_NETWORK'
+            return encrypt_Seguro_INIT_data_ToPGP(cmd)
+        }
+    ], ( err: any, data) => {
         if ( err ) {
             cmd.err = err
             logger (`invitation getJSON ('testImap') Error`, err )
         }
-        cmd.data = [data]
+        logger(`invitation SUCCESS!`)
         return returnCommand (cmd)
     })
 }
+
 
 const newProfile = (cmd: worker_command) => {
     const profile: profile = cmd.data[0]
@@ -528,4 +510,15 @@ const storeProfile = (cmd: worker_command) => {
     return encrypt_Seguro_INIT_data_ToPGP ( cmd )
 }
 
-initEncryptWorker ()
+const startGetNoticeDaemon = () => {
+    if (!systemInitialization) {
+        return logger (`startGetNoticeDaemon have no systemInitialization ERROR!`)
+    }
+    const connect = systemInitialization.SeguroNetwork.SeguroObject 
+    const start = () => {
+        
+    }
+    start ()
+}
+
+initEncryptWorker()
