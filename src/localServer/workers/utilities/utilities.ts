@@ -272,7 +272,7 @@ const localServerErrorBridge = ( status: number, CallBack : ( err: netWorkError|
             return CallBack ('NOT_STRIPE')
         }
         case 402: {
-            return CallBack ('Invitation_code_error')
+            return CallBack ('INVITATION_CODE_ERROR')
         }
         case 406: {
             return CallBack ('SEGURO_DATA_FORMAT_ERROR')
