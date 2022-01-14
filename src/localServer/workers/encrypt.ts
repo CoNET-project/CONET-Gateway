@@ -439,9 +439,11 @@ const invitation = (cmd: worker_command) => {
     ], ( err: any, data) => {
         if ( err ) {
             cmd.err = err
-            logger (`invitation getJSON ('testImap') Error`, err )
+            logger (`invitation Error`, err )
+        } else {
+            logger(`invitation SUCCESS!`)
         }
-        logger(`invitation SUCCESS!`)
+        
         return returnCommand (cmd)
     })
 }
