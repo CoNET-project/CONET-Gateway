@@ -6,6 +6,7 @@ import * as fse from 'fs-extra'
 import { inspect } from 'util'
 import { v4 } from 'uuid'
 import { testImapServer } from './utilities/network'
+import { logger } from './utilities/Imap'
 const cors = require('cors')
 
 const stripeAuth = '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'
