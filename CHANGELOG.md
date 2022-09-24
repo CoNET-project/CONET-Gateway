@@ -1,5 +1,19 @@
 # `seguro-gateway` CHANGELOG
 
+## `0.15.3`
+
+### Additions
+
+- None.
+
+### Changes
+
+- Change NPM project name to @conet.project/seguro-gateway.
+
+### Fixes
+
+- None.
+---
 
 ## `0.15.2`
 
