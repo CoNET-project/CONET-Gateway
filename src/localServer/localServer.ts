@@ -7,7 +7,7 @@ import { inspect } from 'util'
 import { v4 } from 'uuid'
 import { testImapServer } from './utilities/network'
 import { logger } from './utilities/Imap'
-const cors = require('cors')
+
 
 const stripeAuth = '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'
 
@@ -42,6 +42,7 @@ class LocalServer {
     private localserver: Server
 
     private connect_peer_pool: any [] = []
+
     constructor ( private PORT = 3000, private appsPath: string ) {
 		this.appsPath = appsPath || join ( __dirname )
         this.initialize()
@@ -69,7 +70,7 @@ class LocalServer {
 		console.dir ({ staticFolder: staticFolder, launcherFolder: launcherFolder })
 
         const app = express()
-
+		const cors = require('cors')
 
         app.use( cors ())
 		app.use ( express.static ( staticFolder ))

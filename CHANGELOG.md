@@ -1,5 +1,23 @@
 # `seguro-gateway` CHANGELOG
 
+## `0.15.4`
+
+### Additions
+
+- None.
+
+### Changes
+
+- upgrade included packages.
+
+### Fixes
+
+- None.
+
+
+---
+
+
 ## `0.15.3`
 
 ### Additions
