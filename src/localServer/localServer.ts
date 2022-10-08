@@ -8,9 +8,6 @@ import { v4 } from 'uuid'
 import { testImapServer } from './utilities/network'
 import { logger } from './utilities/Imap'
 
-
-const stripeAuth = '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'
-
 const makeMetadata = ( text: string ) => {
     let ret = '{'
     let n = 0
@@ -112,99 +109,99 @@ class LocalServer {
             })
         })
 
-        app.post ('/sendToStripe', ( req: express.Request, res: express.Response ) => {
-            logger (`app.post /sendToStripe ${ req.socket.remoteAddress }:${ req.socket.remotePort } `)
-            const postData = req.body.postData
-            const uuid = v4()
-            const kk = JSON.parse(makeMetadata (Buffer.from(postData).toString ('base64')))
-            const postChunk = {
-                metadata: kk,
-                description: uuid
-            }
-            let count = 0
-            let keyid = ''
-            const Stripe = require('stripe')(stripeAuth)
-            const delCustoms = () => {
-                if ( keyid.length ) {
-                    return Stripe.customers.del(keyid)
-                    .then (() => {
-                        logger (`Deleted Stripe.customer [${ keyid }]`)
-                        keyid = ''
-                    })
-                }
+        // app.post ('/sendToStripe', ( req: express.Request, res: express.Response ) => {
+        //     logger (`app.post /sendToStripe ${ req.socket.remoteAddress }:${ req.socket.remotePort } `)
+        //     const postData = req.body.postData
+        //     const uuid = v4()
+        //     const kk = JSON.parse(makeMetadata (Buffer.from(postData).toString ('base64')))
+        //     const postChunk = {
+        //         metadata: kk,
+        //         description: uuid
+        //     }
+        //     let count = 0
+        //     let keyid = ''
+        //     const Stripe = require('stripe')(stripeAuth)
+        //     const delCustoms = () => {
+        //         if ( keyid.length ) {
+        //             return Stripe.customers.del(keyid)
+        //             .then (() => {
+        //                 logger (`Deleted Stripe.customer [${ keyid }]`)
+        //                 keyid = ''
+        //             })
+        //         }
                 
-            }
-            const getUpdate = () => {
+        //     }
+        //     const getUpdate = () => {
                 
-                return Stripe.customers.retrieve (keyid)
-                .then ((customer: any ) => {
-                    logger (`check update from Stripe [${ count }]`)
+        //         return Stripe.customers.retrieve (keyid)
+        //         .then ((customer: any ) => {
+        //             logger (`check update from Stripe [${ count }]`)
                     
-                    const meta = customer.metadata
-                    logger (inspect(meta, false, 3, true ))
-                    const err = meta.error
-                    if ( err ) {
-                        res.statusCode = /INVITATION/i.test (err) ? 402 : 406
-                        res.end()
-                        return Promise.reject (new Error('end'))
-                    }
+        //             const meta = customer.metadata
+        //             logger (inspect(meta, false, 3, true ))
+        //             const err = meta.error
+        //             if ( err ) {
+        //                 res.statusCode = /INVITATION/i.test (err) ? 402 : 406
+        //                 res.end()
+        //                 return Promise.reject (new Error('end'))
+        //             }
                     
-                    if ( meta.response ) {
+        //             if ( meta.response ) {
                         
-                        joinMetadata(meta)
-                        res.json (customer.metadata.text).end()
-                        return Promise.reject (new Error('end'))
-                    }
+        //                 joinMetadata(meta)
+        //                 res.json (customer.metadata.text).end()
+        //                 return Promise.reject (new Error('end'))
+        //             }
 
-                    if ( ++count > 3 ) {
-                        res.statusCode = 452
-                        res.end()
-                        return Promise.reject (new Error('end'))
-                    }
-                    setTimeout (() => {
-                        logger (`getUpdate with getUpdate!`)
-                        getUpdate ()
-                    }, 2000 )
-                    return Promise.reject (new Error('loop'))
+        //             if ( ++count > 3 ) {
+        //                 res.statusCode = 452
+        //                 res.end()
+        //                 return Promise.reject (new Error('end'))
+        //             }
+        //             setTimeout (() => {
+        //                 logger (`getUpdate with getUpdate!`)
+        //                 getUpdate ()
+        //             }, 2000 )
+        //             return Promise.reject (new Error('loop'))
                     
-                })
-                .catch ((ex: Error ) => {
+        //         })
+        //         .catch ((ex: Error ) => {
 
-                    if ( /^end$/i.test (ex.message )) {
+        //             if ( /^end$/i.test (ex.message )) {
                         
-                        delCustoms ()
+        //                 delCustoms ()
                         
-                        return logger (`catch end reject!`)
-                    }
-                    if ( /^loop$/i.test (ex.message )) {
+        //                 return logger (`catch end reject!`)
+        //             }
+        //             if ( /^loop$/i.test (ex.message )) {
                         
                         
-                        return logger (`catch loop reject!`)
-                    }
-                    logger (`Stripe response ERROR! [${ keyid }]`)
-                    logger (ex)
-                    res.statusCode = 405
-                    res.end()
-                })
-            }
+        //                 return logger (`catch loop reject!`)
+        //             }
+        //             logger (`Stripe response ERROR! [${ keyid }]`)
+        //             logger (ex)
+        //             res.statusCode = 405
+        //             res.end()
+        //         })
+        //     }
 
-            return Stripe.customers.create(postChunk)
-            .then ((n: any ) => {
-                keyid = n.id
-                logger (inspect(n, false, 3, true))
-                setTimeout (()=> {
-                    logger (`getUpdate with main!`)
-                    getUpdate()
-                }, 3000 )
-            })
-            .catch ((ex: any ) => {
-                logger (ex)
-                logger (`Seguro response ERROR! Deleted Stripe.customer [${ keyid }]`)
-                res.statusCode = 405
-                res.end()
-            })
+        //     return Stripe.customers.create(postChunk)
+        //     .then ((n: any ) => {
+        //         keyid = n.id
+        //         logger (inspect(n, false, 3, true))
+        //         setTimeout (()=> {
+        //             logger (`getUpdate with main!`)
+        //             getUpdate()
+        //         }, 3000 )
+        //     })
+        //     .catch ((ex: any ) => {
+        //         logger (ex)
+        //         logger (`Seguro response ERROR! Deleted Stripe.customer [${ keyid }]`)
+        //         res.statusCode = 405
+        //         res.end()
+        //     })
             
-        })
+        // })
 
         app.post ( '/postMessage', ( req: express.Request, res: express.Response ) => {
             const post_data: postData = req.body

@@ -8,7 +8,7 @@
 
 ### Changes
 
-- upgrade included packages.
+- upgrade included packages and added web3 and eth-crypto.
 
 ### Fixes
 

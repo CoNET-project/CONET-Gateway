@@ -2,6 +2,7 @@
 declare const openpgp
 declare const buffer: any
 declare const scrypt: any
+declare const async: any
 
 interface imapConnect {
 	imapServer: string

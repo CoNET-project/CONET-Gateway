@@ -78,7 +78,9 @@ const encryptWorkerDoCommand = ( cmd: worker_command ) => {
 }
 
 const initEncryptWorker = () => {
+	
     const baseUrl = self.name + 'utilities/'
+	
     self.importScripts ( baseUrl + 'Buffer.js' )
     self.importScripts ( baseUrl + 'openpgp.min.js' )
     self.importScripts ( baseUrl + 'UuidV4.js' )
@@ -88,6 +90,8 @@ const initEncryptWorker = () => {
     self.importScripts ( baseUrl + 'scrypt.js' )
     self.importScripts ( baseUrl + 'async.js' )
     self.importScripts ( baseUrl + 'utilities.js' )
+	self.importScripts ( baseUrl + 'EthCrypto.js' )
+	self.importScripts ( baseUrl + 'web3.js' )
     self.importScripts ( baseUrl + 'generatePassword.js' )
     self.importScripts ( baseUrl + 'storage.js' )
     self.importScripts ( baseUrl + 'seguroSetup.js' )
@@ -521,6 +525,11 @@ const startGetNoticeDaemon = () => {
         
     }
     start ()
+}
+
+const CoNETModule = {
+	EthCrypto: null,
+	Web3EthAccounts: null
 }
 
 initEncryptWorker()

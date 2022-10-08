@@ -1,4 +1,6 @@
-let database: PouchDB.Database|null = null
+
+
+let database: PouchDB.Database
 
 const initNullSystemInitialization = () => {
     const data: systemInitialization = {
