@@ -1,4 +1,4 @@
-#! /usr/bin/env node
+#!/usr/local/bin
 import LocalServer from './localServer/localServer';
 const yargs = require('yargs')
 const argv = yargs(process.argv.slice(2))
