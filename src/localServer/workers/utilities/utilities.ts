@@ -74,6 +74,11 @@ const makePrivateKeyObj = (privateArmor: string, password: string, CallBack: (er
 
 }
 
+const loadWalletAddress = ( keypair: keyPair, password ) => {
+	const account = new CoNETModule.Web3EthAccounts ()
+	return account.wallet.decrypt ( keypair.privateKeyArmor, password )
+}
+
 const makeKeypairOBJ = (keypair: keyPair, password: string, CallBack: (err:Error|null) => void) => {
     if (!keypair) {
         return CallBack (new Error ('makeKeypairOBJ have no keypair!'))
@@ -121,9 +126,9 @@ const makeContainerKeyObj = ( CallBack: (err:Error|null) => void ) => {
         if ( err ) {
             return CallBack (err)
         }
-        if ( pass ) {
-            pass.passcode = pass.password = pass._passcode = ''
-        }
+        // if ( pass ) {
+        //     pass.passcode = pass.password = pass._passcode = ''
+        // }
         return CallBack (null)
     })
 }
@@ -144,7 +149,8 @@ const makeSeguroKeyObj = (CallBack: (err:Error|null) => void ) => {
         return CallBack ( new Error (err))
     }
     SeguroKeyChain.isReady = true
-    return makeKeypairOBJ (SeguroKeyChain.keyChain.seguroAccountKeyPair, '', CallBack)
+
+    //return makeKeypairOBJ (SeguroKeyChain.keyChain.seguroAccountKeyPair, '', CallBack)
 }
 
 const decryptWithContainerKey = ( encryptedMessage: string, CallBack: (err: Error|null, text?: string) => void) => {
@@ -249,7 +255,8 @@ const encryptWithContainerKey = ( text: string, CallBack: ( err: Error|null, enc
     const encryptObj = {
         message: null,
         encryptionKeys: keyOpenPGP_obj.publicKeyObj,
-        signingKeys: keyOpenPGP_obj.privateKeyObj
+        signingKeys: keyOpenPGP_obj.privateKeyObj,
+		config: { preferredCompressionAlgorithm: openpgp.enums.compression.zlib } // compress the data with zlib
     }
     return openpgp.createMessage({ text: buffer.Buffer.from (text).toString('base64') })
         .then ((n: any) => {
@@ -287,6 +294,7 @@ const localServerErrorBridge = ( status: number, CallBack : ( err: netWorkError|
 }
 
 const timeoutSetup = 30000
+
 const localServerGetJSON = (command: string, method: string, postJSON: string, CallBack: (err: netWorkError|seguroError|null, payload?: any) => void ) => {
     const xhr = new XMLHttpRequest()
     const url = self.name + command
@@ -317,6 +325,7 @@ const localServerGetJSON = (command: string, method: string, postJSON: string, C
         logger (`localServerGetJSON [${ command }] response status[${ status }] !== 200 ERROR`)
         return localServerErrorBridge ( status, CallBack )
     }
+
     return xhr.send(postJSON)
 }
 
@@ -371,3 +380,35 @@ const getNewNotice = ( connect: webEndpointConnect, CallBack ) => {
     return localServerGetJSON('newNotice', 'GET', '', CallBack)
 }
 
+const initCoNETTestnetUSDCAsset = () => {
+	const ret: CryptoAsset = {
+		history: [],
+		balance: 0,
+		networkName: 'CoNET Testnet',
+		RpcURL:'0xCABCde7cC96F8FbD4e4a1A232C8bfc3aC46b1461',
+		blockExplorerURL: '',
+		chainID: 18,
+		currencySymbol: 'CoNET-USDC',
+	}
+	return ret
+}
+
+const initCoNETTestnetTokenAsset = () => {
+	const ret: CryptoAsset = {
+		history: [],
+		balance: 0,
+		networkName: 'CoNET Testnet',
+		RpcURL:'https://conettech.ca/testnet',
+		blockExplorerURL: '',
+		chainID: 22224,
+		currencySymbol: 'CoNET-Testnet',
+	}
+	return ret
+}
+
+const denominator = 1000000000000000000
+const testNet = 'https://conettech.ca/testnet'
+
+const getCoNETTestnetBalance = async ( walletAddr: string ) => {
+	const web3 = CoNETModule
+}

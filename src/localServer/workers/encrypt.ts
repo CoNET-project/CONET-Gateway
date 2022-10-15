@@ -91,7 +91,8 @@ const initEncryptWorker = () => {
     self.importScripts ( baseUrl + 'async.js' )
     self.importScripts ( baseUrl + 'utilities.js' )
 	self.importScripts ( baseUrl + 'EthCrypto.js' )
-	self.importScripts ( baseUrl + 'web3.js' )
+	self.importScripts ( baseUrl + 'web3-providers-http.js' )
+	self.importScripts ( baseUrl + 'web3-eth.js' )
     self.importScripts ( baseUrl + 'generatePassword.js' )
     self.importScripts ( baseUrl + 'storage.js' )
     self.importScripts ( baseUrl + 'seguroSetup.js' )
@@ -156,49 +157,62 @@ const initSeguroData = ( cmd: worker_command ) => {
         toStoreObj: null,
         encryptedString: ''
     }
-    createKey( pass?.passcode || '', '', '')
+    createGPGKey( pass?.passcode || '', '', '')			//			containerKeyPair
     .then (( data: any ) => {
         ret.containerKeyPair = {
             publicKeyArmor: data.publicKey,
             privateKeyArmor: data.privateKey,
             keyOpenPGP_obj: null
         }
-        return createKey ('', '', '')
-    })
-    .then (( data: any) => {
-        ret.keyChain.deviceKeyPair.publicKeyArmor = data.publicKey
-        ret.keyChain.deviceKeyPair.privateKeyArmor = data.privateKey
-        return createKey ('', '','')
-    })
-    .then (( data: any ) => {
-        ret.keyChain.seguroAccountKeyPair.publicKeyArmor = data.publicKey
-        ret.keyChain.seguroAccountKeyPair.privateKeyArmor = data.privateKey
-        return createKey ('', '','')
-    })
-    .then (( data: any ) => {
-        const _key: keyPair = {
-            publicKeyArmor: data.publicKey,
-            privateKeyArmor: data.privateKey,
-            keyID: '',
-            keyOpenPGP_obj: null,
-            isPrimary: true
-        }
-        ret.keyChain.profiles.push(_key)
-        SeguroKeyChain = ret
-        return async.series ([
-            ( next: any ) => createEncryptObject (next),
-            (next: any ) => initEncryptObject (cmd, next)
-            
-        ], err => {
-            if (err) {
-                logger (`initEncryptObject ERROR`, err )
-                cmd.err = 'OPENPGP_RUNNING_ERROR'
-                return returnCommand (cmd)
-            }
+        const acc: any[] = createKey (pass?.passcode||'', 3)					//			device
+		
+			ret.keyChain.deviceKeyPair.publicKeyArmor = CoNETModule.EthCrypto.publicKeyByPrivateKey (acc[0].privateKey)
+			ret.keyChain.deviceKeyPair.keyID = acc[0].address.toUpperCase()
+			ret.keyChain.deviceKeyPair.privateKeyArmor = acc['encrypted'][0]
+		
+			ret.keyChain.seguroAccountKeyPair.publicKeyArmor = CoNETModule.EthCrypto.publicKeyByPrivateKey (acc[1].privateKey)
+			ret.keyChain.seguroAccountKeyPair.privateKeyArmor = acc[1].address.toUpperCase()
+			ret.keyChain.seguroAccountKeyPair.privateKeyArmor = acc['encrypted'][1]
 
-            return encrypt_Seguro_INIT_data_ToPGP (cmd)
-        })
+			const _key: profile = {
+				publicKeyArmor: CoNETModule.EthCrypto.publicKeyByPrivateKey (acc[2].privateKey),
+				privateKeyArmor: acc['encrypted'][2],
+				keyID: '0x'+acc[2].address.substring(2).toUpperCase(),
+				keyOpenPGP_obj: null,
+				isPrimary: true,
+				assets: [initCoNETTestnetTokenAsset(), initCoNETTestnetUSDCAsset()]
+			}
+			ret.keyChain.profiles.push(_key)
+			SeguroKeyChain = ret
+			return async.series ([
+				//( next: any ) => createEncryptObject (next),
+				(next: any ) => initEncryptObject (cmd, next)
+				
+			], err => {
+				if (err) {
+					logger (`initEncryptObject ERROR`, err )
+					cmd.err = 'OPENPGP_RUNNING_ERROR'
+					return returnCommand (cmd)
+				}
+	
+				return encrypt_Seguro_INIT_data_ToPGP (cmd)
+			})
     })
+
+        // return async.series ([
+        //     ( next: any ) => createEncryptObject (next),
+        //     (next: any ) => initEncryptObject (cmd, next)
+            
+        // ], err => {
+        //     if (err) {
+        //         logger (`initEncryptObject ERROR`, err )
+        //         cmd.err = 'OPENPGP_RUNNING_ERROR'
+        //         return returnCommand (cmd)
+        //     }
+
+        //     return encrypt_Seguro_INIT_data_ToPGP (cmd)
+        // })
+    // })
     .catch (( ex: any ) => {
         cmd.err = 'OPENPGP_RUNNING_ERROR'
         cmd.data = []
@@ -249,12 +263,13 @@ const createEncryptObject = ( CallBack: (err: Error|null) => void ) => {
         if ( !SeguroKeyChain ) {
             return CallBack ( new Error ('createEncryptObject Error! Have no obj') )
         }
-        return async.eachSeries ( SeguroKeyChain.keyChain.profiles, ( n, next ) => makeKeypairOBJ(n, '', next), err => {
-            if ( err ) {
-                return CallBack (err)
-            }
-            return CallBack (null)
-        })
+		return CallBack (null)
+        // return async.eachSeries ( SeguroKeyChain.keyChain.profiles, ( n, next ) => makeKeypairOBJ(n, '', next), err => {
+        //     if ( err ) {
+        //         return CallBack (err)
+        //     }
+        //     return CallBack (null)
+        // })
     })
     
 }
@@ -293,22 +308,18 @@ const initEncryptObject = (cmd: worker_command, CallBack: (err?: Error|null) => 
                         privateKeyArmor: seguroKey.privateKeyArmor,
                         keyOpenPGP_obj: null
                     },
-                    profiles: []
+                    profiles: _SeguroKeyChain.keyChain.profiles
                 },
                 isReady: false,
                 toStoreObj: null,
                 encryptedString: ''
             }
-            _SeguroKeyChain.keyChain.profiles.forEach ( n => {
-                const key = { publicKeyArmor: n.publicKeyArmor, privateKeyArmor: n.privateKeyArmor, keyID: n.keyID, keyOpenPGP_obj: null, alias: n.alias, nickname: n.nickname, tags: n.tags, bio: n.bio, isPrimary: n.isPrimary, profileImg: n.profileImg }
-                kk.keyChain.profiles.push ( key )
-            })
             return kk
         }
-        return async.series ([
-            next => makeDeviceKeyObj (next),
-            next => makeSeguroKeyObj (next)
-        ], CallBack)
+
+		SeguroKeyChain.isReady = true
+
+		return CallBack ()
 
     }
 
@@ -330,25 +341,21 @@ const initEncryptObject = (cmd: worker_command, CallBack: (err?: Error|null) => 
                         return CallBack (err)
                     }
                     let sysInit
-                        const _data = buffer.Buffer.from (data,'base64').toString()
-                        try {
-                            sysInit = JSON.parse (_data)
-                        } catch ( ex ) {
-                            const err = 'unlockContainerKeyPair decryptWithContainerKey JSON.parse Error'
-                            CallBack (new Error (err))
-                            return logger (err)
-                        }
-                        if ( SeguroKeyChain) {
-                            SeguroKeyChain.keyChain = sysInit.SeguroKeyChain.keyChain
-                        }
-                        //@ts-ignore
-                        systemInitialization.SeguroNetwork = sysInit.Preferences.SeguroNetwork
-                        return createEncryptObject ( err => {
-                            if ( err ) {
-                                return CallBack (err)
-                            }
-                            return makeKeyChainObj ()
-                        })
+					const _data = buffer.Buffer.from (data,'base64').toString()
+					try {
+						sysInit = JSON.parse (_data)
+					} catch ( ex ) {
+						const err = 'unlockContainerKeyPair decryptWithContainerKey JSON.parse Error'
+						CallBack (new Error (err))
+						return logger (err)
+					}
+					if ( SeguroKeyChain) {
+						SeguroKeyChain.keyChain = sysInit.SeguroKeyChain.keyChain
+					}
+					//@ts-ignore
+					systemInitialization.SeguroNetwork = sysInit.Preferences.SeguroNetwork
+					return makeKeyChainObj ()
+
                 })
             }
             return makeKeyChainObj ()
@@ -369,7 +376,29 @@ const initEncryptObject = (cmd: worker_command, CallBack: (err?: Error|null) => 
     return unlockContainerKeyPair ()
 }
 
-const createKey = ( passwd: string, name: string, email: string ) => {
+/**
+ * 		
+ */
+const createKey = ( password: string, length: number ) => {
+
+
+/**
+ * 		for web3 window.crypto function in HTML Worker because window & document has not in Worker
+ */
+// @ts-ignore
+// window = {
+// 	crypto: crypto
+// }
+	const eth = new CoNETModule.Web3Eth()
+
+	const acc = eth.accounts.wallet.create(length)
+	acc.encrypted = acc.encrypt (password)
+	return acc
+}
+
+
+
+const createGPGKey = ( passwd: string, name: string, email: string ) => {
 	const userId = {
 		name: name,
 		email: email
@@ -425,7 +454,7 @@ const invitation = (cmd: worker_command) => {
                 invitation: code
             }
             return encrypt_with_Seguro (JSON.stringify (kk), next)
-        }, 
+        },
         ( encryptedText: string, next: any ) => localServerGetJSON ('sendToStripe','POST', JSON.stringify({ postData: encryptedText }), next ),
         ( encrypted: string, next: any ) => decryptWithDeviceKey(encrypted, next),
         ( data: string, next: any) => {
@@ -467,7 +496,7 @@ const newProfile = (cmd: worker_command) => {
         isPrimary: profile.isPrimary,
         profileImg: profile.profileImg
     }
-    return createKey('','','')
+    return createGPGKey('','','')
     .then((n: any) => {
         ret.privateKeyArmor = n.privateKey
         ret.publicKeyArmor = n.publicKey
@@ -527,9 +556,11 @@ const startGetNoticeDaemon = () => {
     start ()
 }
 
-const CoNETModule = {
+const CoNETModule: CoNET_Module = {
 	EthCrypto: null,
-	Web3EthAccounts: null
+	Web3HttpProvider:  null,
+	Web3EthAccounts: null,
+	Web3Eth: null
 }
 
 initEncryptWorker()

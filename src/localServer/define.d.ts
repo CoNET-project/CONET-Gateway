@@ -44,6 +44,7 @@ interface next_time_connect {
 	imap_account: imap_setup
 	server_folder: string
 }
+
 interface postData {
 	connectUUID?: string
 	encryptedMessage: string
@@ -59,7 +60,32 @@ interface Window {
 type keyOpenPGP_obj = {
 	publicKeyObj: any
 	privateKeyObj: any
-} 
+}
+
+type CryptoAssetHistory = {
+	status: 'Pending'|'Confirmed'
+	amount: number
+	Nonce: number
+	to: string
+	transactionFee: number
+	gasLimit: number
+	gasUsed: number
+	baseFee: number
+	priorityFee: number
+	totalGasFee: number
+	maxFeePerGas: number
+	total: number
+}
+
+type CryptoAsset = {
+	balance: number
+	history: CryptoAssetHistory[]
+	networkName: string						//
+	RpcURL: string							//		Token Contract Address
+	chainID: number							//		Token Decimal
+	currencySymbol: string					//		Token Symbol
+	blockExplorerURL: string
+}
 
 interface keyPair {
 	publicKeyArmor: string
@@ -68,6 +94,7 @@ interface keyPair {
 	keyOpenPGP_obj: keyOpenPGP_obj | null
 	_id?: string
 	isPrimary?: boolean
+
 }
 
 
@@ -114,6 +141,7 @@ interface profile extends keyPair {
 	bio?: string
     isPrimary?: boolean
     profileImg?: string
+	assets?: CryptoAsset[]
 }
 
 type ColorTheme = 'LIGHT' | 'DARK'
@@ -152,7 +180,7 @@ type SeguroNetworkStatus =
 'TIMEOUT_EMAIL_SERVER' | 'TIMEOUT_SEGURO_NETWORK' |
 'NO_INTERNET' | 'CONNECTING_ACCESS_POINT' | 'WAITING_SEGURO_RESPONSE'|
 'CONNECTING_SEGURO_NETWORK'|
-'INIT'
+'INIT'|'FINISHED'
 
 interface ISeguroNetwork {
 	SeguroStatus: SeguroNetworkStatus
@@ -197,4 +225,45 @@ interface webEndpointConnect {
 	endPoints: string[]
 	nextNoticeBlock: string
 	NoticeBody: string
+}
+
+interface CoNET_Module {
+	EthCrypto: any
+	Web3HttpProvider: any
+	Web3EthAccounts: any
+	Web3Eth: any
+}
+
+interface CoNET_Web3EthAccounts_WalletCreate {
+	Web3EthAccounts
+}
+
+interface WalletBase {
+    constructor(accounts: AccountsBase)
+
+    length: number
+    defaultKeyName: string
+
+    [key: number]: Account
+
+    create(numberOfAccounts: number, entropy?: string): WalletBase
+
+    add(account: string | AddAccount): AddedAccount
+
+    remove(account: string | number): boolean
+
+    clear(): WalletBase
+
+    encrypt(password: string): EncryptedKeystoreV3Json[]
+
+    decrypt(
+        keystoreArray: EncryptedKeystoreV3Json[],
+        password: string
+    ): WalletBase
+
+    save(password: string, keyName?: string): boolean
+
+    load(password: string, keyName?: string): WalletBase
+
+	encrypted: string[]
 }

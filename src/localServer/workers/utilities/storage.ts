@@ -14,7 +14,7 @@ const initNullSystemInitialization = () => {
             profiles: []
         },
         SeguroNetwork: {
-            SeguroStatus: 'INIT',
+            SeguroStatus: 'FINISHED',
             SeguroObject: {}
         }
     }
@@ -75,6 +75,7 @@ const checkStorage = () => {
                 }
 
                 pass = initData.id
+				
                 const initLocked = () => {
                     const data: systemInitialization = {
                         preferences: {
@@ -215,23 +216,23 @@ const returnSeguroInitializationData = (cmd: worker_command) => {
     }
     const preferences = systemInitialization.preferences
     const profile = SeguroKeyChain.keyChain.profiles
-    const _profile: profile[] = []
-    profile.forEach ( n => {
-        const ret: profile = {
-            publicKeyArmor: '',
-            keyID: n.keyID,
-            privateKeyArmor: '',
-            keyOpenPGP_obj: null,
-            nickname: n.nickname || '',
-            tags: n.tags || [],
-            alias: n.alias || '',
-            bio: n.bio||'',
-            isPrimary: n.isPrimary||false,
-            profileImg: n.profileImg||''
-        }
+    // const _profile: profile[] = []
+    // profile.forEach ( n => {
+    //     const ret: profile = {
+    //         publicKeyArmor: '',
+    //         keyID: n.keyID,
+    //         privateKeyArmor: '',
+    //         keyOpenPGP_obj: null,
+    //         nickname: n.nickname || '',
+    //         tags: n.tags || [],
+    //         alias: n.alias || '',
+    //         bio: n.bio||'',
+    //         isPrimary: n.isPrimary||false,
+    //         profileImg: n.profileImg||''
+    //     }
         
-        _profile.push (ret)
-    })
+    //     _profile.push (ret)
+    // })
 
     const data: systemInitialization = {
         preferences: {
@@ -241,7 +242,7 @@ const returnSeguroInitializationData = (cmd: worker_command) => {
             status: 'UNLOCKED'
         },
         profile: {
-            profiles: _profile
+            profiles: profile
         },
         SeguroNetwork: systemInitialization.SeguroNetwork
     }

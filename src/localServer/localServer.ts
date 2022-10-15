@@ -35,7 +35,7 @@ const joinMetadata = (metadata: any ) => {
 
 
 class LocalServer {
-	// @ts-ignore
+
     private localserver: Server
 
     private connect_peer_pool: any [] = []

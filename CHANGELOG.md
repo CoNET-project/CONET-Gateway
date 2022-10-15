@@ -1,5 +1,22 @@
 # `seguro-gateway` CHANGELOG
 
+## `0.15.5`
+
+### Additions
+
+- Web3 & wallet support.
+
+### Changes
+
+-
+
+### Fixes
+
+- None.
+
+
+---
+
 ## `0.15.4`
 
 ### Additions

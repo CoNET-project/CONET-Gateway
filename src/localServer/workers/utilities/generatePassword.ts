@@ -76,6 +76,7 @@ const getPasscode = (passcode: string, characterSet: string ) => {
 	return ret
 }
 
+
 const createNumberPasscode = ( cmd: worker_command, CallBack: (err: Error|null, password?: any ) => void ) => {
 	const scryptObj = {
 		charSet: '',
@@ -97,7 +98,6 @@ const createNumberPasscode = ( cmd: worker_command, CallBack: (err: Error|null, 
     const _passwd1 = buffer.Buffer.from (scryptObj._passcode)
     //password, salt, N, r, p, dkLen, callback
 	
-
     scrypt.scrypt(_passwd1, scryptObj.salt, scryptObj.N, scryptObj.r, scryptObj.p, scryptObj.dkLen, ( progressCallback: number ) => {
         cmd.data = [progressCallback]
         return returnCommand (cmd)
