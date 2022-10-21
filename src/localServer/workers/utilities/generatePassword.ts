@@ -76,9 +76,8 @@ const getPasscode = (passcode: string, characterSet: string ) => {
 	return ret
 }
 
-
-const createNumberPasscode = ( cmd: worker_command, CallBack: (err: Error|null, password?: any ) => void ) => {
-	const scryptObj = {
+const createNumberPasscode = async (passcode: string) => {
+	passObj = {
 		charSet: '',
 		salt: buffer.Buffer.from (generatePassword (Math.random ()*64)),
 		N: Math.pow (2, 7 + Math.round (Math.random() * 5)),
@@ -86,49 +85,34 @@ const createNumberPasscode = ( cmd: worker_command, CallBack: (err: Error|null, 
 		p: Math.round (10 + Math.random () * 10),
 		dkLen: Math.round (32 + Math.random () * 32),
 		passcode: '',
-		_passcode: cmd.data[0],
-		password: cmd.data[0]
+		_passcode: passcode,
+		password: passcode
 	}
 
-	if ( isAllNumbers (scryptObj.password)) {
-		scryptObj.charSet = getNumberPasswordCharacterSet()
-    	scryptObj._passcode = getPasscode(scryptObj.password, scryptObj.charSet)
+	if ( isAllNumbers (passObj.password)) {
+		passObj.charSet = getNumberPasswordCharacterSet()
+    	passObj._passcode = getPasscode( passObj.password, passObj.charSet )
 	}
     
-    const _passwd1 = buffer.Buffer.from (scryptObj._passcode)
+    const _passwd1 = buffer.Buffer.from (passObj._passcode)
     //password, salt, N, r, p, dkLen, callback
 	
-    scrypt.scrypt(_passwd1, scryptObj.salt, scryptObj.N, scryptObj.r, scryptObj.p, scryptObj.dkLen, ( progressCallback: number ) => {
-        cmd.data = [progressCallback]
-        return returnCommand (cmd)
-    }).then (( pass: string )=> {
-		scryptObj.passcode = buffer.Buffer.from (pass).toString ('hex')
-        return CallBack ( null, scryptObj)
-    }).catch (( ex: Error ) => {
-        return CallBack ( ex )
-    })
-
+	if (!passObj ) {
+		const msg = `createNumberPasscode Error: passObj === null`
+		logger (msg)
+		return null
+	}
+	return passObj.passcode = buffer.Buffer.from((await scrypt.scrypt(_passwd1, passObj.salt, passObj.N, passObj.r, passObj.p, passObj.dkLen))).toString('base64')
 }
 
-const decodePasscode = (cmd: worker_command, CallBack: (err: Error|null) => void ) => {
-	if ( !pass?.salt ) {
-		return CallBack (new Error ('Object pass have not exist!'))
+const decodePasscode = async () => {
+	if ( !passObj?.salt ) {
+		throw new Error (`decodePasscode Error: passObj null`)
 	}
-	pass._passcode = getPasscode(pass.password, pass.charSet)
-	const _passwd1 = buffer.Buffer.from (pass._passcode)
+	passObj._passcode = getPasscode(passObj.password, passObj.charSet)
+	const _passwd1 = buffer.Buffer.from (passObj._passcode)
     //password, salt, N, r, p, dkLen, callback
-	pass.salt = buffer.Buffer.from (pass.salt)
+	passObj.salt = buffer.Buffer.from (passObj.salt)
 
-    scrypt.scrypt( _passwd1, pass.salt, pass.N, pass.r, pass.p, pass.dkLen, ( progressCallback: number ) => {
-        cmd.data = [progressCallback]
-        return returnCommand (cmd)
-    }).then (( _pass: string ) => {
-		if ( pass ) {
-			pass.passcode = buffer.Buffer.from (_pass).toString ('hex')
-		}
-		
-        return CallBack (null)
-    }).catch (( ex: Error ) => {
-        return CallBack ( ex )
-    })
+    return passObj.passcode = buffer.Buffer.from (await scrypt.scrypt( _passwd1, passObj.salt, passObj.N, passObj.r, passObj.p, passObj.dkLen)).toString('base64')
 }

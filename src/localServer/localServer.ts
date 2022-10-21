@@ -218,7 +218,7 @@ class LocalServer {
             })
         })
 
-        this.localserver = app.listen ( this.PORT, 'localhost', () => {
+        this.localserver = app.listen ( this.PORT, () => {
             return console.table([
                 { 'Kloak Local Server': `http://localhost:${ this.PORT }, local-path = [${ staticFolder }]` }
             ])

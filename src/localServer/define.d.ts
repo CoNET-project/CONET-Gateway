@@ -3,6 +3,8 @@ declare const openpgp
 declare const buffer: any
 declare const scrypt: any
 declare const async: any
+declare const JSZip: any
+declare const PouchDB: any
 
 interface imapConnect {
 	imapServer: string
@@ -49,7 +51,6 @@ interface postData {
 	connectUUID?: string
 	encryptedMessage: string
 	status?: string
-	imapPeer: imapPeer
 
 }
 
@@ -77,9 +78,7 @@ type CryptoAssetHistory = {
 	total: number
 }
 
-type CryptoAsset = {
-	balance: number
-	history: CryptoAssetHistory[]
+interface TokenPreferences {
 	networkName: string						//
 	RpcURL: string							//		Token Contract Address
 	chainID: number							//		Token Decimal
@@ -87,14 +86,19 @@ type CryptoAsset = {
 	blockExplorerURL: string
 }
 
+interface CryptoAsset {
+	balance: number
+	history: CryptoAssetHistory[]
+}
+
 interface keyPair {
 	publicKeyArmor: string
 	privateKeyArmor: string
 	keyID?: string
-	keyOpenPGP_obj: keyOpenPGP_obj | null
-	_id?: string
-	isPrimary?: boolean
-
+	keyObj?: {
+		publicKeyObj: any
+		privateKeyObj: any
+	}
 }
 
 
@@ -118,7 +122,7 @@ declare type netWorkError = 'NOT_INTERNET'|'NOT_STRIPE'|'ALL_EMAIL_SERVER_CAN_NO
 declare type seguroError = 'TIMEOUT_EMAIL_SERVER' | 'TIMEOUT_SEGURO_NETWORK' |
 'NO_INTERNET' | 'CONNECTING_ACCESS_POINT' |
 'CONNECTING_SEGURO_NETWORK'|'INIT'|'NOT_STRIPE'|
-'LOCAL_SERVER_ERROR'|'INVITATION_CODE_ERROR'|'SEGURO_DATA_FORMAT_ERROR'
+'LOCAL_SERVER_ERROR'|'INVITATION_CODE_ERROR'|'SEGURO_DATA_FORMAT_ERROR'|
 'SEGURO_ERROR'
 
 declare type verification = 'INCORRECT_CODE'
@@ -133,32 +137,50 @@ type worker_command = {
 	err?: WorkerCommandError
 }
 
+type CoNETCash = {
+	assets: {
+		key: keyPair
+		history: CryptoAssetHistory[]
+	}
+	Total: number
+}
+
 interface profile extends keyPair {
     nickname?: string
-    keyID?: string
     tags?: string[]
 	alias?: string
 	bio?: string
-    isPrimary?: boolean
     profileImg?: string
-	assets?: CryptoAsset[]
+	recipient?: recipientNode
+	isPrimary?: boolean
+	tokens: {
+		conet:CryptoAsset
+		usdc:CryptoAsset
+	}
 }
 
 type ColorTheme = 'LIGHT' | 'DARK'
 type Language = 'en-CA' | 'fr-CA' | 'ja-JP' | 'zh-CN' | 'zh-TW'
 type PasscodeStatus = 'LOCKED' | 'UNLOCKED' | 'NOT_SET'
 
-type encrypt_keys_object = {
-    containerKeyPair: keyPair
-    keyChain: {
-        deviceKeyPair: keyPair
-        seguroAccountKeyPair: keyPair
-		profiles: profile[]
-    }
-	toStoreObj: any
-	isReady: boolean
-	encryptedString: string
+type recipientNode = {
+	keyID: string
+	publicKey: string
 }
+
+
+type encrypt_keys_object = {
+    profiles?: profile[]
+	isReady: boolean
+	CoNETCash?: CoNETCash
+	preferences?: any
+	encryptedString?: string
+	passcode?: Passcode
+	conetTokenPreferences: TokenPreferences
+	usdcTokenPreferences: TokenPreferences
+}
+
+
 
 type Passcode = {
     status: PasscodeStatus
@@ -172,10 +194,6 @@ interface imap_connect {
 }
 
 
-interface PreferencesObj {
-	preferences: any
-}
-
 type SeguroNetworkStatus = 
 'TIMEOUT_EMAIL_SERVER' | 'TIMEOUT_SEGURO_NETWORK' |
 'NO_INTERNET' | 'CONNECTING_ACCESS_POINT' | 'WAITING_SEGURO_RESPONSE'|
@@ -185,15 +203,6 @@ type SeguroNetworkStatus =
 interface ISeguroNetwork {
 	SeguroStatus: SeguroNetworkStatus
 	SeguroObject: webEndpointConnect| {}
-}
-
-interface systemInitialization {
-	preferences: PreferencesObj
-	profile: {
-		profiles: profile[]
-	}
-	passcode: Passcode
-	SeguroNetwork: ISeguroNetwork
 }
 
 interface testImapResult {
@@ -234,36 +243,17 @@ interface CoNET_Module {
 	Web3Eth: any
 }
 
-interface CoNET_Web3EthAccounts_WalletCreate {
-	Web3EthAccounts
+type systemInitialization = {
+	preferences: any
+	passcode: Passcode
 }
 
-interface WalletBase {
-    constructor(accounts: AccountsBase)
-
-    length: number
-    defaultKeyName: string
-
-    [key: number]: Account
-
-    create(numberOfAccounts: number, entropy?: string): WalletBase
-
-    add(account: string | AddAccount): AddedAccount
-
-    remove(account: string | number): boolean
-
-    clear(): WalletBase
-
-    encrypt(password: string): EncryptedKeystoreV3Json[]
-
-    decrypt(
-        keystoreArray: EncryptedKeystoreV3Json[],
-        password: string
-    ): WalletBase
-
-    save(password: string, keyName?: string): boolean
-
-    load(password: string, keyName?: string): WalletBase
-
-	encrypted: string[]
+type CoNETIndexDBInit = {
+	container: {
+		privateKeyArmor: string
+		publicKeyArmor: string
+	}
+	id: passInit
+	uuid: string
+	preferences: any
 }

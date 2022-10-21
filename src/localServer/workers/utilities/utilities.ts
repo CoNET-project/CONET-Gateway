@@ -43,34 +43,24 @@ const imapServers = [
     }
 ]
 
-const makePublicKeyOBJ = (publickeyArmor: string, CallBack: (err: Error|null, keyObj?: any) => void ) => {
-    if  (!publickeyArmor) {
-        return CallBack (new Error (`makePublicKeyOBJ have no publickeyArmor Error!`))
-    }
-    return openpgp.readKey ({ armoredKey: publickeyArmor })
-    .then ((n: any ) => {
-        return CallBack (null, n )
-    })
-    .catch ((ex: any) => {
-        return CallBack (ex)
-    })
+const makePublicKeyOBJ = async ( publickeyArmor: string ) => {
+	
+		if  (!publickeyArmor) {
+			const msg = `makePublicKeyOBJ have no publickeyArmor Error!`
+			logger (msg)
+			return
+		}
+		return (await openpgp.readKey ({ armoredKey: publickeyArmor }))
 }
 
-const makePrivateKeyObj = (privateArmor: string, password: string, CallBack: (err: Error|null, keyObj?: any) => void ) => {
-    if  (!privateArmor) {
-        return CallBack (new Error (`makePublicKeyOBJ have no publickeyArmor Error!`))
-    }
-    return openpgp.readPrivateKey ({ armoredKey: privateArmor})
-    .then ((n: any) => {
-        if (password) {
-            return openpgp.decryptKey ({ privateKey:n, passphrase: pass?.passcode })
-        }
-        return n
-    }).then ((n: any ) => {
-        return CallBack (null, n)
-    }).catch ((ex: Error ) => {
-        return CallBack ( ex )
-    })
+const makePrivateKeyObj = async ( privateArmor: string, password = '' ) => {
+
+	if  (!privateArmor) {
+		const msg = `makePrivateKeyObj have no privateArmor Error!`
+		logger (msg)
+		return 
+	}
+	return await openpgp.decryptKey({ privateKey: await openpgp.readPrivateKey ({ armoredKey: privateArmor}), passphrase: password })
 
 }
 
@@ -79,94 +69,15 @@ const loadWalletAddress = ( keypair: keyPair, password ) => {
 	return account.wallet.decrypt ( keypair.privateKeyArmor, password )
 }
 
-const makeKeypairOBJ = (keypair: keyPair, password: string, CallBack: (err:Error|null) => void) => {
-    if (!keypair) {
-        return CallBack (new Error ('makeKeypairOBJ have no keypair!'))
-    }
-    if (!keypair.keyOpenPGP_obj) {
-        keypair.keyOpenPGP_obj = {
-            publicKeyObj: null,
-            privateKeyObj: null
-        }
-    }
-    const keyOpenPGP_obj = keypair.keyOpenPGP_obj
-    const privateObj = () => {
-        if ( keyOpenPGP_obj.privateKeyObj) {
-            return CallBack (null)
-        }
-        return makePrivateKeyObj ( keypair.privateKeyArmor, password, (err, n)=> {
-            if (err) {
-                return CallBack ( err )
-            }
-            keyOpenPGP_obj.privateKeyObj = n
-            return CallBack ( null )
-        })
-    }
-    if (!keyOpenPGP_obj.publicKeyObj) {
-        return makePublicKeyOBJ ( keypair.publicKeyArmor, (err, n) => {
-            if (err) {
-                return CallBack (err)
-            }
-            keyOpenPGP_obj.publicKeyObj  = n
-            keypair.keyID = n.getKeyID().toHex().toUpperCase ()
-            return privateObj ()
-        })
-    }
-    return privateObj ()
-}
-
-const makeContainerKeyObj = ( CallBack: (err:Error|null) => void ) => {
-    if (!SeguroKeyChain || !pass?.passcode) {
-        const err = `makeContainerKeyObj SeguroKeyChain is NULL ERROR!`
-        logger ( err )
-        return CallBack ( new Error (err))
-    }
-    
-    return makeKeypairOBJ (SeguroKeyChain.containerKeyPair, pass.passcode, err => {
-        if ( err ) {
-            return CallBack (err)
-        }
-        // if ( pass ) {
-        //     pass.passcode = pass.password = pass._passcode = ''
-        // }
-        return CallBack (null)
-    })
-}
-
-const makeDeviceKeyObj = (CallBack: (err:Error|null) => void ) => {
-    if (!SeguroKeyChain ) {
-        const err = `makeContainerKeyObj SeguroKeyChain is NULL ERROR!`
-        logger ( err )
-        return CallBack ( new Error (err))
-    }
-    return makeKeypairOBJ (SeguroKeyChain.keyChain.deviceKeyPair, '', CallBack)
-}
-
-const makeSeguroKeyObj = (CallBack: (err:Error|null) => void ) => {
-    if (!SeguroKeyChain ) {
-        const err = `makeContainerKeyObj SeguroKeyChain is NULL ERROR!`
-        logger ( err )
-        return CallBack ( new Error (err))
-    }
-    SeguroKeyChain.isReady = true
-
-    //return makeKeypairOBJ (SeguroKeyChain.keyChain.seguroAccountKeyPair, '', CallBack)
-}
-
 const decryptWithContainerKey = ( encryptedMessage: string, CallBack: (err: Error|null, text?: string) => void) => {
     let ret = ''
     
     return openpgp.readMessage({armoredMessage: encryptedMessage})
     .then ((message: any) => {
-        if ( !SeguroKeyChain || !SeguroKeyChain.containerKeyPair.keyOpenPGP_obj || !SeguroKeyChain.containerKeyPair.keyOpenPGP_obj.privateKeyObj) {
-            const err = 'decryptWithContainerKey have no SeguroKeyChain.containerKeyPair.keyOpenPGP_obj ERROR!'
-            logger (err)
-            return CallBack (new Error (err))
-        }
         return openpgp.decrypt({
             message,
-            verificationKeys: SeguroKeyChain.containerKeyPair.keyOpenPGP_obj.publicKeyObj,
-            decryptionKeys: SeguroKeyChain.containerKeyPair.keyOpenPGP_obj.privateKeyObj
+            verificationKeys: '',
+            decryptionKeys: ''
         })
     })
     .then ((n: any) => {
@@ -181,20 +92,14 @@ const decryptWithContainerKey = ( encryptedMessage: string, CallBack: (err: Erro
     })
 }
 
-const decryptWithDeviceKey = (encryptedMessage: string, CallBack: (err: Error|null, text?: string) => void) => {
+const decryptWithProfile = (encryptedMessage: string, CallBack: (err: Error|null, text?: string) => void) => {
     let ret = ''
     return openpgp.readMessage({armoredMessage: encryptedMessage})
     .then ((message: any) => {
-        if ( !SeguroKeyChain?.keyChain.deviceKeyPair.keyOpenPGP_obj?.privateKeyObj ) {
-            const err = 'decryptWithDeviceKey have no SeguroKeyChain?.keyChain.deviceKeyPair.keyOpenPGP_obj?.privateKeyObj ERROR!'
-            
-            CallBack (new Error (err))
-            return Promise.reject (new Error(err))
-        }
         return openpgp.decrypt({
             message,
-            verificationKeys: Seguro_PublickeyObj,
-            decryptionKeys:SeguroKeyChain?.keyChain.deviceKeyPair.keyOpenPGP_obj?.privateKeyObj
+            verificationKeys: '',
+            decryptionKeys:''
         })
     })
     .then((n: any) => {
@@ -209,65 +114,42 @@ const decryptWithDeviceKey = (encryptedMessage: string, CallBack: (err: Error|nu
     })
 }
 
-const encrypt_Seguro_INIT_data_ToPGP = ( cmd: worker_command ) => {
+const encryptCoNET_Data_WithContainerKey = async () => {
 
-    if ( !SeguroKeyChain || !systemInitialization ) {
-        logger (`encrypt.js encrypt_InitSeguroDataToPGP error: !SeguroKeyChain?.toStoreObj || !systemInitialization`, cmd )
-        cmd.err = 'INVALID_DATA'
-        return returnCommand(cmd)
-    }
-    
+	if (!CoNET_Data||!containerKeyObj||!containerKeyObj.keyObj) {
+		const msg = `encryptCoNET_Data_WithContainerKey Error: CoNET_Data === null`
+		return logger (msg)
+	}
+	CoNET_Data.encryptedString = ''
     const encryptObj = {
-        SeguroKeyChain: SeguroKeyChain.toStoreObj(),
-        Preferences: systemInitialization
+        message: await openpgp.createMessage({text: buffer.Buffer.from(JSON.stringify (CoNET_Data)).toString('base64')}),
+        encryptionKeys: containerKeyObj.keyObj.publicKeyObj,
+        signingKeys: containerKeyObj?.keyObj.privateKeyObj,
+		config: { preferredCompressionAlgorithm: openpgp.enums.compression.zlib } 		// compress the data with zlib
     }
-    
-    return encryptWithContainerKey(JSON.stringify (encryptObj), (err, encryptedText) => {
-        if ( err ) {
-            logger(`encrypt.js encryptWithContainerKey OpenPGP error`, err)
-            cmd.err = 'OPENPGP_RUNNING_ERROR'
-            return returnCommand(cmd)
-        }
-        if ( encryptedText && SeguroKeyChain) {
-            SeguroKeyChain.encryptedString = encryptedText
-        }
-        
-        return storage_StoreContainerData(cmd)
-    })
-
+	CoNET_Data.encryptedString = await openpgp.encrypt(encryptObj)
+	return
 }
 
-const encryptWithContainerKey = ( text: string, CallBack: ( err: Error|null, encryptedText?: string ) => void ) => {
-    if ( !SeguroKeyChain?.isReady) {
-        logger ('!SeguroKeyChain?.isReady waiting!')
-        setTimeout (() => {
-            return encryptWithContainerKey (text, CallBack )
-        }, 1000)
-        return
-    }
-    logger ('encryptWithContainerKey start!')
-    const keyOpenPGP_obj = SeguroKeyChain.containerKeyPair.keyOpenPGP_obj
-    if ( !keyOpenPGP_obj || !keyOpenPGP_obj.privateKeyObj ) {
-        const err = `encryptWithContainerKey SeguroKeyChain.containerKeyPair.keyOpenPGP_obj have not ready Error!`
-        logger (err)
-        return CallBack (new Error (err))
-    }
-    const encryptObj = {
-        message: null,
-        encryptionKeys: keyOpenPGP_obj.publicKeyObj,
-        signingKeys: keyOpenPGP_obj.privateKeyObj,
-		config: { preferredCompressionAlgorithm: openpgp.enums.compression.zlib } // compress the data with zlib
-    }
-    return openpgp.createMessage({ text: buffer.Buffer.from (text).toString('base64') })
-        .then ((n: any) => {
-            encryptObj.message = n
-            return openpgp.encrypt(encryptObj)
-        }).then (( encrypted: string ) => {
-            return CallBack ( null, encrypted )
-        }).catch ((ex: Error) => {
-            return CallBack ( ex )
-        })
+const decryptCoNET_Data_WithContainerKey = async () => {
+	if (!CoNET_Data || !containerKeyObj || !containerKeyObj?.keyObj || !CoNET_Data?.encryptedString ) {
+		throw new Error(`decryptCoNET_Data_WithContainerKey Error: have no containerKeyObj?.keyObj || CoNET_Data?.encryptedString`)
+	}
 
+	const de = await openpgp.decrypt ({
+		message: await openpgp.readMessage({armoredMessage: CoNET_Data.encryptedString}),
+		verificationKeys: containerKeyObj.keyObj.publicKeyObj,
+		decryptionKeys: containerKeyObj.keyObj.privateKeyObj
+	})
+	const { verified, keyID } = de.signatures[0]
+	await verified
+	CoNET_Data = JSON.parse(buffer.Buffer.from( de.data,'base64').toString())
+	if (!CoNET_Data) {
+		throw new Error ('decryptCoNET_Data_WithContainerKey got empty CoNET_Data!')
+	}
+	
+	CoNET_Data.encryptedString = ''
+	preferences = CoNET_Data.preferences
 }
 
 const localServerErrorBridge = ( status: number, CallBack : ( err: netWorkError|seguroError|null, payload?: any ) => void ) => {
@@ -380,35 +262,86 @@ const getNewNotice = ( connect: webEndpointConnect, CallBack ) => {
     return localServerGetJSON('newNotice', 'GET', '', CallBack)
 }
 
-const initCoNETTestnetUSDCAsset = () => {
-	const ret: CryptoAsset = {
-		history: [],
-		balance: 0,
-		networkName: 'CoNET Testnet',
-		RpcURL:'0xCABCde7cC96F8FbD4e4a1A232C8bfc3aC46b1461',
+const initUSDCTokenPreferences = () => {
+	const ret: TokenPreferences = {
+		networkName: 'CoNET USDC',
+		RpcURL:'http://mvpusdc.conettech.ca/mvptest',
 		blockExplorerURL: '',
-		chainID: 18,
-		currencySymbol: 'CoNET-USDC',
+		chainID: 22223,
+		currencySymbol: 'USDC',
 	}
 	return ret
 }
 
-const initCoNETTestnetTokenAsset = () => {
-	const ret: CryptoAsset = {
-		history: [],
-		balance: 0,
-		networkName: 'CoNET Testnet',
-		RpcURL:'https://conettech.ca/testnet',
+const initCoNETTokenPreferences = () => {
+	const ret: TokenPreferences = {
+		networkName: 'CoNET mvp',
+		RpcURL:'https://conettech.ca/mvptest',
 		blockExplorerURL: '',
-		chainID: 22224,
-		currencySymbol: 'CoNET-Testnet',
+		chainID: 22222,
+		currencySymbol: 'CoNET',
 	}
 	return ret
 }
 
 const denominator = 1000000000000000000
-const testNet = 'https://conettech.ca/testnet'
+const testNet = 'https://conettech.ca/CoNET'
 
 const getCoNETTestnetBalance = async ( walletAddr: string ) => {
 	const web3 = CoNETModule
+}
+
+const unZIP = (compress: string) => {
+
+    const zipObj = new JSZip()
+    zipObj.loadAsync(compress)
+    .then (content=> {
+        return content.async ()
+    })
+    
+}
+
+const initProfileTokens = () => {
+	return {
+		conet: {
+			balance: 0,
+			history: []
+		},
+		usdc: {
+			balance: 0,
+			history: []
+		}
+	}
+}
+
+const initCoNET_Data = ( passcode = '' ) => {
+	CoNET_Data = {
+		isReady: true,
+		conetTokenPreferences: initCoNETTokenPreferences(),
+		usdcTokenPreferences: initUSDCTokenPreferences()
+	}
+    const acc = createKey (1)
+
+	const profile: profile = {
+		tokens: initProfileTokens(),
+		publicKeyArmor: CoNETModule.EthCrypto.publicKeyByPrivateKey (acc[0].privateKey),
+		keyID: acc[0].address.substring(0,2) + acc[0].address.substring(2).toUpperCase(),
+		isPrimary: true,
+		privateKeyArmor: acc[0].privateKey
+	}
+	return  CoNET_Data.profiles = [profile]
+}
+
+const makeContainerPGPObj = async () => {
+	if (!containerKeyObj?.privateKeyArmor || !containerKeyObj?.publicKeyArmor ) {
+		throw new Error (`makeContainerPGPObj Error: have no KeyArmor!`)
+	}
+	if ( !passObj?.passcode ) {
+		throw new Error (`makeContainerPGPObj Error: have no passObj?.passcode!`)
+	}
+	return containerKeyObj.keyObj = {
+		publicKeyObj: await makePublicKeyOBJ (containerKeyObj.publicKeyArmor),
+		privateKeyObj: await makePrivateKeyObj (containerKeyObj.privateKeyArmor, passObj.passcode)
+	}
+
 }
