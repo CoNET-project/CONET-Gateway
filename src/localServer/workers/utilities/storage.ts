@@ -187,3 +187,21 @@ const deleteExistDB = async () => {
     }
     return await database.destroy()
 }
+
+const storeProfile = async (cmd: worker_command) => {
+	const _profile: profile = cmd?.data[0]
+	if ( !_profile || !CoNET_Data || !CoNET_Data.profiles ) {
+		cmd.err = 'INVALID_DATA'
+		return returnCommand (cmd)
+	}
+	returnCommand (cmd)
+	let oldProfile = CoNET_Data.profiles.filter (n => n.keyID === _profile.keyID )[0]
+	if ( !oldProfile ) {
+		CoNET_Data.profiles.push (_profile)
+	} else {
+		CoNET_Data.profiles = CoNET_Data.profiles.map (n => n.keyID === _profile.keyID ? _profile : n)
+	}
+	await encryptCoNET_Data_WithContainerKey()
+	await storage_StoreContainerData ()
+	delete cmd.err
+}

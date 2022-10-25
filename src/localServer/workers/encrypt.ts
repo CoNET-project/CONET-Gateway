@@ -83,7 +83,7 @@ const encryptWorkerDoCommand = async ( cmd: worker_command ) => {
         }
 
         case 'storeProfile': {
-            //return storeProfile ()
+            return storeProfile (cmd)
         }
 
         default: {
@@ -214,6 +214,7 @@ const encrypt_TestPasscode = async (cmd: worker_command) => {
 	cmd.data = [CoNET_Data]
 	return returnCommand (cmd)
 }
+
 
 
 initEncryptWorker()
