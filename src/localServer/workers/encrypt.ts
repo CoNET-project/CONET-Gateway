@@ -36,8 +36,6 @@ const encryptWorkerDoCommand = async ( cmd: worker_command ) => {
 					status: 'UNLOCKED'
 				},
 				profiles: CoNET_Data?.profiles,
-				conetTokenPreferences: initCoNETTokenPreferences(),
-				usdcTokenPreferences: initUSDCTokenPreferences(),
 				isReady: true
 			}
 		
@@ -85,6 +83,10 @@ const encryptWorkerDoCommand = async ( cmd: worker_command ) => {
         case 'storeProfile': {
             return storeProfile (cmd)
         }
+
+		case 'getFaucet': {
+			return //getFaucet (cmd)
+		}
 
         default: {
             cmd.err = 'INVALID_COMMAND'
@@ -211,10 +213,23 @@ const encrypt_TestPasscode = async (cmd: worker_command) => {
 		status: 'UNLOCKED'
 	}
 
+	const profiles = CoNET_Data.profiles
+	if ( profiles ) {
+		for ( let i = 0; i < profiles.length; i++ ) {
+			const key = profiles[i].keyID
+			if (key) {
+				profiles[i].tokens.conet.balance = await getCONETBalance (key)
+				profiles[i].tokens.usdc.balance = await getUSDCBalance (key)
+			}	
+			
+		}
+	}
 	cmd.data = [CoNET_Data]
+	if ( profiles && profiles[0].keyID ) {
+		getFaucet (profiles[0].keyID)
+	}
+	
 	return returnCommand (cmd)
 }
-
-
 
 initEncryptWorker()

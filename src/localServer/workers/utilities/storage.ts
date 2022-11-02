@@ -59,9 +59,7 @@ const checkStorage = async () => {
 
 	CoNET_Data = {
 		isReady: false,
-		encryptedString: doc.title,
-		conetTokenPreferences: initCoNETTokenPreferences(),
-		usdcTokenPreferences: initUSDCTokenPreferences()
+		encryptedString: doc.title
 	}
 
 	const data: systemInitialization = {
@@ -189,19 +187,22 @@ const deleteExistDB = async () => {
 }
 
 const storeProfile = async (cmd: worker_command) => {
-	const _profile: profile = cmd?.data[0]
-	if ( !_profile || !CoNET_Data || !CoNET_Data.profiles ) {
+	const _profiles: profile[] = cmd?.data[0]
+	if ( !_profiles || !CoNET_Data || !CoNET_Data.profiles ) {
 		cmd.err = 'INVALID_DATA'
 		return returnCommand (cmd)
 	}
+	delete cmd.err
 	returnCommand (cmd)
-	let oldProfile = CoNET_Data.profiles.filter (n => n.keyID === _profile.keyID )[0]
-	if ( !oldProfile ) {
-		CoNET_Data.profiles.push (_profile)
-	} else {
-		CoNET_Data.profiles = CoNET_Data.profiles.map (n => n.keyID === _profile.keyID ? _profile : n)
-	}
+
+	CoNET_Data.profiles = CoNET_Data.profiles.map (n => {
+		const prof = _profiles.filter (nn => nn.keyID === n.keyID)[0]
+		if ( prof ) {
+			prof.tokens = n.tokens
+			return prof
+		}
+		return n
+	})
 	await encryptCoNET_Data_WithContainerKey()
 	await storage_StoreContainerData ()
-	delete cmd.err
 }

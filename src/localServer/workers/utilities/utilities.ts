@@ -2,8 +2,6 @@ const returnCommand = ( cmd: worker_command ) => {
     self.postMessage ( JSON.stringify ( cmd ))
 }
 
-
-
 const logger = (...argv: any ) => {
     const date = new Date ()
     let dateStrang = `[Seguro-worker INFO ${ date.getHours() }:${ date.getMinutes() }:${ date.getSeconds() }:${ date.getMilliseconds ()}] `
@@ -265,9 +263,9 @@ const getNewNotice = ( connect: webEndpointConnect, CallBack ) => {
 const initUSDCTokenPreferences = () => {
 	const ret: TokenPreferences = {
 		networkName: 'CoNET USDC',
-		RpcURL:'http://mvpusdc.conettech.ca/mvptest',
+		RpcURL:'http://mvpusdc.conettech.ca/mvpusdc',
 		blockExplorerURL: '',
-		chainID: 22223,
+		chainID: 222222,
 		currencySymbol: 'USDC',
 	}
 	return ret
@@ -276,10 +274,10 @@ const initUSDCTokenPreferences = () => {
 const initCoNETTokenPreferences = () => {
 	const ret: TokenPreferences = {
 		networkName: 'CoNET mvp',
-		RpcURL:'https://conettech.ca/mvptest',
+		RpcURL:'https://conettech.ca/mvp',
 		blockExplorerURL: '',
 		chainID: 22222,
-		currencySymbol: 'CoNET',
+		currencySymbol: 'CONET',
 	}
 	return ret
 }
@@ -316,9 +314,7 @@ const initProfileTokens = () => {
 
 const initCoNET_Data = ( passcode = '' ) => {
 	CoNET_Data = {
-		isReady: true,
-		conetTokenPreferences: initCoNETTokenPreferences(),
-		usdcTokenPreferences: initUSDCTokenPreferences()
+		isReady: true
 	}
     const acc = createKey (1)
 
@@ -344,4 +340,119 @@ const makeContainerPGPObj = async () => {
 		privateKeyObj: await makePrivateKeyObj (containerKeyObj.privateKeyArmor, passObj.passcode)
 	}
 
+}
+
+const usdcNet = 'http://mvpusdc.conettech.ca/mvpusdc'
+
+const getUSDCBalance = async (Addr: string) => {
+	const eth = new CoNETModule.Web3Eth ( new CoNETModule.Web3Eth.providers.HttpProvider(usdcNet))
+	const uuu = await eth.getBalance(Addr)
+	console.log (uuu)
+	const balance = parseInt(uuu)/denominator
+	console.log (`Balance=`, balance)
+	return balance
+}
+const CONETNet = 'https://conettech.ca/fujiCoNET'
+const getCONETBalance = async (Addr: string) => {
+	const eth = new CoNETModule.Web3Eth ( new CoNETModule.Web3Eth.providers.HttpProvider(CONETNet))
+	const uuu = await eth.getBalance(Addr)
+	console.log (uuu)
+	const balance = parseInt(uuu)/denominator
+	console.log (`Balance=`, balance)
+	return balance
+}
+
+const getAllProfileCoNETBalance = () => {
+	const profiles = CoNET_Data?.profiles
+	if ( !profiles || !profiles.length ) {
+		return logger (`getAllProfileCoNETBalance error: have no CoNET_Data?.profiles!`)
+	}
+	const ret: any [] = []
+	profiles.forEach (async n => {
+		if ( n.keyID ) {
+			const newBalance = await getCONETBalance (n.keyID)
+			if ( n.tokens.conet.balance !== newBalance ) {
+				n.tokens.conet.balance = newBalance
+				ret.push ({
+					keyID: n.keyID,
+					tokens: {
+						conet: {
+							balance : n.tokens.conet.balance
+						}
+					}
+				})
+			}
+		}
+		
+	})
+	if ( ret.length ) {
+		const cmd: worker_command = {
+			cmd: 'READY',
+			data: [ret]
+		}
+		returnCommand (cmd)
+	}
+}
+
+const subscriptCoNET = () => {
+	const eth = new CoNETModule.Web3Eth ( new CoNETModule.Web3Eth.providers.HttpProvider(CONETNet))
+	const subscription = eth.subscribe('newBlockHeaders',err => {
+		if (err) {
+			logger ( `subscriptCoNET`, err )
+		}
+	})
+	subscription.once ('connected', () => {
+		logger (`subscriptCoNET connected`)
+	})
+	subscription.on ('data', blockHeader => {
+		logger (blockHeader)
+		getAllProfileCoNETBalance ()
+	})
+	subscription.once("error", err => {
+		logger (`subscriptCoNET on error`, err )
+	})
+}
+
+const postToEndpoint = ( url: string, jsonData ) => {
+	return new Promise ((resolve) => {
+		const xhr = new XMLHttpRequest()
+		xhr.onload = () => {
+			if (xhr.status === 200) {
+				// parse JSON
+				if ( !xhr.responseText.length ) {
+					return resolve ('')
+				}
+				const response = JSON.parse(xhr.responseText)
+				return resolve (response)
+			}
+			throw new Error (`status != 200`)
+		}
+		xhr.open( 'POST', url, true )
+		xhr.setRequestHeader('Content-Type', 'application/json;charset=UTF-8')
+		xhr.send(JSON.stringify(jsonData))
+		logger (url)
+		logger (jsonData)
+	})
+	
+}
+
+const conet_DL_endpoint = 'http://dl.conettech.ca/conet-faucet'
+const getFaucet = async (keyID: string ) => {
+	// const keyID = cmd.data[0]
+	// if (!keyID) {
+	// 	cmd.err = 'INVALID_DATA'
+	// 	return returnCommand (cmd)
+	// }
+	// delete cmd.err
+
+	logger (`getFaucet START`)
+	let result
+	try {
+		result = await postToEndpoint(conet_DL_endpoint, { walletAddr: keyID })
+	} catch (ex) {
+		logger (`postToEndpoint error`)
+		logger (ex)
+	}
+	logger (`postToEndpoint SUCCESS`)
+	logger (`result = `, result )
 }
