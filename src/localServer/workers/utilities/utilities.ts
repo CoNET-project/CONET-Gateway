@@ -353,6 +353,7 @@ const getUSDCBalance = async (Addr: string) => {
 	return balance
 }
 const CONETNet = 'https://conettech.ca/fujiCoNET'
+const CoNETCashNet = 'http://dl.conettech.ca/CoNETCash'
 const getCONETBalance = async (Addr: string) => {
 	const eth = new CoNETModule.Web3Eth ( new CoNETModule.Web3Eth.providers.HttpProvider(CONETNet))
 	const uuu = await eth.getBalance(Addr)
@@ -362,7 +363,7 @@ const getCONETBalance = async (Addr: string) => {
 	return balance
 }
 
-const getAllProfileCoNETBalance = () => {
+const getAllProfileUSDCBalance = () => {
 	const profiles = CoNET_Data?.profiles
 	if ( !profiles || !profiles.length ) {
 		return logger (`getAllProfileCoNETBalance error: have no CoNET_Data?.profiles!`)
@@ -370,17 +371,19 @@ const getAllProfileCoNETBalance = () => {
 	const ret: any [] = []
 	profiles.forEach (async n => {
 		if ( n.keyID ) {
-			const newBalance = await getCONETBalance (n.keyID)
-			if ( n.tokens.conet.balance !== newBalance ) {
-				n.tokens.conet.balance = newBalance
+			const newBalance = await getUSDCBalance (n.keyID)
+			if ( n.tokens.usdc.balance !== newBalance ) {
+				n.tokens.usdc.balance = newBalance
 				ret.push ({
 					keyID: n.keyID,
 					tokens: {
-						conet: {
-							balance : n.tokens.conet.balance
+						usdc: {
+							balance : n.tokens.usdc.balance
 						}
 					}
 				})
+				logger (`getAllProfileUSDCBalance USDC Balance changed!`)
+				logger (ret)
 			}
 		}
 		
@@ -394,29 +397,34 @@ const getAllProfileCoNETBalance = () => {
 	}
 }
 
-const subscriptCoNET = () => {
-	const eth = new CoNETModule.Web3Eth ( new CoNETModule.Web3Eth.providers.HttpProvider(CONETNet))
-	const subscription = eth.subscribe('newBlockHeaders',err => {
-		if (err) {
-			logger ( `subscriptCoNET`, err )
+const getAllProfileBalance = () => {
+	const profiles = CoNET_Data?.profiles
+	if ( !profiles || !profiles.length ) {
+		return logger (`getAllProfileCoNETBalance error: have no CoNET_Data?.profiles!`)
+	}
+	return new Promise (async (resolve) => {
+		for ( let n of profiles ) {
+			if ( n.keyID ) {
+				n.tokens.conet.balance = await getCONETBalance (n.keyID)
+				n.tokens.usdc.balance = await getUSDCBalance (n.keyID)
+			}
 		}
+
+		return resolve (null)
+		
 	})
-	subscription.once ('connected', () => {
-		logger (`subscriptCoNET connected`)
-	})
-	subscription.on ('data', blockHeader => {
-		logger (blockHeader)
-		getAllProfileCoNETBalance ()
-	})
-	subscription.once("error", err => {
-		logger (`subscriptCoNET on error`, err )
-	})
+	
 }
 
+
+
+const XMLHttpRequestTimeout = 15 * 1000
+
 const postToEndpoint = ( url: string, jsonData ) => {
-	return new Promise ((resolve) => {
+	return new Promise ((resolve, reject) => {
 		const xhr = new XMLHttpRequest()
 		xhr.onload = () => {
+			clearTimeout (timeCount)
 			if (xhr.status === 200) {
 				// parse JSON
 				if ( !xhr.responseText.length ) {
@@ -425,25 +433,33 @@ const postToEndpoint = ( url: string, jsonData ) => {
 				const response = JSON.parse(xhr.responseText)
 				return resolve (response)
 			}
-			throw new Error (`status != 200`)
+			return reject(new Error (`status != 200`))
 		}
+
 		xhr.open( 'POST', url, true )
 		xhr.setRequestHeader('Content-Type', 'application/json;charset=UTF-8')
 		xhr.send(JSON.stringify(jsonData))
 		logger (url)
 		logger (jsonData)
+
+		const timeCount = setTimeout (() => {
+			const Err = `postToEndpoint Timeout!`
+			logger (`postToEndpoint Error`, Err )
+			reject (new Error ( Err ))
+		}, XMLHttpRequestTimeout )
 	})
 	
 }
 
 const conet_DL_endpoint = 'http://dl.conettech.ca/conet-faucet'
-const getFaucet = async (keyID: string ) => {
-	// const keyID = cmd.data[0]
-	// if (!keyID) {
-	// 	cmd.err = 'INVALID_DATA'
-	// 	return returnCommand (cmd)
-	// }
-	// delete cmd.err
+
+const getFaucet = async ( cmd: worker_command ) => {
+	const keyID = cmd.data[0]
+	if (!keyID) {
+		cmd.err = 'INVALID_DATA'
+		return returnCommand (cmd)
+	}
+	delete cmd.err
 
 	logger (`getFaucet START`)
 	let result
@@ -451,8 +467,66 @@ const getFaucet = async (keyID: string ) => {
 		result = await postToEndpoint(conet_DL_endpoint, { walletAddr: keyID })
 	} catch (ex) {
 		logger (`postToEndpoint error`)
-		logger (ex)
+		cmd.err = 'FAILURE'
+		returnCommand (cmd)
+		return logger (ex)
 	}
 	logger (`postToEndpoint SUCCESS`)
 	logger (`result = `, result )
+	cmd.data = []
+	returnCommand (cmd)
+}
+
+const syncAsset = async (cmd: worker_command) => {
+	await getAllProfileBalance ()
+	cmd.data = [CoNET_Data]
+	return returnCommand (cmd)
+}
+
+const wei = 1000000000000000000
+
+const sendCoNETCash = (cmd: worker_command) => {
+
+}
+
+const sendAsset = async (cmd: worker_command) => {
+	const [fromAddr, total, toAddr, asset] = cmd.data[0]
+	if ( !fromAddr || !total || !toAddr || !CoNET_Data?.profiles ) {
+		cmd.err = 'FAILURE'
+		return returnCommand (cmd)
+	}
+	
+	const obj = {
+		gas: 21000,
+		to: toAddr,
+		value: (total * wei).toString()
+	}
+	const index = CoNET_Data.profiles.findIndex (val => {
+		return val.keyID === fromAddr
+	})
+
+	if (index < 0 ) {
+		cmd.err = 'FAILURE'
+		return returnCommand (cmd)
+	}
+	const profile = CoNET_Data.profiles[index]
+	let network = ''
+	let history: any = null
+	if (asset === 'CoNETCash' ) {
+		return sendCoNETCash (cmd)
+	}
+	if (asset === 'CoNET') {
+		network = CONETNet
+		history = profile.tokens.conet.history
+	} else {
+		network = usdcNet
+		history = profile.tokens.usdc.history
+	}
+	
+	const eth = new CoNETModule.Web3Eth ( new CoNETModule.Web3Eth.providers.HttpProvider(network))
+	const createTransaction = await eth.accounts.signTransaction( obj, profile.privateKeyArmor )
+	const receipt = await eth.sendSignedTransaction (createTransaction.rawTransaction )
+	history.unshift (receipt)
+	cmd.data = [CoNET_Data]
+	return returnCommand (cmd)
 }

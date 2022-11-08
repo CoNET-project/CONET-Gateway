@@ -11,7 +11,8 @@ const CoNETModule: CoNET_Module = {
 	EthCrypto: null,
 	Web3HttpProvider:  null,
 	Web3EthAccounts: null,
-	Web3Eth: null
+	Web3Eth: null,
+	Web3Utils: null
 }
 
 const encryptWorkerDoCommand = async ( cmd: worker_command ) => {
@@ -85,7 +86,22 @@ const encryptWorkerDoCommand = async ( cmd: worker_command ) => {
         }
 
 		case 'getFaucet': {
-			return //getFaucet (cmd)
+			return getFaucet (cmd)
+		}
+
+		case 'sendAsset': {
+			return sendAsset (cmd)
+		}
+
+		case 'syncAsset': {
+			return syncAsset (cmd)
+		}
+
+		case 'isAddress' : {
+			const address = cmd.data[0]
+			const ret = CoNETModule.Web3Utils.isAddress (address)
+			cmd.data = [ret]
+			return returnCommand (cmd)
 		}
 
         default: {
@@ -112,6 +128,7 @@ const initEncryptWorker = () => {
 	self.importScripts ( baseUrl + 'EthCrypto.js' )
 	self.importScripts ( baseUrl + 'web3-providers-http.js' )
 	self.importScripts ( baseUrl + 'web3-eth.js' )
+	self.importScripts ( baseUrl + 'web3-utils.js' )
     self.importScripts ( baseUrl + 'generatePassword.js' )
     self.importScripts ( baseUrl + 'storage.js' )
     self.importScripts ( baseUrl + 'seguroSetup.js' )
@@ -225,10 +242,6 @@ const encrypt_TestPasscode = async (cmd: worker_command) => {
 		}
 	}
 	cmd.data = [CoNET_Data]
-	if ( profiles && profiles[0].keyID ) {
-		getFaucet (profiles[0].keyID)
-	}
-	
 	return returnCommand (cmd)
 }
 

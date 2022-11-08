@@ -130,7 +130,7 @@ declare type verification = 'INCORRECT_CODE'
 declare type WorkerCommand = 'READY'|
 	'encrypt_TestPasscode'|'encrypt_createPasscode'|'encrypt_lock'|'invitation'|'encrypt_deletePasscode'|
 	'storePreferences'|'newProfile'|'storeProfile'|
-	'getFaucet'
+	'getFaucet'|'isAddress'|'syncAsset'|'sendAsset'
 
 type worker_command = {
 	cmd: WorkerCommand
@@ -241,6 +241,7 @@ interface CoNET_Module {
 	Web3HttpProvider: any
 	Web3EthAccounts: any
 	Web3Eth: any
+	Web3Utils: any
 }
 
 type systemInitialization = {
