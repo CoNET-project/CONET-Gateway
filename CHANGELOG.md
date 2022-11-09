@@ -1,5 +1,22 @@
 # `seguro-gateway` CHANGELOG
 
+## `0.16.0`
+
+### Additions
+
+- buyUSDC, getUSDCPrice, sendAsset, getFaucet
+
+### Changes
+
+-
+
+### Fixes
+
+- None.
+
+
+---
+
 ## `0.15.5`
 
 ### Additions

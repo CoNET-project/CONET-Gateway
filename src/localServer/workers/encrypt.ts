@@ -85,6 +85,10 @@ const encryptWorkerDoCommand = async ( cmd: worker_command ) => {
             return storeProfile (cmd)
         }
 
+		case 'getUSDCPrice': {
+			return getUSDCPrice (cmd)
+		}
+
 		case 'getFaucet': {
 			return getFaucet (cmd)
 		}
@@ -95,6 +99,10 @@ const encryptWorkerDoCommand = async ( cmd: worker_command ) => {
 
 		case 'syncAsset': {
 			return syncAsset (cmd)
+		}
+
+		case 'buyUSDC': {
+			return buyUSDC (cmd)
 		}
 
 		case 'isAddress' : {

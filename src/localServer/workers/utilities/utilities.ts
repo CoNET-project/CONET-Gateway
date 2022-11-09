@@ -420,7 +420,7 @@ const getAllProfileBalance = () => {
 
 const XMLHttpRequestTimeout = 15 * 1000
 
-const postToEndpoint = ( url: string, jsonData ) => {
+const postToEndpoint = ( url: string, post: boolean, jsonData ) => {
 	return new Promise ((resolve, reject) => {
 		const xhr = new XMLHttpRequest()
 		xhr.onload = () => {
@@ -436,11 +436,12 @@ const postToEndpoint = ( url: string, jsonData ) => {
 			return reject(new Error (`status != 200`))
 		}
 
-		xhr.open( 'POST', url, true )
+		xhr.open( post? 'POST': 'GET', url, true )
 		xhr.setRequestHeader('Content-Type', 'application/json;charset=UTF-8')
-		xhr.send(JSON.stringify(jsonData))
+
+		xhr.send(jsonData? JSON.stringify(jsonData): '')
+
 		logger (url)
-		logger (jsonData)
 
 		const timeCount = setTimeout (() => {
 			const Err = `postToEndpoint Timeout!`
@@ -464,18 +465,20 @@ const getFaucet = async ( cmd: worker_command ) => {
 	logger (`getFaucet START`)
 	let result
 	try {
-		result = await postToEndpoint(conet_DL_endpoint, { walletAddr: keyID })
+		result = await postToEndpoint(conet_DL_endpoint, true, { walletAddr: keyID })
 	} catch (ex) {
-		logger (`postToEndpoint error`)
+		logger (`postToEndpoint [${conet_DL_endpoint}] error!`)
 		cmd.err = 'FAILURE'
 		returnCommand (cmd)
 		return logger (ex)
 	}
-	logger (`postToEndpoint SUCCESS`)
+	logger (`postToEndpoint [${ conet_DL_endpoint }] SUCCESS`)
 	logger (`result = `, result )
 	cmd.data = []
 	returnCommand (cmd)
 }
+
+const gasFee = 21000
 
 const syncAsset = async (cmd: worker_command) => {
 	await getAllProfileBalance ()
@@ -497,7 +500,7 @@ const sendAsset = async (cmd: worker_command) => {
 	}
 	
 	const obj = {
-		gas: 21000,
+		gas: gasFee,
 		to: toAddr,
 		value: (total * wei).toString()
 	}
@@ -525,8 +528,82 @@ const sendAsset = async (cmd: worker_command) => {
 	
 	const eth = new CoNETModule.Web3Eth ( new CoNETModule.Web3Eth.providers.HttpProvider(network))
 	const createTransaction = await eth.accounts.signTransaction( obj, profile.privateKeyArmor )
+	let receipt
+	try {
+		receipt = await eth.sendSignedTransaction (createTransaction.rawTransaction )
+	} catch (ex) {
+		cmd.err = 'FAILURE'
+		return returnCommand (cmd)
+	}
+	
+	history.unshift (receipt)
+
+	return storeProfile (cmd)
+}
+
+const conet_DL_getUSDCPrice_Endpoint = 'http://dl.conettech.ca/conet-price'
+const USDC_exchange_Addr = '0xD493391c2a2AafEd135A9f6164C0Dcfa9C68F1ee'
+
+const getUSDCPrice = async (cmd: worker_command) => {
+	logger (`getUSDCPrice START`)
+	let result
+	try {
+		result = await postToEndpoint(conet_DL_getUSDCPrice_Endpoint, false,'')
+
+	} catch (ex) {
+		logger (`postToEndpoint [${conet_DL_getUSDCPrice_Endpoint}] error`)
+		cmd.err = 'FAILURE'
+		returnCommand (cmd)
+		return logger (ex)
+	}
+	cmd.data = [result]
+	return returnCommand (cmd)
+}
+
+const GasToEth = 0.00000001
+const buyUSDCEndpoint = `'http://dl.conettech.ca/exchange_conet_usdc`
+
+const buyUSDC = async (cmd: worker_command) => {
+	logger (`buyUSDC START`)
+	const [conetVal, keyID] = cmd.data[0]
+	if ( !CoNET_Data?.profiles|| !keyID || conetVal <= 0) {
+		cmd.err = 'NOT_READY'
+		return returnCommand (cmd)
+	}
+	const profileIndex = CoNET_Data.profiles.findIndex (n => n.keyID === keyID)
+	if ( profileIndex < 0 ) {
+		cmd.err = 'FAILURE'
+		return returnCommand (cmd)
+	}
+	
+	const profile = CoNET_Data.profiles[profileIndex]
+	const balance = profile.tokens.conet.balance
+	const history = profile.tokens.conet.history
+
+	if ( conetVal - balance > 0) {
+		cmd.err = 'FAILURE'
+		return returnCommand (cmd)
+	}
+	const obj = {
+		gas: gasFee,
+		to: USDC_exchange_Addr,
+		value: (conetVal * wei).toString()
+	}
+	const eth = new CoNETModule.Web3Eth ( new CoNETModule.Web3Eth.providers.HttpProvider(CONETNet))
+	const createTransaction = await eth.accounts.signTransaction( obj, profile.privateKeyArmor )
 	const receipt = await eth.sendSignedTransaction (createTransaction.rawTransaction )
 	history.unshift (receipt)
-	cmd.data = [CoNET_Data]
-	return returnCommand (cmd)
+	let result
+	try {
+		result = await postToEndpoint(buyUSDCEndpoint, true, { txHash: receipt.transactionHash })
+	} catch (ex) {
+		logger (`postToEndpoint []error`)
+		cmd.err = 'FAILURE'
+		returnCommand (cmd)
+		return logger (ex)
+	}
+	logger (`postToEndpoint [${ buyUSDCEndpoint }] SUCCESS`)
+	logger (`result = `, result )
+	return storeProfile (cmd)
+	
 }
