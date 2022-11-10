@@ -1,5 +1,21 @@
 # `seguro-gateway` CHANGELOG
 
+## `0.16.1`
+
+### Additions
+
+- buyUSDC, getUSDCPrice, sendAsset, getFaucet
+
+### Changes
+
+-
+
+### Fixes
+
+- reflash asset when success process.
+
+---
+
 ## `0.16.0`
 
 ### Additions

@@ -263,7 +263,7 @@ const getNewNotice = ( connect: webEndpointConnect, CallBack ) => {
 const initUSDCTokenPreferences = () => {
 	const ret: TokenPreferences = {
 		networkName: 'CoNET USDC',
-		RpcURL:'http://mvpusdc.conettech.ca/mvpusdc',
+		RpcURL:'https://mvpusdc.conettech.ca/mvpusdc',
 		blockExplorerURL: '',
 		chainID: 222222,
 		currencySymbol: 'USDC',
@@ -342,7 +342,7 @@ const makeContainerPGPObj = async () => {
 
 }
 
-const usdcNet = 'http://mvpusdc.conettech.ca/mvpusdc'
+const usdcNet = 'https://mvpusdc.conettech.ca/mvpusdc'
 
 const getUSDCBalance = async (Addr: string) => {
 	const eth = new CoNETModule.Web3Eth ( new CoNETModule.Web3Eth.providers.HttpProvider(usdcNet))
@@ -353,7 +353,7 @@ const getUSDCBalance = async (Addr: string) => {
 	return balance
 }
 const CONETNet = 'https://conettech.ca/fujiCoNET'
-const CoNETCashNet = 'http://dl.conettech.ca/CoNETCash'
+const CoNETCashNet = 'https://dl.conettech.ca/CoNETCash'
 const getCONETBalance = async (Addr: string) => {
 	const eth = new CoNETModule.Web3Eth ( new CoNETModule.Web3Eth.providers.HttpProvider(CONETNet))
 	const uuu = await eth.getBalance(Addr)
@@ -452,7 +452,7 @@ const postToEndpoint = ( url: string, post: boolean, jsonData ) => {
 	
 }
 
-const conet_DL_endpoint = 'http://dl.conettech.ca/conet-faucet'
+const conet_DL_endpoint = 'https://dl.conettech.ca/conet-faucet'
 
 const getFaucet = async ( cmd: worker_command ) => {
 	const keyID = cmd.data[0]
@@ -541,7 +541,7 @@ const sendAsset = async (cmd: worker_command) => {
 	return storeProfile (cmd)
 }
 
-const conet_DL_getUSDCPrice_Endpoint = 'http://dl.conettech.ca/conet-price'
+const conet_DL_getUSDCPrice_Endpoint = 'https://dl.conettech.ca/conet-price'
 const USDC_exchange_Addr = '0xD493391c2a2AafEd135A9f6164C0Dcfa9C68F1ee'
 
 const getUSDCPrice = async (cmd: worker_command) => {
@@ -561,7 +561,7 @@ const getUSDCPrice = async (cmd: worker_command) => {
 }
 
 const GasToEth = 0.00000001
-const buyUSDCEndpoint = `'http://dl.conettech.ca/exchange_conet_usdc`
+const buyUSDCEndpoint = `https://dl.conettech.ca/exchange_conet_usdc`
 
 const buyUSDC = async (cmd: worker_command) => {
 	logger (`buyUSDC START`)

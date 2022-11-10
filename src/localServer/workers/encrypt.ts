@@ -179,6 +179,7 @@ const createPlatformFirstProfile = async () => {
 /**
  * 		
  */
+
 const createKey = ( length: number ) => {
 
 	const eth = new CoNETModule.Web3Eth()
@@ -208,10 +209,6 @@ const startGetNoticeDaemon = () => {
     }
     start ()
 }
-
-//	/UXwE6uyvnLxeE1n6dsvVsFq2gjRtXqpPff8C2k6st1UbrnYDw==
-
-// H/ZglQf4ZNpYNmHMgUDYD7XjB/DDT1h/yXM7UHp9nci1zJb/Pzu1/ShDfH/Ss5w=
 
 const encrypt_TestPasscode = async (cmd: worker_command) => {
 	if ( !cmd.data?.length || !passObj ) {
