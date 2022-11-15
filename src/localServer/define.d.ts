@@ -65,17 +65,30 @@ type keyOpenPGP_obj = {
 
 type CryptoAssetHistory = {
 	status: 'Pending'|'Confirmed'
-	amount: number
-	Nonce: number
-	to: string
-	transactionFee: number
-	gasLimit: number
-	gasUsed: number
-	baseFee: number
-	priorityFee: number
-	totalGasFee: number
-	maxFeePerGas: number
-	total: number
+	Nonce?: number
+	to?: string
+	transactionFee?: number
+	gasLimit?: number
+	gasUsed?: number
+	baseFee?: number
+	priorityFee?: number
+	totalGasFee?: number
+	maxFeePerGas?: number
+	transactionHash?: string
+	time: string
+	blockHash?: string
+	blockNumber?: number
+	contractAddress?: string
+	effectiveGasPrice?: number
+	cumulativeGasUsed?: number
+	from?: string
+	logs?: any[]
+	logsBloom?: string
+	transactionIndex?: number
+	type?: string
+	value: number
+	isSend: boolean
+
 }
 
 interface TokenPreferences {
@@ -130,7 +143,8 @@ declare type verification = 'INCORRECT_CODE'
 declare type WorkerCommand = 'READY'|
 	'encrypt_TestPasscode'|'encrypt_createPasscode'|'encrypt_lock'|'invitation'|'encrypt_deletePasscode'|
 	'storePreferences'|'newProfile'|'storeProfile'|
-	'getFaucet'|'isAddress'|'syncAsset'|'sendAsset'|'getUSDCPrice'|'buyUSDC'
+	'getFaucet'|'isAddress'|'syncAsset'|'sendAsset'|'getUSDCPrice'|'buyUSDC'|
+	'mintCoNETCash'
 
 type worker_command = {
 	cmd: WorkerCommand
@@ -141,9 +155,10 @@ type worker_command = {
 
 type CoNETCash = {
 	assets: {
-		key: keyPair
+		key: keyPair,
+		id: ''
 		history: CryptoAssetHistory[]
-	}
+	}[]
 	Total: number
 }
 

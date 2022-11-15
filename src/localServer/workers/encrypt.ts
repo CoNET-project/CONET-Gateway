@@ -105,6 +105,10 @@ const encryptWorkerDoCommand = async ( cmd: worker_command ) => {
 			return buyUSDC (cmd)
 		}
 
+		case 'mintCoNETCash': {
+			return mintCoNETCash (cmd)
+		}
+
 		case 'isAddress' : {
 			const address = cmd.data[0]
 			const ret = CoNETModule.Web3Utils.isAddress (address)
