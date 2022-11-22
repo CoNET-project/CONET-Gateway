@@ -12,7 +12,8 @@ const CoNETModule: CoNET_Module = {
 	Web3HttpProvider:  null,
 	Web3EthAccounts: null,
 	Web3Eth: null,
-	Web3Utils: null
+	Web3Utils: null,
+	forge: null
 }
 
 const encryptWorkerDoCommand = async ( cmd: worker_command ) => {
@@ -116,6 +117,12 @@ const encryptWorkerDoCommand = async ( cmd: worker_command ) => {
 			return returnCommand (cmd)
 		}
 
+		case 'getSINodes': {
+			const sortby = cmd.data[0][0]
+			const region = cmd.data[0][1]
+			return getSINodes (sortby, region, cmd)
+		}
+
         default: {
             cmd.err = 'INVALID_COMMAND'
             returnCommand (cmd)
@@ -135,6 +142,7 @@ const initEncryptWorker = () => {
     self.importScripts ( baseUrl + 'PouchdbMemory.js' )
     self.importScripts ( baseUrl + 'scrypt.js' )
     self.importScripts ( baseUrl + 'async.js' )
+    self.importScripts ( baseUrl + 'forge.all.min.js' )	
     self.importScripts ( baseUrl + 'jszip.min.js' )
     self.importScripts ( baseUrl + 'utilities.js' )
 	self.importScripts ( baseUrl + 'EthCrypto.js' )

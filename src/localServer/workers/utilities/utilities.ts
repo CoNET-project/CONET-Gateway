@@ -355,7 +355,7 @@ const getUSDCBalance = async (Addr: string) => {
 	return balance
 }
 const CONETNet = 'https://conettech.ca/fujiCoNET'
-const CoNETCashNet = 'https://dl.conettech.ca/CoNETCash'
+const CoNETCashNet = 'https://openpgp.online/api/CoNETCash'
 
 const getCONETBalance = async (Addr: string) => {
 	const eth = new CoNETModule.Web3Eth ( new CoNETModule.Web3Eth.providers.HttpProvider(CONETNet))
@@ -452,7 +452,7 @@ const postToEndpoint = ( url: string, post: boolean, jsonData ) => {
 	
 }
 
-const conet_DL_endpoint = 'https://dl.conettech.ca/conet-faucet'
+const conet_DL_endpoint = 'https://openpgp.online/api/conet-faucet'
 
 const getProfileFromKeyID = (keyID: string) => {
 	if ( ! CoNET_Data?.profiles) {
@@ -475,7 +475,6 @@ const getFaucet = async ( cmd: worker_command ) => {
 	}
 
 	delete cmd.err
-	logger (`getFaucet START`)
 
 	let result
 
@@ -514,6 +513,7 @@ const wei = 1000000000000000000
 const sendCoNETCash = (cmd: worker_command) => {
 
 }
+
 
 const sendAsset = async (cmd: worker_command) => {
 	const [fromAddr, total, toAddr, asset] = cmd.data[0]
@@ -574,7 +574,7 @@ const sendAsset = async (cmd: worker_command) => {
 	return storeProfile (cmd)
 }
 
-const conet_DL_getUSDCPrice_Endpoint = 'https://dl.conettech.ca/conet-price'
+const conet_DL_getUSDCPrice_Endpoint = 'https://openpgp.online/api/conet-price'
 const USDC_exchange_Addr = '0xD493391c2a2AafEd135A9f6164C0Dcfa9C68F1ee'
 
 const getUSDCPrice = async (cmd: worker_command) => {
@@ -594,8 +594,8 @@ const getUSDCPrice = async (cmd: worker_command) => {
 }
 
 const GasToEth = 0.00000001
-const buyUSDCEndpoint = `https://dl.conettech.ca/exchange_conet_usdc`
-const mintCoNETCashEndpoint = `https://dl.conettech.ca/mint_conetcash`
+const buyUSDCEndpoint = `https://openpgp.online/api/exchange_conet_usdc`
+const mintCoNETCashEndpoint = `https://openpgp.online/api/mint_conetcash`
 
 const buyUSDC = async (cmd: worker_command) => {
 	logger (`buyUSDC START`)
@@ -638,6 +638,7 @@ const buyUSDC = async (cmd: worker_command) => {
 	receipt.isSend = true
 	receipt.time = new Date().toISOString()
 	receipt.value = conetVal
+	logger(`buyUSDC Send CoNET`, receipt)
 	history.unshift (receipt)
 	let result
 	try {
@@ -654,6 +655,8 @@ const buyUSDC = async (cmd: worker_command) => {
 	const receipt1 = await getTxhashInfo (result.transactionHash, usdcNet)
 	receipt1.isSend = false
 	receipt1.time = new Date().toISOString()
+	
+	logger(`buyUSDC get receipt1`, receipt1) 
 	profile.tokens.usdc.history.unshift (receipt1)
 	return storeProfile (cmd)
 	
@@ -753,4 +756,130 @@ const mintCoNETCash = async (cmd: worker_command) => {
 		}]
 	})
 	return storeProfile (cmd)
+}
+
+const openpgp_online_CA_Store = `
+-----BEGIN CERTIFICATE-----
+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
+-----END CERTIFICATE-----
+`
+
+const requestEndpoint = async ( host: string, path: string, post: boolean, jsonData: string ) => {
+	return new Promise ((resolve,reject ) => {
+		const verifyFun = (connection, verified, depth, certs) => {
+			return true
+		}
+	
+		const closed = () => {
+			logger (`requestEndpoint on closed`)
+		}
+	
+		const connectError = err => {
+			logger (`connectError on ERROR!`)
+			logger (err)
+		}
+	
+		const dataReady = connection => {
+			logger (`dataReady!`)
+		}
+
+		const tlsDataReady = (conn: any) => {
+		
+			const data = conn.tlsData.getBytes()
+			logger ('tlsDataReady', `data length[${ data.length}]`)
+			xhr.send(data)
+		}
+	
+		const client = CoNETModule.forge.tls.createConnection({
+			server: false,
+			caStore: openpgp_online_CA_Store,
+			sessionCache: {},
+			virtualHost: host,
+			verify: verifyFun,
+			connected: () => {
+				logger (`requestEndpoint [${ host }/${ path }] connected!`)
+			},
+			dataReady: dataReady,
+			closed: closed,
+			error: connectError,
+			tlsDataReady: tlsDataReady
+		})
+	
+		const xhr = new XMLHttpRequest()
+		xhr.onload = () => {
+			logger (`xhr.onload!`)
+			if (xhr.status === 200) {
+
+				// parse JSON
+				if ( !xhr.responseText.length ) {
+					return resolve ('')
+				}
+				const response = JSON.parse(xhr.responseText)
+				return resolve (response)
+			}
+			return reject(new Error (`status != 200`))
+		}
+	
+		xhr.open( post? 'POST': 'GET', host, true )
+
+		xhr.setRequestHeader('Content-Type', 'application/json;charset=UTF-8')
+	
+		client.handshake()
+	})
+
+}
+
+const conet_DL_getSINodes = 'https://openpgp.online/api/conet-si-list'
+
+const getSINodes = async (sortby: SINodesSortby, region: SINodesRegion, cmd) => {
+	const data = {
+		sortby,
+		region
+	}
+	logger (`getSINodes START data=`, data )
+	let result
+	try {
+		result = await postToEndpoint(conet_DL_getSINodes, true, data)
+	} catch (ex) {
+		logger (`postToEndpoint [${conet_DL_getSINodes}] Error`, ex)
+		cmd.err = 'FAILURE'
+		returnCommand (cmd)
+		return logger (ex)
+	}
+	cmd.err = null
+	cmd.data = [result]
+	logger (result)
+	return returnCommand (cmd)
 }

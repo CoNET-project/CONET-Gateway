@@ -144,8 +144,12 @@ declare type WorkerCommand = 'READY'|
 	'encrypt_TestPasscode'|'encrypt_createPasscode'|'encrypt_lock'|'invitation'|'encrypt_deletePasscode'|
 	'storePreferences'|'newProfile'|'storeProfile'|
 	'getFaucet'|'isAddress'|'syncAsset'|'sendAsset'|'getUSDCPrice'|'buyUSDC'|
-	'mintCoNETCash'
+	'mintCoNETCash'|'getSINodes'
 
+type SINodesSortby = 'CUSTOMER_REVIEW'|'TOTAL_ONLINE_TIME'|
+	'STORAGE_PRICE_LOW'|'STORAGE_PRICE_HIGH'|'OUTBOUND_PRICE_HIGH'|'OUTBOUND_PRICE_LOW'
+	
+type SINodesRegion = 'USA'|'UK'|'ES'|'DE'
 type worker_command = {
 	cmd: WorkerCommand
 	data: any[]
@@ -257,6 +261,7 @@ interface CoNET_Module {
 	Web3EthAccounts: any
 	Web3Eth: any
 	Web3Utils: any
+	forge: any
 }
 
 type systemInitialization = {

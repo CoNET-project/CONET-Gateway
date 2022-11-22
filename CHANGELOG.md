@@ -1,5 +1,22 @@
 # `seguro-gateway` CHANGELOG
 
+## `0.17.1`
+
+### Additions
+
+- Get list of CoNET-SI network nodes.
+
+### Changes
+
+- None.
+
+### Fixes
+
+- None.
+
+---
+
+
 ## `0.16.1`
 
 ### Additions
