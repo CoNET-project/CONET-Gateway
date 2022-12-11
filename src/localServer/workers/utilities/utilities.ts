@@ -1,11 +1,36 @@
+const CoNET_SI_Network_Domain = 'openpgp.online'
+const conet_DL_endpoint = `https://${ CoNET_SI_Network_Domain }/api/conet-faucet`
+const conet_DL_getUSDCPrice_Endpoint = `https://${ CoNET_SI_Network_Domain }/api/conet-price`
+const conet_DL_getSINodes = `https://${ CoNET_SI_Network_Domain }/api/conet-si-list`
+const conet_DL_authorizeCoNETCashEndpoint = `https://${ CoNET_SI_Network_Domain }/api/authorizeCoNETCash`
+const conet_DL_regiestProfile = `https://${ CoNET_SI_Network_Domain }/api/regiestProfileRoute`
+const conet_DL_publishGPGKeyArmored = `https://${ CoNET_SI_Network_Domain }/api/publishGPGKeyArmored`
+const gasFee = 21000
+const wei = 1000000000000000000
+const denominator = 1000000000000000000
+const gasFeeEth = 0.000526
+const GasToEth = 0.00000001
+const USDC_exchange_Addr = '0xD493391c2a2AafEd135A9f6164C0Dcfa9C68F1ee'
+const buyUSDCEndpoint = `https://${ CoNET_SI_Network_Domain }/api/exchange_conet_usdc`
+const mintCoNETCashEndpoint = `https://${ CoNET_SI_Network_Domain }/api/mint_conetcash`
+
+
+const CoNETNet = [`https://rpc1.${CoNET_SI_Network_Domain}`,`https://rpc2.${CoNET_SI_Network_Domain}`,`https://rpc3.${CoNET_SI_Network_Domain}`]
+
+const usdcNet = 'https://mvpusdc.conettech.ca/mvpusdc'
+
+const getRandomCoNETEndPoint = () => {
+	return CoNETNet[Math.round(Math.random() * 3)]
+}
 const returnCommand = ( cmd: worker_command ) => {
     self.postMessage ( JSON.stringify ( cmd ))
 }
 
 const logger = (...argv: any ) => {
     const date = new Date ()
-    let dateStrang = `[Seguro-worker INFO ${ date.getHours() }:${ date.getMinutes() }:${ date.getSeconds() }:${ date.getMilliseconds ()}] `
-    return console.log ( dateStrang, ...argv )
+    const dateStrang = `%c [Seguro-worker INFO ${ date.getHours() }:${ date.getMinutes() }:${ date.getSeconds() }:${ date.getMilliseconds ()}]`
+	
+    return console.log ( dateStrang, 'color: #dcde56',  ...argv)
 }
 
 const isAllNumbers = ( text: string ) => {
@@ -55,11 +80,19 @@ const makePrivateKeyObj = async ( privateArmor: string, password = '' ) => {
 
 	if  (!privateArmor) {
 		const msg = `makePrivateKeyObj have no privateArmor Error!`
-		logger (msg)
-		return 
+		return logger (msg)
 	}
-	return await openpgp.decryptKey({ privateKey: await openpgp.readPrivateKey ({ armoredKey: privateArmor}), passphrase: password })
 
+	let privateKey = await openpgp.readPrivateKey ({armoredKey: privateArmor})
+
+	if (!privateKey.isDecrypted()) {
+		privateKey = await openpgp.decryptKey({
+			privateKey,
+			passphrase: password
+		})
+	}
+
+	return privateKey
 }
 
 const loadWalletAddress = ( keypair: keyPair, password ) => {
@@ -110,6 +143,17 @@ const decryptWithProfile = (encryptedMessage: string, CallBack: (err: Error|null
     .catch ((ex: Error) => {
         logger (ex)
     })
+}
+
+const encrypt_Message = async (privatePgpObj: any, armoredPublicKey: string, message: any) => {
+	const encryptObj = {
+        message: await openpgp.createMessage({text: buffer.Buffer.from(JSON.stringify (message)).toString('base64')}),
+        encryptionKeys: await openpgp.readKey ({ armoredKey: armoredPublicKey }),
+        signingKeys: privatePgpObj,
+		config: { preferredCompressionAlgorithm: openpgp.enums.compression.zlib } 		// compress the data with zlib
+		
+    }
+	return await openpgp.encrypt(encryptObj)
 }
 
 const encryptCoNET_Data_WithContainerKey = async () => {
@@ -282,8 +326,7 @@ const initCoNETTokenPreferences = () => {
 	return ret
 }
 
-const denominator = 1000000000000000000
-const testNet = 'https://conettech.ca/CoNET'
+
 
 const getCoNETTestnetBalance = async ( walletAddr: string ) => {
 	const web3 = CoNETModule
@@ -346,7 +389,7 @@ const makeContainerPGPObj = async () => {
 
 }
 
-const usdcNet = 'https://mvpusdc.conettech.ca/mvpusdc'
+
 
 const getUSDCBalance = async (Addr: string) => {
 	const eth = new CoNETModule.Web3Eth ( new CoNETModule.Web3Eth.providers.HttpProvider(usdcNet))
@@ -354,11 +397,11 @@ const getUSDCBalance = async (Addr: string) => {
 	const balance = parseInt(uuu)/denominator
 	return balance
 }
-const CONETNet = 'https://conettech.ca/fujiCoNET'
-const CoNETCashNet = 'https://openpgp.online/api/CoNETCash'
+
 
 const getCONETBalance = async (Addr: string) => {
-	const eth = new CoNETModule.Web3Eth ( new CoNETModule.Web3Eth.providers.HttpProvider(CONETNet))
+	const CoNETEndpoint = getRandomCoNETEndPoint()
+	const eth = new CoNETModule.Web3Eth ( new CoNETModule.Web3Eth.providers.HttpProvider(getRandomCoNETEndPoint()))
 	const uuu = await eth.getBalance(Addr)
 	const balance = parseInt(uuu)/denominator
 	return balance
@@ -418,7 +461,7 @@ const getAllProfileBalance = () => {
 }
 
 
-const XMLHttpRequestTimeout = 15 * 1000
+const XMLHttpRequestTimeout = 30 * 1000
 
 const postToEndpoint = ( url: string, post: boolean, jsonData ) => {
 	return new Promise ((resolve, reject) => {
@@ -430,8 +473,18 @@ const postToEndpoint = ( url: string, post: boolean, jsonData ) => {
 				if ( !xhr.responseText.length ) {
 					return resolve ('')
 				}
-				const response = JSON.parse(xhr.responseText)
-				return resolve (response)
+				const splitTextArray = xhr.responseText.split (/\r\n\r\n/)
+				const jsonText = splitTextArray[splitTextArray.length-1]
+				let ret
+				try {
+					ret = JSON.parse(jsonText)
+				} catch (ex) {
+					if ( post ) {
+						return resolve (null)
+					}
+					return resolve(xhr.responseText)
+				}
+				resolve (ret)
 			}
 			return reject(new Error (`status != 200`))
 		}
@@ -452,7 +505,7 @@ const postToEndpoint = ( url: string, post: boolean, jsonData ) => {
 	
 }
 
-const conet_DL_endpoint = 'https://openpgp.online/api/conet-faucet'
+
 
 const getProfileFromKeyID = (keyID: string) => {
 	if ( ! CoNET_Data?.profiles) {
@@ -475,22 +528,29 @@ const getFaucet = async ( cmd: worker_command ) => {
 	}
 
 	delete cmd.err
-
 	let result
-
 	try {
 		result = await postToEndpoint(conet_DL_endpoint, true, { walletAddr: keyID })
 	} catch (ex) {
 		logger (`postToEndpoint [${conet_DL_endpoint}] error!`)
 		cmd.err = 'FAILURE'
 		returnCommand (cmd)
-		return logger (ex)
+		return logger (`postToEndpoint ${conet_DL_endpoint} ERROR!`)
+	}
+	
+	if (!result?.txHash ) {
+		
+		cmd.err = 'FAILURE'
+		returnCommand (cmd)
+		logger (`postToEndpoint ${conet_DL_endpoint} ERROR!`)
 	}
 
 	logger (`postToEndpoint [${ conet_DL_endpoint }] SUCCESS`)
-	logger (`result = `, result )
+	
+	logger (`result = ${result}` )
+
 	if ( result.txHash) {
-		const receipt = await getTxhashInfo (result.txHash, CONETNet)
+		const receipt = await getTxhashInfo (result.txHash, getRandomCoNETEndPoint())
 		receipt.isSend = false
 		receipt.time = new Date().toISOString()
 		profile.tokens.conet.history.push (receipt)
@@ -499,17 +559,12 @@ const getFaucet = async ( cmd: worker_command ) => {
 	return storeProfile (cmd)
 }
 
-const gasFee = 21000
 
-const gasFeeEth = 0.000526
 const syncAsset = async (cmd: worker_command) => {
 	await getAllProfileBalance ()
 	cmd.data = [CoNET_Data]
 	return returnCommand (cmd)
 }
-
-const wei = 1000000000000000000
-
 const sendCoNETCash = (cmd: worker_command) => {
 
 }
@@ -540,7 +595,7 @@ const sendAsset = async (cmd: worker_command) => {
 		return sendCoNETCash (cmd)
 	}
 	if (asset === 'CoNET') {
-		network = CONETNet
+		network = getRandomCoNETEndPoint()
 		history = profile.tokens.conet.history
 		balance = profile.tokens.conet.balance
 
@@ -574,9 +629,6 @@ const sendAsset = async (cmd: worker_command) => {
 	return storeProfile (cmd)
 }
 
-const conet_DL_getUSDCPrice_Endpoint = 'https://openpgp.online/api/conet-price'
-const USDC_exchange_Addr = '0xD493391c2a2AafEd135A9f6164C0Dcfa9C68F1ee'
-
 const getUSDCPrice = async (cmd: worker_command) => {
 	logger (`getUSDCPrice START`)
 	let result
@@ -592,10 +644,6 @@ const getUSDCPrice = async (cmd: worker_command) => {
 	cmd.data = [result]
 	return returnCommand (cmd)
 }
-
-const GasToEth = 0.00000001
-const buyUSDCEndpoint = `https://openpgp.online/api/exchange_conet_usdc`
-const mintCoNETCashEndpoint = `https://openpgp.online/api/mint_conetcash`
 
 const buyUSDC = async (cmd: worker_command) => {
 	logger (`buyUSDC START`)
@@ -624,12 +672,13 @@ const buyUSDC = async (cmd: worker_command) => {
 		to: USDC_exchange_Addr,
 		value: (conetVal * wei).toString()
 	}
-	const eth = new CoNETModule.Web3Eth ( new CoNETModule.Web3Eth.providers.HttpProvider(CONETNet))
+	const CoNETEndpoint = getRandomCoNETEndPoint()
+	const eth = new CoNETModule.Web3Eth ( new CoNETModule.Web3Eth.providers.HttpProvider(CoNETEndpoint))
 	let createTransaction
 	try {
 		createTransaction = await eth.accounts.signTransaction( obj, profile.privateKeyArmor )
 	} catch (ex) {
-		logger (`${CONETNet} is not available`)
+		logger (`${CoNETEndpoint} is not available`)
 		cmd.err = 'FAILURE'
 		return returnCommand (cmd)
 	}
@@ -715,7 +764,7 @@ const mintCoNETCash = async (cmd: worker_command) => {
 	receipt.time = time.toISOString()
 	profile.tokens.usdc.history.unshift(receipt)
 
-	let key
+	let key: walletKey
 	if ( !CoNET_Data.CoNETCash ) {
 		CoNET_Data.CoNETCash = {
 			Total: 0,
@@ -723,14 +772,13 @@ const mintCoNETCash = async (cmd: worker_command) => {
 		}
 	}
 	key = createKey (1)[0]
-	
-
-	const message = CoNETModule.EthCrypto.hash.keccak256(receipt.transactionHash)
-	const _sign = CoNETModule.EthCrypto.sign(key.privateKey, message)
+	const txObj = { tx:receipt.transactionHash, to: key.address }
+	const message = CoNETModule.EthCrypto.hash.keccak256(txObj)
+	const _sign = CoNETModule.EthCrypto.sign( profile.privateKeyArmor, message )
 
 	let result
 	try {
-		result = await postToEndpoint(mintCoNETCashEndpoint, true, { txHash: receipt.transactionHash, sign: _sign })
+		result = await postToEndpoint(mintCoNETCashEndpoint, true, { txObj, txHash: message, sign: _sign })
 	} catch (ex) {
 		logger (`postToEndpoint [${mintCoNETCashEndpoint}] error`)
 		cmd.err = 'FAILURE'
@@ -796,80 +844,49 @@ Hwudb9AqSDUqQ0H1xpvjsoyxujQCquSx289B4kjvfA==
 -----END CERTIFICATE-----
 `
 
-const requestEndpoint = async ( host: string, path: string, post: boolean, jsonData: string ) => {
-	return new Promise ((resolve,reject ) => {
-		const verifyFun = (connection, verified, depth, certs) => {
-			return true
-		}
-	
-		const closed = () => {
-			logger (`requestEndpoint on closed`)
-		}
-	
-		const connectError = err => {
-			logger (`connectError on ERROR!`)
-			logger (err)
-		}
-	
-		const dataReady = connection => {
-			logger (`dataReady!`)
-		}
-
-		const tlsDataReady = (conn: any) => {
-		
-			const data = conn.tlsData.getBytes()
-			logger ('tlsDataReady', `data length[${ data.length}]`)
-			xhr.send(data)
-		}
-	
-		const client = CoNETModule.forge.tls.createConnection({
-			server: false,
-			caStore: openpgp_online_CA_Store,
-			sessionCache: {},
-			virtualHost: host,
-			verify: verifyFun,
-			connected: () => {
-				logger (`requestEndpoint [${ host }/${ path }] connected!`)
-			},
-			dataReady: dataReady,
-			closed: closed,
-			error: connectError,
-			tlsDataReady: tlsDataReady
-		})
-	
-		const xhr = new XMLHttpRequest()
-		xhr.onload = () => {
-			logger (`xhr.onload!`)
-			if (xhr.status === 200) {
-
-				// parse JSON
-				if ( !xhr.responseText.length ) {
-					return resolve ('')
-				}
-				const response = JSON.parse(xhr.responseText)
-				return resolve (response)
+const checkAllRowsCurrentSetups = (rows: nodes_info[], setups: nodes_info[]) => {
+	if ( setups.length > 0 ) {
+		const currents: nodes_info[] = JSON.parse(JSON.stringify(setups))
+		currents.forEach ((n, _inedx ) => {
+			const index = rows.findIndex (nn => nn.pgp_publickey_id === n.pgp_publickey_id )
+			if (!index) {
+				return
 			}
-			return reject(new Error (`status != 200`))
-		}
-	
-		xhr.open( post? 'POST': 'GET', host, true )
-
-		xhr.setRequestHeader('Content-Type', 'application/json;charset=UTF-8')
-	
-		client.handshake()
-	})
-
+			rows.splice (index, 1)
+			rows.unshift (n)
+			currents.splice (_inedx, 1)
+		})
+		currents.forEach ((n, _inedx ) => {
+			rows.unshift (n)
+		})
+	}
 }
 
-const conet_DL_getSINodes = 'https://openpgp.online/api/conet-si-list'
+const checkAllRowsCurrentRecipients = (rows: nodes_info[]) => {
+	if (!CoNET_Data?.profiles?.length) {
+		return
+	}
+	const currentProfile = CoNET_Data.profiles.filter ( n => n.isPrimary )[0]
+
+	
+	if ( currentProfile?.network?.recipients ) {
+		checkAllRowsCurrentSetups (rows, currentProfile.network.recipients )
+	}
+	if ( currentProfile?.network?.entrys ) {
+		checkAllRowsCurrentSetups (rows, currentProfile.network.entrys )
+	}
+	
+}
 
 const getSINodes = async (sortby: SINodesSortby, region: SINodesRegion, cmd) => {
+
 	const data = {
 		sortby,
 		region
 	}
 	logger (`getSINodes START data=`, data )
 	let result
+
 	try {
 		result = await postToEndpoint(conet_DL_getSINodes, true, data)
 	} catch (ex) {
@@ -878,8 +895,294 @@ const getSINodes = async (sortby: SINodesSortby, region: SINodesRegion, cmd) => 
 		returnCommand (cmd)
 		return logger (ex)
 	}
+	const rows: nodes_info[] = result.rows
+	if (rows.length) {
+		rows.forEach (n => {
+			n.disable = n.entryChecked = n.recipientChecked = false
+		})
+		checkAllRowsCurrentRecipients (rows)
+	}
 	cmd.err = null
 	cmd.data = [result]
 	logger (result)
 	return returnCommand (cmd)
+}
+
+const generateAesKey = async (length = 256) => {
+	const key = await crypto.subtle.generateKey({
+	  name: 'AES-CBC',
+	  length
+	}, true, ['encrypt', 'decrypt'])
+  
+	return key
+}
+
+const authorizeCoNETCash = ( amount: number, recipientsWalletAddress: string, logs ) => {
+	return new Promise (async resolve => {
+
+		if ( !CoNET_Data?.CoNETCash?.assets.length ) {
+			return resolve (null)
+		}
+
+		const CoNETCashAsset = CoNET_Data.CoNETCash.assets[0]
+
+		const CoNETCash_authorizedObj: CoNETCash_authorized = {
+			type: 'USDC',
+			to: recipientsWalletAddress,
+			amount,
+			id: CoNETCashAsset.id,
+			from: CoNETCashAsset.key.address
+		}
+	
+		const authorizedObjHash = CoNETModule.EthCrypto.hash.keccak256(CoNETCash_authorizedObj)
+	
+		const sign = CoNETModule.EthCrypto.sign(CoNETCashAsset.key.privateKey, authorizedObjHash)
+
+		let result
+		try {
+			result = await postToEndpoint (conet_DL_authorizeCoNETCashEndpoint, true, {CoNETCash_authorizedObj, authorizedObjHash, sign} )
+		} catch (ex) {
+			return resolve (null)
+		}
+		const time1 = new Date()
+		CoNETCashAsset.history.unshift ({
+			status: 'Confirmed',
+			value: amount,
+			cumulativeGasUsed: 0.0001 * amount,
+			time: time1.toISOString(),
+			transactionHash: result,
+			isSend: true,
+			to: recipientsWalletAddress,
+			type: 'authorized',
+			logs: logs
+		})
+
+		return resolve(result)
+
+	})
+	
+}
+
+const sendRequestToNode: (_cmd: SICommandObj_Command, currentProfile: profile, entryNode: nodes_info, node: nodes_info, requestData: any[]) => 
+	Promise<null|SICommandObj> = async (_cmd: SICommandObj_Command, currentProfile: profile, entryNode: nodes_info, node: nodes_info, requestData: any[] ) => {
+
+	return new Promise ( async resolve => {
+
+		if (!currentProfile?.pgpKey?.publicKeyArmor || !node.armoredPublicKey ) {
+			return resolve (null)
+		}
+		let key = await crypto.subtle.generateKey({
+			name: 'AES-CBC',
+			length: 256
+		}, true, ['encrypt', 'decrypt'])
+
+		let iv = crypto.getRandomValues(new Uint8Array(16))
+		const command: SICommandObj = {
+			command: _cmd,
+			publicKeyArmored: currentProfile.pgpKey.publicKeyArmor,
+			algorithm: 'aes-256-cbc',
+			iv: buffer.Buffer.from(iv).toString('base64'),
+			Securitykey: JSON.stringify(await crypto.subtle.exportKey('jwk', key)),
+			requestData
+		}
+
+		let privateKeyObj = null
+
+		try {
+			privateKeyObj = await makePrivateKeyObj (currentProfile.pgpKey.privateKeyArmor)
+		} catch (ex){
+			logger (ex)
+		}
+	
+		const encryptedCommand = await encrypt_Message( privateKeyObj, node.armoredPublicKey, command)
+		
+		const url = `https://${ entryNode.pgp_publickey_id }.${CoNET_SI_Network_Domain}/post`
+		let result
+
+		logger (`connect to ${url}`)
+
+		try {
+			result = await postToEndpoint(url, true, {data: encryptedCommand})
+		} catch (ex) {
+			return resolve (null)
+		}
+		let res
+		try {
+			const ciphertext = buffer.Buffer.from (result.data, 'base64')
+			res = await crypto.subtle.decrypt({ name: "AES-CBC",iv}, key, ciphertext)
+			
+		} catch (ex){
+			return resolve (null)
+		}
+		
+		const dec = new TextDecoder()
+		const _ret = dec.decode(res)
+		
+		
+		let ret: SICommandObj
+
+		try {
+			ret = JSON.parse (_ret)
+		} catch (ex) {
+			return resolve (null)
+		}
+		return resolve (ret)
+	})
+
+}
+
+const getRecipientCoNETCashAddress = async (cmd: worker_command) => {
+	let save = false
+	if (!CoNET_Data?.profiles?.length) {
+		cmd.err = 'NOT_READY'
+		return returnCommand (cmd)
+	}
+	
+	const currentProfile = CoNET_Data.profiles[CoNET_Data.profiles.findIndex(n => n.isPrimary)]
+	
+	if (!currentProfile.network?.entrys.length || !currentProfile.network?.recipients.length ) {
+		cmd.err = 'NOT_READY'
+		return returnCommand (cmd)
+	}
+
+	if ( !currentProfile.pgpKey ) {
+		const key = await createGPGKey('', '', '')
+		currentProfile.pgpKey = {
+			privateKeyArmor: key.privateKey,
+			publicKeyArmor: key.publicKey
+		}
+		save = true
+		
+	}
+
+	if (!currentProfile.network.recipients[0].armoredPublicKey) {
+
+		const nft_tokenid = currentProfile.network.recipients[0].nft_tokenid
+		const endPoint = `https://s3.us-east-1.wasabisys.com/conet-mvp/router/${nft_tokenid}`
+		let getRouter
+		try {
+			getRouter = await postToEndpoint(endPoint, false, null)
+		} catch (ex) {
+			cmd.err = 'NOT_READY'
+			return returnCommand (cmd)
+		}
+		currentProfile.network.recipients[0].armoredPublicKey = getRouter.armoredPublicKey
+		save = true
+	}
+
+	if (save ) {
+		await encryptCoNET_Data_WithContainerKey()
+		await storage_StoreContainerData ()
+		save = false
+	}
+	
+	if ( !cmd.data?.length || typeof cmd?.data[0] !== 'number' ) {
+		cmd.err = 'INVALID_DATA'
+		return returnCommand (cmd)
+	}
+
+	const amount: number = cmd.data[0]
+
+	if (!CoNET_Data.CoNETCash?.assets?.length) {
+		cmd.err = 'INVALID_DATA'
+		return returnCommand (cmd)
+	}
+
+	const index = Math.round(Math.random() * currentProfile.network.entrys.length-1)
+	const entryNode = currentProfile.network.entrys[index]
+	const recipientNode =  currentProfile.network.recipients[0]
+	
+	const wRequest = await sendRequestToNode('getCoNETCashAccount', currentProfile, entryNode, recipientNode, [])
+	if ( !wRequest|| ! wRequest.responseData?.length ) {
+		cmd.err = 'FAILURE'
+		return returnCommand (cmd)
+	}
+
+	recipientNode.CoNETCashWalletAddress = wRequest.responseData[0]
+	logger (recipientNode.CoNETCashWalletAddress)
+
+	const CoNETCashTX = await authorizeCoNETCash ( amount, recipientNode.CoNETCashWalletAddress, [recipientNode])
+	logger (CoNETCashTX)
+
+	if (!CoNETCashTX) {
+		cmd.err = 'FAILURE'
+		return returnCommand (cmd)
+	}
+	save = true
+	
+	const _currentProfile: publicProfile = {
+		bio: currentProfile.bio? currentProfile.bio: '',
+		nickname: currentProfile.nickname? currentProfile.nickname: '',
+		profileImg: currentProfile.profileImg ? currentProfile.profileImg : '',
+		tags: currentProfile.tags ? currentProfile.tags : [],
+	}
+
+	const authorizedObjHash = CoNETModule.EthCrypto.hash.keccak256(_currentProfile)
+	const sign = CoNETModule.EthCrypto.sign(currentProfile.privateKeyArmor, authorizedObjHash)
+
+	const wRequest1 = await sendRequestToNode('regiestRecipient', currentProfile, entryNode, recipientNode, [CoNETCashTX, {profile: _currentProfile, profileHash: authorizedObjHash, sign}])
+	
+	if (!wRequest1) {
+		cmd.err = 'FAILURE'
+		return returnCommand (cmd)
+	}
+
+	logger (wRequest1)
+	if (wRequest1.requestData) {
+		const payment = CoNET_Data.CoNETCash.assets[0].history[0]
+		if (currentProfile.network?.payment?.length ){
+			currentProfile.network?.payment.unshift(payment)
+		} else {
+			currentProfile.network.payment = [payment]
+		}
+		returnCommand (cmd)
+		await encryptCoNET_Data_WithContainerKey()
+		await storage_StoreContainerData ()
+		await regiestProfile (currentProfile, recipientNode)
+	}
+
+
+	cmd.err = 'FAILURE'
+	return returnCommand (cmd)
+	
+}
+
+const regiestProfile = async (profile: profile, recipientNode: nodes_info) => {
+	if (!recipientNode?.armoredPublicKey || !profile.keyID || !profile?.pgpKey ) {
+		return logger (`regiestProfile !recipientNode?.armoredPublicKey || !profile.keyID || !profile?.pgpKey Error!`)
+	}
+	const DL_publiy: any = await postToEndpoint (conet_DL_publishGPGKeyArmored, false, '' )
+
+	if ( !DL_publiy?.publishGPGKey ) {
+		return logger (`regiestProfile conet_DL_publishGPGKeyArmored have null Error!`)
+	}
+
+	const data: ICoNET_Profile = {
+		profileImg: profile?.profileImg ? profile.profileImg: '',
+		nickName: profile?.nickname ? profile.nickname : '',
+		emailAddr: profile?.emailAddr ? profile.emailAddr: '',
+		routerPublicKeyID: recipientNode.pgp_publickey_id,
+		routerArmoredPublicKey: recipientNode.armoredPublicKey,
+		armoredPublicKey: profile.pgpKey.publicKeyArmor,
+		walletAddr: profile.keyID,
+		walletAddrSign: CoNETModule.EthCrypto.sign(profile.privateKeyArmor, CoNETModule.EthCrypto.hash.keccak256(profile.keyID))
+	}
+	let privateKeyObj = null
+
+	try {
+		privateKeyObj = await makePrivateKeyObj (profile.pgpKey.privateKeyArmor)
+	} catch (ex){
+		logger (ex)
+	}
+
+	const encryptedCommand = await encrypt_Message( privateKeyObj, DL_publiy.publishGPGKey, data)
+
+	let result
+	try {
+		result = await postToEndpoint (conet_DL_regiestProfile, true, {pgpMessage: encryptedCommand} )
+	} catch (ex) {
+		return logger (`regiestProfile POST to conet_DL_regiestProfile ${conet_DL_regiestProfile} get ERROR`)
+	}
+	logger (`regiestProfile FINISHED!`)
+
 }

@@ -29,6 +29,30 @@ interface connectRequest {
 	connect_info?: connect_imap_reqponse
 }
 
+type nodes_info = {
+	country: string
+	customs_review_total: number
+	ip_addr: string
+	last_online: string
+	lat: number
+	lon: number 
+	nft_tokenid: string
+	outbound_fee: number
+	outbound_total: number
+	pgp_publickey_id: string
+	region: string
+	registration_date: string
+	storage_fee: number
+	storage_total: number
+	total_online: number
+	wallet_addr: string
+	entryChecked?: boolean
+	recipientChecked?: boolean
+	disable?: boolean
+	armoredPublicKey?: string
+	CoNETCashWalletAddress: string
+}
+
 interface connect_imap_reqponse {
 	imap_account: imap_setup
 	server_folder: string
@@ -104,16 +128,6 @@ interface CryptoAsset {
 	history: CryptoAssetHistory[]
 }
 
-interface keyPair {
-	publicKeyArmor: string
-	privateKeyArmor: string
-	keyID?: string
-	keyObj?: {
-		publicKeyObj: any
-		privateKeyObj: any
-	}
-}
-
 
 interface passInit {
 	charSet: string
@@ -144,7 +158,7 @@ declare type WorkerCommand = 'READY'|
 	'encrypt_TestPasscode'|'encrypt_createPasscode'|'encrypt_lock'|'invitation'|'encrypt_deletePasscode'|
 	'storePreferences'|'newProfile'|'storeProfile'|
 	'getFaucet'|'isAddress'|'syncAsset'|'sendAsset'|'getUSDCPrice'|'buyUSDC'|
-	'mintCoNETCash'|'getSINodes'
+	'mintCoNETCash'|'getSINodes'|'getRecipientCoNETCashAddress'
 
 type SINodesSortby = 'CUSTOMER_REVIEW'|'TOTAL_ONLINE_TIME'|
 	'STORAGE_PRICE_LOW'|'STORAGE_PRICE_HIGH'|'OUTBOUND_PRICE_HIGH'|'OUTBOUND_PRICE_LOW'
@@ -156,29 +170,75 @@ type worker_command = {
 	uuid?: string
 	err?: WorkerCommandError
 }
-
+type walletKey = {
+	address: string
+	index: number
+	privateKey: string
+}
 type CoNETCash = {
 	assets: {
-		key: keyPair,
-		id: ''
+		key: walletKey
+		id: string
 		history: CryptoAssetHistory[]
 	}[]
 	Total: number
 }
 
+interface keyPair {
+	publicKeyArmor: string
+	privateKeyArmor: string
+	keyID?: string
+	keyObj?: {
+		publicKeyObj: any
+		privateKeyObj: any
+	}
+}
 interface profile extends keyPair {
     nickname?: string
     tags?: string[]
 	alias?: string
 	bio?: string
     profileImg?: string
+	note?: string[]
 	recipient?: recipientNode
 	isPrimary?: boolean
+	pgpKey?: pgpKeyPair
+	emailAddr?: string
 	tokens: {
 		conet:CryptoAsset
 		usdc:CryptoAsset
 	}
+	network?: {
+		entrys: nodes_info[]
+		recipients: nodes_info[]
+		payment?: CryptoAssetHistory[]
+	}
+
 }
+
+interface publicProfile {
+	nickname: string
+    tags: string[]
+	bio: string
+    profileImg: string
+}
+
+interface ICoNET_Router_Base {
+	gpgPublicKeyID?: string
+	armoredPublicKey: string
+	walletAddr: string
+	signPgpKeyID?: string
+	walletAddrSign: string
+}
+
+interface ICoNET_Profile extends ICoNET_Router_Base {
+	nickName: string
+	profileImg: string
+	emailAddr: string
+	routerPublicKeyID: string
+	routerArmoredPublicKey: string
+}
+
 
 type ColorTheme = 'LIGHT' | 'DARK'
 type Language = 'en-CA' | 'fr-CA' | 'ja-JP' | 'zh-CN' | 'zh-TW'
@@ -199,7 +259,10 @@ type encrypt_keys_object = {
 	passcode?: Passcode
 }
 
-
+type pgpKeyPair = {
+	privateKeyArmor: string
+	publicKeyArmor: string
+}
 
 type Passcode = {
     status: PasscodeStatus
@@ -270,11 +333,38 @@ type systemInitialization = {
 }
 
 type CoNETIndexDBInit = {
-	container: {
-		privateKeyArmor: string
-		publicKeyArmor: string
-	}
+	container: pgpKeyPair
 	id: passInit
 	uuid: string
 	preferences: any
+}
+
+type SICommandObj_Command = 'getCoNETCashAccount'|'regiestRecipient'
+
+interface SICommandObj {
+	command: SICommandObj_Command
+	publicKeyArmored: string
+	responseError?: WorkerCommandError
+	responseData?: any[]
+	algorithm: 'aes-256-cbc'
+	iv: string
+	Securitykey: string
+	requestData: any[]
+}
+
+interface ethSignedObj {
+	message: string
+	messageHash: string
+	r: string
+	s: string
+	signature: string
+	v: string
+}
+
+interface CoNETCash_authorized {
+	id: string
+	to: string
+	amount: number
+	type: 'USDC'
+	from: string
 }

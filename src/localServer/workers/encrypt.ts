@@ -5,8 +5,8 @@ let workerReady = false
 let CoNET_Data: encrypt_keys_object | null = null
 let containerKeyObj: keyPair|null = null
 let preferences: any = null
-
 const databaseName = 'CoNET'
+
 const CoNETModule: CoNET_Module = {
 	EthCrypto: null,
 	Web3HttpProvider:  null,
@@ -60,6 +60,11 @@ const encryptWorkerDoCommand = async ( cmd: worker_command ) => {
             await deleteExistDB ()
 			return returnInitNull (cmd)
         }
+
+		case 'getRecipientCoNETCashAddress': {
+			return getRecipientCoNETCashAddress (cmd)
+
+		}
 
         case 'storePreferences': {
 			if ( !cmd.data || !cmd.data.length || !CoNET_Data?.isReady || !containerKeyObj ) {
@@ -259,7 +264,8 @@ const encrypt_TestPasscode = async (cmd: worker_command) => {
 		}
 	}
 	cmd.data = [CoNET_Data]
-	return returnCommand (cmd)
+	returnCommand (cmd)
+	
 }
 
 initEncryptWorker()
