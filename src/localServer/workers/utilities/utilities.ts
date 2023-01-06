@@ -5,7 +5,7 @@ const conet_DL_getSINodes = `https://${ CoNET_SI_Network_Domain }/api/conet-si-l
 const conet_DL_authorizeCoNETCashEndpoint = `https://${ CoNET_SI_Network_Domain }/api/authorizeCoNETCash`
 const conet_DL_regiestProfile = `https://${ CoNET_SI_Network_Domain }/api/regiestProfileRoute`
 const conet_DL_publishGPGKeyArmored = `https://${ CoNET_SI_Network_Domain }/api/publishGPGKeyArmored`
-const gasFee = 21000
+const gasFee = 30000
 const wei = 1000000000000000000
 const denominator = 1000000000000000000
 const gasFeeEth = 0.000526
@@ -672,6 +672,7 @@ const buyUSDC = async (cmd: worker_command) => {
 		to: USDC_exchange_Addr,
 		value: (conetVal * wei).toString()
 	}
+	logger (obj)
 	const CoNETEndpoint = getRandomCoNETEndPoint()
 	const eth = new CoNETModule.Web3Eth ( new CoNETModule.Web3Eth.providers.HttpProvider(CoNETEndpoint))
 	let createTransaction
@@ -884,6 +885,7 @@ const getSINodes = async (sortby: SINodesSortby, region: SINodesRegion, cmd) => 
 		sortby,
 		region
 	}
+
 	logger (`getSINodes START data=`, data )
 	let result
 
@@ -895,10 +897,11 @@ const getSINodes = async (sortby: SINodesSortby, region: SINodesRegion, cmd) => 
 		returnCommand (cmd)
 		return logger (ex)
 	}
-	const rows: nodes_info[] = result.rows
+	const rows: nodes_info[] = result
 	if (rows.length) {
 		rows.forEach (n => {
 			n.disable = n.entryChecked = n.recipientChecked = false
+			n.customs_review_total = parseFloat(n.customs_review_total.toString())
 		})
 		checkAllRowsCurrentRecipients (rows)
 	}
