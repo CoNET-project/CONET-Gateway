@@ -158,7 +158,8 @@ declare type WorkerCommand = 'READY'|
 	'encrypt_TestPasscode'|'encrypt_createPasscode'|'encrypt_lock'|'invitation'|'encrypt_deletePasscode'|
 	'storePreferences'|'newProfile'|'storeProfile'|
 	'getFaucet'|'isAddress'|'syncAsset'|'sendAsset'|'getUSDCPrice'|'buyUSDC'|
-	'mintCoNETCash'|'getSINodes'|'getRecipientCoNETCashAddress'
+	'mintCoNETCash'|'getSINodes'|'getRecipientCoNETCashAddress'|'getUserProfile'|
+	'sendMessage'|'incomeData'|'WORKER_MESSAGE'
 
 type SINodesSortby = 'CUSTOMER_REVIEW'|'TOTAL_ONLINE_TIME'|
 	'STORAGE_PRICE_LOW'|'STORAGE_PRICE_HIGH'|'OUTBOUND_PRICE_HIGH'|'OUTBOUND_PRICE_LOW'
@@ -257,6 +258,8 @@ type encrypt_keys_object = {
 	preferences?: any
 	encryptedString?: string
 	passcode?: Passcode
+	clientPool:clientProfile[]
+
 }
 
 type pgpKeyPair = {
@@ -339,7 +342,7 @@ type CoNETIndexDBInit = {
 	preferences: any
 }
 
-type SICommandObj_Command = 'getCoNETCashAccount'|'regiestRecipient'
+type SICommandObj_Command = 'getCoNETCashAccount'|'regiestRecipient'|'connecting'
 
 interface SICommandObj {
 	command: SICommandObj_Command
@@ -367,4 +370,14 @@ interface CoNETCash_authorized {
 	amount: number
 	type: 'USDC'
 	from: string
+}
+
+type clientProfile = {
+	armoredPublicKey: string
+	gpgPublicKeyID: string
+	nickName: string
+	profileImg: string
+	walletAddr: string
+	routerArmoredPublicKey: string
+	routerPublicKeyID: string
 }

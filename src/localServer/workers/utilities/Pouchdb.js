@@ -1,6 +1,6 @@
-// PouchDB 8.0.0
+// PouchDB 8.0.1
 // 
-// (c) 2012-2022 Dale Harvey and the PouchDB team
+// (c) 2012-2023 Dale Harvey and the PouchDB team
 // PouchDB may be freely distributed under the Apache license, version 2.0.
 // For all details and documentation:
 // http://pouchdb.com
@@ -3150,7 +3150,7 @@ class Changes extends EE {
     this._listeners = {};
     
     if (hasLocalStorage()) {
-      addEventListener("storage", function (e) {
+      addEventListener("storage", (e) => {
         this.emit(e.key);
       });
     }
@@ -5861,7 +5861,7 @@ PouchDB.fetch = function (url, opts) {
 PouchDB.prototype.activeTasks = PouchDB.activeTasks = new ActiveTasks();
 
 // managed automatically by set-version.js
-var version = "8.0.0";
+var version = "8.0.1";
 
 // this would just be "return doc[field]", but fields
 // can be "deep" due to dot notation

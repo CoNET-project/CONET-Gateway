@@ -59,7 +59,8 @@ const checkStorage = async () => {
 
 	CoNET_Data = {
 		isReady: false,
-		encryptedString: doc.title
+		encryptedString: doc.title,
+		clientPool: []
 	}
 
 	const data: systemInitialization = {
@@ -166,6 +167,7 @@ const storage_StoreContainerData = async () => {
 		const msg = `storage_StoreContainerData Error: CoNET_Data === null`
 		return logger (msg)
 	}
+	await encryptCoNET_Data_WithContainerKey()
     const oldUuid = systemInitialization_UUID
     logger ('storage_StoreContainerData start! oldUuid = ', oldUuid)
 
@@ -206,6 +208,5 @@ const storeProfile = async (cmd: worker_command) => {
 		})
 	}
 	
-	await encryptCoNET_Data_WithContainerKey()
 	await storage_StoreContainerData ()
 }

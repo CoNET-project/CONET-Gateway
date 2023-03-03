@@ -28,7 +28,6 @@ const encryptWorkerDoCommand = async ( cmd: worker_command ) => {
 			const password = cmd.data[0]
             await createNumberPasscode (password)
 			await createPlatformFirstProfile ()
-            await encryptCoNET_Data_WithContainerKey()
 			await storage_StoreContainerData ()
 			const data: encrypt_keys_object = {
 				preferences: {
@@ -38,7 +37,8 @@ const encryptWorkerDoCommand = async ( cmd: worker_command ) => {
 					status: 'UNLOCKED'
 				},
 				profiles: CoNET_Data?.profiles,
-				isReady: true
+				isReady: true,
+				clientPool: []
 			}
 		
 			cmd.data = [data]
@@ -128,6 +128,14 @@ const encryptWorkerDoCommand = async ( cmd: worker_command ) => {
 			return getSINodes (sortby, region, cmd)
 		}
 
+		case 'getUserProfile': {
+			return getProfile (cmd)
+		}
+
+		case 'sendMessage': {
+			return sendMessage (cmd)
+		}
+
         default: {
             cmd.err = 'INVALID_COMMAND'
             returnCommand (cmd)
@@ -151,9 +159,8 @@ const initEncryptWorker = () => {
     self.importScripts ( baseUrl + 'jszip.min.js' )
     self.importScripts ( baseUrl + 'utilities.js' )
 	self.importScripts ( baseUrl + 'EthCrypto.js' )
-	self.importScripts ( baseUrl + 'web3-providers-http.js' )
-	self.importScripts ( baseUrl + 'web3-eth.js' )
-	self.importScripts ( baseUrl + 'web3-utils.js' )
+	self.importScripts ( baseUrl + 'web3.js' )
+
     self.importScripts ( baseUrl + 'generatePassword.js' )
     self.importScripts ( baseUrl + 'storage.js' )
     self.importScripts ( baseUrl + 'seguroSetup.js' )

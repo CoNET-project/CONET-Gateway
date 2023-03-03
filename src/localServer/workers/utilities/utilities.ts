@@ -15,12 +15,12 @@ const buyUSDCEndpoint = `https://${ CoNET_SI_Network_Domain }/api/exchange_conet
 const mintCoNETCashEndpoint = `https://${ CoNET_SI_Network_Domain }/api/mint_conetcash`
 
 
-const CoNETNet = [`https://rpc1.${CoNET_SI_Network_Domain}`,`https://rpc2.${CoNET_SI_Network_Domain}`,`https://rpc3.${CoNET_SI_Network_Domain}`]
+const CoNETNet = [`https://rpc1.${CoNET_SI_Network_Domain}`]
 
 const usdcNet = 'https://mvpusdc.conettech.ca/mvpusdc'
 
 const getRandomCoNETEndPoint = () => {
-	return CoNETNet[Math.round(Math.random() * 3)]
+	return CoNETNet[0]			//Math.round(Math.random() * 3)]
 }
 const returnCommand = ( cmd: worker_command ) => {
     self.postMessage ( JSON.stringify ( cmd ))
@@ -31,6 +31,14 @@ const logger = (...argv: any ) => {
     const dateStrang = `%c [Seguro-worker INFO ${ date.getHours() }:${ date.getMinutes() }:${ date.getSeconds() }:${ date.getMilliseconds ()}]`
 	
     return console.log ( dateStrang, 'color: #dcde56',  ...argv)
+}
+
+const getRamdomEntryNode = (currentProfile: profile ) => {
+	if (!currentProfile.network) {
+		return null
+	}
+	const index = ( currentProfile.network.entrys.length === 1) ? 0: Math.round(Math.random() * currentProfile.network.entrys.length-1)
+	return currentProfile.network.entrys[index]
 }
 
 const isAllNumbers = ( text: string ) => {
@@ -123,27 +131,6 @@ const decryptWithContainerKey = ( encryptedMessage: string, CallBack: (err: Erro
     })
 }
 
-const decryptWithProfile = (encryptedMessage: string, CallBack: (err: Error|null, text?: string) => void) => {
-    let ret = ''
-    return openpgp.readMessage({armoredMessage: encryptedMessage})
-    .then ((message: any) => {
-        return openpgp.decrypt({
-            message,
-            verificationKeys: '',
-            decryptionKeys:''
-        })
-    })
-    .then((n: any) => {
-        ret = n.data
-        return n.verified
-    })
-    .then (() => {
-        return CallBack (null, ret )
-    })
-    .catch ((ex: Error) => {
-        logger (ex)
-    })
-}
 
 const encrypt_Message = async (privatePgpObj: any, armoredPublicKey: string, message: any) => {
 	const encryptObj = {
@@ -191,6 +178,9 @@ const decryptCoNET_Data_WithContainerKey = async () => {
 	}
 	
 	CoNET_Data.encryptedString = ''
+	if (!CoNET_Data.clientPool) {
+		CoNET_Data.clientPool = []
+	}
 	preferences = CoNET_Data.preferences
 }
 
@@ -326,8 +316,6 @@ const initCoNETTokenPreferences = () => {
 	return ret
 }
 
-
-
 const getCoNETTestnetBalance = async ( walletAddr: string ) => {
 	const web3 = CoNETModule
 }
@@ -361,7 +349,8 @@ const initCoNET_Data = ( passcode = '' ) => {
 		CoNETCash: {
 			Total: 0,
 			assets: []
-		}
+		},
+		clientPool: []
 	}
     const acc = createKey (1)
 
@@ -388,8 +377,6 @@ const makeContainerPGPObj = async () => {
 	}
 
 }
-
-
 
 const getUSDCBalance = async (Addr: string) => {
 	const eth = new CoNETModule.Web3Eth ( new CoNETModule.Web3Eth.providers.HttpProvider(usdcNet))
@@ -468,6 +455,8 @@ const postToEndpoint = ( url: string, post: boolean, jsonData ) => {
 		const xhr = new XMLHttpRequest()
 		xhr.onload = () => {
 			clearTimeout (timeCount)
+			//const status = parseInt(xhr.responseText.split (' ')[1])
+
 			if (xhr.status === 200) {
 				// parse JSON
 				if ( !xhr.responseText.length ) {
@@ -484,9 +473,10 @@ const postToEndpoint = ( url: string, post: boolean, jsonData ) => {
 					}
 					return resolve(xhr.responseText)
 				}
-				resolve (ret)
+				return resolve (ret)
 			}
-			return reject(new Error (`status != 200`))
+
+			return reject(new Error (`status is not 200 ${ xhr.responseText }`))
 		}
 
 		xhr.open( post? 'POST': 'GET', url, true )
@@ -565,6 +555,8 @@ const syncAsset = async (cmd: worker_command) => {
 	cmd.data = [CoNET_Data]
 	return returnCommand (cmd)
 }
+
+
 const sendCoNETCash = (cmd: worker_command) => {
 
 }
@@ -966,6 +958,218 @@ const authorizeCoNETCash = ( amount: number, recipientsWalletAddress: string, lo
 	
 }
 
+const postToEndpointSSE = ( url: string, post: boolean, jsonData, CallBack ) => {
+
+		const xhr = new XMLHttpRequest()
+		let last_response_len = 0
+
+		xhr.onprogress = () => {
+			clearTimeout (timeCount)
+			
+
+			if (!last_response_len) {
+				if (xhr.status === 200) {
+					const splitTextArray = xhr.responseText.split(/data: /)[1].split(/\r\n/)[0]
+					last_response_len = xhr.response.length
+					
+					return CallBack (null, splitTextArray)
+				}
+				return CallBack(new Error (`status != 200`))
+			}
+			
+			const responseText: string = xhr.response.substr(last_response_len)
+			last_response_len = xhr.response.length
+			logger (responseText)
+			const line = responseText.split ('data: ')[1]
+			
+			if (!line ) {
+				return
+			}
+			CallBack (null, line)
+		}
+
+		xhr.open( post? 'POST': 'GET', url, true )
+		xhr.setRequestHeader('Content-Type', 'application/json;charset=UTF-8')
+		xhr.send(jsonData? JSON.stringify(jsonData): '')
+
+		logger (url)
+
+		const timeCount = setTimeout (() => {
+			const Err = `postToEndpoint Timeout!`
+			logger (`postToEndpoint Error`, Err )
+			CallBack (new Error ( Err ))
+		}, XMLHttpRequestTimeout )
+	
+	
+}
+
+const decrypteMessage = (encryptedMessage: string, privatePgpObj: any) => {
+	return new Promise ( async resolve => {
+		let de
+		try {
+			de = await openpgp.decrypt ({
+				message: await openpgp.readMessage({armoredMessage: encryptedMessage}),
+				decryptionKeys: privatePgpObj
+			})
+		} catch (ex) {
+			return resolve (null)
+		}
+		
+		return resolve(de)
+	})
+	
+}
+
+
+const longConnectToNode = async (_cmd: SICommandObj_Command, currentProfile: profile, entryNode: nodes_info, node: nodes_info, requestData: any[], cmd: worker_command ) => {
+	return new Promise ( async resolve => {
+		if (!currentProfile?.pgpKey?.publicKeyArmor || !node.armoredPublicKey ) {
+			return resolve (null)
+		}
+		let key = await crypto.subtle.generateKey({
+			name: 'AES-CBC',
+			length: 256
+		}, true, ['encrypt', 'decrypt'])
+
+		let iv = crypto.getRandomValues(new Uint8Array(16))
+		const command: SICommandObj = {
+			command: _cmd,
+			publicKeyArmored: currentProfile.pgpKey.publicKeyArmor,
+			algorithm: 'aes-256-cbc',
+			iv: buffer.Buffer.from(iv).toString('base64'),
+			Securitykey: JSON.stringify(await crypto.subtle.exportKey('jwk', key)),
+			requestData
+		}
+
+		let privateKeyObj = null
+
+		try {
+			privateKeyObj = await makePrivateKeyObj (currentProfile.pgpKey.privateKeyArmor)
+		} catch (ex){
+			logger (ex)
+		}
+	
+		const encryptedCommand = await encrypt_Message( privateKeyObj, node.armoredPublicKey, command)
+		
+		const url = `https://${ entryNode.pgp_publickey_id }.${CoNET_SI_Network_Domain}/post`
+		let result
+
+		logger (`connect to ${url}`)
+
+		return postToEndpointSSE(url, true, {data: encryptedCommand}, async (err, data ) => {
+
+			if (err) {
+				return resolve (null)
+			}
+			if (!data) {
+				return resolve (null)
+			}
+			if (/-----BEGIN PGP MESSAGE-----/.test(data)) {
+				const clearText:any = await decrypteMessage (data, privateKeyObj)
+				if ( !clearText.data ||!clearText.signatures||!CoNET_Data) {
+					return
+				}
+				
+				try {
+					clearText.obj =  JSON.parse (buffer.Buffer.from(clearText.data,'base64').toString())
+				} catch (ex) {
+					return
+				}
+				const key = clearText.signatures[0].keyID.toHex()
+				clearText.signatures[0].keyIDHex = key
+				let index = -1
+
+				if (!CoNET_Data.clientPool?.length) {
+					CoNET_Data.clientPool = []
+				}
+
+				if ((index = CoNET_Data.clientPool.findIndex (n => n.walletAddr.toUpperCase() === key.toUpperCase())) < 0) {
+					
+					let result
+					try {
+						result = await postToEndpoint (`${openSourceEndpoint}${key.toUpperCase()}`, false, null )
+					} catch (ex) {
+						return logger (`longConnectToNode have not find ${key} ERROR`)
+					}
+					CoNET_Data.clientPool.push (result)
+					logger (result)
+					clearText.profile = result
+				} else {
+					clearText.profile = CoNET_Data.clientPool[index]
+				}
+				
+				delete cmd.err
+				cmd.data[0]= clearText
+				return returnCommand(cmd)
+			}
+			let res
+			try {
+				const ciphertext = buffer.Buffer.from (data, 'base64')
+				res = await crypto.subtle.decrypt({ name: "AES-CBC",iv}, key, ciphertext)
+				
+			} catch (ex){
+				return resolve (null)
+			}
+
+			
+			
+			const dec = new TextDecoder()
+			const _ret = dec.decode(res)
+			
+			
+			let ret: SICommandObj
+
+			try {
+				ret = JSON.parse (_ret)
+			} catch (ex) {
+				return resolve (null)
+			}
+
+			return resolve (ret)
+		})
+		
+	})
+}
+
+const sendForwardToNode = (currentProfile: profile, client: clientProfile, messageObj: any ) => {
+	return new Promise ( async resolve => {
+		
+		if (!currentProfile?.pgpKey?.publicKeyArmor ) {
+			return resolve (null)
+		}
+		let privateKeyObj = null
+
+		try {
+			privateKeyObj = await makePrivateKeyObj (currentProfile.pgpKey.privateKeyArmor)
+		} catch (ex){
+			logger (ex)
+		}
+		const entryNode = getRamdomEntryNode (currentProfile)
+	
+		if (!entryNode) {
+			return resolve (null)
+		}
+
+		const encryptedData = await encrypt_Message( privateKeyObj, client.armoredPublicKey, messageObj)
+		const encryptedForwardMessage =  await encrypt_Message( privateKeyObj, client.routerArmoredPublicKey, encryptedData)
+
+		const url = `https://${ entryNode.pgp_publickey_id }.${CoNET_SI_Network_Domain}/post`
+		let result
+
+		logger (`connect to ${url}`)
+		try {
+			result = await postToEndpoint(url, true, {data: encryptedForwardMessage})
+		} catch (ex) {
+			return resolve (null)
+		}
+
+		return resolve(true)
+
+	})
+	
+
+}
+
 const sendRequestToNode: (_cmd: SICommandObj_Command, currentProfile: profile, entryNode: nodes_info, node: nodes_info, requestData: any[]) => 
 	Promise<null|SICommandObj> = async (_cmd: SICommandObj_Command, currentProfile: profile, entryNode: nodes_info, node: nodes_info, requestData: any[] ) => {
 
@@ -1073,11 +1277,7 @@ const getRecipientCoNETCashAddress = async (cmd: worker_command) => {
 		save = true
 	}
 
-	if (save ) {
-		await encryptCoNET_Data_WithContainerKey()
-		await storage_StoreContainerData ()
-		save = false
-	}
+	
 	
 	if ( !cmd.data?.length || typeof cmd?.data[0] !== 'number' ) {
 		cmd.err = 'INVALID_DATA'
@@ -1091,10 +1291,15 @@ const getRecipientCoNETCashAddress = async (cmd: worker_command) => {
 		return returnCommand (cmd)
 	}
 
-	const index = Math.round(Math.random() * currentProfile.network.entrys.length-1)
-	const entryNode = currentProfile.network.entrys[index]
+	const entryNode = getRamdomEntryNode (currentProfile)
+
+	if (!entryNode) {
+		cmd.err = 'NOT_READY'
+		return returnCommand (cmd)
+	}
 	const recipientNode =  currentProfile.network.recipients[0]
 	
+	logger (`regiest to recipient node [${ recipientNode.ip_addr }]`)
 	const wRequest = await sendRequestToNode('getCoNETCashAccount', currentProfile, entryNode, recipientNode, [])
 	if ( !wRequest|| ! wRequest.responseData?.length ) {
 		cmd.err = 'FAILURE'
@@ -1123,7 +1328,7 @@ const getRecipientCoNETCashAddress = async (cmd: worker_command) => {
 	const authorizedObjHash = CoNETModule.EthCrypto.hash.keccak256(_currentProfile)
 	const sign = CoNETModule.EthCrypto.sign(currentProfile.privateKeyArmor, authorizedObjHash)
 
-	const wRequest1 = await sendRequestToNode('regiestRecipient', currentProfile, entryNode, recipientNode, [CoNETCashTX, {profile: _currentProfile, profileHash: authorizedObjHash, sign}])
+	const wRequest1: any = await longConnectToNode('regiestRecipient', currentProfile, entryNode, recipientNode, [CoNETCashTX, {profile: _currentProfile, profileHash: authorizedObjHash, sign}],cmd)
 	
 	if (!wRequest1) {
 		cmd.err = 'FAILURE'
@@ -1139,15 +1344,45 @@ const getRecipientCoNETCashAddress = async (cmd: worker_command) => {
 			currentProfile.network.payment = [payment]
 		}
 		returnCommand (cmd)
-		await encryptCoNET_Data_WithContainerKey()
 		await storage_StoreContainerData ()
-		await regiestProfile (currentProfile, recipientNode)
+		return await regiestProfile (currentProfile, recipientNode)
 	}
 
 
 	cmd.err = 'FAILURE'
-	return returnCommand (cmd)
+	returnCommand (cmd)
+	if (save ) {
+		await storage_StoreContainerData ()
+		save = false
+	}
+}
+
+const connectToRecipient = async (cmd: worker_command) => {
+	if (!CoNET_Data?.profiles?.length) {
+		cmd.err = 'NOT_READY'
+		return returnCommand (cmd)
+	}
+	const currentProfile = CoNET_Data.profiles[CoNET_Data.profiles.findIndex(n => n.isPrimary)]
 	
+	if (!currentProfile.network?.entrys.length || !currentProfile.network?.recipients.length ) {
+		cmd.err = 'NOT_READY'
+		return returnCommand (cmd)
+	}
+	const entryNode = getRamdomEntryNode (currentProfile)
+
+	if (!entryNode) {
+		cmd.err = 'NOT_READY'
+		return returnCommand (cmd)
+	}
+	const recipientNode =  currentProfile.network.recipients[0]
+
+	const wRequest1: any = await longConnectToNode('connecting', currentProfile, entryNode, recipientNode, [],cmd)
+	if (!wRequest1) {
+		cmd.err = 'FAILURE'
+		return returnCommand (cmd)
+	}
+	returnCommand (cmd)
+
 }
 
 const regiestProfile = async (profile: profile, recipientNode: nodes_info) => {
@@ -1170,6 +1405,7 @@ const regiestProfile = async (profile: profile, recipientNode: nodes_info) => {
 		walletAddr: profile.keyID,
 		walletAddrSign: CoNETModule.EthCrypto.sign(profile.privateKeyArmor, CoNETModule.EthCrypto.hash.keccak256(profile.keyID))
 	}
+
 	let privateKeyObj = null
 
 	try {
@@ -1179,7 +1415,7 @@ const regiestProfile = async (profile: profile, recipientNode: nodes_info) => {
 	}
 
 	const encryptedCommand = await encrypt_Message( privateKeyObj, DL_publiy.publishGPGKey, data)
-
+	Math.min(3,4)
 	let result
 	try {
 		result = await postToEndpoint (conet_DL_regiestProfile, true, {pgpMessage: encryptedCommand} )
@@ -1189,3 +1425,85 @@ const regiestProfile = async (profile: profile, recipientNode: nodes_info) => {
 	logger (`regiestProfile FINISHED!`)
 
 }
+
+const openSourceEndpoint = 'https://s3.us-east-1.wasabisys.com/conet-mvp/router/'
+
+const getProfile = async (cmd: worker_command) => {
+	const key = cmd.data[0]
+	const ret = CoNETModule.Web3Utils.isAddress (key)
+	const keyUp = key.toUpperCase()
+	if (!ret || !CoNET_Data) {
+		cmd.err = 'INVALID_DATA'
+		returnCommand (cmd)
+		return logger (`getProfile have not KEY ERROR!`)
+	}
+
+	if (CoNET_Data.clientPool.length) {
+		const index = CoNET_Data.clientPool.findIndex( n => n.walletAddr === keyUp)
+		if (index > -1 ) {
+			cmd.data[0] = CoNET_Data.clientPool[index]
+			return returnCommand (cmd)
+		}
+	}
+	let result
+	try {
+		result = await postToEndpoint (`${openSourceEndpoint}${keyUp}`, false, null )
+	} catch (ex) {
+		return logger (`regiestProfile POST to conet_DL_regiestProfile ${conet_DL_regiestProfile} get ERROR`)
+	}
+	if (CoNET_Data) {
+		CoNET_Data.clientPool.push (result)
+
+	}
+	
+	logger (result)
+	cmd.data[0] = result
+	returnCommand (cmd)
+	await storage_StoreContainerData ()
+	
+}
+
+const sendMessage = async (cmd: worker_command) => {
+	const key = cmd.data[0]
+	const message = cmd.data[1]
+	if (!CoNET_Data) {
+		cmd.err = 'NOT_READY'
+		return returnCommand (cmd)
+	}
+	const index = CoNET_Data.clientPool.findIndex (n => n.walletAddr.toUpperCase() === key.toUpperCase())
+	if (index<0 || !CoNET_Data?.profiles) {
+		cmd.err = 'INVALID_DATA'
+		return returnCommand (cmd)
+	}
+	const client = CoNET_Data.clientPool[index]
+
+	const currentProfile = CoNET_Data.profiles[CoNET_Data.profiles.findIndex(n => n.isPrimary)]
+	if (!currentProfile.pgpKey?.privateKeyArmor ) {
+		cmd.err = 'INVALID_DATA'
+		return returnCommand (cmd)
+	}
+	let privateKeyObj = null
+
+	try {
+		privateKeyObj = await makePrivateKeyObj (currentProfile.pgpKey?.privateKeyArmor)
+	} catch (ex){
+		logger (ex)
+		cmd.err = 'INVALID_DATA'
+		return returnCommand (cmd)
+	}
+	const sendMessage = {
+		cmd: 'message',
+		conect: message,
+		totalPart: 1,
+		currentPart: 1,
+		timestamp: new Date().getTime()
+	}
+
+	const send = await sendForwardToNode (currentProfile, client, sendMessage)
+	if (send) {
+		return returnCommand (cmd)
+	}
+	cmd.err = 'FAILURE'
+	return returnCommand (cmd)
+}
+
