@@ -17,7 +17,7 @@ const mintCoNETCashEndpoint = `https://${ CoNET_SI_Network_Domain }/api/mint_con
 
 const CoNETNet = [`https://rpc1.${CoNET_SI_Network_Domain}`]
 
-const usdcNet = 'https://mvpusdc.conettech.ca/mvpusdc'
+const usdcNet = 'https://rpc1.openpgp.online/usdc'
 
 const getRandomCoNETEndPoint = () => {
 	return CoNETNet[0]			//Math.round(Math.random() * 3)]

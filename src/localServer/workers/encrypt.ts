@@ -158,7 +158,6 @@ const initEncryptWorker = () => {
     self.importScripts ( baseUrl + 'forge.all.min.js' )	
     self.importScripts ( baseUrl + 'jszip.min.js' )
     self.importScripts ( baseUrl + 'utilities.js' )
-	self.importScripts ( baseUrl + 'EthCrypto.js' )
 	self.importScripts ( baseUrl + 'web3.js' )
 
     self.importScripts ( baseUrl + 'generatePassword.js' )
