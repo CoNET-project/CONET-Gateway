@@ -1,6 +1,6 @@
 {
     "name": "@conet.project/seguro-gateway",
-    "version": "0.18.3",
+    "version": "0.18.4",
     "license": "UNLICENSED",
     "files": [
         "./build"
@@ -20,7 +20,7 @@
         "colors": "^1.4.0",
         "cors": "^2.8.5",
         "express": "^4.18.2",
-        "fs-extra": "^11.1.0",
+        "fs-extra": "^11.1.1",
         "uuid": "^9.0.0",
         "yargs": "^17.7.1"
     },
@@ -29,25 +29,25 @@
         "@types/express": "^4.17.17",
         "@types/fs-extra": "^11.0.1",
         "@types/jest": "^29.5.0",
-        "@types/node": "^18.15.5",
+        "@types/node": "^18.15.10",
         "@types/pouchdb": "^6.4.0",
         "@types/uuid": "^9.0.1",
-        "@typescript-eslint/eslint-plugin": "^5.56.0",
-        "@typescript-eslint/parser": "^5.56.0",
+        "@typescript-eslint/eslint-plugin": "^5.57.0",
+        "@typescript-eslint/parser": "^5.57.0",
         "eslint": "^8.36.0",
         "eslint-config-airbnb-base": "^15.0.0",
         "eslint-config-prettier": "^8.8.0",
         "eslint-plugin-import": "^2.27.5",
         "eslint-plugin-jest": "^27.2.1",
-        "eth-crypto":"^2.6.0",
+        "eth-crypto": "^2.6.0",
         "jest": "^29.5.0",
+        "jszip": "^3.10.1",
         "openpgp": "^5.7.0",
         "pouchdb": "^8.0.1",
         "ts-jest": "^29.0.5",
         "ts-node": "^10.9.1",
         "typescript": "^5.0.2",
-        "web3": "^1.9.0",
-		"jszip": "^3.10.1"
+        "web3": "^1.9.0"
     },
     "bin": {
         "seguro-gateway": "./build/index.js"

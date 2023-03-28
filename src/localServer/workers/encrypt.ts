@@ -6,6 +6,22 @@ let CoNET_Data: encrypt_keys_object | null = null
 let containerKeyObj: keyPair|null = null
 let preferences: any = null
 const databaseName = 'CoNET'
+const channel = new BroadcastChannel('toMainWroker')
+const responseChannel = new BroadcastChannel('toServiceWroker')
+let activeNodes: nodes_info[]|null= null
+channel.addEventListener('message', e => {
+	logger (`BroadcastChannel('toMainWroker') have message!`, e.data )
+	const cmd: worker_command = e.data
+	switch (cmd.cmd) {
+		case 'urlProxy': {
+			preProxyConnect (cmd)
+			return logger (`Wroker BroadcastChannel [toMainWroker] got urlProxy command!`)
+		}
+		default: {
+			return logger (`Wroker BroadcastChannel [toMainWroker] got unknow command!`, cmd)
+		}
+	}
+})
 
 const CoNETModule: CoNET_Module = {
 	EthCrypto: null,
@@ -42,6 +58,7 @@ const encryptWorkerDoCommand = async ( cmd: worker_command ) => {
 			}
 		
 			cmd.data = [data]
+			activeNodes = await _getSINodes ('CUSTOMER_REVIEW', 'DE')
 			return returnCommand (cmd)
 		}
 
@@ -180,6 +197,7 @@ const initEncryptWorker = () => {
         return encryptWorkerDoCommand ( cmd )
     }
 
+	
     return checkStorage ()
 }
 
@@ -271,7 +289,37 @@ const encrypt_TestPasscode = async (cmd: worker_command) => {
 	}
 	cmd.data = [CoNET_Data]
 	returnCommand (cmd)
-	
+	activeNodes = await _getSINodes ('CUSTOMER_REVIEW', 'USA')
 }
 
 initEncryptWorker()
+
+const getRandomNode = async () => {
+	if (activeNodes?.length ) {
+		activeNodes = await _getSINodes ('CUSTOMER_REVIEW', 'USA')
+	}
+	if (!activeNodes?.length) {
+		return null
+	}
+	const index =  Math.random() * activeNodes.length
+	return activeNodes[index]
+
+}
+const preProxyConnect = async (cmd: worker_command) => {
+	const entryNode = await getRandomNode ()
+	const gatewayNode = await getRandomNode ()
+	if (!entryNode||!gatewayNode||!CoNET_Data?.profiles) {
+		cmd.err = 'NOT_INTERNET'
+		return responseChannel.postMessage(cmd)
+	}
+
+	if (!CoNET_Data?.profiles) {
+		cmd.err = 'NOT_READY'
+		return responseChannel.postMessage(cmd)
+	}
+	const currentProfile = CoNET_Data.profiles[CoNET_Data.profiles.findIndex(n => n.isPrimary)]
+	
+	cmd.data = [await sendRequestToNode ('SaaS_Proxy', currentProfile, entryNode, gatewayNode, cmd.data[0])]
+
+	return responseChannel.postMessage(cmd)
+}

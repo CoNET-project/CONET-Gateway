@@ -495,8 +495,6 @@ const postToEndpoint = ( url: string, post: boolean, jsonData ) => {
 	
 }
 
-
-
 const getProfileFromKeyID = (keyID: string) => {
 	if ( ! CoNET_Data?.profiles) {
 		return null
@@ -861,7 +859,6 @@ const checkAllRowsCurrentRecipients = (rows: nodes_info[]) => {
 	}
 	const currentProfile = CoNET_Data.profiles.filter ( n => n.isPrimary )[0]
 
-	
 	if ( currentProfile?.network?.recipients ) {
 		checkAllRowsCurrentSetups (rows, currentProfile.network.recipients )
 	}
@@ -871,23 +868,18 @@ const checkAllRowsCurrentRecipients = (rows: nodes_info[]) => {
 	
 }
 
-const getSINodes = async (sortby: SINodesSortby, region: SINodesRegion, cmd) => {
-
+const _getSINodes = async (sortby: SINodesSortby, region: SINodesRegion) => {
 	const data = {
 		sortby,
 		region
 	}
-
 	logger (`getSINodes START data=`, data )
 	let result
-
 	try {
 		result = await postToEndpoint(conet_DL_getSINodes, true, data)
 	} catch (ex) {
 		logger (`postToEndpoint [${conet_DL_getSINodes}] Error`, ex)
-		cmd.err = 'FAILURE'
-		returnCommand (cmd)
-		return logger (ex)
+		return null
 	}
 	const rows: nodes_info[] = result
 	if (rows.length) {
@@ -897,9 +889,19 @@ const getSINodes = async (sortby: SINodesSortby, region: SINodesRegion, cmd) => 
 		})
 		checkAllRowsCurrentRecipients (rows)
 	}
-	cmd.err = null
+	logger (rows)
+	return rows
+}
+
+const getSINodes = async (sortby: SINodesSortby, region: SINodesRegion, cmd) => {
+
+	const result = await _getSINodes(sortby, region)
+	if (!result) {
+		logger (`postToEndpoint [${conet_DL_getSINodes}] Error`)
+		cmd.err = 'FAILURE'
+		return returnCommand (cmd)
+	}
 	cmd.data = [result]
-	logger (result)
 	return returnCommand (cmd)
 }
 
@@ -1204,6 +1206,11 @@ const sendRequestToNode: (_cmd: SICommandObj_Command, currentProfile: profile, e
 		const encryptedCommand = await encrypt_Message( privateKeyObj, node.armoredPublicKey, command)
 		
 		const url = `https://${ entryNode.pgp_publickey_id }.${CoNET_SI_Network_Domain}/post`
+
+		if (_cmd === 'SaaS_Proxy') {
+			command.requestData = [encryptedCommand, url]
+			return resolve (command)
+		}
 		let result
 
 		logger (`connect to ${url}`)

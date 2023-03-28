@@ -159,7 +159,9 @@ declare type WorkerCommand = 'READY'|
 	'storePreferences'|'newProfile'|'storeProfile'|
 	'getFaucet'|'isAddress'|'syncAsset'|'sendAsset'|'getUSDCPrice'|'buyUSDC'|
 	'mintCoNETCash'|'getSINodes'|'getRecipientCoNETCashAddress'|'getUserProfile'|
-	'sendMessage'|'incomeData'|'WORKER_MESSAGE'
+	'sendMessage'|'incomeData'|'WORKER_MESSAGE'|
+	//		from service worker
+	'urlProxy'
 
 type SINodesSortby = 'CUSTOMER_REVIEW'|'TOTAL_ONLINE_TIME'|
 	'STORAGE_PRICE_LOW'|'STORAGE_PRICE_HIGH'|'OUTBOUND_PRICE_HIGH'|'OUTBOUND_PRICE_LOW'
@@ -342,7 +344,7 @@ type CoNETIndexDBInit = {
 	preferences: any
 }
 
-type SICommandObj_Command = 'getCoNETCashAccount'|'regiestRecipient'|'connecting'
+type SICommandObj_Command = 'getCoNETCashAccount'|'regiestRecipient'|'connecting'|'SaaS_Proxy'
 
 interface SICommandObj {
 	command: SICommandObj_Command
