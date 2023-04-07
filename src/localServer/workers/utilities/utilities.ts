@@ -13,7 +13,7 @@ const GasToEth = 0.00000001
 const USDC_exchange_Addr = '0xD493391c2a2AafEd135A9f6164C0Dcfa9C68F1ee'
 const buyUSDCEndpoint = `https://${ CoNET_SI_Network_Domain }/api/exchange_conet_usdc`
 const mintCoNETCashEndpoint = `https://${ CoNET_SI_Network_Domain }/api/mint_conetcash`
-
+const openSourceEndpoint = 'https://s3.us-east-1.wasabisys.com/conet-mvp/router/'
 
 const CoNETNet = [`https://rpc1.${CoNET_SI_Network_Domain}`]
 
@@ -361,6 +361,7 @@ const initCoNET_Data = ( passcode = '' ) => {
 		isPrimary: true,
 		privateKeyArmor: acc[0].privateKey
 	}
+	
 	return  CoNET_Data.profiles = [profile]
 }
 
@@ -853,6 +854,8 @@ const checkAllRowsCurrentSetups = (rows: nodes_info[], setups: nodes_info[]) => 
 	}
 }
 
+
+
 const checkAllRowsCurrentRecipients = (rows: nodes_info[]) => {
 	if (!CoNET_Data?.profiles?.length) {
 		return
@@ -865,6 +868,61 @@ const checkAllRowsCurrentRecipients = (rows: nodes_info[]) => {
 	if ( currentProfile?.network?.entrys ) {
 		checkAllRowsCurrentSetups (rows, currentProfile.network.entrys )
 	}
+	
+}
+const getHtmlHeaders = (rawHtml: string = '', remoteSite: string) => {
+	const headers = [
+		'content-type',
+		'cache-control',
+		'pragma',
+		'accept-ch',
+		'permissions-policy',
+		'report-to',
+//		'cross-origin-opener-policy-report-only',
+		'x-frame-options',
+		'p3p',
+		'alt-svc',
+		'accept-ranges',
+		'vary',
+		'server',
+		'x-content-type-options',
+		'expires',
+		'date',
+		'strict-transport-security',
+		'x-xss-protection',
+		'alt-svc'
+
+
+	]
+	if (!rawHtml.length) {
+		return {}
+	}
+	const headerResult: { [key: string]: string|boolean } = {}
+	for (let i in headers ) {
+		const u = getHeader(rawHtml, headers[i])
+		if (u) {
+			headerResult[headers[i]] = u
+		}
+	}
+	headerResult['X-Frame-Options'] = `ALLOW FROM ${location.origin} ${remoteSite}`
+	headerResult['Content-Security-Policy'] = `frame-ancestors 'self' ${location.origin} ${remoteSite}`
+	headerResult['Access-Control-Allow-Origin'] = `*`
+	headerResult['Access-Control-Allow-Credentials'] = true
+	return headerResult
+}
+const _getNftArmoredPublicKey = (gatewayNode): Promise<string> => {
+	return new Promise( async resolve => {
+		const nft_tokenid = gatewayNode.nft_tokenid
+		const endPoint = `${openSourceEndpoint}${nft_tokenid}`
+		let getRouter
+		try {
+			getRouter = await postToEndpoint(endPoint, false, null)
+		} catch (ex) {
+			return resolve('')
+		}
+		return resolve(getRouter.armoredPublicKey)
+	})
+
 	
 }
 
@@ -883,9 +941,14 @@ const _getSINodes = async (sortby: SINodesSortby, region: SINodesRegion) => {
 	}
 	const rows: nodes_info[] = result
 	if (rows.length) {
-		rows.forEach (n => {
+		// async.series(rows.map(n=> ( next => _getNftArmoredPublicKey(n).then(nn => {n.armoredPublicKey = nn; next()}))))
+		rows.forEach ( async n => {
+			if (n.ip_addr === '74.208.19.133'||n.ip_addr === '74.208.33.100') {
+				n.armoredPublicKey = await _getNftArmoredPublicKey (n)
+			}
 			n.disable = n.entryChecked = n.recipientChecked = false
 			n.customs_review_total = parseFloat(n.customs_review_total.toString())
+			// n.armoredPublicKey = await _getNftArmoredPublicKey (n)
 		})
 		checkAllRowsCurrentRecipients (rows)
 	}
@@ -1208,7 +1271,7 @@ const sendRequestToNode: (_cmd: SICommandObj_Command, currentProfile: profile, e
 		const url = `https://${ entryNode.pgp_publickey_id }.${CoNET_SI_Network_Domain}/post`
 
 		if (_cmd === 'SaaS_Proxy') {
-			command.requestData = [encryptedCommand, url]
+			command.requestData = [encryptedCommand, url, key, iv]
 			return resolve (command)
 		}
 		let result
@@ -1270,17 +1333,7 @@ const getRecipientCoNETCashAddress = async (cmd: worker_command) => {
 	}
 
 	if (!currentProfile.network.recipients[0].armoredPublicKey) {
-
-		const nft_tokenid = currentProfile.network.recipients[0].nft_tokenid
-		const endPoint = `https://s3.us-east-1.wasabisys.com/conet-mvp/router/${nft_tokenid}`
-		let getRouter
-		try {
-			getRouter = await postToEndpoint(endPoint, false, null)
-		} catch (ex) {
-			cmd.err = 'NOT_READY'
-			return returnCommand (cmd)
-		}
-		currentProfile.network.recipients[0].armoredPublicKey = getRouter.armoredPublicKey
+		currentProfile.network.recipients[0].armoredPublicKey = await _getNftArmoredPublicKey(currentProfile.network.recipients[0])
 		save = true
 	}
 
@@ -1304,7 +1357,7 @@ const getRecipientCoNETCashAddress = async (cmd: worker_command) => {
 		cmd.err = 'NOT_READY'
 		return returnCommand (cmd)
 	}
-	const recipientNode =  currentProfile.network.recipients[0]
+	const recipientNode = currentProfile.network.recipients[0]
 	
 	logger (`regiest to recipient node [${ recipientNode.ip_addr }]`)
 	const wRequest = await sendRequestToNode('getCoNETCashAccount', currentProfile, entryNode, recipientNode, [])
@@ -1433,8 +1486,6 @@ const regiestProfile = async (profile: profile, recipientNode: nodes_info) => {
 
 }
 
-const openSourceEndpoint = 'https://s3.us-east-1.wasabisys.com/conet-mvp/router/'
-
 const getProfile = async (cmd: worker_command) => {
 	const key = cmd.data[0]
 	const ret = CoNETModule.Web3Utils.isAddress (key)
@@ -1514,3 +1565,649 @@ const sendMessage = async (cmd: worker_command) => {
 	return returnCommand (cmd)
 }
 
+const getHeader = (text: string, header: string) => {
+	const rex = RegExp (header + ': ', 'gi')
+	const u = text.split(rex)
+	if (u.length < 2) {
+		return ''
+	}
+	return u[1].split('\r\n')[0]
+}
+
+const fixHtmlLinks = (htmlText: string, proxySite: string) => {
+	const body = htmlText.split('\r\n\r\n')
+	const rawHeader = body.shift()
+	htmlText = body.join('\r\n\r\n')
+
+	if(!rawHeader) {
+		logger (`fixHtmlLinks GOT NO Header HTML!!!!!!!!!rawHeader=\n`, rawHeader)
+		return { body: htmlText, rawHeader } 
+	}
+	const _status = rawHeader.split('\r\n')[0]
+	const __status = _status.split (' ')
+	if (!/^HTTP\//.test(_status)) {
+		logger (`fixHtmlLinks GOT unformated http protocol! status line = \n`, _status)
+		return { body: htmlText, rawHeader }
+	}
+	const status = parseInt(__status[1])
+	const statusText = __status[2].split(/\r?\n/)[0]
+
+	if ( Number.isNaN(status) || !status) {
+		return { body: htmlText, rawHeader }
+	}
+	
+	if ( !htmlText) {
+		logger (`fixHtmlLinks GOT NO BODY HTML!!!!!!!!!\n`)
+		logger ( rawHeader )
+		return { body: htmlText, rawHeader, status, statusText } 
+	}
+	const typeHeader = rawHeader.split(/Content\-Type\: /i)[1]
+	if (!typeHeader?.length) {
+		return { body: htmlText, rawHeader, status, statusText }
+	}
+
+	if(/html|css/i.test(typeHeader)) {
+		htmlText
+	}
+	return { body: htmlText, rawHeader, status, statusText } 
+	// const type = typeHeader.split('\r\n')[0]
+	// if (!/text/.test(type)) {
+	// 	return { body: htmlText, rawHeader, status, statusText } 
+	// }
+	
+	// const textBody = buffer.Buffer.from(htmlText,'base64').toString()
+
+	// const orgnalSite = location.origin
+	// const proxySiteRex = RegExp (proxySite, 'gi')
+	
+	// //htmlText = htmlText.replace(/X\-Frame\-Options\:.*\r\n$/ig, '')
+	// htmlText = textBody.replace(proxySiteRex, orgnalSite)
+	
+	// return { body: htmlText, rawHeader, status, statusText } 
+}
+
+
+const getRandomNode = async () => {
+	if (!activeNodes?.length ) {
+		activeNodes = await _getSINodes ('CUSTOMER_REVIEW', 'USA')
+	}
+	if (!activeNodes?.length) {
+		return null
+	}
+	const index =  Math.round(Math.random() * activeNodes.length)
+	return activeNodes[index]
+}
+
+const getNodeByIpaddress = (ipaddress: string ): Promise<nodes_info|null> => {
+	return new Promise(async resolve=> {
+		if ( !activeNodes) {
+			logger (`getNodeByIpaddress activeNodes === null Error`)
+			return resolve(null)
+		}
+		const index = activeNodes.findIndex(n => n.ip_addr === ipaddress)
+		if ( index < 0 ) {
+			return resolve(null)
+		}
+		const node = activeNodes[index]
+		if ( !node.armoredPublicKey ) {
+			node.armoredPublicKey = await _getNftArmoredPublicKey(node)
+		}
+		return resolve (node)
+	})
+	
+}
+
+
+const preProxyConnect = async (cmd: worker_command) => {
+
+	const entryNode = await getNodeByIpaddress ('74.208.33.100')
+	const gatewayNode = await getNodeByIpaddress ('74.208.19.133')
+
+
+	const responseChannel = new BroadcastChannel('toServiceWroker')
+
+	if ( !entryNode|| !gatewayNode ||! CoNET_Data?.profiles) {
+		cmd.err = 'NOT_INTERNET'
+		return responseChannel.postMessage(cmd)
+	}
+
+	const currentProfile = CoNET_Data.profiles[CoNET_Data.profiles.findIndex(n => n.isPrimary)]
+
+	const _site: urlData = cmd.data[0]
+	const site = new URL (_site.href)
+	const result: { [key: string]: string } = cmd.data[1]
+
+	cmd.data = [await sendRequestToNode ('SaaS_Proxy', currentProfile, entryNode, gatewayNode, cmd.data)]
+
+	const requestCmd: SICommandObj = cmd.data[0]
+	if (cmd.err || !requestCmd.requestData?.length) {
+		//		have no action nodes
+		return responseChannel.postMessage(cmd)
+	}
+
+	const url = requestCmd.requestData[1]
+	const data = requestCmd.requestData[0]
+	const key = requestCmd.requestData[2]
+	const iv = requestCmd.requestData[3]
+	let headerResult: { [key: string]: string } = {}
+	//  const text = await postToEndpointGetBody (url, true, {data})
+	fetch (url, 
+	{
+		method: 'POST',
+		headers: {
+			'Content-Type': 'application/json;charset=UTF-8',
+			'Connection': 'close',
+		},
+		body: JSON.stringify ({data}),
+		cache: 'no-store',
+		referrerPolicy: 'no-referrer'
+	}).then ( async res => {
+		return res.text()
+	}).then ( async text => {
+		let textContent = await decryptFetchBody(key,iv, text)
+	
+
+		logger (`Stream ready for service worker [${_site.href}]`)
+
+		const { body, rawHeader, status, statusText } = fixHtmlLinks(textContent, site.origin)
+		
+		cmd.data[0]=body
+		cmd.data[1]=getHtmlHeaders(rawHeader, site.origin)
+		cmd.data[2]= {status, statusText }
+		return responseChannel.postMessage(JSON.stringify(cmd))
+	})
+
+}
+
+class findBlock extends TransformStream {
+	
+	constructor(key: CryptoKey, iv: Buffer, textBuffer: string = '', count: number = 0, cloudflare = true,first = true) {
+		
+			
+		super({
+				async transform(chunk, controller){
+				
+				textBuffer += buffer.Buffer.from(chunk).toString()
+				if (!textBuffer.length) {
+					logger (`transform come with EMPTY ! skip!`)
+					return
+				}
+
+				let _ret = ''
+				
+				if (first) {
+					first = false
+					const block = textBuffer.split(/\r\n\r\n/)
+					const header = block.shift()
+					
+					if ( ! block.length ) {
+						logger (`findBlock First body !!!!!\n`, block)
+						return
+					}
+					textBuffer = block.join('\r\n\r\n')
+				}
+
+				const blocks = textBuffer.split('\r\n\r\n')
+				
+				while ( blocks.length ) {
+					const dataBlock = blocks.shift()
+
+					if (!dataBlock) {
+						logger (`findBlock get empty dataBlock!!!! continue loop`, dataBlock)
+						continue
+					}
+					const subBlock = dataBlock.split('\r\n')
+
+					/**
+					 * 		HTML Transfer-Encoding: chunked
+					 * 		https://developer.mozilla.org/en-US/docs/Glossary/Payload_body
+					 */
+
+					if ( subBlock.length < 2) {
+						logger (`findBlock get a subBlock which have not length stop current black !!!! giveup current subBlock ! continue loop`, dataBlock)
+						continue
+					}
+
+					const bodyLength = parseInt ( subBlock[0], 16)
+					const body = subBlock[1]
+
+					if ( Number.isNaN(bodyLength)) {
+						logger (`findBlock get unformated subBlock, transfer terminate now!!!!!\n`, subBlock )
+						controller.terminate()
+					}
+
+					//		the EOF of data
+					if (bodyLength === 0) {
+						logger (`findBlock get EOF! total count = [${count}]`)
+						return
+					}
+
+					if (!body) {
+						if (!blocks.length) {
+							logger (`findBlock get empty body!!!!!!!!!! waiting next !`, dataBlock )
+							blocks.unshift(dataBlock)
+							break
+						}
+						logger (`findBlock get unformated subBlock, transfer terminate now!!!!!\n`, subBlock )
+						controller.terminate()
+					}
+
+					logger (`findBlock process block number ${++count}! bodyLength part get body length = [${bodyLength}] body.length [${body.length }]`)
+
+
+					if ( body.length < bodyLength ) {
+						
+						if (! blocks.length ) {
+							blocks.unshift(dataBlock)
+							logger (`findBlock block number ${count} body.length < bodyLength ERROR! waiting next buffer come!`)
+							break
+						}
+						logger (`findBlock block number ${count}  body.length < bodyLength ERROR!!\n Because blocks has more blocks behind!!!, try to decrypt current one!`)
+
+					}
+
+					const ciphertext = buffer.Buffer.from ( body, 'base64')
+					let res
+					try {
+						res = await crypto.subtle.decrypt({ name: "AES-CBC", iv}, key, ciphertext)
+					} catch (ex){
+						logger(`findBlock block number ${ count } crypto.subtle.decrypt Error dataBlock, giveup current dataBlock `, dataBlock)
+						continue
+					}
+
+					const dec = new TextDecoder()
+					
+					_ret += dec.decode(res)
+				}
+
+				logger (`findBlock decrypted block No.[${count}]`)
+
+				textBuffer = blocks.shift()||''
+				if (_ret.length) {
+					controller.enqueue(_ret)
+				}
+				
+			}
+			, async flush (controller) {
+					logger(`findBlock TransformStream on flush count = [${count}] buffer length =`, textBuffer.length)
+					return
+			// 		// if ( !_a.length ) {
+			// 		// 	logger(`findBlock TransformStream flush _a length = Empty STOP findBlock`)
+			// 		// 	return controller.terminate()
+			// 		// }
+
+			// 		// let res
+			// 		// try {
+			// 		// 	const ciphertext = buffer.Buffer.from ( _a, 'base64')
+			// 		// 	res = await crypto.subtle.decrypt({ name: "AES-CBC", iv}, key, ciphertext)
+						
+			// 		// } catch (ex){
+			// 		// 	logger(`TransformStream flush() crypto.subtle.decrypt Error _a Length = `, _a.length)
+			// 		// 	return controller.terminate()
+			// 		// }
+			// 		// const dec = new TextDecoder()
+			// 		// const _ret = dec.decode(res)
+			// 		// console.log (_ret)
+			// 		// controller.enqueue(_ret)
+				}
+			})
+	}
+	
+}
+
+const createKey = ( length: number ) => {
+
+	const eth = new CoNETModule.Web3Eth()
+	const acc = eth.accounts.wallet.create(length)
+	return acc
+}
+
+const createGPGKey = ( passwd: string, name: string, email: string ) => {
+	const userId = {
+		name: name,
+		email: email
+	}
+	const option = {
+        type: 'ecc',
+		passphrase: passwd,
+		userIDs: [ userId ],
+		curve: 'curve25519',
+        format: 'armored'
+	}
+
+	return openpgp.generateKey ( option )
+}
+
+const startGetNoticeDaemon = () => {
+    const start = () => {
+        
+    }
+    start ()
+}
+
+const encrypt_TestPasscode = async (cmd: worker_command) => {
+	if ( !cmd.data?.length || !passObj ) {
+        cmd.err = 'INVALID_DATA'
+        return returnCommand (cmd)
+    }
+	passObj.password = cmd.data[0]
+	await decodePasscode ()
+	try {
+		await makeContainerPGPObj()
+		await decryptCoNET_Data_WithContainerKey ()
+	} catch (ex) {
+		logger (`encrypt_TestPasscode get password error!`)
+		cmd.err = 'FAILURE'
+		return returnCommand (cmd)
+	}
+	delete cmd.err
+	if (!CoNET_Data) {
+		logger (`encrypt_TestPasscode Error: Empty CoNET_Data!`)
+		cmd.err = 'FAILURE'
+		return returnCommand (cmd)
+	}
+	CoNET_Data.passcode = {
+		status: 'UNLOCKED'
+	}
+
+	const profiles = CoNET_Data.profiles
+	if ( profiles ) {
+		for ( let i = 0; i < profiles.length; i++ ) {
+			const key = profiles[i].keyID
+			if (key) {
+				profiles[i].tokens.conet.balance = await getCONETBalance (key)
+				profiles[i].tokens.usdc.balance = await getUSDCBalance (key)
+			}	
+			
+		}
+	}
+	cmd.data = [CoNET_Data]
+	returnCommand (cmd)
+
+}
+
+const createPlatformFirstProfile = async () => {
+    
+    initCoNET_Data ()
+	if ( !CoNET_Data|| !CoNET_Data.profiles?.length) {
+		return logger (`createPlatformFirstProfile initCoNET_Data got damaged!`)
+	}
+    const data = await createGPGKey( passObj?.passcode || '', '', '')			//			containerKeyPair
+
+	containerKeyObj = {
+		publicKeyArmor: data.publicKey,
+		privateKeyArmor: data.privateKey
+	}
+	const key = await createGPGKey('', '', '')
+	CoNET_Data.profiles[0].pgpKey = {
+		privateKeyArmor: key.privateKey,
+		publicKeyArmor: key.publicKey
+	}
+	
+	return makeContainerPGPObj()
+}
+
+const encryptWorkerDoCommand = async ( cmd: worker_command ) => {
+
+    switch ( cmd.cmd ) {
+        case 'encrypt_createPasscode': {
+            if ( !cmd.data || cmd.data.length < 2) {
+                cmd.err = 'INVALID_DATA'
+                return returnCommand ( cmd )
+            }
+            delete cmd.err
+			const password = cmd.data[0]
+            await createNumberPasscode (password)
+			await createPlatformFirstProfile ()
+			await storage_StoreContainerData ()
+			const data: encrypt_keys_object = {
+				preferences: {
+					preferences: preferences
+				},
+				passcode: {
+					status: 'UNLOCKED'
+				},
+				profiles: CoNET_Data?.profiles,
+				isReady: true,
+				clientPool: []
+			}
+		
+			cmd.data = [data]
+			returnCommand (cmd)
+			activeNodes = await _getSINodes ('CUSTOMER_REVIEW', 'DE')
+			
+		}
+
+        case 'encrypt_lock': {
+            const data = {
+                passcode: {
+                    status: 'LOCKED'
+                }
+            }
+            cmd.data = [data]
+            
+            return returnCommand (cmd)
+        }
+
+        case 'encrypt_deletePasscode': {
+            await deleteExistDB ()
+			return returnInitNull (cmd)
+        }
+
+		case 'getRecipientCoNETCashAddress': {
+			return getRecipientCoNETCashAddress (cmd)
+
+		}
+
+        case 'storePreferences': {
+			if ( !cmd.data || !cmd.data.length || !CoNET_Data?.isReady || !containerKeyObj ) {
+				logger (`storePreferences ERROR have not attach preferences DATA`)
+				cmd.err = 'INVALID_DATA'
+				return returnCommand (cmd)
+			}
+			delete cmd.err
+			CoNET_Data.preferences = preferences = cmd.data[0]
+			await encryptCoNET_Data_WithContainerKey()
+			storage_StoreContainerData ()
+            return returnCommand (cmd)
+        }
+
+		case 'encrypt_TestPasscode': {
+			return encrypt_TestPasscode (cmd)
+		}
+
+        case 'newProfile': {
+            return //newProfile (cmd)
+        }
+
+        case 'storeProfile': {
+            return storeProfile (cmd)
+        }
+
+		case 'getUSDCPrice': {
+			return getUSDCPrice (cmd)
+		}
+
+		case 'getFaucet': {
+			return getFaucet (cmd)
+		}
+
+		case 'sendAsset': {
+			return sendAsset (cmd)
+		}
+
+		case 'syncAsset': {
+			return syncAsset (cmd)
+		}
+
+		case 'buyUSDC': {
+			return buyUSDC (cmd)
+		}
+
+		case 'mintCoNETCash': {
+			return mintCoNETCash (cmd)
+		}
+
+		case 'isAddress' : {
+			const address = cmd.data[0]
+			const ret = CoNETModule.Web3Utils.isAddress (address)
+			cmd.data = [ret]
+			return returnCommand (cmd)
+		}
+
+		case 'getSINodes': {
+			const sortby = cmd.data[0][0]
+			const region = cmd.data[0][1]
+			return getSINodes (sortby, region, cmd)
+		}
+
+		case 'getUserProfile': {
+			return getProfile (cmd)
+		}
+
+		case 'sendMessage': {
+			return sendMessage (cmd)
+		}
+
+        default: {
+            cmd.err = 'INVALID_COMMAND'
+            returnCommand (cmd)
+            return console.log (`encryptWorkerDoCommand unknow command!`)
+        }
+    }
+}
+
+const decryptFetchBody = async (key: CryptoKey, iv: Buffer, textBuffer: string ) => {
+	if (!textBuffer?.length) {
+		logger (`transform come with EMPTY ! skip!`)
+		return ''
+	}
+
+	let _ret = ''
+	
+	
+	const block = textBuffer.split(/\r\n\r\n/)
+	const header = block.shift()
+	//	logger (`findBlock got HTTP headers\n`, header)
+	
+	if ( ! block.length ) {
+		logger (`findBlock First body !!!!!\n`, block)
+		return ''
+	}
+	let count = 0
+
+	textBuffer = block.join('\r\n\r\n')
+
+
+	const blocks = textBuffer.split('\r\n\r\n')
+	
+	while ( blocks.length ) {
+		const dataBlock = blocks.shift()
+
+		if (!dataBlock) {
+			logger (`findBlock get empty dataBlock!!!! continue loop`, dataBlock)
+			continue
+		}
+		const subBlock = dataBlock.split('\r\n')
+
+		/**
+		 * 		HTML Transfer-Encoding: chunked
+		 * 		https://developer.mozilla.org/en-US/docs/Glossary/Payload_body
+		 */
+
+		if ( subBlock.length < 2) {
+			logger (`findBlock get a subBlock which have not length stop current black !!!! giveup current subBlock ! continue loop`, dataBlock)
+			continue
+		}
+
+		const bodyLength = parseInt ( subBlock[0], 16)
+		const body = subBlock[1]
+
+		if ( Number.isNaN(bodyLength)) {
+			logger (`findBlock get unformated subBlock, transfer terminate now!!!!!\n`, subBlock )
+			continue
+		}
+
+		//		the EOF of data
+		if (bodyLength === 0) {
+			logger (`findBlock get EOF! total count = [${count}]`)
+			break
+		}
+
+		if (!body) {
+			if (!blocks.length) {
+				logger (`findBlock get empty body!!!!!!!!!! waiting next !`, dataBlock )
+				blocks.unshift(dataBlock)
+				break
+			}
+			logger (`findBlock get unformated subBlock, transfer terminate now!!!!!\n`, subBlock )
+			continue
+		}
+
+		logger (`findBlock process block number ${++count}! bodyLength part get body length = [${bodyLength}] body.length [${body.length }]`)
+
+
+		// if ( body.length < bodyLength ) {
+			
+		// 	if (! blocks.length ) {
+		// 		blocks.unshift(dataBlock)
+		// 		logger (`findBlock block number ${count} body.length < bodyLength ERROR! waiting next buffer come!`)
+		// 		break
+		// 	}
+		// 	logger (`findBlock block number ${count}  body.length < bodyLength ERROR!!\n Because blocks has more blocks behind!!!, try to decrypt current one!`)
+
+		// }
+
+		const ciphertext = buffer.Buffer.from ( body, 'base64')
+		let res
+		try {
+			res = await crypto.subtle.decrypt({ name: "AES-CBC", iv}, key, ciphertext)
+		} catch (ex){
+			logger(`findBlock block number ${ count } crypto.subtle.decrypt Error dataBlock, giveup current dataBlock `, dataBlock)
+			continue
+		}
+
+		const dec = new TextDecoder()
+		
+		_ret += dec.decode(res)
+	}
+
+	logger (`findBlock decrypted block No.[${count}]`)
+
+	textBuffer = blocks.shift()||''
+	return _ret
+}
+
+const postToEndpointGetBody: ( url: string, post: boolean, jsonData: any) => Promise<string> = ( url: string, post: boolean, jsonData ) => {
+	return new Promise ((resolve, reject) => {
+		const xhr = new XMLHttpRequest()
+		xhr.onload = () => {
+			clearTimeout (timeCount)
+			//const status = parseInt(xhr.responseText.split (' ')[1])
+
+			if (xhr.status === 200) {
+				// parse JSON
+				if ( !xhr.responseText.length ) {
+					return resolve ('')
+				}
+				return resolve ( xhr.responseText)
+			}
+			return resolve ('')
+			
+		}
+
+		xhr.open( post? 'POST': 'GET', url, true )
+		xhr.setRequestHeader('Content-Type', 'application/json;charset=UTF-8')
+		// xhr.setRequestHeader('Connection', 'close')
+
+		xhr.send(jsonData? JSON.stringify(jsonData): '')
+
+		logger (url)
+
+		const timeCount = setTimeout (() => {
+			const Err = `postToEndpoint Timeout!`
+			return resolve ('')
+		}, XMLHttpRequestTimeout )
+	})
+	
+}

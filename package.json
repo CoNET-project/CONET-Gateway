@@ -1,6 +1,6 @@
 {
     "name": "@conet.project/seguro-gateway",
-    "version": "0.18.4",
+    "version": "0.18.5",
     "license": "UNLICENSED",
     "files": [
         "./build"
@@ -29,12 +29,12 @@
         "@types/express": "^4.17.17",
         "@types/fs-extra": "^11.0.1",
         "@types/jest": "^29.5.0",
-        "@types/node": "^18.15.10",
+        "@types/node": "^18.15.11",
         "@types/pouchdb": "^6.4.0",
         "@types/uuid": "^9.0.1",
-        "@typescript-eslint/eslint-plugin": "^5.57.0",
-        "@typescript-eslint/parser": "^5.57.0",
-        "eslint": "^8.36.0",
+        "@typescript-eslint/eslint-plugin": "^5.57.1",
+        "@typescript-eslint/parser": "^5.57.1",
+        "eslint": "^8.37.0",
         "eslint-config-airbnb-base": "^15.0.0",
         "eslint-config-prettier": "^8.8.0",
         "eslint-plugin-import": "^2.27.5",
@@ -44,9 +44,9 @@
         "jszip": "^3.10.1",
         "openpgp": "^5.7.0",
         "pouchdb": "^8.0.1",
-        "ts-jest": "^29.0.5",
+        "ts-jest": "^29.1.0",
         "ts-node": "^10.9.1",
-        "typescript": "^5.0.2",
+        "typescript": "^5.0.4",
         "web3": "^1.9.0"
     },
     "bin": {

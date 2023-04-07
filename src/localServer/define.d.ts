@@ -383,3 +383,9 @@ type clientProfile = {
 	routerArmoredPublicKey: string
 	routerPublicKeyID: string
 }
+interface urlData {
+	href: string
+	port: number
+	method: string
+	json: string
+}
