@@ -870,6 +870,7 @@ const checkAllRowsCurrentRecipients = (rows: nodes_info[]) => {
 	}
 	
 }
+
 const getHtmlHeaders = (rawHtml: string = '', remoteSite: string) => {
 	const headers = [
 		'content-type',
@@ -910,6 +911,7 @@ const getHtmlHeaders = (rawHtml: string = '', remoteSite: string) => {
 	headerResult['Access-Control-Allow-Credentials'] = true
 	return headerResult
 }
+
 const _getNftArmoredPublicKey = (gatewayNode): Promise<string> => {
 	return new Promise( async resolve => {
 		const nft_tokenid = gatewayNode.nft_tokenid
@@ -976,6 +978,8 @@ const generateAesKey = async (length = 256) => {
   
 	return key
 }
+
+
 
 const authorizeCoNETCash = ( amount: number, recipientsWalletAddress: string, logs ) => {
 	return new Promise (async resolve => {
@@ -1091,12 +1095,12 @@ const longConnectToNode = async (_cmd: SICommandObj_Command, currentProfile: pro
 		if (!currentProfile?.pgpKey?.publicKeyArmor || !node.armoredPublicKey ) {
 			return resolve (null)
 		}
-		let key = await crypto.subtle.generateKey({
+		const key = await crypto.subtle.generateKey({
 			name: 'AES-CBC',
 			length: 256
 		}, true, ['encrypt', 'decrypt'])
 
-		let iv = crypto.getRandomValues(new Uint8Array(16))
+		const iv = crypto.getRandomValues(new Uint8Array(16))
 		const command: SICommandObj = {
 			command: _cmd,
 			publicKeyArmored: currentProfile.pgpKey.publicKeyArmor,
@@ -1117,7 +1121,6 @@ const longConnectToNode = async (_cmd: SICommandObj_Command, currentProfile: pro
 		const encryptedCommand = await encrypt_Message( privateKeyObj, node.armoredPublicKey, command)
 		
 		const url = `https://${ entryNode.pgp_publickey_id }.${CoNET_SI_Network_Domain}/post`
-		let result
 
 		logger (`connect to ${url}`)
 
@@ -1243,12 +1246,14 @@ const sendRequestToNode: (_cmd: SICommandObj_Command, currentProfile: profile, e
 		if (!currentProfile?.pgpKey?.publicKeyArmor || !node.armoredPublicKey ) {
 			return resolve (null)
 		}
+
 		let key = await crypto.subtle.generateKey({
 			name: 'AES-CBC',
 			length: 256
-		}, true, ['encrypt', 'decrypt'])
+		}, true, ['encrypt'])
 
 		let iv = crypto.getRandomValues(new Uint8Array(16))
+
 		const command: SICommandObj = {
 			command: _cmd,
 			publicKeyArmored: currentProfile.pgpKey.publicKeyArmor,
@@ -1657,12 +1662,39 @@ const getNodeByIpaddress = (ipaddress: string ): Promise<nodes_info|null> => {
 	
 }
 
+const createProxyConnect = async (currentProfile: profile, entryNode: nodes_info, node: nodes_info, requestData: any[]) => {
+	if (!currentProfile?.pgpKey|| !node?.armoredPublicKey) {
+		return 
+	}
+	const key = buffer.Buffer.from(crypto.getRandomValues(new Uint8Array(16))).toString('base64')
+	const command: SICommandObj = {
+		command: 'SaaS_Proxy',
+		publicKeyArmored: currentProfile.pgpKey.publicKeyArmor,
+		algorithm: 'AES-GCM',
+		Securitykey: key,
+		requestData
+	}
+	let privateKeyObj = null
+
+	try {
+		privateKeyObj = await makePrivateKeyObj (currentProfile.pgpKey.privateKeyArmor)
+	} catch (ex){
+		logger (ex)
+	}
+
+	const encryptedCommand = await encrypt_Message( privateKeyObj, node.armoredPublicKey, command)
+	const url = `https://${ entryNode.pgp_publickey_id }.${CoNET_SI_Network_Domain}/post`
+
+		
+	command.requestData = [encryptedCommand, url, key]
+	return (command)
+}
 
 const preProxyConnect = async (cmd: worker_command) => {
 
 	const entryNode = await getNodeByIpaddress ('74.208.33.100')
 	const gatewayNode = await getNodeByIpaddress ('74.208.19.133')
-
+	//const gatewayNode = await getNodeByIpaddress ('74.208.33.24')
 
 	const responseChannel = new BroadcastChannel('toServiceWroker')
 
@@ -1675,9 +1707,8 @@ const preProxyConnect = async (cmd: worker_command) => {
 
 	const _site: urlData = cmd.data[0]
 	const site = new URL (_site.href)
-	const result: { [key: string]: string } = cmd.data[1]
 
-	cmd.data = [await sendRequestToNode ('SaaS_Proxy', currentProfile, entryNode, gatewayNode, cmd.data)]
+	cmd.data = [await createProxyConnect ( currentProfile, entryNode, gatewayNode, cmd.data)]
 
 	const requestCmd: SICommandObj = cmd.data[0]
 	if (cmd.err || !requestCmd.requestData?.length) {
@@ -1686,11 +1717,9 @@ const preProxyConnect = async (cmd: worker_command) => {
 	}
 
 	const url = requestCmd.requestData[1]
-	const data = requestCmd.requestData[0]
-	const key = requestCmd.requestData[2]
-	const iv = requestCmd.requestData[3]
-	let headerResult: { [key: string]: string } = {}
-	//  const text = await postToEndpointGetBody (url, true, {data})
+	const encryptedCommand = requestCmd.requestData[0]
+	const password = requestCmd.requestData[2]
+
 	fetch (url, 
 	{
 		method: 'POST',
@@ -1698,18 +1727,17 @@ const preProxyConnect = async (cmd: worker_command) => {
 			'Content-Type': 'application/json;charset=UTF-8',
 			'Connection': 'close',
 		},
-		body: JSON.stringify ({data}),
+		body: JSON.stringify ({data: encryptedCommand}),
 		cache: 'no-store',
 		referrerPolicy: 'no-referrer'
 	}).then ( async res => {
 		return res.text()
 	}).then ( async text => {
-		let textContent = await decryptFetchBody(key,iv, text)
+		let textContent = await decryptFetchBody(password, text)
 	
-
 		logger (`Stream ready for service worker [${_site.href}]`)
 
-		const { body, rawHeader, status, statusText } = fixHtmlLinks(textContent, site.origin)
+		const { body, rawHeader,status, statusText } = fixHtmlLinks(textContent, site.origin)
 		
 		cmd.data[0]=body
 		cmd.data[1]=getHtmlHeaders(rawHeader, site.origin)
@@ -2077,7 +2105,7 @@ const encryptWorkerDoCommand = async ( cmd: worker_command ) => {
     }
 }
 
-const decryptFetchBody = async (key: CryptoKey, iv: Buffer, textBuffer: string ) => {
+const decryptFetchBody = async (password: string, textBuffer: string ) => {
 	if (!textBuffer?.length) {
 		logger (`transform come with EMPTY ! skip!`)
 		return ''
@@ -2146,30 +2174,7 @@ const decryptFetchBody = async (key: CryptoKey, iv: Buffer, textBuffer: string )
 
 		logger (`findBlock process block number ${++count}! bodyLength part get body length = [${bodyLength}] body.length [${body.length }]`)
 
-
-		// if ( body.length < bodyLength ) {
-			
-		// 	if (! blocks.length ) {
-		// 		blocks.unshift(dataBlock)
-		// 		logger (`findBlock block number ${count} body.length < bodyLength ERROR! waiting next buffer come!`)
-		// 		break
-		// 	}
-		// 	logger (`findBlock block number ${count}  body.length < bodyLength ERROR!!\n Because blocks has more blocks behind!!!, try to decrypt current one!`)
-
-		// }
-
-		const ciphertext = buffer.Buffer.from ( body, 'base64')
-		let res
-		try {
-			res = await crypto.subtle.decrypt({ name: "AES-CBC", iv}, key, ciphertext)
-		} catch (ex){
-			logger(`findBlock block number ${ count } crypto.subtle.decrypt Error dataBlock, giveup current dataBlock `, dataBlock)
-			continue
-		}
-
-		const dec = new TextDecoder()
-		
-		_ret += dec.decode(res)
+		_ret += await CoNETModule.aesGcmDecrypt (body, password)
 	}
 
 	logger (`findBlock decrypted block No.[${count}]`)

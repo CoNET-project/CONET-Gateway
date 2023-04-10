@@ -330,6 +330,8 @@ interface CoNET_Module {
 	Web3Eth: any
 	Web3Utils: any
 	forge: any
+	aesGcmEncrypt: (plaintext: string, password: string) => void
+	aesGcmDecrypt: (ciphertext: string, password: string) => void
 }
 
 type systemInitialization = {
@@ -351,8 +353,8 @@ interface SICommandObj {
 	publicKeyArmored: string
 	responseError?: WorkerCommandError
 	responseData?: any[]
-	algorithm: 'aes-256-cbc'
-	iv: string
+	algorithm: 'aes-256-cbc'|'AES-GCM'
+	iv?: string
 	Securitykey: string
 	requestData: any[]
 }
