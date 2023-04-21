@@ -60,8 +60,16 @@ const CoNETModule: CoNET_Module = {
 	}
 }
 
-channel.addEventListener('message', e => {
-	const cmd: worker_command = JSON.parse(e.data)
+
+const messageListen = e => {
+	let cmd: worker_command 
+
+	try {
+		cmd = JSON.parse(e.data)
+	} catch (ex) {
+		return logger (`messageListen JSON.parse Error!`)
+	}
+
 	switch (cmd.cmd) {
 		case 'urlProxy': {
 			return preProxyConnect (cmd)
@@ -70,11 +78,16 @@ channel.addEventListener('message', e => {
 			return logger (`Wroker BroadcastChannel [toMainWroker] got unknow command!`, cmd)
 		}
 	}
-})
+}
+channel.addEventListener('message', messageListen )
 
 
+self.onhashchange = () => {
+	channel.removeEventListener('message', messageListen)
+}
 
-const initEncryptWorker = () => {
+
+const initEncryptWorker = async () => {
 	
     const baseUrl = self.name + 'utilities/'
     self.importScripts ( baseUrl + 'Buffer.js' )
@@ -111,7 +124,8 @@ const initEncryptWorker = () => {
         return encryptWorkerDoCommand ( cmd )
     }
 	
-    return checkStorage ()
+    checkStorage ()
+	activeNodes = await _getSINodes ('CUSTOMER_REVIEW', 'USA')
 }
 /**
  * 		
