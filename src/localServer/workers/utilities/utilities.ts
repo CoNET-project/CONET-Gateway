@@ -25,7 +25,7 @@ const getRandomCoNETEndPoint = () => {
 const returnCommand = ( cmd: worker_command ) => {
     self.postMessage ( JSON.stringify ( cmd ))
 }
-
+//	@ts-ignore
 const logger = (...argv: any ) => {
     const date = new Date ()
     const dateStrang = `%c [Seguro-worker INFO ${ date.getHours() }:${ date.getMinutes() }:${ date.getSeconds() }:${ date.getMilliseconds ()}]`
@@ -1611,6 +1611,29 @@ const getHeader = (text: string, header: string) => {
 	return u[1].split('\r\n')[0]
 }
 
+const _fixUrlPro = ( match: string, html: string, localhostname: string  ) => {
+	const splitReg = new RegExp(match, 'i')
+	const lineText = html.split(splitReg)
+
+	if (lineText.length < 2) {
+		return html
+	}
+
+	const hhh = new RegExp(`^${localhostname}`)
+
+	let ret = ''
+	for (let i = 0; i < lineText.length; i ++) {
+		ret += lineText[i]
+		if (i < lineText.length - 1 ) {
+			const url = lineText[i+1].split(match[0])[0]
+			const uu = new URL(match.substring(1)+url)
+			const remotePath = uu.pathname ? (/\/$/.test(uu.pathname)? uu.pathname : uu.pathname + '/'): ''
+			ret += hhh.test(lineText[i+1]) ? match : `${match[0]}${location.origin}/api${remotePath}_/CoNET_proxyUrl/${match.substring(1)}`
+		}
+	}
+	return ret
+}
+
 const fixHtmlLinks = (htmlText: string) => {
 	const body = htmlText.split('\r\n\r\n')
 	const rawHeader = body.shift()
@@ -1634,17 +1657,26 @@ const fixHtmlLinks = (htmlText: string) => {
 	}
 	
 	if ( !_htmlText) {
+		logger (`###################################################################\n`)
 		logger (`fixHtmlLinks GOT NO BODY HTML!!!!!!!!!\n`)
 		logger ( rawHeader )
+		logger (`###################################################################\n`)
 		return { body: _htmlText, rawHeader, status, statusText } 
 	}
+
+
 	const typeHeader = rawHeader.split(/Content\-Type\: /i)[1]
-	if (!typeHeader.length) {
+	if (!typeHeader.length || !/html/i.test(typeHeader.split('\r\n')[0])  ) {
 		return { body: _htmlText, rawHeader, status, statusText }
 	}
 	
 	_htmlText = _htmlText.replace (/<meta name="referrer" content\=\".+\r\n/, '<meta name="referrer" content="no-referrer"/>\r\n')
-	
+	let localhostname = location.protocol === 'blob:' ? new URL(location.origin) : location
+	_htmlText = _fixUrlPro (`"http://`, _htmlText, localhostname.host)
+	_htmlText = _fixUrlPro (`'http://`, _htmlText, localhostname.host)
+	_htmlText = _fixUrlPro (`"https://`, _htmlText, localhostname.host)
+	_htmlText = _fixUrlPro (`'https://`, _htmlText, localhostname.host)
+
 	return { body: _htmlText, rawHeader, status, statusText } 
 	// const type = typeHeader.split('\r\n')[0]
 	// if (!/text/.test(type)) {
@@ -1724,12 +1756,21 @@ const createProxyConnect = async (currentProfile: profile, entryNode: nodes_info
 }
 
 const preProxyConnect = async (cmd: worker_command) => {
-	logger ('******************** preProxyConnect **********************\n',cmd)
-	const entryNode = await getRandomNode()
+
+	logger ('******************** preProxyConnect **********************\n', cmd)
+	const _site: urlData = cmd.data[0]
 	const gatewayNode = (cmd.data.length > 2 && cmd.data[2]) ? cmd.data[2] : await getRandomNode()
+	const cacheStore = await cacheProfile (_site)
+	if ( cacheStore ) {
+		cmd.data=[cacheStore.body, cacheStore.headers, {status: cacheStore.status, statusText: cacheStore.statusText }, gatewayNode]
+		return responseChannel.postMessage(JSON.stringify(cmd))
+	}
+	
+	const entryNode = await getRandomNode()
+	
 	// const gatewayNode = await getNodeByIpaddress ('74.208.33.24')
 
-	const responseChannel = new BroadcastChannel('toServiceWroker')
+
 
 	if ( !entryNode|| !gatewayNode ||! CoNET_Data?.profiles) {
 		cmd.err = 'NOT_INTERNET'
@@ -1738,8 +1779,9 @@ const preProxyConnect = async (cmd: worker_command) => {
 
 	const currentProfile = CoNET_Data.profiles[CoNET_Data.profiles.findIndex(n => n.isPrimary)]
 
-	const _site: urlData = cmd.data[0]
+	
 	const site = new URL (_site.href)
+
 
 	cmd.data = [await createProxyConnect ( currentProfile, entryNode, gatewayNode, cmd.data)]
 
@@ -1753,7 +1795,7 @@ const preProxyConnect = async (cmd: worker_command) => {
 	const encryptedCommand = requestCmd.requestData[0]
 	const password = requestCmd.requestData[2]
 
-	fetch (url, 
+	return fetch (url, 
 	{
 		method: 'POST',
 		headers: {
@@ -1767,17 +1809,21 @@ const preProxyConnect = async (cmd: worker_command) => {
 		return res.text()
 	}).then ( async text => {
 		let textContent = await decryptFetchBody(password, text)
-	
 		logger (`Stream ready for service worker [${_site.href}]`)
 		const { body, rawHeader,status, statusText } = fixHtmlLinks(textContent)
-
-		
-		cmd.data=[body, getHtmlHeadersV2(rawHeader, site.origin), {status, statusText }, gatewayNode]
-		return responseChannel.postMessage(JSON.stringify(cmd))
+		const headers = getHtmlHeadersV2(rawHeader, site.origin)
+		cmd.data=[body, headers, { _site, status, statusText }, gatewayNode]
+		responseChannel.postMessage(JSON.stringify(cmd))
+		if (_site.method === 'GET' && status === 200) {
+			const hash = CoNETModule.Web3Utils.sha3(_site.href)
+			await storageCache (hash, {body, headers, status, statusText})
+		}
 	}).catch (ex=> {
 		logger (`*************************  WORKER FETCH ERROR!  ************************* `)
 		logger (_site.href)
 		logger (cmd)
+		cmd.err = 'UNKNOW_ERROR'
+		responseChannel.postMessage(JSON.stringify(cmd))
 		logger (`*************************  WORKER FETCH ERROR!  ************************* `)
 	})
 

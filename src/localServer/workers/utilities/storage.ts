@@ -211,3 +211,39 @@ const storeProfile = async (cmd: worker_command) => {
 	
 	await storage_StoreContainerData ()
 }
+
+const cacheProfile = async (urlData: urlData) => {
+	if (urlData.method !== 'GET') {
+		return null
+	}
+	const hash = CoNETModule.Web3Utils.sha3(urlData.href)
+	if ( !database ) {
+        database = new PouchDB( databaseName, { auto_compaction: true  })
+    }
+
+	let result: fetchCashStorageData
+	try {
+		const doc = await database.get (hash, {latest: true})
+		if (!doc?.title) {
+			return null
+		}
+		const data = buffer.Buffer.from(doc.title, 'base64').toString()
+		result = JSON.parse (data)
+	} catch (ex) {
+		return null
+	}
+
+	return result
+}
+
+const storageCache = async (urlHash: string, data: fetchCashStorageData ) => {
+	if ( !database ) {
+        database = new PouchDB(databaseName, { auto_compaction: true  })
+    }
+
+	const putData = {
+        _id: urlHash,
+		title: buffer.Buffer.from(JSON.stringify(data)).toString('base64')
+    }
+	await database.post( putData )
+}

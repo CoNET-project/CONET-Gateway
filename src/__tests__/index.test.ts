@@ -1,13 +1,14 @@
-import { Person, getGreeting } from '../utilities/utilities'
+import { getGreeting } from './utilities'
 
 describe('public interface', () => {
+    describe('greet', () => {
 
-    it('should have getGreeting function', () => {
-        expect(typeof getGreeting).toEqual('function')
-    })
+        it('should greet a given name', () => {
+            expect(getGreeting({ name: 'John' })).toEqual('HELLO JOHN')
+        })
 
-    it('should have Person type', () => {
-        const person: Person = { name: 'John' }
-        expect(typeof person).toEqual('object')
+        it('should greet the world if a name is not given', () => {
+            expect(getGreeting()).toEqual('HELLO WORLD')
+        })
     })
 })

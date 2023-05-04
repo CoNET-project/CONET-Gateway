@@ -5,6 +5,7 @@ let workerReady = false
 let CoNET_Data: encrypt_keys_object | null = null
 let containerKeyObj: keyPair|null = null
 let preferences: any = null
+const responseChannel = new BroadcastChannel('toServiceWroker')
 const databaseName = 'CoNET'
 const channel = new BroadcastChannel('toMainWroker')
 let activeNodes: nodes_info[]|null= null
@@ -60,7 +61,6 @@ const CoNETModule: CoNET_Module = {
 	}
 }
 
-
 const messageListen = e => {
 	let cmd: worker_command 
 
@@ -81,11 +81,9 @@ const messageListen = e => {
 }
 channel.addEventListener('message', messageListen )
 
-
 self.onhashchange = () => {
 	channel.removeEventListener('message', messageListen)
 }
-
 
 const initEncryptWorker = async () => {
 	
@@ -127,6 +125,8 @@ const initEncryptWorker = async () => {
     checkStorage ()
 	activeNodes = await _getSINodes ('CUSTOMER_REVIEW', 'USA')
 }
+
+
 /**
  * 		
  */

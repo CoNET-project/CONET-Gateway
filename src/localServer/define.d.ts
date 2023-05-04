@@ -6,6 +6,7 @@ declare const async: any
 declare const JSZip: any
 declare const PouchDB: any
 
+
 interface imapConnect {
 	imapServer: string
 	imapUserName: string
@@ -390,4 +391,13 @@ interface urlData {
 	port: number
 	method: string
 	json: string
+}
+
+type fetchCashStorageData = {
+	headers: {
+		[key: string]: string | boolean
+	}
+	body: string
+	status: number
+	statusText: string
 }
