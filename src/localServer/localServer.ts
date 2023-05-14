@@ -39,9 +39,8 @@ class LocalServer {
     private localserver: Server
 
     private connect_peer_pool: any [] = []
-
-    constructor ( private PORT = 3000, private appsPath: string ) {
-		this.appsPath = appsPath || join ( __dirname )
+	private appsPath: string = join ( __dirname ) 
+    constructor ( private PORT = 3000, private reactBuildFolder: string ) {
         this.initialize()
     }
 
@@ -63,15 +62,17 @@ class LocalServer {
     private initialize = () => {
 
         const staticFolder = join ( this.appsPath, 'workers' )
-        const launcherFolder = join ( this.appsPath, '../launcher' )
-		console.dir ({ staticFolder: staticFolder, launcherFolder: launcherFolder })
+		const staticFolder1 = join ( this.appsPath, '../../../seguro-platform/build' )
+        //const launcherFolder = join ( this.appsPath, '../launcher' )
+		//console.dir ({ staticFolder: staticFolder, launcherFolder: launcherFolder })
 
         const app = express()
 		const cors = require('cors')
 
         app.use( cors ())
 		app.use ( express.static ( staticFolder ))
-        app.use ( express.static ( launcherFolder ))
+        //app.use ( express.static ( launcherFolder ))
+		app.use ( express.static ( staticFolder1 ))
         app.use ( express.json() )
 
         app.once ( 'error', ( err: any ) => {
@@ -80,17 +81,17 @@ class LocalServer {
             return this.initialize ()
         })
 
-        app.get ('/', async ( req: express.Request, res: express.Response) => {
+        // app.get ('/', async ( req: express.Request, res: express.Response) => {
 
-            const launcherHTMLPath = join (
-                this.appsPath  + '../launcher/index.html'
-            )
-            const hasLauncher = await fse.pathExists(launcherHTMLPath);
-            if (hasLauncher) {
-                return res.status(200).sendFile(launcherHTMLPath);
-            }
-            return res.status(200).send("<p style='font-family: Arial, Helvetica, sans-serif;'>Oh no! You don't have the Kloak Platform Launcher!</p>")
-        })
+        //     const launcherHTMLPath = join (
+        //         this.appsPath  + '../launcher/index.html'
+        //     )
+        //     const hasLauncher = await fse.pathExists(launcherHTMLPath);
+        //     if (hasLauncher) {
+        //         return res.status(200).sendFile(launcherHTMLPath);
+        //     }
+        //     return res.status(200).send("<p style='font-family: Arial, Helvetica, sans-serif;'>Oh no! You don't have the Kloak Platform Launcher!</p>")
+        // })
 
         /**
          * Test network online
@@ -107,6 +108,7 @@ class LocalServer {
             return testImapServer (( _err, data ) => {
                 return res.json (data)
             })
+			
         })
 
         // app.post ('/sendToStripe', ( req: express.Request, res: express.Response ) => {
@@ -220,7 +222,7 @@ class LocalServer {
 
         this.localserver = app.listen ( this.PORT, () => {
             return console.table([
-                { 'Kloak Local Server': `http://localhost:${ this.PORT }, local-path = [${ staticFolder }]` }
+                { 'Kloak Local Server': `http://localhost:${ this.PORT }, local-path = [${ staticFolder }] staticFolder1 [${staticFolder1}]` }
             ])
         })
     }

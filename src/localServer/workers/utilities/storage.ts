@@ -73,7 +73,9 @@ const checkStorage = async () => {
 	
 	cmd.data = [data]
 	returnCommand (cmd)
-
+	if (!activeNodes?.length ) {
+		activeNodes = await _getSINodes ('CUSTOMER_REVIEW', 'USA')
+	}
 	
 }
 

@@ -162,7 +162,7 @@ declare type WorkerCommand = 'READY'|
 	'mintCoNETCash'|'getSINodes'|'getRecipientCoNETCashAddress'|'getUserProfile'|
 	'sendMessage'|'incomeData'|'WORKER_MESSAGE'|
 	//		from service worker
-	'urlProxy'
+	'urlProxy'|'saveDomain'|'getDomain'|'getWorkerClientID'
 
 type SINodesSortby = 'CUSTOMER_REVIEW'|'TOTAL_ONLINE_TIME'|
 	'STORAGE_PRICE_LOW'|'STORAGE_PRICE_HIGH'|'OUTBOUND_PRICE_HIGH'|'OUTBOUND_PRICE_LOW'
@@ -390,7 +390,7 @@ interface urlData {
 	href: string
 	port: number
 	method: string
-	json: string
+	json: ArrayBuffer|null
 }
 
 type fetchCashStorageData = {
@@ -400,4 +400,39 @@ type fetchCashStorageData = {
 	body: string
 	status: number
 	statusText: string
+}
+
+interface clientPool {
+	clientId: {
+		resultingClientId: string
+		clientId: string
+	}
+	siteOrigin: URL
+	node: any
+}
+
+interface workPromise {
+	cmd: IWorker_command
+	uuid: string
+	_promise: (value: IWorker_command | PromiseLike<IWorker_command>) => void
+}
+
+interface urlData {
+	href: string
+	port: number
+	method: string
+	json: string
+}
+
+type IWorker_command = {
+	cmd: WorkerCommand
+	data: any[]
+	uuid: string
+	err?: string
+}
+
+interface clientPoolWroker {
+	domain: URL
+	id: string
+	node: any
 }

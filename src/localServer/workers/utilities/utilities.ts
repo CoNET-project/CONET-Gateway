@@ -1610,31 +1610,295 @@ const getHeader = (text: string, header: string) => {
 	}
 	return u[1].split('\r\n')[0]
 }
+const pathFileMatch = /\.\w+$/
 
-const _fixUrlPro = ( match: string, html: string, localhostname: string  ) => {
-	const splitReg = new RegExp(match, 'i')
+const _fixUrlProRegexp_new = ( match: RegExp, symbol: string, html: string, remotesite: string ) => {
+
+	const lineText = html.split(match)
+
+	if (lineText.length < 2) {
+		return html
+	}
+
+	let ret = ''
+	for (let i = 0; i < lineText.length; i ++) {
+		ret += lineText[i] + symbol
+		if (/Futm_source|dos,dpf,hsm,jsa,d,csi/.test (lineText[i+1])) {
+			logger (`Futm_source`)
+		}
+		if (i < lineText.length - 1 ) {
+
+			//	remove the first / support src start as '//'
+			let domTag
+			let tag
+			try {
+				let _domArray = lineText[i].split('<')
+				
+				if (_domArray.length < 2) {
+					_domArray = ret.split('<')
+				}
+				const domArray =_domArray[_domArray.length -1]
+				const __domArray = domArray.split (/\s/)
+				
+				domTag = __domArray.length < 2 ? '': __domArray[0]
+				
+				const _tag = domArray.split(/\s*=\s*.?/)
+				tag = findSource(_tag)
+			} catch (ex) {
+				ret += match
+				logger (`SKIP uu = new URL(url) Error [${lineText[i+1].substring(0, 200)}]`)
+				continue
+			}
+			if (!tag) {
+				ret += match
+				logger (`SKIP uu = new URL(url) Error [${lineText[i+1].substring(0, 200)}]`)
+				continue
+			}
+			let useRemote = true
+			
+			if (lineText[i+1][0] === '/') {
+				lineText[i+1] = lineText[i+1].substring(1)
+				useRemote = false
+			}
+			const _path = lineText[i + 1].split(symbol)[0]
+			const url = useRemote ? `${remotesite}/${_path}` : `https://${_path}`
+			
+			let remote: URL|null = null
+			try {
+				remote = new URL (url)
+			} catch (ex) {
+				if (!useRemote) {
+					ret += '/'
+				}
+				continue
+			}
+			
+			const pathArray = remote.pathname.split('/')
+
+			//	remove file name
+			if (pathFileMatch.test(pathArray[pathArray.length - 1])) {
+				pathArray.pop()
+			}
+
+			//	remove the last /
+			if (pathArray[pathArray.length - 1]==='') {
+				pathArray.pop()
+			}
+
+			const path = pathArray.join('/')
+			ret += `${location.origin}/api/${path? path + '/': ''}_/CoNET_proxyUrl/${useRemote? remotesite + '/': 'https://'}`
+		}
+	}
+	return ret
+}
+const _fixUrlProRegexp = (match, symbol, html, remotesite) => {
+    const lineText = html.split(match);
+    if (lineText.length < 2) {
+        return html;
+    }
+    let ret = '';
+    for (let i = 0; i < lineText.length; i++) {
+        ret += lineText[i] + symbol;
+        if (i < lineText.length - 1) {
+            //	remove the first / support src start as '//'
+            let useRemote = true;
+            if (lineText[i + 1][0] === '/') {
+                lineText[i + 1] = lineText[i + 1].substring(1);
+                useRemote = false;
+            }
+            const _path = lineText[i + 1].split(symbol)[0];
+            const url = useRemote ? `${remotesite}/${_path}` : `https://${_path}`;
+            let remote: URL|null = null
+            try {
+                remote = new URL(url);
+            }
+            catch (ex) {
+                if (!useRemote) {
+                    ret += '/';
+                }
+                continue;
+            }
+            const pathArray = remote.pathname.split('/');
+            //	remove file name
+            if (pathFileMatch.test(pathArray[pathArray.length - 1])) {
+                pathArray.pop();
+            }
+            //	remove the last /
+            if (pathArray[pathArray.length - 1] === '') {
+                pathArray.pop();
+            }
+            const path = pathArray.join('/');
+            ret += `${location.origin}/api/${path ? path + '/' : ''}_/CoNET_proxyUrl/${useRemote ? remotesite + '/' : 'https://'}`;
+        }
+    }
+    return ret;
+};
+
+const findSource = (textArr: string[]) => {
+	let source = textArr.pop()
+	let retSou = ''
+
+	do {
+		if (!source || /http/.test(source)) {
+			source = textArr.pop()
+			continue
+		}
+		const oo = source.split(/\s/)
+		retSou = oo[oo.length - 1]
+
+		break
+	} while (source)
+	retSou = /\W/.test(retSou) ? '': retSou
+	return retSou
+}
+
+const _fixUrlPro = (match, html, remotesite) => {
+    const splitReg = new RegExp(match);
+    const lineText = html.split(splitReg);
+    if (lineText.length < 2) {
+        return html;
+    }
+    let ret = '';
+    for (let i = 0; i < lineText.length; i++) {
+        ret += lineText[i];
+        if (i < lineText.length - 1) {
+            const url = lineText[i + 1].split(/('|"|>|\)){1}/)[0];
+            let domTag;
+            let uu;
+            let tag;
+            try {
+                uu = new URL(match + url);
+                const _domArray = lineText[i].split('<');
+                const domArray = _domArray[_domArray.length - 1];
+                domTag = domArray.split(/\s/)[0];
+                const _tag = domArray.split(/\s*=\s*.?/);
+                if (_tag.length > 0 && !_tag[_tag.length - 1]) {
+                    _tag.pop();
+                }
+                const __tag = _tag[_tag.length - 1].split(/\s/);
+                tag = __tag[__tag.length - 1];
+            }
+            catch (ex) {
+                ret += match;
+                logger(`SKIP uu = new URL(url) Error [${lineText[i + 1].substring(0, 200)}]`);
+                continue;
+            }
+            if (uu.origin === location.origin) {
+                ret += match;
+                //logger (`SKIP because uu.origin === location.origin [${uu.origin === location.origin}]  [${ret.substring(ret.length -100)}]`)
+                continue;
+            }
+            if (!/href|src|data-original|action|onClick/i.test(tag)) {
+                ret += match;
+                logger(`SKIP because [${ret.substring(ret.length - 150)}] tag【${tag}】!/href|src|data-original|action|onClick/i.test(tag) [${!/href|src|data-original|action|onClick/.test(tag)}]) !domTag【${domTag}】[${!domTag}] || domTag && !/a|/i.test(domTag) [${domTag && !/a|/i.test(domTag)}]`);
+                continue;
+            }
+            const pathArray = uu.pathname.split('/');
+            //	remove file name
+            if (pathFileMatch.test(pathArray[pathArray.length - 1])) {
+                pathArray.pop();
+            }
+            //	remove the last /
+            if (pathArray[pathArray.length - 1] === '') {
+                pathArray.pop();
+            }
+            // if (pathArray.length > 1 && pathArray[0]!=='') {
+            // 	pathArray.unshift('')
+            // }
+            let remotePath = pathArray.join('/');
+            //const remotePath = uu.pathname ? (/\/$/.test(uu.pathname)? uu.pathname : uu.pathname + '/'): ''
+            if (remotePath === '/') {
+                remotePath = '';
+            }
+            ret += location.origin === uu.origin ? match : `${location.origin}/api${remotePath ? remotePath + '/' : ''}_/CoNET_proxyUrl/${match}`;
+        }
+    }
+    return ret;
+};
+
+const _fixUrlPro_new = ( match: string, html: string, remotesite: string ) => {
+	const splitReg = new RegExp(match)
 	const lineText = html.split(splitReg)
 
 	if (lineText.length < 2) {
 		return html
 	}
 
-	const hhh = new RegExp(`^${localhostname}`)
-
 	let ret = ''
 	for (let i = 0; i < lineText.length; i ++) {
 		ret += lineText[i]
 		if (i < lineText.length - 1 ) {
-			const url = lineText[i+1].split(match[0])[0]
-			const uu = new URL(match.substring(1)+url)
-			const remotePath = uu.pathname ? (/\/$/.test(uu.pathname)? uu.pathname : uu.pathname + '/'): ''
-			ret += hhh.test(lineText[i+1]) ? match : `${match[0]}${location.origin}/api${remotePath}_/CoNET_proxyUrl/${match.substring(1)}`
+			const url = lineText[i+1].split(/('|"|>|\)){1}/)[0]
+			let domTag
+			let uu: URL
+			let tag
+			try {
+				uu = new URL(match+url)
+				let _domArray = lineText[i].split('<')
+				
+				if (_domArray.length < 2) {
+					_domArray = ret.split('<')
+				}
+				const domArray =_domArray[_domArray.length -1]
+				const __domArray = domArray.split (/\s/)
+
+				domTag = __domArray.length > 1 ? __domArray[0]: ''
+				const _tag = domArray.split(/\s*=\s*.?/)
+				tag = findSource(_tag)
+			} catch (ex) {
+				ret += match
+				logger (`SKIP uu = new URL(url) Error [${lineText[i+1].substring(0, 200)}]`)
+				continue
+			}
+
+			if (uu.origin === location.origin) {
+				ret += match
+				//logger (`SKIP because uu.origin === location.origin [${uu.origin === location.origin}]  [${ret.substring(ret.length -100)}]`)
+				continue
+			}
+
+			if ( !tag || !/href|data-original|action|onClick|srcset|src/i.test(tag)) {
+				ret += match
+				logger (`SKIP because [${ret.substring(ret.length -150)}] tag【${tag}】!/href|src|data-original|action|onClick/i.test(tag) [${!/href|src|data-original|action|onClick/.test(tag)}]) !domTag【${domTag}】[${!domTag}] || domTag && !/a|/i.test(domTag) [${domTag && !/a|/i.test(domTag)}]`)
+				continue
+			}
+			
+			
+			const pathArray = uu.pathname.split('/')
+
+			//	remove file name
+			if (pathFileMatch.test(pathArray[pathArray.length - 1])) {
+				pathArray.pop()
+			}
+			//	remove the last /
+			if (pathArray[pathArray.length-1] ==='') {
+				pathArray.pop()
+			}
+
+			// if (pathArray.length > 1 && pathArray[0]!=='') {
+			// 	pathArray.unshift('')
+			// }
+			
+			let remotePath = pathArray.join('/')
+			//const remotePath = uu.pathname ? (/\/$/.test(uu.pathname)? uu.pathname : uu.pathname + '/'): ''
+			if (remotePath === '/') {
+				remotePath = ''
+			}
+
+			ret += location.origin === uu.origin ? match : `${location.origin}/api${remotePath? remotePath + '/': ''}_/CoNET_proxyUrl/${match}`
 		}
 	}
 	return ret
 }
 
-const fixHtmlLinks = (htmlText: string) => {
+const match = /(https?\:\/\/)?(www\.)?[^\s]+\.[^\s]+/g
+
+const changeLink = (html: string, remotesite: string) => {
+
+}
+
+
+const fixHtmlLinks = (htmlText: string, remotrSite: string) => {
 	const body = htmlText.split('\r\n\r\n')
 	const rawHeader = body.shift()
 	let _htmlText = body.join('\r\n\r\n')
@@ -1671,11 +1935,11 @@ const fixHtmlLinks = (htmlText: string) => {
 	}
 	
 	_htmlText = _htmlText.replace (/<meta name="referrer" content\=\".+\r\n/, '<meta name="referrer" content="no-referrer"/>\r\n')
-	let localhostname = location.protocol === 'blob:' ? new URL(location.origin) : location
-	_htmlText = _fixUrlPro (`"http://`, _htmlText, localhostname.host)
-	_htmlText = _fixUrlPro (`'http://`, _htmlText, localhostname.host)
-	_htmlText = _fixUrlPro (`"https://`, _htmlText, localhostname.host)
-	_htmlText = _fixUrlPro (`'https://`, _htmlText, localhostname.host)
+	//	_htmlText = _fixUrl_a_tab (_htmlText, remotrSite)
+	_htmlText = _fixUrlPro (`https://`, _htmlText, remotrSite)
+	_htmlText = _fixUrlPro (`http://`, _htmlText, remotrSite)
+	_htmlText = _fixUrlProRegexp (/"\//, '"',_htmlText, remotrSite)
+	_htmlText = _fixUrlProRegexp (/'\//, "'",_htmlText, remotrSite)
 
 	return { body: _htmlText, rawHeader, status, statusText } 
 	// const type = typeHeader.split('\r\n')[0]
@@ -1755,11 +2019,29 @@ const createProxyConnect = async (currentProfile: profile, entryNode: nodes_info
 	return (command)
 }
 
+const fetchWithTimeout = async (resource, options: any) => {
+	const {timeout = 80000 } = options
+	
+	const controller = new AbortController()
+	const id = setTimeout(() => controller.abort(), timeout)
+  
+	const response = await fetch(resource, {
+	  ...options,
+	  signal: controller.signal  
+	})
+
+	clearTimeout(id)
+  
+	return response
+}
+
 const preProxyConnect = async (cmd: worker_command) => {
 
 	logger ('******************** preProxyConnect **********************\n', cmd)
 	const _site: urlData = cmd.data[0]
 	const gatewayNode = (cmd.data.length > 2 && cmd.data[2]) ? cmd.data[2] : await getRandomNode()
+	// const gatewayNode = await getNodeByIpaddress('108.175.5.112')
+	
 	const cacheStore = await cacheProfile (_site)
 	if ( cacheStore ) {
 		cmd.data=[cacheStore.body, cacheStore.headers, {status: cacheStore.status, statusText: cacheStore.statusText }, gatewayNode]
@@ -1782,7 +2064,7 @@ const preProxyConnect = async (cmd: worker_command) => {
 	
 	const site = new URL (_site.href)
 
-
+	logger (cmd)
 	cmd.data = [await createProxyConnect ( currentProfile, entryNode, gatewayNode, cmd.data)]
 
 	const requestCmd: SICommandObj = cmd.data[0]
@@ -1795,7 +2077,7 @@ const preProxyConnect = async (cmd: worker_command) => {
 	const encryptedCommand = requestCmd.requestData[0]
 	const password = requestCmd.requestData[2]
 
-	return fetch (url, 
+	return fetchWithTimeout (url, 
 	{
 		method: 'POST',
 		headers: {
@@ -1810,7 +2092,7 @@ const preProxyConnect = async (cmd: worker_command) => {
 	}).then ( async text => {
 		let textContent = await decryptFetchBody(password, text)
 		logger (`Stream ready for service worker [${_site.href}]`)
-		const { body, rawHeader,status, statusText } = fixHtmlLinks(textContent)
+		const { body, rawHeader,status, statusText } = fixHtmlLinks(textContent, site.origin)
 		const headers = getHtmlHeadersV2(rawHeader, site.origin)
 		cmd.data=[body, headers, { _site, status, statusText }, gatewayNode]
 		responseChannel.postMessage(JSON.stringify(cmd))
@@ -1821,7 +2103,7 @@ const preProxyConnect = async (cmd: worker_command) => {
 	}).catch (ex=> {
 		logger (`*************************  WORKER FETCH ERROR!  ************************* `)
 		logger (_site.href)
-		logger (cmd)
+		logger (ex)
 		cmd.err = 'UNKNOW_ERROR'
 		responseChannel.postMessage(JSON.stringify(cmd))
 		logger (`*************************  WORKER FETCH ERROR!  ************************* `)
@@ -1852,12 +2134,6 @@ const createGPGKey = ( passwd: string, name: string, email: string ) => {
 	return openpgp.generateKey ( option )
 }
 
-const startGetNoticeDaemon = () => {
-    const start = () => {
-        
-    }
-    start ()
-}
 
 const encrypt_TestPasscode = async (cmd: worker_command) => {
 	if ( !cmd.data?.length || !passObj ) {
@@ -1921,7 +2197,18 @@ const createPlatformFirstProfile = async () => {
 	return makeContainerPGPObj()
 }
 
-const encryptWorkerDoCommand = async ( cmd: worker_command ) => {
+const encryptWorkerDoCommand = async ( e ) => {
+	const jsonData = buffer.Buffer.from ( e.data ).toString()
+	let cmd: worker_command
+	try {
+		cmd = JSON.parse ( jsonData )
+	} catch ( ex ) {
+		return console.dir ( ex )
+	}
+	if ( !workerReady ) {
+		cmd.err = 'NOT_READY'
+		return returnCommand ( cmd )
+	}
 
     switch ( cmd.cmd ) {
         case 'encrypt_createPasscode': {
@@ -1948,8 +2235,6 @@ const encryptWorkerDoCommand = async ( cmd: worker_command ) => {
 		
 			cmd.data = [data]
 			returnCommand (cmd)
-			activeNodes = await _getSINodes ('CUSTOMER_REVIEW', 'DE')
-			
 		}
 
         case 'encrypt_lock': {

@@ -60,29 +60,14 @@ const CoNETModule: CoNET_Module = {
 		}
 	}
 }
+let ClientIDworker = ''
+const backGroundPoolWorker: clientPoolWroker[] = []
 
-const messageListen = e => {
-	let cmd: worker_command 
 
-	try {
-		cmd = JSON.parse(e.data)
-	} catch (ex) {
-		return logger (`messageListen JSON.parse Error!`)
-	}
-
-	switch (cmd.cmd) {
-		case 'urlProxy': {
-			return preProxyConnect (cmd)
-		}
-		default: {
-			return logger (`Wroker BroadcastChannel [toMainWroker] got unknow command!`, cmd)
-		}
-	}
-}
-channel.addEventListener('message', messageListen )
 
 self.onhashchange = () => {
-	channel.removeEventListener('message', messageListen)
+	channel.removeEventListener('message', channelWorkerDoCommand)
+	self.removeEventListener ('message', encryptWorkerDoCommand)
 }
 
 const initEncryptWorker = async () => {
@@ -106,25 +91,85 @@ const initEncryptWorker = async () => {
     self.importScripts ( baseUrl + 'seguroSetup.js' )
     workerReady = true
 	
-    onmessage = e => {
-        const jsonData = buffer.Buffer.from ( e.data ).toString()
-		let cmd: worker_command
-		try {
-			cmd = JSON.parse ( jsonData )
-		} catch ( ex ) {
-			return console.dir ( ex )
-		}
-        if ( !workerReady ) {
-            cmd.err = 'NOT_READY'
-            return returnCommand ( cmd )
-        }
+	self.addEventListener ('message', encryptWorkerDoCommand)
+    channel.addEventListener('message', channelWorkerDoCommand )
 
-        return encryptWorkerDoCommand ( cmd )
-    }
+	const cmd: worker_command = {
+		cmd: 'READY',
+		data: []
+	}
+	responseChannel.postMessage(JSON.stringify(cmd))
 	
     checkStorage ()
-	activeNodes = await _getSINodes ('CUSTOMER_REVIEW', 'USA')
 }
+
+
+const channelWorkerDoCommand = (e => {
+	const jsonData = buffer.Buffer.from ( e.data ).toString()
+	let cmd: worker_command
+	try {
+		cmd = JSON.parse ( jsonData )
+	} catch ( ex ) {
+		return console.dir ( ex )
+	}
+	if ( !workerReady ) {
+		cmd.err = 'NOT_READY'
+		return returnCommand ( cmd )
+	}
+
+	switch (cmd.cmd) {
+		case 'urlProxy': {
+			return preProxyConnect (cmd)
+		}
+		case 'saveDomain': {
+			const domain: URL = cmd.data[0]
+			const id = cmd.data[1]
+			const node = cmd.data[2]
+			const index = backGroundPoolWorker.findIndex(n => n.id === id)
+			if (index > -1) {
+				backGroundPoolWorker.splice(index)
+			}
+			return backGroundPoolWorker.push({id, domain, node})
+		}
+	
+		case 'getDomain': {
+			const id = cmd.data[0]
+			if (id) {
+				const index = backGroundPoolWorker.findIndex(n => n.id === id)
+				if (index > -1) {
+					cmd.data[1] = backGroundPoolWorker[index]
+				} else {
+					cmd.err = 'UNKNOW_ERROR'
+				}
+			} else {
+				cmd.data[1] = backGroundPoolWorker[backGroundPoolWorker.length - 1]
+				if (!cmd.data[1]) {
+					cmd.err = 'INVALID_DATA'
+				}
+			}
+			
+			return responseChannel.postMessage(JSON.stringify(cmd))
+		}
+	
+		case 'READY': {
+			ClientIDworker = cmd.data[0]
+			return logger (`Worker encryptWorkerDoCommand got READY ClientIDworker [${ClientIDworker}]`)
+		}
+	
+		case 'getWorkerClientID' : {
+			cmd.data = [ClientIDworker]
+			logger (`Worker encryptWorkerDoCommand got getWorkerClientID ClientIDworker = [${ClientIDworker}]`)
+			return responseChannel.postMessage(JSON.stringify(cmd))
+		}
+	
+		default: {
+			cmd.err = 'INVALID_COMMAND'
+			responseChannel.postMessage(JSON.stringify(cmd))
+			return console.log (`channelWorkerDoCommand unknow command!`)
+		}
+	}
+
+})
 
 
 /**
