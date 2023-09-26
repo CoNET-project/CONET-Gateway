@@ -5,8 +5,14 @@ import { join } from 'path'
 import * as fse from 'fs-extra'
 import { inspect } from 'util'
 import { v4 } from 'uuid'
-import { testImapServer } from './utilities/network'
-import { logger } from './utilities/Imap'
+
+const logger = 
+(...argv: any ) => {
+    const date = new Date ()
+    const dateStrang = `%c [Seguro-worker INFO ${ date.getHours() }:${ date.getMinutes() }:${ date.getSeconds() }:${ date.getMilliseconds ()}]`
+	
+    return console.log ( dateStrang, 'color: #dcde56',  ...argv)
+}
 
 const makeMetadata = ( text: string ) => {
     let ret = '{'
@@ -72,6 +78,7 @@ class LocalServer {
         app.use( cors ())
 		app.use ( express.static ( staticFolder ))
         //app.use ( express.static ( launcherFolder ))
+        logger (staticFolder1)
 		app.use ( express.static ( staticFolder1 ))
         app.use ( express.json() )
 
@@ -104,12 +111,6 @@ class LocalServer {
          * 		time: connected time | null if have error
          * }
          */
-        app.get ( '/testImapServer', ( req: express.Request, res: express.Response ) => {
-            return testImapServer (( _err, data ) => {
-                return res.json (data)
-            })
-			
-        })
 
         // app.post ('/sendToStripe', ( req: express.Request, res: express.Response ) => {
         //     logger (`app.post /sendToStripe ${ req.socket.remoteAddress }:${ req.socket.remotePort } `)
@@ -205,6 +206,10 @@ class LocalServer {
             
         // })
 
+        app.get ('./sw.js', ( req, res ) => {
+            logger (`./sw.js`)
+
+        })
         app.post ( '/postMessage', ( req: express.Request, res: express.Response ) => {
             const post_data: postData = req.body
             console.log ( inspect ( post_data, false, 3, true ))

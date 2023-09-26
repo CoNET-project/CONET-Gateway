@@ -17,7 +17,7 @@ const openSourceEndpoint = 'https://s3.us-east-1.wasabisys.com/conet-mvp/router/
 
 const CoNETNet = [`https://rpc1.${CoNET_SI_Network_Domain}`]
 
-const usdcNet = 'https://rpc1.openpgp.online/usdc'
+// const usdcNet = 'https://rpc1.openpgp.online/usdc'
 
 const getRandomCoNETEndPoint = () => {
 	return CoNETNet[0]			//Math.round(Math.random() * 3)]
@@ -346,10 +346,10 @@ const initProfileTokens = () => {
 const initCoNET_Data = ( passcode = '' ) => {
 	CoNET_Data = {
 		isReady: true,
-		CoNETCash: {
-			Total: 0,
-			assets: []
-		},
+		// CoNETCash: {
+		// 	Total: 0,
+		// 	assets: []
+		// },
 		clientPool: []
 	}
     const acc = createKey (1)
@@ -379,55 +379,54 @@ const makeContainerPGPObj = async () => {
 
 }
 
-const getUSDCBalance = async (Addr: string) => {
-	const eth = new CoNETModule.Web3Eth ( new CoNETModule.Web3Eth.providers.HttpProvider(usdcNet))
-	const uuu = await eth.getBalance(Addr)
-	const balance = parseInt(uuu)/denominator
-	return balance
-}
+// const getUSDCBalance = async (Addr: string) => {
+// 	const eth = new CoNETModule.Web3Eth ( new CoNETModule.Web3Eth.providers.HttpProvider(usdcNet))
+// 	const uuu = await eth.getBalance(Addr)
+// 	const balance = parseInt(uuu)/denominator
+// 	return balance
+// }
 
 
 const getCONETBalance = async (Addr: string) => {
-	const CoNETEndpoint = getRandomCoNETEndPoint()
 	const eth = new CoNETModule.Web3Eth ( new CoNETModule.Web3Eth.providers.HttpProvider(getRandomCoNETEndPoint()))
 	const uuu = await eth.getBalance(Addr)
 	const balance = parseInt(uuu)/denominator
 	return balance
 }
 
-const getAllProfileUSDCBalance = () => {
-	const profiles = CoNET_Data?.profiles
-	if ( !profiles || !profiles.length ) {
-		return logger (`getAllProfileCoNETBalance error: have no CoNET_Data?.profiles!`)
-	}
-	const ret: any [] = []
-	profiles.forEach (async n => {
-		if ( n.keyID ) {
-			const newBalance = await getUSDCBalance (n.keyID)
-			if ( n.tokens.usdc.balance !== newBalance ) {
-				n.tokens.usdc.balance = newBalance
-				ret.push ({
-					keyID: n.keyID,
-					tokens: {
-						usdc: {
-							balance : n.tokens.usdc.balance
-						}
-					}
-				})
-				logger (`getAllProfileUSDCBalance USDC Balance changed!`)
-				logger (ret)
-			}
-		}
+// const getAllProfileUSDCBalance = () => {
+// 	const profiles = CoNET_Data?.profiles
+// 	if ( !profiles || !profiles.length ) {
+// 		return logger (`getAllProfileCoNETBalance error: have no CoNET_Data?.profiles!`)
+// 	}
+// 	const ret: any [] = []
+// 	profiles.forEach (async n => {
+// 		if ( n.keyID ) {
+// 			const newBalance = await getUSDCBalance (n.keyID)
+// 			if ( n.tokens.usdc.balance !== newBalance ) {
+// 				n.tokens.usdc.balance = newBalance
+// 				ret.push ({
+// 					keyID: n.keyID,
+// 					tokens: {
+// 						usdc: {
+// 							balance : n.tokens.usdc.balance
+// 						}
+// 					}
+// 				})
+// 				logger (`getAllProfileUSDCBalance USDC Balance changed!`)
+// 				logger (ret)
+// 			}
+// 		}
 		
-	})
-	if ( ret.length ) {
-		const cmd: worker_command = {
-			cmd: 'READY',
-			data: [ret]
-		}
-		returnCommand (cmd)
-	}
-}
+// 	})
+// 	if ( ret.length ) {
+// 		const cmd: worker_command = {
+// 			cmd: 'READY',
+// 			data: [ret]
+// 		}
+// 		returnCommand (cmd)
+// 	}
+// }
 
 const getAllProfileBalance = () => {
 	const profiles = CoNET_Data?.profiles
@@ -438,7 +437,6 @@ const getAllProfileBalance = () => {
 		for ( let n of profiles ) {
 			if ( n.keyID ) {
 				n.tokens.conet.balance = await getCONETBalance (n.keyID)
-				n.tokens.usdc.balance = await getUSDCBalance (n.keyID)
 			}
 		}
 
@@ -554,11 +552,6 @@ const syncAsset = async (cmd: worker_command) => {
 }
 
 
-const sendCoNETCash = (cmd: worker_command) => {
-
-}
-
-
 const sendAsset = async (cmd: worker_command) => {
 	const [fromAddr, total, toAddr, asset] = cmd.data[0]
 	if ( !fromAddr || !total || !toAddr || !CoNET_Data?.profiles ) {
@@ -580,19 +573,18 @@ const sendAsset = async (cmd: worker_command) => {
 	let network = ''
 	let history: any = null
 	let balance = 0.0
-	if (asset === 'CoNETCash' ) {
-		return sendCoNETCash (cmd)
-	}
-	if (asset === 'CoNET') {
+	// if (asset === 'CoNETCash' ) {
+	// 	return sendCoNETCash (cmd)
+	// }
+	// if (asset === 'CoNET') {
 		network = getRandomCoNETEndPoint()
 		history = profile.tokens.conet.history
 		balance = profile.tokens.conet.balance
 
-	} else {
-		network = usdcNet
-		history = profile.tokens.usdc.history
-		balance = profile.tokens.usdc.balance
-	}
+	// } else {
+	// 	history = profile.tokens.usdc.history
+	// 	balance = profile.tokens.usdc.balance
+	// }
 
 	const usdcValFix = (total + gasFeeEth - balance > 0) ? balance - gasFeeEth : total
 	const obj = {
@@ -618,88 +610,88 @@ const sendAsset = async (cmd: worker_command) => {
 	return storeProfile (cmd)
 }
 
-const getUSDCPrice = async (cmd: worker_command) => {
-	logger (`getUSDCPrice START`)
-	let result
-	try {
-		result = await postToEndpoint(conet_DL_getUSDCPrice_Endpoint, false,'')
+// const getUSDCPrice = async (cmd: worker_command) => {
+// 	logger (`getUSDCPrice START`)
+// 	let result
+// 	try {
+// 		result = await postToEndpoint(conet_DL_getUSDCPrice_Endpoint, false,'')
 
-	} catch (ex) {
-		logger (`postToEndpoint [${conet_DL_getUSDCPrice_Endpoint}] error`)
-		cmd.err = 'FAILURE'
-		returnCommand (cmd)
-		return logger (ex)
-	}
-	cmd.data = [result]
-	return returnCommand (cmd)
-}
+// 	} catch (ex) {
+// 		logger (`postToEndpoint [${conet_DL_getUSDCPrice_Endpoint}] error`)
+// 		cmd.err = 'FAILURE'
+// 		returnCommand (cmd)
+// 		return logger (ex)
+// 	}
+// 	cmd.data = [result]
+// 	return returnCommand (cmd)
+// }
 
-const buyUSDC = async (cmd: worker_command) => {
-	logger (`buyUSDC START`)
-	const [conetVal, keyID] = cmd.data[0]
+// const buyUSDC = async (cmd: worker_command) => {
+// 	logger (`buyUSDC START`)
+// 	const [conetVal, keyID] = cmd.data[0]
 
-	if ( !CoNET_Data?.profiles|| !keyID || conetVal <= 0) {
-		cmd.err = 'NOT_READY'
-		return returnCommand (cmd)
-	}
+// 	if ( !CoNET_Data?.profiles|| !keyID || conetVal <= 0) {
+// 		cmd.err = 'NOT_READY'
+// 		return returnCommand (cmd)
+// 	}
 	
-	const profile = getProfileFromKeyID(keyID)
+// 	const profile = getProfileFromKeyID(keyID)
 
-	if ( !profile ) {
-		cmd.err = 'FAILURE'
-		return returnCommand (cmd)
-	}
-	const balance = profile.tokens.conet.balance
-	const history = profile.tokens.conet.history
+// 	if ( !profile ) {
+// 		cmd.err = 'FAILURE'
+// 		return returnCommand (cmd)
+// 	}
+// 	const balance = profile.tokens.conet.balance
+// 	const history = profile.tokens.conet.history
 
-	if ( conetVal - balance - gasFee> 0) {
-		cmd.err = 'FAILURE'
-		return returnCommand (cmd)
-	}
-	const obj = {
-		gas: gasFee,
-		to: USDC_exchange_Addr,
-		value: (conetVal * wei).toString()
-	}
-	logger (obj)
-	const CoNETEndpoint = getRandomCoNETEndPoint()
-	const eth = new CoNETModule.Web3Eth ( new CoNETModule.Web3Eth.providers.HttpProvider(CoNETEndpoint))
-	let createTransaction
-	try {
-		createTransaction = await eth.accounts.signTransaction( obj, profile.privateKeyArmor )
-	} catch (ex) {
-		logger (`${CoNETEndpoint} is not available`)
-		cmd.err = 'FAILURE'
-		return returnCommand (cmd)
-	}
+// 	if ( conetVal - balance - gasFee> 0) {
+// 		cmd.err = 'FAILURE'
+// 		return returnCommand (cmd)
+// 	}
+// 	const obj = {
+// 		gas: gasFee,
+// 		to: USDC_exchange_Addr,
+// 		value: (conetVal * wei).toString()
+// 	}
+// 	logger (obj)
+// 	const CoNETEndpoint = getRandomCoNETEndPoint()
+// 	const eth = new CoNETModule.Web3Eth ( new CoNETModule.Web3Eth.providers.HttpProvider(CoNETEndpoint))
+// 	let createTransaction
+// 	try {
+// 		createTransaction = await eth.accounts.signTransaction( obj, profile.privateKeyArmor )
+// 	} catch (ex) {
+// 		logger (`${CoNETEndpoint} is not available`)
+// 		cmd.err = 'FAILURE'
+// 		return returnCommand (cmd)
+// 	}
 	
-	const receipt = await eth.sendSignedTransaction (createTransaction.rawTransaction )
-	receipt.isSend = true
-	receipt.time = new Date().toISOString()
-	receipt.value = conetVal
-	logger(`buyUSDC Send CoNET`, receipt)
-	history.unshift (receipt)
-	let result
-	try {
-		result = await postToEndpoint(buyUSDCEndpoint, true, { txHash: receipt.transactionHash })
-	} catch (ex) {
-		logger (`postToEndpoint [${buyUSDCEndpoint}] Error`)
-		cmd.err = 'FAILURE'
-		returnCommand (cmd)
-		return logger (ex)
-	}
+// 	const receipt = await eth.sendSignedTransaction (createTransaction.rawTransaction )
+// 	receipt.isSend = true
+// 	receipt.time = new Date().toISOString()
+// 	receipt.value = conetVal
+// 	logger(`buyUSDC Send CoNET`, receipt)
+// 	history.unshift (receipt)
+// 	let result
+// 	try {
+// 		result = await postToEndpoint(buyUSDCEndpoint, true, { txHash: receipt.transactionHash })
+// 	} catch (ex) {
+// 		logger (`postToEndpoint [${buyUSDCEndpoint}] Error`)
+// 		cmd.err = 'FAILURE'
+// 		returnCommand (cmd)
+// 		return logger (ex)
+// 	}
 
-	logger (`postToEndpoint [${ buyUSDCEndpoint }] SUCCESS`)
-	logger (`result = `, result )
-	const receipt1 = await getTxhashInfo (result.transactionHash, usdcNet)
-	receipt1.isSend = false
-	receipt1.time = new Date().toISOString()
+// 	logger (`postToEndpoint [${ buyUSDCEndpoint }] SUCCESS`)
+// 	logger (`result = `, result )
+// 	const receipt1 = await getTxhashInfo (result.transactionHash, usdcNet)
+// 	receipt1.isSend = false
+// 	receipt1.time = new Date().toISOString()
 	
-	logger(`buyUSDC get receipt1`, receipt1) 
-	profile.tokens.usdc.history.unshift (receipt1)
-	return storeProfile (cmd)
+// 	logger(`buyUSDC get receipt1`, receipt1) 
+// 	profile.tokens.usdc.history.unshift (receipt1)
+// 	return storeProfile (cmd)
 	
-}
+// }
 
 const getTxhashInfo = async (txhash: string, network: string) => {
 	const eth = new CoNETModule.Web3Eth ( new CoNETModule.Web3Eth.providers.HttpProvider(network))
@@ -714,87 +706,87 @@ const getTxhashInfo = async (txhash: string, network: string) => {
 	return receipt
 }
 
-const mintCoNETCash = async (cmd: worker_command) => {
-	logger (`mintCoNETCash START`)
-	const [usdcVal, keyID] = cmd.data[0]
-	if ( !CoNET_Data?.profiles || usdcVal <= 0 || !keyID) {
-		cmd.err = 'NOT_READY'
-		return returnCommand (cmd)
-	}
-	const profileIndex = CoNET_Data.profiles.findIndex (n => n.keyID === keyID)
-	if ( profileIndex < 0 ) {
-		cmd.err = 'FAILURE'
-		return returnCommand (cmd)
-	}
-	const profile = CoNET_Data.profiles[profileIndex]
-	const usdcBalance = profile.tokens.usdc.balance
+// const mintCoNETCash = async (cmd: worker_command) => {
+// 	logger (`mintCoNETCash START`)
+// 	const [usdcVal, keyID] = cmd.data[0]
+// 	if ( !CoNET_Data?.profiles || usdcVal <= 0 || !keyID) {
+// 		cmd.err = 'NOT_READY'
+// 		return returnCommand (cmd)
+// 	}
+// 	const profileIndex = CoNET_Data.profiles.findIndex (n => n.keyID === keyID)
+// 	if ( profileIndex < 0 ) {
+// 		cmd.err = 'FAILURE'
+// 		return returnCommand (cmd)
+// 	}
+// 	const profile = CoNET_Data.profiles[profileIndex]
+// 	const usdcBalance = profile.tokens.usdc.balance
 
-	const usdcValFix = (usdcVal + gasFeeEth - usdcBalance > 0) ? usdcBalance - gasFeeEth : usdcVal
+// 	const usdcValFix = (usdcVal + gasFeeEth - usdcBalance > 0) ? usdcBalance - gasFeeEth : usdcVal
 	
-	const obj = {
-		gas: gasFee,
-		to: USDC_exchange_Addr,
-		value: (usdcValFix * wei).toString()
-	}
+// 	const obj = {
+// 		gas: gasFee,
+// 		to: USDC_exchange_Addr,
+// 		value: (usdcValFix * wei).toString()
+// 	}
 
-	const eth = new CoNETModule.Web3Eth ( new CoNETModule.Web3Eth.providers.HttpProvider(usdcNet))
-	const time = new Date()
-	let createTransaction
-	try {
-		createTransaction = await eth.accounts.signTransaction( obj, profile.privateKeyArmor )
-	} catch (ex) {
-		logger (`${usdcNet} is not available`)
-		cmd.err = 'FAILURE'
-		return returnCommand (cmd)
-	}
-	const receipt = await eth.sendSignedTransaction (createTransaction.rawTransaction )
+// 	const eth = new CoNETModule.Web3Eth ( new CoNETModule.Web3Eth.providers.HttpProvider(usdcNet))
+// 	const time = new Date()
+// 	let createTransaction
+// 	try {
+// 		createTransaction = await eth.accounts.signTransaction( obj, profile.privateKeyArmor )
+// 	} catch (ex) {
+// 		logger (`${usdcNet} is not available`)
+// 		cmd.err = 'FAILURE'
+// 		return returnCommand (cmd)
+// 	}
+// 	const receipt = await eth.sendSignedTransaction (createTransaction.rawTransaction )
 
-	receipt.value = usdcValFix
-	receipt.isSend = true
-	receipt.time = time.toISOString()
-	profile.tokens.usdc.history.unshift(receipt)
+// 	receipt.value = usdcValFix
+// 	receipt.isSend = true
+// 	receipt.time = time.toISOString()
+// 	profile.tokens.usdc.history.unshift(receipt)
 
-	let key: walletKey
-	if ( !CoNET_Data.CoNETCash ) {
-		CoNET_Data.CoNETCash = {
-			Total: 0,
-			assets: []
-		}
-	}
-	key = createKey (1)[0]
-	const txObj = { tx:receipt.transactionHash, to: key.address }
-	const message = CoNETModule.EthCrypto.hash.keccak256(txObj)
-	const _sign = CoNETModule.EthCrypto.sign( profile.privateKeyArmor, message )
+// 	let key: walletKey
+// 	if ( !CoNET_Data.CoNETCash ) {
+// 		CoNET_Data.CoNETCash = {
+// 			Total: 0,
+// 			assets: []
+// 		}
+// 	}
+// 	key = createKey (1)[0]
+// 	const txObj = { tx:receipt.transactionHash, to: key.address }
+// 	const message = CoNETModule.EthCrypto.hash.keccak256(txObj)
+// 	const _sign = CoNETModule.EthCrypto.sign( profile.privateKeyArmor, message )
 
-	let result
-	try {
-		result = await postToEndpoint(mintCoNETCashEndpoint, true, { txObj, txHash: message, sign: _sign })
-	} catch (ex) {
-		logger (`postToEndpoint [${mintCoNETCashEndpoint}] error`)
-		cmd.err = 'FAILURE'
-		returnCommand (cmd)
-		return logger (ex)
-	}
+// 	let result
+// 	try {
+// 		result = await postToEndpoint(mintCoNETCashEndpoint, true, { txObj, txHash: message, sign: _sign })
+// 	} catch (ex) {
+// 		logger (`postToEndpoint [${mintCoNETCashEndpoint}] error`)
+// 		cmd.err = 'FAILURE'
+// 		returnCommand (cmd)
+// 		return logger (ex)
+// 	}
 
-	logger (`postToEndpoint [${ mintCoNETCashEndpoint }] SUCCESS`)
-	logger (`result = `, result )
-	const time1 = new Date()
-	const amount = usdcValFix - usdcValFix * 0.0001
-	CoNET_Data.CoNETCash.Total += amount
-	CoNET_Data.CoNETCash.assets.unshift ({
-		key: key,
-		id: result.id,
-		history: [{
-			status: 'Confirmed',
-			value: amount,
-			cumulativeGasUsed: 0.0001 * usdcValFix,
-			time: time1.toISOString(),
-			transactionHash: result.transactionHash,
-			isSend: false
-		}]
-	})
-	return storeProfile (cmd)
-}
+// 	logger (`postToEndpoint [${ mintCoNETCashEndpoint }] SUCCESS`)
+// 	logger (`result = `, result )
+// 	const time1 = new Date()
+// 	const amount = usdcValFix - usdcValFix * 0.0001
+// 	CoNET_Data.CoNETCash.Total += amount
+// 	CoNET_Data.CoNETCash.assets.unshift ({
+// 		key: key,
+// 		id: result.id,
+// 		history: [{
+// 			status: 'Confirmed',
+// 			value: amount,
+// 			cumulativeGasUsed: 0.0001 * usdcValFix,
+// 			time: time1.toISOString(),
+// 			transactionHash: result.transactionHash,
+// 			isSend: false
+// 		}]
+// 	})
+// 	return storeProfile (cmd)
+// }
 
 const openpgp_online_CA_Store = `
 -----BEGIN CERTIFICATE-----
@@ -1015,51 +1007,51 @@ const generateAesKey = async (length = 256) => {
 
 
 
-const authorizeCoNETCash = ( amount: number, recipientsWalletAddress: string, logs ) => {
-	return new Promise (async resolve => {
+// const authorizeCoNETCash = ( amount: number, recipientsWalletAddress: string, logs ) => {
+// 	return new Promise (async resolve => {
 
-		if ( !CoNET_Data?.CoNETCash?.assets.length ) {
-			return resolve (null)
-		}
+// 		if ( !CoNET_Data?.CoNETCash?.assets.length ) {
+// 			return resolve (null)
+// 		}
 
-		const CoNETCashAsset = CoNET_Data.CoNETCash.assets[0]
+// 		const CoNETCashAsset = CoNET_Data.CoNETCash.assets[0]
 
-		const CoNETCash_authorizedObj: CoNETCash_authorized = {
-			type: 'USDC',
-			to: recipientsWalletAddress,
-			amount,
-			id: CoNETCashAsset.id,
-			from: CoNETCashAsset.key.address
-		}
+// 		const CoNETCash_authorizedObj: CoNETCash_authorized = {
+// 			type: 'USDC',
+// 			to: recipientsWalletAddress,
+// 			amount,
+// 			id: CoNETCashAsset.id,
+// 			from: CoNETCashAsset.key.address
+// 		}
 	
-		const authorizedObjHash = CoNETModule.EthCrypto.hash.keccak256(CoNETCash_authorizedObj)
+// 		const authorizedObjHash = CoNETModule.EthCrypto.hash.keccak256(CoNETCash_authorizedObj)
 	
-		const sign = CoNETModule.EthCrypto.sign(CoNETCashAsset.key.privateKey, authorizedObjHash)
+// 		const sign = CoNETModule.EthCrypto.sign(CoNETCashAsset.key.privateKey, authorizedObjHash)
 
-		let result
-		try {
-			result = await postToEndpoint (conet_DL_authorizeCoNETCashEndpoint, true, {CoNETCash_authorizedObj, authorizedObjHash, sign} )
-		} catch (ex) {
-			return resolve (null)
-		}
-		const time1 = new Date()
-		CoNETCashAsset.history.unshift ({
-			status: 'Confirmed',
-			value: amount,
-			cumulativeGasUsed: 0.0001 * amount,
-			time: time1.toISOString(),
-			transactionHash: result,
-			isSend: true,
-			to: recipientsWalletAddress,
-			type: 'authorized',
-			logs: logs
-		})
+// 		let result
+// 		try {
+// 			result = await postToEndpoint (conet_DL_authorizeCoNETCashEndpoint, true, {CoNETCash_authorizedObj, authorizedObjHash, sign} )
+// 		} catch (ex) {
+// 			return resolve (null)
+// 		}
+// 		const time1 = new Date()
+// 		CoNETCashAsset.history.unshift ({
+// 			status: 'Confirmed',
+// 			value: amount,
+// 			cumulativeGasUsed: 0.0001 * amount,
+// 			time: time1.toISOString(),
+// 			transactionHash: result,
+// 			isSend: true,
+// 			to: recipientsWalletAddress,
+// 			type: 'authorized',
+// 			logs: logs
+// 		})
 
-		return resolve(result)
+// 		return resolve(result)
 
-	})
+// 	})
 	
-}
+// }
 
 const postToEndpointSSE = ( url: string, post: boolean, jsonData, CallBack ) => {
 
@@ -1345,114 +1337,114 @@ const sendRequestToNode: (_cmd: SICommandObj_Command, currentProfile: profile, e
 
 }
 
-const getRecipientCoNETCashAddress = async (cmd: worker_command) => {
-	let save = false
-	if (!CoNET_Data?.profiles?.length) {
-		cmd.err = 'NOT_READY'
-		return returnCommand (cmd)
-	}
+// const getRecipientCoNETCashAddress = async (cmd: worker_command) => {
+// 	let save = false
+// 	if (!CoNET_Data?.profiles?.length) {
+// 		cmd.err = 'NOT_READY'
+// 		return returnCommand (cmd)
+// 	}
 	
-	const currentProfile = CoNET_Data.profiles[CoNET_Data.profiles.findIndex(n => n.isPrimary)]
+// 	const currentProfile = CoNET_Data.profiles[CoNET_Data.profiles.findIndex(n => n.isPrimary)]
 	
-	if (!currentProfile.network?.entrys.length || !currentProfile.network?.recipients.length ) {
-		cmd.err = 'NOT_READY'
-		return returnCommand (cmd)
-	}
+// 	if (!currentProfile.network?.entrys.length || !currentProfile.network?.recipients.length ) {
+// 		cmd.err = 'NOT_READY'
+// 		return returnCommand (cmd)
+// 	}
 
-	if ( !currentProfile.pgpKey ) {
-		const key = await createGPGKey('', '', '')
-		currentProfile.pgpKey = {
-			privateKeyArmor: key.privateKey,
-			publicKeyArmor: key.publicKey
-		}
-		save = true
+// 	if ( !currentProfile.pgpKey ) {
+// 		const key = await createGPGKey('', '', '')
+// 		currentProfile.pgpKey = {
+// 			privateKeyArmor: key.privateKey,
+// 			publicKeyArmor: key.publicKey
+// 		}
+// 		save = true
 		
-	}
+// 	}
 
-	if (!currentProfile.network.recipients[0].armoredPublicKey) {
-		currentProfile.network.recipients[0].armoredPublicKey = await _getNftArmoredPublicKey(currentProfile.network.recipients[0])
-		save = true
-	}
+// 	if (!currentProfile.network.recipients[0].armoredPublicKey) {
+// 		currentProfile.network.recipients[0].armoredPublicKey = await _getNftArmoredPublicKey(currentProfile.network.recipients[0])
+// 		save = true
+// 	}
 
 	
 	
-	if ( !cmd.data?.length || typeof cmd?.data[0] !== 'number' ) {
-		cmd.err = 'INVALID_DATA'
-		return returnCommand (cmd)
-	}
+// 	if ( !cmd.data?.length || typeof cmd?.data[0] !== 'number' ) {
+// 		cmd.err = 'INVALID_DATA'
+// 		return returnCommand (cmd)
+// 	}
 
-	const amount: number = cmd.data[0]
+// 	const amount: number = cmd.data[0]
 
-	if (!CoNET_Data.CoNETCash?.assets?.length) {
-		cmd.err = 'INVALID_DATA'
-		return returnCommand (cmd)
-	}
+// 	if (!CoNET_Data.CoNETCash?.assets?.length) {
+// 		cmd.err = 'INVALID_DATA'
+// 		return returnCommand (cmd)
+// 	}
 
-	const entryNode = getRamdomEntryNode (currentProfile)
+// 	const entryNode = getRamdomEntryNode (currentProfile)
 
-	if (!entryNode) {
-		cmd.err = 'NOT_READY'
-		return returnCommand (cmd)
-	}
-	const recipientNode = currentProfile.network.recipients[0]
+// 	if (!entryNode) {
+// 		cmd.err = 'NOT_READY'
+// 		return returnCommand (cmd)
+// 	}
+// 	const recipientNode = currentProfile.network.recipients[0]
 	
-	logger (`regiest to recipient node [${ recipientNode.ip_addr }]`)
-	const wRequest = await sendRequestToNode('getCoNETCashAccount', currentProfile, entryNode, recipientNode, [])
-	if ( !wRequest|| ! wRequest.responseData?.length ) {
-		cmd.err = 'FAILURE'
-		return returnCommand (cmd)
-	}
+// 	logger (`regiest to recipient node [${ recipientNode.ip_addr }]`)
+// 	const wRequest = await sendRequestToNode('getCoNETCashAccount', currentProfile, entryNode, recipientNode, [])
+// 	if ( !wRequest|| ! wRequest.responseData?.length ) {
+// 		cmd.err = 'FAILURE'
+// 		return returnCommand (cmd)
+// 	}
 
-	recipientNode.CoNETCashWalletAddress = wRequest.responseData[0]
-	logger (recipientNode.CoNETCashWalletAddress)
+// 	recipientNode.CoNETCashWalletAddress = wRequest.responseData[0]
+// 	logger (recipientNode.CoNETCashWalletAddress)
 
-	const CoNETCashTX = await authorizeCoNETCash ( amount, recipientNode.CoNETCashWalletAddress, [recipientNode])
-	logger (CoNETCashTX)
+// 	const CoNETCashTX = await authorizeCoNETCash ( amount, recipientNode.CoNETCashWalletAddress, [recipientNode])
+// 	logger (CoNETCashTX)
 
-	if (!CoNETCashTX) {
-		cmd.err = 'FAILURE'
-		return returnCommand (cmd)
-	}
-	save = true
+// 	if (!CoNETCashTX) {
+// 		cmd.err = 'FAILURE'
+// 		return returnCommand (cmd)
+// 	}
+// 	save = true
 	
-	const _currentProfile: publicProfile = {
-		bio: currentProfile.bio? currentProfile.bio: '',
-		nickname: currentProfile.nickname? currentProfile.nickname: '',
-		profileImg: currentProfile.profileImg ? currentProfile.profileImg : '',
-		tags: currentProfile.tags ? currentProfile.tags : [],
-	}
+// 	const _currentProfile: publicProfile = {
+// 		bio: currentProfile.bio? currentProfile.bio: '',
+// 		nickname: currentProfile.nickname? currentProfile.nickname: '',
+// 		profileImg: currentProfile.profileImg ? currentProfile.profileImg : '',
+// 		tags: currentProfile.tags ? currentProfile.tags : [],
+// 	}
 
-	const authorizedObjHash = CoNETModule.EthCrypto.hash.keccak256(_currentProfile)
-	const sign = CoNETModule.EthCrypto.sign(currentProfile.privateKeyArmor, authorizedObjHash)
+// 	const authorizedObjHash = CoNETModule.EthCrypto.hash.keccak256(_currentProfile)
+// 	const sign = CoNETModule.EthCrypto.sign(currentProfile.privateKeyArmor, authorizedObjHash)
 
-	const wRequest1: any = await longConnectToNode('regiestRecipient', currentProfile, entryNode, recipientNode, [CoNETCashTX, {profile: _currentProfile, profileHash: authorizedObjHash, sign}],cmd)
+// 	const wRequest1: any = await longConnectToNode('regiestRecipient', currentProfile, entryNode, recipientNode, [CoNETCashTX, {profile: _currentProfile, profileHash: authorizedObjHash, sign}],cmd)
 	
-	if (!wRequest1) {
-		cmd.err = 'FAILURE'
-		return returnCommand (cmd)
-	}
+// 	if (!wRequest1) {
+// 		cmd.err = 'FAILURE'
+// 		return returnCommand (cmd)
+// 	}
 
-	logger (wRequest1)
-	if (wRequest1.requestData) {
-		const payment = CoNET_Data.CoNETCash.assets[0].history[0]
-		if (currentProfile.network?.payment?.length ){
-			currentProfile.network?.payment.unshift(payment)
-		} else {
-			currentProfile.network.payment = [payment]
-		}
-		returnCommand (cmd)
-		await storage_StoreContainerData ()
-		return await regiestProfile (currentProfile, recipientNode)
-	}
+// 	logger (wRequest1)
+// 	if (wRequest1.requestData) {
+// 		const payment = CoNET_Data.CoNETCash.assets[0].history[0]
+// 		if (currentProfile.network?.payment?.length ){
+// 			currentProfile.network?.payment.unshift(payment)
+// 		} else {
+// 			currentProfile.network.payment = [payment]
+// 		}
+// 		returnCommand (cmd)
+// 		await storage_StoreContainerData ()
+// 		return await regiestProfile (currentProfile, recipientNode)
+// 	}
 
 
-	cmd.err = 'FAILURE'
-	returnCommand (cmd)
-	if (save ) {
-		await storage_StoreContainerData ()
-		save = false
-	}
-}
+// 	cmd.err = 'FAILURE'
+// 	returnCommand (cmd)
+// 	if (save ) {
+// 		await storage_StoreContainerData ()
+// 		save = false
+// 	}
+// }
 
 const connectToRecipient = async (cmd: worker_command) => {
 	if (!CoNET_Data?.profiles?.length) {
@@ -2039,8 +2031,8 @@ const preProxyConnect = async (cmd: worker_command) => {
 
 	logger ('******************** preProxyConnect **********************\n', cmd)
 	const _site: urlData = cmd.data[0]
-	const gatewayNode = (cmd.data.length > 2 && cmd.data[2]) ? cmd.data[2] : await getRandomNode()
-	// const gatewayNode = await getNodeByIpaddress('108.175.5.112')
+	//const gatewayNode = (cmd.data.length > 2 && cmd.data[2]) ? cmd.data[2] : await getRandomNode()
+	const gatewayNode = await getNodeByIpaddress('108.175.5.112')
 	
 	const cacheStore = await cacheProfile (_site)
 	if ( cacheStore ) {
@@ -2048,10 +2040,10 @@ const preProxyConnect = async (cmd: worker_command) => {
 		return responseChannel.postMessage(JSON.stringify(cmd))
 	}
 	
-	const entryNode = await getRandomNode()
+	//const entryNode = await getRandomNode()
 	
-	// const gatewayNode = await getNodeByIpaddress ('74.208.33.24')
-
+	
+	const entryNode = await getNodeByIpaddress('74.208.55.241')
 
 
 	if ( !entryNode|| !gatewayNode ||! CoNET_Data?.profiles) {
@@ -2166,7 +2158,7 @@ const encrypt_TestPasscode = async (cmd: worker_command) => {
 			const key = profiles[i].keyID
 			if (key) {
 				profiles[i].tokens.conet.balance = await getCONETBalance (key)
-				profiles[i].tokens.usdc.balance = await getUSDCBalance (key)
+				// profiles[i].tokens.usdc.balance = await getUSDCBalance (key)
 			}	
 			
 		}
@@ -2253,10 +2245,10 @@ const encryptWorkerDoCommand = async ( e ) => {
 			return returnInitNull (cmd)
         }
 
-		case 'getRecipientCoNETCashAddress': {
-			return getRecipientCoNETCashAddress (cmd)
+		// case 'getRecipientCoNETCashAddress': {
+		// 	return getRecipientCoNETCashAddress (cmd)
 
-		}
+		// }
 
         case 'storePreferences': {
 			if ( !cmd.data || !cmd.data.length || !CoNET_Data?.isReady || !containerKeyObj ) {
@@ -2283,9 +2275,9 @@ const encryptWorkerDoCommand = async ( e ) => {
             return storeProfile (cmd)
         }
 
-		case 'getUSDCPrice': {
-			return getUSDCPrice (cmd)
-		}
+		// case 'getUSDCPrice': {
+		// 	return getUSDCPrice (cmd)
+		// }
 
 		case 'getFaucet': {
 			return getFaucet (cmd)
@@ -2299,13 +2291,13 @@ const encryptWorkerDoCommand = async ( e ) => {
 			return syncAsset (cmd)
 		}
 
-		case 'buyUSDC': {
-			return buyUSDC (cmd)
-		}
+		// case 'buyUSDC': {
+		// 	return buyUSDC (cmd)
+		// }
 
-		case 'mintCoNETCash': {
-			return mintCoNETCash (cmd)
-		}
+		// case 'mintCoNETCash': {
+		// 	return mintCoNETCash (cmd)
+		// }
 
 		case 'isAddress' : {
 			const address = cmd.data[0]
@@ -2337,83 +2329,119 @@ const encryptWorkerDoCommand = async ( e ) => {
 }
 
 const decryptFetchBody = async (password: string, textBuffer: string ) => {
+
 	if (!textBuffer?.length) {
-		logger (`transform come with EMPTY ! skip!`)
+		logger (`decryptFetchBody come with EMPTY ! skip!`)
 		return ''
 	}
-
-	let _ret = ''
-	
-	
-	const block = textBuffer.split(/\r\n\r\n/)
-	const header = block.shift()
-	//	logger (`findBlock got HTTP headers\n`, header)
-	
-	if ( ! block.length ) {
-		logger (`findBlock First body !!!!!\n`, block)
-		return ''
-	}
-	let count = 0
-
-	textBuffer = block.join('\r\n\r\n')
-
-
 	const blocks = textBuffer.split('\r\n\r\n')
-	
-	while ( blocks.length ) {
-		const dataBlock = blocks.shift()
-
-		if (!dataBlock) {
-			logger (`findBlock get empty dataBlock!!!! continue loop`, dataBlock)
-			continue
-		}
-		const subBlock = dataBlock.split('\r\n')
-
-		/**
-		 * 		HTML Transfer-Encoding: chunked
-		 * 		https://developer.mozilla.org/en-US/docs/Glossary/Payload_body
-		 */
-
-		if ( subBlock.length < 2) {
-			logger (`findBlock get a subBlock which have not length stop current black !!!! giveup current subBlock ! continue loop`, dataBlock)
-			continue
-		}
-
-		const bodyLength = parseInt ( subBlock[0], 16)
-		const body = subBlock[1]
-
-		if ( Number.isNaN(bodyLength)) {
-			logger (`findBlock get unformated subBlock, transfer terminate now!!!!!\n`, subBlock )
-			continue
-		}
-
-		//		the EOF of data
-		if (bodyLength === 0) {
-			logger (`findBlock get EOF! total count = [${count}]`)
-			break
-		}
-
-		if (!body) {
-			if (!blocks.length) {
-				logger (`findBlock get empty body!!!!!!!!!! waiting next !`, dataBlock )
-				blocks.unshift(dataBlock)
-				break
-			}
-			logger (`findBlock get unformated subBlock, transfer terminate now!!!!!\n`, subBlock )
-			continue
-		}
-
-		// logger (`findBlock process block number ${++count}! bodyLength part get body length = [${bodyLength}] body.length [${body.length }]`)
-
-
-		_ret += await CoNETModule.aesGcmDecrypt (body, password)
+	if (blocks.length < 2) {
+		logger (`decryptFetchBody has no BODY ! skip!`)
+		return ''
 	}
-
-	logger (`findBlock decrypted block No.[${count}]`)
-
-	textBuffer = blocks.shift()||''
+	blocks.shift()
+	
+	let _ret = ''
+	do {
+		const _bodys = blocks.shift()
+		if (!_bodys) {
+			continue
+		}
+		const uu = _bodys.split('\r\n')
+		for (let u of uu) {
+			if (u.length < 10) {
+				continue
+			}
+			_ret += await CoNETModule.aesGcmDecrypt (u, password)
+		}
+		
+	} while (blocks.length > 0)
 	return _ret
 }
+
+
+// const decryptFetchBody = async (password: string, textBuffer: string ) => {
+// 	if (!textBuffer?.length) {
+// 		logger (`transform come with EMPTY ! skip!`)
+// 		return ''
+// 	}
+
+// 	let _ret = ''
+	
+	
+// 	const block = textBuffer.split(/\r\n\r\n/)
+	
+// 	const bodys = block[1]
+
+// 	//	logger (`findBlock got HTTP headers\n`, header)
+	
+// 	if ( ! block.length ) {
+// 		logger (`findBlock First body !!!!!\n`, block)
+// 		return ''
+// 	}
+// 	let count = 0
+
+// 	textBuffer = block.join('\r\n\r\n')
+
+
+// 	const blocks = textBuffer.split('\r\n\r\n')
+	
+
+
+// 	// while ( blocks.length ) {
+// 	// 	const dataBlock = blocks.shift()
+
+// 	// 	if (!dataBlock) {
+// 	// 		logger (`findBlock get empty dataBlock!!!! continue loop`, dataBlock)
+// 	// 		continue
+// 	// 	}
+// 	// 	const subBlock = dataBlock.split('\r\n')
+
+// 	// 	/**
+// 	// 	 * 		HTML Transfer-Encoding: chunked
+// 	// 	 * 		https://developer.mozilla.org/en-US/docs/Glossary/Payload_body
+// 	// 	 */
+
+// 	// 	if ( subBlock.length < 2) {
+// 	// 		logger (`findBlock get a subBlock which have not length stop current black !!!! giveup current subBlock ! continue loop`, dataBlock)
+// 	// 		continue
+// 	// 	}
+
+// 	// 	const bodyLength = parseInt ( subBlock[0], 16)
+// 	// 	const body = subBlock[1]
+
+// 	// 	if ( Number.isNaN(bodyLength)) {
+// 	// 		logger (`findBlock get unformated subBlock, transfer terminate now!!!!!\n`, subBlock )
+// 	// 		continue
+// 	// 	}
+
+// 	// 	//		the EOF of data
+// 	// 	if (bodyLength === 0) {
+// 	// 		logger (`findBlock get EOF! total count = [${count}]`)
+// 	// 		break
+// 	// 	}
+
+// 	// 	if (!body) {
+// 	// 		if (!blocks.length) {
+// 	// 			logger (`findBlock get empty body!!!!!!!!!! waiting next !`, dataBlock )
+// 	// 			blocks.unshift(dataBlock)
+// 	// 			break
+// 	// 		}
+// 	// 		logger (`findBlock get unformated subBlock, transfer terminate now!!!!!\n`, subBlock )
+// 	// 		continue
+// 	// 	}
+
+// 	// 	// logger (`findBlock process block number ${++count}! bodyLength part get body length = [${bodyLength}] body.length [${body.length }]`)
+
+
+// 	// 	_ret += await CoNETModule.aesGcmDecrypt (body, password)
+// 	// }
+
+// 	logger (`findBlock decrypted block No.[${count}]`)
+
+// 	textBuffer = blocks.shift()||''
+// 	return _ret
+// }
 
 const postToEndpointGetBody: ( url: string, post: boolean, jsonData: any) => Promise<string> = ( url: string, post: boolean, jsonData ) => {
 	return new Promise ((resolve, reject) => {
@@ -2454,6 +2482,4 @@ const postToEndpointGetBody: ( url: string, post: boolean, jsonData: any) => Pro
  * 
  * 			test unit
  */
-
-
 

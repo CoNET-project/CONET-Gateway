@@ -179,7 +179,14 @@ self.addEventListener( "fetch", async (event: any) => {
 	}
 
 	return event.respondWith(( async () => {
-		const siteOrigin = new URL (reqUrl)
+
+
+		const cacheStore = await caches.match(event.request)
+		if (cacheStore) {
+			logger(`URL [${event.request.url}] has cacheStore stop forward to nodes!`)
+			return cacheStore
+		}
+		let siteOrigin = new URL (reqUrl)
 		if (!workerClientID) {
 			const cmd = await getWorkerClientID()
 			logger (cmd)
@@ -187,16 +194,10 @@ self.addEventListener( "fetch", async (event: any) => {
 			logger_service_worker (` ****************** %%%%%%%%%%%%%%%%%%%%%%% await getWorkerClientID() = [${workerClientID}] &&&&&&&&&&&&&&&&&&&&&& ****************** ` )
 		}
 		logger_service_worker (`****************************** accessHref pre process= ${reqUrl} clientId [${ clientId.clientId }]`, event)
-
-		const cacheStore = await caches.match(event.request)
-		if (cacheStore) {
-			return cacheStore
-		}
-
 		const urlData: urlData = {
 			href: reqUrl,
 			method: event.request.method,
-			port: siteOrigin.port || /^http\:$/.test(siteOrigin.protocol) ? 80 : 443,
+			port: siteOrigin.port || /^http\:$/i.test(siteOrigin.protocol) ? 80 : 443,
 			json: null
 		}
 		const headers = event.request.headers
@@ -242,9 +243,14 @@ self.addEventListener( "fetch", async (event: any) => {
 		if (cmd.err) {
 			return err_response_network_err()
 		}
+		const responseHeaders = cmd.data[1]
+		if (responseHeaders.location) {
+			const href = `${responseHeaders.location}${siteOrigin.pathname}`
+			siteOrigin = new URL (href)
+		}
 
 		if (siteMaster && clientId.resultingClientId) {
-			const node =  cmd.data[3]
+			const node = cmd.data[3]
 			const data: clientPool = {
 				clientId,
 				//	@ts-ignore
@@ -258,7 +264,6 @@ self.addEventListener( "fetch", async (event: any) => {
 			storageDomain(siteOrigin, node, clientId.resultingClientId)
 		}
 		
-		const responseHeaders = cmd.data[1]
 		logger (urlData)
 		logger (cmd)
 

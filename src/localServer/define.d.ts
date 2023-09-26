@@ -210,7 +210,6 @@ interface profile extends keyPair {
 	emailAddr?: string
 	tokens: {
 		conet:CryptoAsset
-		usdc:CryptoAsset
 	}
 	network?: {
 		entrys: nodes_info[]
@@ -369,13 +368,13 @@ interface ethSignedObj {
 	v: string
 }
 
-interface CoNETCash_authorized {
-	id: string
-	to: string
-	amount: number
-	type: 'USDC'
-	from: string
-}
+// interface CoNETCash_authorized {
+// 	id: string
+// 	to: string
+// 	amount: number
+// 	type: 'USDC'
+// 	from: string
+// }
 
 type clientProfile = {
 	armoredPublicKey: string

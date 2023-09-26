@@ -63,8 +63,6 @@ const CoNETModule: CoNET_Module = {
 let ClientIDworker = ''
 const backGroundPoolWorker: clientPoolWroker[] = []
 
-
-
 self.onhashchange = () => {
 	channel.removeEventListener('message', channelWorkerDoCommand)
 	self.removeEventListener ('message', encryptWorkerDoCommand)
@@ -102,7 +100,6 @@ const initEncryptWorker = async () => {
 	
     checkStorage ()
 }
-
 
 const channelWorkerDoCommand = (e => {
 	const jsonData = buffer.Buffer.from ( e.data ).toString()
@@ -170,7 +167,6 @@ const channelWorkerDoCommand = (e => {
 	}
 
 })
-
 
 /**
  * 		
