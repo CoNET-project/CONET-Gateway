@@ -5,6 +5,25 @@ let workerReady = false
 let CoNET_Data: encrypt_keys_object | null = null
 let containerKeyObj: keyPair|null = null
 let preferences: any = null
+const CoNET_SI_Network_Domain = 'openpgp.online'
+const conet_DL_endpoint = `https://${ CoNET_SI_Network_Domain }/api/conet-faucet`
+const conet_DL_getUSDCPrice_Endpoint = `https://${ CoNET_SI_Network_Domain }/api/conet-price`
+const conet_DL_getSINodes = `https://${ CoNET_SI_Network_Domain }/api/conet-si-list`
+const conet_DL_authorizeCoNETCashEndpoint = `https://${ CoNET_SI_Network_Domain }/api/authorizeCoNETCash`
+const conet_DL_regiestProfile = `https://${ CoNET_SI_Network_Domain }/api/regiestProfileRoute`
+const conet_DL_publishGPGKeyArmored = `https://${ CoNET_SI_Network_Domain }/api/publishGPGKeyArmored`
+const gasFee = 30000
+const wei = 1000000000000000000
+const denominator = 1000000000000000000
+const gasFeeEth = 0.000526
+const GasToEth = 0.00000001
+const USDC_exchange_Addr = '0xD493391c2a2AafEd135A9f6164C0Dcfa9C68F1ee'
+const buyUSDCEndpoint = `https://${ CoNET_SI_Network_Domain }/api/exchange_conet_usdc`
+const mintCoNETCashEndpoint = `https://${ CoNET_SI_Network_Domain }/api/mint_conetcash`
+const openSourceEndpoint = 'https://s3.us-east-1.wasabisys.com/conet-mvp/router/'
+
+
+
 const responseChannel = new BroadcastChannel('toServiceWroker')
 const databaseName = 'CoNET'
 const channel = new BroadcastChannel('toMainWroker')

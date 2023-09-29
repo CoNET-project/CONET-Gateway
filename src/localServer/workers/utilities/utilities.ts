@@ -1,19 +1,4 @@
-const CoNET_SI_Network_Domain = 'openpgp.online'
-const conet_DL_endpoint = `https://${ CoNET_SI_Network_Domain }/api/conet-faucet`
-const conet_DL_getUSDCPrice_Endpoint = `https://${ CoNET_SI_Network_Domain }/api/conet-price`
-const conet_DL_getSINodes = `https://${ CoNET_SI_Network_Domain }/api/conet-si-list`
-const conet_DL_authorizeCoNETCashEndpoint = `https://${ CoNET_SI_Network_Domain }/api/authorizeCoNETCash`
-const conet_DL_regiestProfile = `https://${ CoNET_SI_Network_Domain }/api/regiestProfileRoute`
-const conet_DL_publishGPGKeyArmored = `https://${ CoNET_SI_Network_Domain }/api/publishGPGKeyArmored`
-const gasFee = 30000
-const wei = 1000000000000000000
-const denominator = 1000000000000000000
-const gasFeeEth = 0.000526
-const GasToEth = 0.00000001
-const USDC_exchange_Addr = '0xD493391c2a2AafEd135A9f6164C0Dcfa9C68F1ee'
-const buyUSDCEndpoint = `https://${ CoNET_SI_Network_Domain }/api/exchange_conet_usdc`
-const mintCoNETCashEndpoint = `https://${ CoNET_SI_Network_Domain }/api/mint_conetcash`
-const openSourceEndpoint = 'https://s3.us-east-1.wasabisys.com/conet-mvp/router/'
+
 
 const CoNETNet = [`https://rpc1.${CoNET_SI_Network_Domain}`]
 
@@ -2031,8 +2016,10 @@ const preProxyConnect = async (cmd: worker_command) => {
 
 	logger ('******************** preProxyConnect **********************\n', cmd)
 	const _site: urlData = cmd.data[0]
-	//const gatewayNode = (cmd.data.length > 2 && cmd.data[2]) ? cmd.data[2] : await getRandomNode()
-	const gatewayNode = await getNodeByIpaddress('108.175.5.112')
+
+	const gatewayNode = (cmd.data.length > 2 && cmd.data[2]) ? cmd.data[2] : await getRandomNode()
+	//const gatewayNode = await getNodeByIpaddress('108.175.5.112')
+
 	
 	const cacheStore = await cacheProfile (_site)
 	if ( cacheStore ) {
@@ -2040,10 +2027,11 @@ const preProxyConnect = async (cmd: worker_command) => {
 		return responseChannel.postMessage(JSON.stringify(cmd))
 	}
 	
-	//const entryNode = await getRandomNode()
+	const entryNode = await getRandomNode()
 	
-	
-	const entryNode = await getNodeByIpaddress('74.208.55.241')
+
+	//const entryNode = await getNodeByIpaddress('74.208.55.241')
+
 
 
 	if ( !entryNode|| !gatewayNode ||! CoNET_Data?.profiles) {
