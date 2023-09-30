@@ -953,7 +953,7 @@ const _getSINodes = async (sortby: SINodesSortby, region: SINodesRegion) => {
 	const rows: nodes_info[] = result
 
 	if (rows.length) {
-		async.series(rows.filter(n => n.country === 'US').map(n=> ( next => _getNftArmoredPublicKey(n).then(nn => {n.armoredPublicKey = nn; next()}))))
+		//async.series(rows.filter(n => n.country === 'US').map(n=> ( next => _getNftArmoredPublicKey(n).then(nn => {n.armoredPublicKey = nn; next()}))))
 
 		rows.forEach ( async n => {
 			n.disable = n.entryChecked = n.recipientChecked = false
@@ -1960,9 +1960,9 @@ const getNodeByIpaddress = (ipaddress: string ): Promise<nodes_info|null> => {
 			return resolve(null)
 		}
 		const node = activeNodes[index]
-		if ( !node.armoredPublicKey ) {
-			node.armoredPublicKey = await _getNftArmoredPublicKey(node)
-		}
+		// if ( !node.armoredPublicKey ) {
+		// 	node.armoredPublicKey = await _getNftArmoredPublicKey(node)
+		// }
 		return resolve (node)
 	})
 	
@@ -2019,7 +2019,6 @@ const preProxyConnect = async (cmd: worker_command) => {
 
 	const gatewayNode = (cmd.data.length > 2 && cmd.data[2]) ? cmd.data[2] : await getRandomNode()
 	//const gatewayNode = await getNodeByIpaddress('108.175.5.112')
-
 	
 	const cacheStore = await cacheProfile (_site)
 	if ( cacheStore ) {
@@ -2031,7 +2030,6 @@ const preProxyConnect = async (cmd: worker_command) => {
 	
 
 	//const entryNode = await getNodeByIpaddress('74.208.55.241')
-
 
 
 	if ( !entryNode|| !gatewayNode ||! CoNET_Data?.profiles) {
