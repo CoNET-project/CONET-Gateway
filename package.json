@@ -13,7 +13,8 @@
         "buildAndy": "tsc --project ./tsconfig.build.json && cp -r node_modules/@conet-project/seguro-platform/build ./build/launcher ",
         "build": "tsc --project ./tsconfig.build.json && cp src/localServer/workers/utilities/*.js src/localServer/workers/utilities/*.map build/localServer/workers/utilities/",
         "clean": "rm -rf ./node_modules ./build",
-        "local": "node build/localServer/index"
+        "local": "node build/localServer/index",
+        "build:docker": "docker buildx create --name conet-platform --use --bootstrap && docker buildx build --push --platform linux/amd64,linux/arm64 --tag conetnetwork/conet:platform ."
     },
     "dependencies": {
         "async": "^3.2.4",
