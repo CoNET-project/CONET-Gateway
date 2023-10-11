@@ -346,7 +346,7 @@ type CoNETIndexDBInit = {
 	preferences: any
 }
 
-type SICommandObj_Command = 'getCoNETCashAccount'|'regiestRecipient'|'connecting'|'SaaS_Proxy'
+type SICommandObj_Command = 'getCoNETCashAccount'|'regiestRecipient'|'connecting'|'SaaS_Proxy'|'SaaS_Sock5_Data_Entry'|'SaaS_Sock5'
 
 interface SICommandObj {
 	command: SICommandObj_Command
@@ -357,6 +357,7 @@ interface SICommandObj {
 	iv?: string
 	Securitykey: string
 	requestData: any[]
+	uuid?: string
 }
 
 interface ethSignedObj {
@@ -434,4 +435,29 @@ interface clientPoolWroker {
 	domain: URL
 	id: string
 	node: any
+}
+
+interface requestObj {
+    remotePort: number|undefined
+    remoteAddress: string|undefined
+    targetHost: string|null
+    targetPort: number
+    methods: string
+    uuid: string|undefined
+    socks?: string
+}
+interface VE_IPptpStream {
+    type?: string
+    buffer: string
+    host: string|null
+    port: number
+    cmd: string
+    //ATYP: number
+    uuid?: string
+    length?:number
+    randomBuffer?: Buffer
+    ssl: boolean
+    hostIPAddress: string|null
+    hostName?: string       //      for test gateway from client
+	order: number
 }

@@ -1,17 +1,110 @@
 import express from 'express'
-import type { Server } from 'http'
-import { request } from 'https'
-import { join } from 'path'
-import * as fse from 'fs-extra'
-import { inspect } from 'util'
+import type { Server } from 'node:http'
+import { request } from 'node:https'
+import type {RequestOptions} from 'node:https'
+import { join } from 'node:path'
+import Colors from 'colors/safe'
+import { inspect } from 'node:util'
 import { v4 } from 'uuid'
+import {proxyServer} from './proxyServer'
+import {logger} from './logger'
 
-const logger = 
-(...argv: any ) => {
-    const date = new Date ()
-    const dateStrang = `%c [Seguro-worker INFO ${ date.getHours() }:${ date.getMinutes() }:${ date.getSeconds() }:${ date.getMilliseconds ()}]`
+const CoNET_SI_Network_Domain = 'openpgp.online'
+const conet_DL_getSINodes = `https://${ CoNET_SI_Network_Domain }/api/conet-si-list`
+
+const postToEndpointJSON = ( url: string, jsonData: string ) => {
+	return new Promise ((resolve, reject) => {
+
+        const Url = new URL(url)
+
+        const option: RequestOptions = {
+            port: 443,
+            hostname: Url.hostname,
+            host: Url.host,
+            path: Url.pathname,
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'Content-Length': jsonData.length
+            },
+            rejectUnauthorized: false
+        }
+
+        const connect = request(option, res => {
+            let data = ''
+            if (res.statusCode === 200 ) {
+                res.on ('data', _data => {
+                    data += _data
+                })
+            }
+            res.once ('end', () => {
+                logger (`postToEndpoint res on END`)
+                if ( data.length) {
+                    let ret
+                    try {
+                        ret = JSON.parse(data)
+                    } catch (ex) {
+                        logger (Colors.red(`postToEndpointJSON [${url}] JSON parse ERROR! data=\n[${ data }]\n`))
+                        return resolve ('')
+                    }
+                    return resolve (ret)
+                }
+                return ('')
+            })
+            res.on('error', err => {
+                logger (Colors.red(`postToEndpointJSON [${url}] response on ERROR! \n[${ err.message }]\n`) )
+            })
+
+        })
+
+        connect.on ('error', err => {
+
+            logger (Colors.red(`postToEndpointJSON [${url}] connect on ERROR! \n[${ err.message }]\n`))
+            return reject (err)
+        })
+
+        connect.end(jsonData)
+
+	})
 	
-    return console.log ( dateStrang, 'color: #dcde56',  ...argv)
+}
+
+export const splitIpAddr = (ipaddress: string ) => {
+	if (!ipaddress?.length) {
+		logger (Colors.red(`splitIpAddr ipaddress have no ipaddress?.length`), inspect( ipaddress, false, 3, true ))
+		return ''
+	}
+	const _ret = ipaddress.split (':')
+	return _ret[_ret.length - 1]
+}
+
+const _getSINodes = async (sortby: SINodesSortby, region: SINodesRegion) => {
+	const data = {
+		sortby,
+		region
+	}
+	let result
+
+	try {
+		result = await postToEndpointJSON(conet_DL_getSINodes, '')
+	} catch (ex) {
+		logger (`postToEndpoint [${conet_DL_getSINodes}] Error`, ex)
+		return null
+	}
+	const rows: nodes_info[] = result
+	if (rows.length) {
+		//async.series(rows.filter(n => n.country === 'US').map(n=> ( next => _getNftArmoredPublicKey(n).then(nn => {n.armoredPublicKey = nn; next()}))))
+
+		rows.forEach ( async n => {
+			n.disable = n.entryChecked = n.recipientChecked = false
+			n.customs_review_total = parseFloat(n.customs_review_total.toString())
+			// n.armoredPublicKey = await _getNftArmoredPublicKey (n)
+		})
+		
+	} else {
+		logger (`################ _getSINodes get null nodes Error! `)
+	}
+	return rows
 }
 
 const makeMetadata = ( text: string ) => {
@@ -40,15 +133,38 @@ const joinMetadata = (metadata: any ) => {
 }
 
 
+const otherRespon = ( body: string| Buffer, _status: number ) => {
+	const Ranges = ( _status === 200 ) ? 'Accept-Ranges: bytes\r\n' : ''
+	const Content = ( _status === 200 ) ? `Content-Type: text/html; charset=utf-8\r\n` : 'Content-Type: text/html\r\n'
+	const headers = `Server: nginx/1.6.2\r\n`
+					+ `Date: ${ new Date ().toUTCString()}\r\n`
+					+ Content
+					+ `Content-Length: ${ body.length }\r\n`
+					+ `Connection: keep-alive\r\n`
+					+ `Vary: Accept-Encoding\r\n`
+					//+ `Transfer-Encoding: chunked\r\n`
+					+ '\r\n'
+
+	const status = _status === 200 ? 'HTTP/1.1 200 OK\r\n' : 'HTTP/1.1 404 Not Found\r\n'
+	return status + headers + body
+}
+
+
+export const return404 = () => {
+	const kkk = '<html>\r\n<head><title>404 Not Found</title></head>\r\n<body bgcolor="white">\r\n<center><h1>404 Not Found</h1></center>\r\n<hr><center>nginx/1.6.2</center>\r\n</body>\r\n</html>\r\n'
+	return otherRespon ( Buffer.from ( kkk ), 404 )
+}
+
+
 class LocalServer {
-
+    private nodes: nodes_info[] = []
     private localserver: Server
-
     private connect_peer_pool: any [] = []
 	private appsPath: string = join ( __dirname ) 
     constructor ( private PORT = 3000, private reactBuildFolder: string ) {
         this.initialize()
     }
+    public _proxyServer: proxyServer|null = null
 
     public end () {
         this.localserver.close ()
@@ -66,7 +182,6 @@ class LocalServer {
     }
 
     private initialize = () => {
-
         const staticFolder = join ( this.appsPath, 'workers' )
 		const staticFolder1 = join ( this.appsPath, '../../../seguro-platform/build' )
         //const launcherFolder = join ( this.appsPath, '../launcher' )
@@ -78,7 +193,6 @@ class LocalServer {
         app.use( cors ())
 		app.use ( express.static ( staticFolder ))
         //app.use ( express.static ( launcherFolder ))
-        logger (staticFolder1)
 		app.use ( express.static ( staticFolder1 ))
         app.use ( express.json() )
 
@@ -218,6 +332,21 @@ class LocalServer {
             return res.end ()
         })
 
+        app.post ( '/conet-profile', ( req: express.Request, res: express.Response ) => {
+            const data: { profiles, activeNodes } = req.body
+            
+            //logger (Colors.blue(`Local server get POST /profile req.body = `), inspect(data, false, 3, true))
+            if (data.activeNodes && data.profiles ) {
+                if (!this._proxyServer) {
+                    this._proxyServer = new proxyServer((this.PORT + 2).toString(), data.activeNodes, data.profiles, true)
+                }
+                res.sendStatus(200) 
+            } else {
+                res.sendStatus(404)
+            }
+            return res.end ()
+        })
+
         app.post('/newNotice', ( req: express.Request, res: express.Response ) => {
             const url: string = req.body
             return request (url, _res => {
@@ -225,12 +354,35 @@ class LocalServer {
             })
         })
 
+        app.all ('*', (req, res) => {
+			logger (Colors.red(`Local web server got unknow request URL Error! [${ splitIpAddr (req.ip) }] => ${ req.method }[http://${ req.headers.host }${ req.url }]`))
+			return res.status(404).end (return404 ())
+		})
+
         this.localserver = app.listen ( this.PORT, () => {
             return console.table([
-                { 'Kloak Local Server': `http://localhost:${ this.PORT }, local-path = [${ staticFolder }] staticFolder1 [${staticFolder1}]` }
+                { 'CONET Local Web Server': `http://localhost:${ this.PORT }, local-path = [${ staticFolder }]` },
+                
             ])
         })
     }
 }
 
 export default LocalServer
+
+/**
+ *          test()
+ */
+
+
+// const doTest = async () => {
+//     const uu = await _getSINodes ('CUSTOMER_REVIEW', 'USA')
+//     logger (inspect(uu, false, 3, true))
+// }
+
+
+
+
+
+
+// doTest()

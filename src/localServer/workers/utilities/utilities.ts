@@ -2151,7 +2151,8 @@ const encrypt_TestPasscode = async (cmd: worker_command) => {
 	}
 	cmd.data = [CoNET_Data]
 	returnCommand (cmd)
-
+	const url = `${self.location.origin}/conet-profile`
+	postToEndpoint(url, true, { profiles, activeNodes })
 }
 
 const createPlatformFirstProfile = async () => {

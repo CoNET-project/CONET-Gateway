@@ -25,7 +25,7 @@ const backGroundPool: workPromise[] = []
 const clientDomainPool: clientPool[] = []
 const listenChannel = new BroadcastChannel('toServiceWroker')
 const channelServiceWroker = new BroadcastChannel('toMainWroker')
-const siteMatch = /openpgp.online\/api\/conet-si-list|\w+.openpgp.online\/post$|webpack\.config\.js|robots\.txt|sw\.js|service-worker\.js(\..*)?|service-worker\.jsrobots\.txt|manifest\.json|logo\d{3}\.png|index\.html|encrypt\.js|asset\-manifest\.json|(^\/s|^s)tatic\/|favicon\.ico$|swsw\.js|encrypt\.js$|utilities\/(Pouchdb|seguroSetup|Buffer|openpgp|UuidV4|Pouchdb|PouchdbFind|PouchdbMemory|scrypt|async|forge.all|jszip|utilities|web3|generatePassword|storage|seguroSetup])\.(min\.)?(js|js\.map)$/i
+const siteMatch = /openpgp.online\/api\/conet-si-list|\w+.openpgp.online\/post$|webpack\.config\.js|robots\.txt|sw\.js|service-worker\.js(\..*)?|service-worker\.jsrobots\.txt|manifest\.json|logo\d{3}\.png|index\.html|encrypt\.js|asset\-manifest\.json|(^\/s|^s)tatic\/|^\/?favicon\.ico$|^\/?sw\.js$|^\/?encrypt\.js$|^\/?conet-profile|utilities\/(Pouchdb|seguroSetup|Buffer|openpgp|UuidV4|Pouchdb|PouchdbFind|PouchdbMemory|scrypt|async|forge.all|jszip|utilities|web3|generatePassword|storage|seguroSetup])\.(min\.)?(js|js\.map)$/i
 
 const blocklist: RegExp[] = [
 	//	/https:\/\/www.youtube.com\/youtubei\/v1\/feedback/
