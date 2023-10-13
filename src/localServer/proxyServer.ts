@@ -1,20 +1,15 @@
 import Colors, { green } from 'colors/safe'
 import Net from 'node:net'
+import {getRandomValues} from 'node:crypto'
 import { Transform, pipeline, Writable} from 'node:stream'
 import { inspect } from 'node:util'
 import * as Socks from './socks'
 import HttpProxyHeader from './httpProxy'
-
-import {request as HttpsRequest} from 'node:https'
 import {request as requestHttp} from 'node:http'
 import {logger, hexDebug} from './logger'
 import * as res from './res'
 import type {RequestOptions} from 'node:https'
 import * as openpgp from 'openpgp'
-import { log } from 'node:console'
-import dgram from 'node:dgram'
-import {v4} from 'uuid'
-
 const getRandomNode = (activeNodes: nodes_info[], saasNode: nodes_info|null) => {
 
 	
@@ -29,60 +24,6 @@ const getRandomNode = (activeNodes: nodes_info[], saasNode: nodes_info|null) => 
 	return ret
 }
 const CoNET_SI_Network_Domain = 'openpgp.online'
-
-// const httpProxy = ( clientSocket: Net.Socket, buffer: Buffer, _gatway: gateWay, debug: boolean ) => {
-
-// 	if ( !_gatway || typeof _gatway.requestGetWay !== 'function' ) {
-// 		console.log (Colors.red(`httpProxy !gateWay stop SOCKET res._HTTP_PROXY_302 `))
-// 		return clientSocket.end ( res._HTTP_PROXY_302 ())
-// 	}
-		
-// 	const httpHead = new HttpProxyHeader ( buffer )
-// 	const hostName = httpHead.host
-// 	const userAgent = httpHead.headers [ 'user-agent' ]
-
-
-// 	const connect = ( _, _data?: Buffer ) => {
-// 		const uuuu : VE_IPptpStream = {
-// 			uuid: Crypto.randomBytes (10).toString ('hex'),
-// 			host: hostName,
-// 			hostIPAddress: httpHead.hostIpAddress,
-// 			buffer: _data.toString ( 'base64' ),
-// 			cmd: httpHead.methods,
-// 			//ATYP: Rfc1928.ATYP.IP_V4,
-// 			port: httpHead.Port,
-// 			ssl: isSslFromBuffer ( _data )
-// 		}
-
-// 		const requestObj: requestObj = {
-// 			remotePort: clientSocket.remotePort,
-// 			remoteAddress: clientSocket.remoteAddress.split(':')[3],
-// 			targetHost: hostName,
-// 			targetPort: httpHead.Port,
-// 			methods: httpHead.methods,
-// 			uuid: uuuu.uuid
-// 		}
-
-// 		if (!_data || ! _data.length) {
-// 			console.log( colors.red(`httpProxy got unknow request stop proxy request `))
-// 			closeClientSocket(clientSocket)
-// 			return console.log( inspect( requestObj, false, 3, true ))
-// 		}
-
-// 		if ( _gatway && typeof _gatway.requestGetWay === 'function' ) {
-// 			return _gatway.requestGetWay ( requestObj, uuuu, userAgent, clientSocket )
-// 		}
-// 		console.log (colors.red(`httpProxy _gatway have no ready!`))
-// 		return closeClientSocket(clientSocket)
-// 	}
-
-// 	if ( httpHead.isConnect ) {
-// 		return getSslConnectFirstData ( clientSocket, buffer, true, connect )
-// 	}
-// 	return connect (null, buffer )
-	
-
-// }
 
 const getPac = ( hostIp: string, port: string, http: boolean, sock5: boolean ) => {
 
@@ -148,7 +89,7 @@ const udpPackageCmd = async (currentProfile: profile, nodes: nodes_info[], SaaSn
 	if (!currentProfile?.pgpKey|| !SaaSnode?.armoredPublicKey || !nodes.length ) {
 		return null
 	}
-	const key = Buffer.from(crypto.getRandomValues(new Uint8Array(16))).toString('base64')
+	const key = Buffer.from(getRandomValues(new Uint8Array(16))).toString('base64')
 	const command: SICommandObj = {
 		command: 'SaaS_Sock5_Data_Entry',
 		publicKeyArmored: currentProfile.pgpKey.publicKeyArmor,
@@ -173,7 +114,7 @@ const createSock5ConnectCmd = async (currentProfile: profile, entryNode: nodes_i
 	if (!currentProfile?.pgpKey|| !SaaSnode?.armoredPublicKey || !entryNode ) {
 		return null
 	}
-	const key = Buffer.from(crypto.getRandomValues(new Uint8Array(16))).toString('base64')
+	const key = Buffer.from(getRandomValues(new Uint8Array(16))).toString('base64')
 	const command: SICommandObj = {
 		command: 'SaaS_Sock5',
 		publicKeyArmored: currentProfile.pgpKey.publicKeyArmor,
@@ -242,46 +183,6 @@ const ConnectToProxyNode = (cmd : SICommandObj, SaaSnode: nodes_info, nodes: nod
 	})
 
 	remoteSocket.write(data)
-
-}
-
-const sendUDPMessage = async (SaaS_node: nodes_info, nodes: nodes_info[], currentProfile: profile, uuuu: VE_IPptpStream) => {
-	// const upChannel_SaaS_node = getRandomNode(this.nodes)
-	// const upChannelEntry_node = getRandomNode(this.nodes)
-
-	if (!SaaS_node?.ip_addr ) {
-		return logger (Colors.red(`proxyServer makeUpChannel upChannel_SaaS_node or upChannelEntry_node Null Error!`))
-	}
-
-	const cmd = await udpPackageCmd (currentProfile, nodes, SaaS_node, [uuuu])
-	if (!cmd) {
-		return logger (Colors.red(`proxyServer makeUpChannel createEntryChannel return Null Error!`))
-	}
-
-	const _sendData =cmd.requestData[0]
-
-	const udpPort = 41234
-	
-	const tryConnect = () => {
-		const udpClient = dgram.createSocket('udp4')
-		const id = Colors.green(`Connect to [`)+Colors.red(`${uuuu.host}:${uuuu.port}`)+Colors.green(`]`)
-
-		udpClient.connect(udpPort,
-			'108.175.5.112',
-			//getRandomNode(nodes, SaaS_node).ip_addr,
-			() => {
-			udpClient.send(_sendData, err => {
-				udpClient.close()
-				logger (Colors.blue(`sendUDPMessage [${ uuuu.uuid }] [${id}] chunk length [${_sendData.length}] ==`))
-				if (err) {
-					logger (Colors.red(`udpClient send got Error! `))
-				}
-				// logger (Colors.blue(`udpClient send SUCCESS! length = [${_sendData.length}]`))
-				// logger (JSON.stringify(_sendData))
-			})
-		})
-	}
-	tryConnect()
 
 }
 
@@ -424,42 +325,6 @@ export class proxyServer {
 		// logger(Colors.blue(`VE_IPptpStream = [${inspect(uuuu, false, 3, true)}]`))
 		ConnectToProxyNode (cmd, upChannel_SaaS_node, this.nodes, socket, this.currentProfile, uuuu)
 	}
-	
-
-	// private getGlobalIp = ( gateWay: gateWay ) => {
-	// 	if ( this.getGlobalIpRunning ) {
-	// 		return console.log (`getGlobalIp getGlobalIpRunning === true!, skip!`)
-	// 	}
-			
-	// 	this.getGlobalIpRunning = true
-	// 	logger ( `doing getGlobalIp!`)
-	// 	return gateWay.hostLookup ( testGatewayDomainName, null, ( err, data ) => {
-	// 		this.getGlobalIpRunning = false
-	// 		if ( err ) {
-	// 			return logger ( 'getGlobalIp ERROR:', err.message )
-	// 		}
-				
-	// 		//console.log ( Util.inspect ( data ))
-			
-	// 		this.hostLocalIpv6 ? console.log ( `LocalIpv6[ ${ this.hostLocalIpv6 } ]`) : null
-
-	// 		this.hostLocalIpv4.forEach ( n => {
-	// 			return console.log ( `LocalIpv4[ ${ n.address }]`)
-	// 		})
-
-	// 		this.hostGlobalIpV6 ? console.log ( `GlobalIpv6[ ${ this.hostGlobalIpV6 } ]`) : null
-			
-	// 		this.hostGlobalIpV4 ? console.log ( `GlobalIpv4[ ${ this.hostGlobalIpV4 } ]`) : null
-
-	// 		const domain = data
-	// 		if ( ! domain ) {
-	// 			return console.log ( `[] Gateway connect Error!` )
-	// 		}
-	// 		this.network = true
-	// 		console.log ( '*************** Gateway connect ready *************************' )
-
-	// 	})
-	// }
     
 	constructor ( 
 		

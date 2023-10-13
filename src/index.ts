@@ -1,5 +1,5 @@
 #!/usr/local/bin
-import LocalServer from './localServer/localServer';
+import LocalServer from './localServer/localServer'
 const yargs = require('yargs')
 const argv = yargs(process.argv.slice(2))
     .usage('Usage: yarn run seguro-gateway --port [number] --path [string]')
@@ -26,7 +26,7 @@ const argv = yargs(process.argv.slice(2))
         }
         return true;
     })
-    .argv;
+    .argv
 
 let PORT = 3001
 let PATH = ''

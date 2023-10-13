@@ -1,6 +1,6 @@
 {
-    "name": "@conet.project/seguro-gateway",
-    "version": "0.18.6",
+    "name": "@conet.project/conet-gateway",
+    "version": "0.0.6",
     "license": "UNLICENSED",
     "files": [
         "./build"
@@ -10,8 +10,7 @@
     "scripts": {
         "lint": "echo 'no linter available'",
         "test": "echo 'no linter available'",
-        "buildAndy": "tsc --project ./tsconfig.build.json && cp -r node_modules/@conet-project/seguro-platform/build ./build/launcher ",
-        "build": "tsc --project ./tsconfig.build.json && cp src/localServer/workers/utilities/*.js src/localServer/workers/utilities/*.map build/localServer/workers/utilities/",
+        "build": "tsc --project ./tsconfig.build.json && cp src/favicon.ico build/localServer/workers/ && cp src/localServer/workers/utilities/*.js src/localServer/workers/utilities/*.map build/localServer/workers/utilities/",
         "clean": "rm -rf ./node_modules ./build",
         "local": "node build/localServer/index",
         "build:docker": "docker buildx create --name conet-platform --use --bootstrap && docker buildx build --push --platform linux/amd64,linux/arm64 --tag conetnetwork/conet:platform ."
@@ -31,7 +30,7 @@
         "@types/express": "^4.17.18",
         "@types/fs-extra": "^11.0.2",
         "@types/jest": "^29.5.5",
-        "@types/node": "^20.7.1",
+        "@types/node": "^20.8.4",
         "@types/pouchdb": "^6.4.0",
         "@types/uuid": "^9.0.4",
         "@typescript-eslint/eslint-plugin": "^6.7.3",
@@ -49,9 +48,13 @@
         "ts-jest": "^29.1.1",
         "ts-node": "^10.9.1",
         "typescript": "^5.2.2",
-        "web3": "^4.1.2"
+        "web3": "^4.1.2",
+        "electron": "^27.0.0",
+        "electron-winstaller": "^5.1.0",
+        "electron-windows-installer":"^1.7.8",
+        "gulp": "^4.0.2"
     },
     "bin": {
-        "seguro-gateway": "./build/index.js"
+        "conet-platform": "./build/index.js"
     }
 }
