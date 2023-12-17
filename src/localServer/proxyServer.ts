@@ -4,26 +4,50 @@ import {getRandomValues} from 'node:crypto'
 import { Transform, pipeline, Writable} from 'node:stream'
 import { inspect } from 'node:util'
 import * as Socks from './socks'
+import { request as requestHttps } from 'node:https'
 import HttpProxyHeader from './httpProxy'
 import {request as requestHttp} from 'node:http'
 import {logger, hexDebug} from './logger'
 import * as res from './res'
 import type {RequestOptions} from 'node:https'
 import * as openpgp from 'openpgp'
-const getRandomNode = (activeNodes: nodes_info[], saasNode: nodes_info|null) => {
+import { TransformCallback } from 'stream'
 
-	
-	// return getNodeByIpaddress ('108.175.5.112', activeNodes)
-	const ramdom = Math.round((activeNodes.length - 1 ) * Math.random())
-	
-	logger (Colors.grey(`getRandomNode ramdom[${ramdom}]`))
-	const ret = activeNodes[ramdom]
-	if (saasNode && ret.ip_addr === saasNode.ip_addr) {
-		return getRandomNode (activeNodes, saasNode)
+
+
+const getRandomSaaSNode = (saasNodes: nodes_info[], allNodes: nodes_info[]) => {
+	if (!saasNodes.length || !allNodes.length) {
+		return null
 	}
+	logger (`getRandomSaaSNode saasNodes length [${saasNodes.length}] allNodes length [${allNodes}]`)
+	const ramdom = Math.round((saasNodes.length - 1 ) * Math.random())
+	const _ret = saasNodes[ramdom]
+	const index = allNodes.findIndex(n => n.ip_addr === _ret.ip_addr)
+
+	if (index === -1 ) {
+		saasNodes = saasNodes.filter(n => n.ip_addr !== _ret.ip_addr)
+		if (saasNodes.length < 1)  {
+			return null
+		}
+		return getRandomSaaSNode (saasNodes, allNodes)
+	}
+	return allNodes[index]
+}
+
+const getRandomNode = (activeNodes: nodes_info[], saasNode: nodes_info) => {
+
+	const nodes = activeNodes.filter(n => n.ip_addr!== saasNode.ip_addr)
+	// return getNodeByIpaddress ('108.175.5.112', activeNodes)
+	const ramdom = Math.round((nodes.length - 1 ) * Math.random())
+	
+	
+	const ret = nodes[ramdom]
+	logger (Colors.grey(`getRandomNode nodes.length= [${nodes.length}] ramdom = [${ramdom}]`))
+	logger (Colors.grey(`getRandomNode ${ret.ip_addr} saasNode ${saasNode?.ip_addr}`))
 	return ret
 }
 const CoNET_SI_Network_Domain = 'openpgp.online'
+const conet_DL_getSINodes = `https://${ CoNET_SI_Network_Domain }:4001/api/conet-si-list`
 
 const getPac = ( hostIp: string, port: string, http: boolean, sock5: boolean ) => {
 
@@ -33,7 +57,9 @@ const getPac = ( hostIp: string, port: string, http: boolean, sock5: boolean ) =
 		isInNet( dnsResolve( host ), "172.16.0.0", "255.240.255.0") ||
 		isInNet( dnsResolve( host ), "127.0.0.0", "255.255.255.0") ||
 		isInNet ( dnsResolve( host ), "192.168.0.0", "255.255.0.0" ) ||
-		isInNet ( dnsResolve( host ), "10.0.0.0", "255.0.0.0" )) {
+		isInNet ( dnsResolve( host ), "10.0.0.0", "255.0.0.0" ) ||
+		dnsDomainIs( host, "conet.network") || dnsDomainIs( host, "openpgp.online")
+		) {
 			return "DIRECT";
 		}
 		return "${ http ? 'PROXY': ( sock5 ? 'SOCKS5' : 'SOCKS' ) } ${ hostIp }:${ port }";
@@ -148,6 +174,61 @@ const otherRequestForNet = ( data: string, host: string, port: number, UserAgent
 			data + '\r\n\r\n'
 }
 
+type ITypeTransferCount = {
+	hostInfo: string
+	upload: number
+	download: number
+	startTime: number
+	endTime: number
+	nodeIpaddress: string
+	ssl: boolean
+}
+
+class transferCount extends Transform {
+	constructor(private upload: boolean, private info: ITypeTransferCount) {
+		super()
+	}
+	_transform(chunk: Buffer, encoding: BufferEncoding, callback: TransformCallback): void {
+		if (this.upload) {
+			this.info.upload += chunk.length
+		} else {
+			this.info.download += chunk.length
+		}
+		callback(null, chunk)
+	}
+}
+
+
+const sendTransferDataToLocalHost = (infoData: ITypeTransferCount) => {
+	return new Promise(resolve => {
+		const option: RequestOptions = {
+			host: 'localhost',
+			method: 'POST',
+			port: '3001',
+			path: '/proxyusage',
+			headers: {
+				'Content-Type': 'application/json;charset=UTF-8',
+				'Connection': 'close',
+			}
+		}
+		const req = requestHttp(option, res => {
+			if (res.statusCode !==200) {
+				return logger (Colors.red(`sendTransferDataToLocalHost res.statusCode [${res.statusCode}] !== 200 ERROR`))
+			}
+			logger (Colors.blue(`sendTransferDataToLocalHost SUCCESS`))
+			res.destroy()
+			resolve(null)
+		})
+	
+		req.on('error', err => {
+			logger (Colors.red(`sendTransferDataToLocalHost on Error!`), err)
+		})
+	
+		req.end(JSON.stringify({data:infoData}))
+	})
+
+}
+
 const ConnectToProxyNode = (cmd : SICommandObj, SaaSnode: nodes_info, nodes: nodes_info[], socket: Net.Socket, currentProfile: profile, uuuu: VE_IPptpStream) => {
 	const Url = new URL (cmd.requestData[1])
 	const entryNode = getRandomNode(nodes, SaaSnode)
@@ -157,24 +238,40 @@ const ConnectToProxyNode = (cmd : SICommandObj, SaaSnode: nodes_info, nodes: nod
 	const connectID = Colors.gray('Connect to [') + Colors.green(`${uuuu.host}:${uuuu.port}`)+Colors.gray(']')
 
 	const data = otherRequestForNet(JSON.stringify({data: cmd.requestData[0]}), entryNode.ip_addr, 80, 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/117.0.0.0 Safari/537.36')
+	const infoData: ITypeTransferCount = {
+		hostInfo: `${uuuu.host}:${uuuu.port}`,
+		ssl: uuuu.ssl,
+		startTime: new Date().getTime(),
+		download: 0,
+		upload: 0,
+		nodeIpaddress: SaaSnode.ip_addr,
+		endTime: 0
+	}
 
+	const upload = new transferCount (true, infoData)
+	const download = new transferCount (false, infoData)
 	const remoteSocket = Net.createConnection(80, entryNode.ip_addr, () => {
 		//	remoteSocket.setNoDelay(true)
+		
 		logger(Colors.blue(`ConnectToProxyNode connect to ${connectID}`))
-		remoteSocket.pipe(socket).pipe(remoteSocket)
+		remoteSocket.pipe(download).pipe(socket).pipe(upload).pipe(remoteSocket)
+
 	})
 
 	remoteSocket.on('error', err => {
 		logger (Colors.red(`ConnectToProxyNode remote [${entryNode}:${80}] on Error ${err.message} `))
 	})
 
-	remoteSocket.once('close', () => {
+	remoteSocket.once('close', async () => {
 		logger (Colors.magenta(`ConnectToProxyNode remote [${entryNode}:${80}] on Close `))
+		await sendTransferDataToLocalHost(infoData)
 	})
 
 	socket.once ('close', () => {
 		logger(Colors.magenta(`Proxy client on Close! STOP connecting`))
 		remoteSocket.end().destroy()
+		infoData.endTime=new Date().getTime()
+		
 	})
 
 	socket.once ('error', err => {
@@ -209,6 +306,7 @@ const postUDPMessage = async (SaaS_node: nodes_info, nodes: nodes_info[], curren
 			'Connection': 'close',
 		}
 	}
+
 	const req = requestHttp(option, res => {
 		if (res.statusCode !==200) {
 			return logger (Colors.red(`postUDPMessage [${ uuuu.uuid }] [${id}]  STEP [${uuuu.order }] chunk length [${_sendData.length}] res.statusCode [${res.statusCode}] !== 200 ERROR`))
@@ -222,6 +320,55 @@ const postUDPMessage = async (SaaS_node: nodes_info, nodes: nodes_info[], curren
 		logger (Colors.red(`postUDPMessage [${ uuuu.uuid }] [${id}] STEP [${uuuu.order }] chunk length [${_sendData.length}] host on Error!`), err)
 	})
 	req.end(JSON.stringify({data:_sendData}))
+}
+
+const getJSON_DataFromUrl= (_url: string) => {
+	const url = new URL(_url)
+	const option: RequestOptions = {
+		hostname: url.hostname,
+		method: 'POST',
+		port: url.port,
+		path: url.pathname,
+		protocol: url.protocol,
+		headers: {
+			'Content-Type': 'application/json;charset=UTF-8',
+			'Connection': 'close',
+		}
+	}
+	
+	return new Promise(( resolve)  => {
+		const req = requestHttps(option, res => {
+			if (res.statusCode!== 200) {
+				resolve (null)
+				return logger (Colors.red(`getJSON_DataFromPOST res got response [${res.statusCode}] !== 200 `))
+			}
+
+			let data=''
+			res.on('data', _data => {
+				data += _data.toString()
+			})
+
+			res.once ('end', () => {
+				let ret
+				try{
+					ret = JSON.parse(data)
+				} catch (ex) {
+					logger (Colors.red(`getJSON_DataFromPOST JSON.parse(data) ERROR`), data)
+					return resolve(null)
+				}
+				return resolve(ret)
+			})
+			
+		})
+
+		req.on('error', err => {
+			logger (Colors.red(`getJSON_DataFromPOST server on Error _url=[${_url}] `), inspect(option, false, 2, true), err)
+		})
+		req.end()
+	})
+
+	
+	
 }
 
 export class proxyServer {
@@ -239,12 +386,17 @@ export class proxyServer {
 	public checkAgainTimeOut = 1000 * 60 * 5
 	public connectHostTimeOut = 1000 * 5
 	public useGatWay = true
+	public nodes
 	public clientSockets: Set<Net.Socket> = new Set()
-	public currentProfile: profile
 
-	private startLocalProxy () {
+	private startLocalProxy = async () => {
+
+		this.nodes = await getJSON_DataFromUrl(conet_DL_getSINodes)
+		if (!this._nodes|| !this._nodes.length) {
+			logger (Colors.red(`startLocalProxy Error! Have no SI nodes Infomation!`))
+		}
+		logger(inspect(this._nodes))
 		let socks
-		
 		this.server = Net.createServer ( socket => {
 			const ip = socket.remoteAddress
 			this.clientSockets.add (socket)
@@ -303,14 +455,12 @@ export class proxyServer {
 		this.server.maxConnections = 65536
 
 		this.server.listen ( this.proxyPort, () => {
-			return logger ( Colors.blue(`Proxy SERVER success on port : [${ this.proxyPort }]`))
+			return logger ( Colors.blue(`Proxy SERVER success on port : [${ this.proxyPort }] active nodes =[${this.nodes.length}] Saas nodes = [${this.currentProfile.network.recipients.length}]`))
 		})
 	}
 
-
-
 	public requestGetWay = async (requestObj: requestObj, uuuu : VE_IPptpStream, userAgent:string, socket: Net.Socket ) => {
-		const upChannel_SaaS_node  = getRandomNode(this.nodes, null)	//getNodeByIpaddress('74.208.55.241', this.nodes)
+		const upChannel_SaaS_node  = getRandomSaaSNode(this.currentProfile.network.recipients, this.nodes)	//getNodeByIpaddress('74.208.55.241', this.nodes)
 		
 		if (!upChannel_SaaS_node ) {
 			return logger (Colors.red(`proxyServer makeUpChannel upChannel_SaaS_node Null Error!`))
@@ -321,29 +471,19 @@ export class proxyServer {
 			return logger (Colors.red(`requestGetWay createSock5Connect return Null Error!`))
 		}
 
-		// logger (inspect(requestObj, false, 3, true))
-		// logger(Colors.blue(`VE_IPptpStream = [${inspect(uuuu, false, 3, true)}]`))
 		ConnectToProxyNode (cmd, upChannel_SaaS_node, this.nodes, socket, this.currentProfile, uuuu)
 	}
     
-	constructor ( 
+	constructor (
 		
 		public proxyPort: string,						//			Proxy server listening port number
-		private nodes: nodes_info[],	 				//			gateway nodes information
-		private profile: profile[],
-		public debug = false ) 
+		private _nodes: nodes_info[],	 				//			gateway nodes information
+		private currentProfile: profile,
+		public debug = false )
 		
 		{
-			const index = this.profile.findIndex (n => n.isPrimary)
-			if ( index > -1 ) {
-				this.currentProfile = this.profile[index]
-				this.startLocalProxy()
-			} else {
-				logger (Colors.red(`Local Proxy have no profile ERROR!`))
-			}
-
-			logger (Colors.red(`proxyServer start [${nodes.length }] nodes`))
-	}
-
+			logger(inspect(this.currentProfile.network.recipients, false, 1, true))
+			this.startLocalProxy()
+		}
 }
 

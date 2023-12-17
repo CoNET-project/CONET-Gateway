@@ -1,0 +1,1 @@
+export declare const launchSeguroGateway:(port: number, path: string) => void

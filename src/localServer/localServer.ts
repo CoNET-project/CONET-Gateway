@@ -8,9 +8,15 @@ import { inspect } from 'node:util'
 import { v4 } from 'uuid'
 import {proxyServer} from './proxyServer'
 import {logger} from './logger'
+import Ip from "ip"
+
+
+
+const ver = '0.0.12'
+
 
 const CoNET_SI_Network_Domain = 'openpgp.online'
-const conet_DL_getSINodes = `https://${ CoNET_SI_Network_Domain }/api/conet-si-list`
+const conet_DL_getSINodes = `https://${ CoNET_SI_Network_Domain }:4001/api/conet-si-list`
 
 const postToEndpointJSON = ( url: string, jsonData: string ) => {
 	return new Promise ((resolve, reject) => {
@@ -18,11 +24,12 @@ const postToEndpointJSON = ( url: string, jsonData: string ) => {
         const Url = new URL(url)
 
         const option: RequestOptions = {
-            port: 443,
+            port: Url.port,
             hostname: Url.hostname,
             host: Url.host,
             path: Url.pathname,
             method: 'POST',
+			protocol: Url.protocol,
             headers: {
                 'Content-Type': 'application/json',
                 'Content-Length': jsonData.length
@@ -69,7 +76,7 @@ const postToEndpointJSON = ( url: string, jsonData: string ) => {
 	
 }
 
-export const splitIpAddr = (ipaddress: string ) => {
+export const splitIpAddr = (ipaddress: string | undefined) => {
 	if (!ipaddress?.length) {
 		logger (Colors.red(`splitIpAddr ipaddress have no ipaddress?.length`), inspect( ipaddress, false, 3, true ))
 		return ''
@@ -157,13 +164,19 @@ export const return404 = () => {
 
 
 class LocalServer {
-    private nodes: nodes_info[] = []
+    private logsPool: proxyLogs[] = []
+
+    private loginListening: express.Response|null = null
     private localserver: Server
     private connect_peer_pool: any [] = []
-	private appsPath: string = join ( __dirname ) 
+	private appsPath: string = join ( __dirname )
+    private worker_command_waiting_pool: Map<string, express.Response> = new Map()
+    
+
     constructor ( private PORT = 3000, private reactBuildFolder: string ) {
         this.initialize()
     }
+
     public _proxyServer: proxyServer|null = null
 
     public end () {
@@ -183,7 +196,6 @@ class LocalServer {
 
     private initialize = () => {
         const staticFolder = join ( this.appsPath, 'workers' )
-		const staticFolder1 = join ( this.appsPath, '../../../seguro-platform/build' )
         //const launcherFolder = join ( this.appsPath, '../launcher' )
 		//console.dir ({ staticFolder: staticFolder, launcherFolder: launcherFolder })
 
@@ -193,7 +205,6 @@ class LocalServer {
         app.use( cors ())
 		app.use ( express.static ( staticFolder ))
         //app.use ( express.static ( launcherFolder ))
-		app.use ( express.static ( staticFolder1 ))
         app.use ( express.json() )
 
         app.once ( 'error', ( err: any ) => {
@@ -320,10 +331,7 @@ class LocalServer {
             
         // })
 
-        app.get ('./sw.js', ( req, res ) => {
-            logger (`./sw.js`)
-
-        })
+        
         app.post ( '/postMessage', ( req: express.Request, res: express.Response ) => {
             const post_data: postData = req.body
             console.log ( inspect ( post_data, false, 3, true ))
@@ -333,29 +341,204 @@ class LocalServer {
         })
 
         app.post ( '/conet-profile', ( req: express.Request, res: express.Response ) => {
-            const data: { profiles, activeNodes } = req.body
+            const data: { profile, activeNodes } = req.body
             
             //logger (Colors.blue(`Local server get POST /profile req.body = `), inspect(data, false, 3, true))
-            if (data.activeNodes && data.profiles ) {
+            if (data.activeNodes.length > 0 && data.profile ) {
+                
                 if (!this._proxyServer) {
-                    this._proxyServer = new proxyServer((this.PORT + 2).toString(), data.activeNodes, data.profiles, true)
+					logger (`Start new proxyServer data.profile [${data.profile}] data.activeNodes [${data.activeNodes}]`)
+                    this._proxyServer = new proxyServer((this.PORT + 2).toString(), data.activeNodes, data.profile, true)
                 }
-                res.sendStatus(200) 
+                res.sendStatus(200)
             } else {
+                logger (`/conet-profile Error data.activeNodes [${data.activeNodes.length}] data.activeNodes.length > 0[${data.activeNodes.length > 0}]`, inspect(data.profile, false, 3, true))
                 res.sendStatus(404)
             }
-            return res.end ()
+            return res.end()
         })
 
-        app.post('/newNotice', ( req: express.Request, res: express.Response ) => {
-            const url: string = req.body
-            return request (url, _res => {
-                return _res.pipe ( res )
+		app.get('/ipaddress', (req, res) => {
+			return res.json ({ip:Ip.address()}).end()
+		})
+
+        app.post ('/proxyusage', (req, res) => {
+            res.json().end()
+            logger (inspect(req.body.data, false, 3, true))
+            this.logsPool.unshift(req.body.data)
+        })
+
+        app.post('/getProxyusage', (req, res) => {
+
+            if (!this._proxyServer) {
+                return res.sendStatus(404).end()
+            }
+            const headerName=Colors.blue (`/getProxyusage`)
+            logger(headerName,  inspect(req.body.data, false, 3, true))
+            let roop:  NodeJS.Timeout
+            res.setHeader('Cache-Control', 'no-cache')
+            res.setHeader('Content-Type', 'text/event-stream')
+            res.setHeader('Access-Control-Allow-Origin', '*')
+            res.setHeader('Connection', 'keep-alive')
+            res.flushHeaders() // flush the headers to establish SSE with client
+
+            let interValID = () => {
+
+                if (res.closed) {
+                    return logger ('')
+                }
+                if (this.logsPool.length <1) {
+
+                    this.logsPool.push(
+                        //@ts-ignore
+                        {data:`/getProxyusage ${req.body.data}`}
+                    )
+                }
+                
+                res.write(`${JSON.stringify({data: this.logsPool})}\r\n\r\n`, () => {
+                    this.logsPool = []
+                    return roop = setTimeout(() => {
+                        interValID()
+                    }, 10000)
+                })
+            }
+
+            res.on('close', () => {
+                console.log(`[${headerName}] client dropped me!`)
+                res.end()
+                clearTimeout(roop)
             })
+            interValID()
+            
+        })
+
+        app.post('/connecting', (req, res) => {
+
+            const headerName=Colors.blue (`Local Server /connecting remoteAddress = ${req.socket?.remoteAddress}`)
+            logger(headerName,  inspect(req.body.data, false, 3, true))
+            let roop:  NodeJS.Timeout
+            if (this.loginListening) {
+                logger (`${headerName} Double connecting. drop connecting!`)
+                return res.sendStatus(403).end()
+                
+            }
+            this.loginListening = res
+            res.setHeader('Cache-Control', 'no-cache')
+            res.setHeader('Content-Type', 'text/event-stream')
+            res.setHeader('Access-Control-Allow-Origin', '*')
+            res.setHeader('Connection', 'keep-alive')
+            res.flushHeaders() // flush the headers to establish SSE with client
+
+            const interValID = () => {
+
+                if (res.closed) {
+                    this.loginListening = null
+                    return logger (` ${headerName} lost connect! `)
+                }
+                
+                res.write(`\r\n\r\n`, err => {
+                    if (err) {
+                        logger (`${headerName }res.write got Error STOP connecting`, err)
+                        res.end()
+                        this.loginListening = null
+                    }
+                    return roop = setTimeout(() => {
+                        interValID()
+                    }, 10000)
+                })
+            }
+
+            res.once('close', () => {
+                logger(`[${headerName}] Closed`)
+                res.end()
+                clearTimeout(roop)
+                this.loginListening = null
+            })
+
+            res.on('error', err => {
+                logger(`[${headerName}] on Error`, err)
+            })
+
+            return interValID()
+            
+        })
+
+        app.post('/connectingResponse', (req, res) =>{
+            const headerName = Colors.blue (`Local Server /connectingResponse remoteAddress = ${req.socket?.remoteAddress}`)
+            const data: worker_command = req.body.data
+            logger (`${headerName} connecting `, inspect(data))
+            if (!data.uuid) {
+                logger (`${headerName} has not UUID in worker_command! STOP connecting!`, inspect(data))
+                data.err = 'NO_UUID'
+                return res.sendStatus(403).json(data)
+            }
+
+            const _res = this.worker_command_waiting_pool.get (data.uuid)
+
+            if (!_res) {
+                logger (`${headerName} has not res STOP connecting!`, inspect(data))
+                data.err = 'NOT_READY'
+                return res.sendStatus(403).json(data)
+            }
+
+            this.worker_command_waiting_pool.delete(data.uuid)
+
+            if (_res.closed|| !_res.writable) {
+                logger (`${headerName} has not res STOP connecting!`, inspect(data))
+                data.err = 'NOT_READY'
+                return res.sendStatus(403).json(data)
+            }
+            res.json()
+
+            if (data.err) {
+                return _res.sendStatus(404).end()
+            }
+            _res.json(data)
+
+        })
+
+        app.get('/ver', (req, res) =>{
+			logger (`APP get ${req.url}`)
+            res.json({ver})
+        })
+
+        app.post('/loginRequest', (req, res) =>{
+            
+            const headerName=Colors.blue (`Local Server /loginRequest remoteAddress = ${req.socket?.remoteAddress}`)
+            const data = req.body.data
+            logger(headerName, inspect(data, false, 3, true))
+
+            if (this._proxyServer) {
+                logger (`${headerName} return proxy launched!`)
+                return res.sendStatus(200).end()
+            }
+
+            if (!this.loginListening || this.loginListening.closed) {
+                this.loginListening = null
+                logger (`${headerName} has not any loginListening to host Error! STOP connecting!`)
+                return  res.sendStatus (403).end()
+            }
+
+
+            if (!data) {
+                logger (`${headerName} has not any data! STOP connecting!`)
+                return  res.sendStatus (404).end()
+            }
+            const cmd: worker_command = {
+                cmd: 'encrypt_TestPasscode',
+                data: [data],
+                uuid: v4()
+            }
+
+            if (cmd.uuid) {
+                this.worker_command_waiting_pool.set (cmd.uuid, res)
+            }
+            
+            this.loginListening.write (JSON.stringify(cmd)+'\r\n\r\n')
         })
 
         app.all ('*', (req, res) => {
-			logger (Colors.red(`Local web server got unknow request URL Error! [${ splitIpAddr (req.ip) }] => ${ req.method }[http://${ req.headers.host }${ req.url }]`))
+			logger (Colors.red(`Local web server got unknow request URL Error! [${ splitIpAddr (req.ip) }] => ${ req.method } url =[${ req.url }]`))
 			return res.status(404).end (return404 ())
 		})
 
