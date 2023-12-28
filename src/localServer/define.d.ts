@@ -161,10 +161,10 @@ declare type WorkerCommand = 'READY'|'getRegiestNodes'|
 	'storePreferences'|'newProfile'|'storeProfile'|'urlProxy'|'saveDomain'|'getDomain'|'setRegion'|
 	'getFaucet'|'isAddress'|'syncAsset'|'sendAsset'|'getUSDCPrice'|'buyUSDC'|'getWorkerClientID'|
 	'mintCoNETCash'|'getSINodes'|'getRecipientCoNETCashAddress'|'getUserProfile'|
-	'sendMessage'|'incomeData'|'WORKER_MESSAGE'|'getCONETBalance'|'startProxy'|
-    'SaaSRegister'|'getContainer'|'ipaddress'|'startLiveness'|'stopLiveness'|'isLivenessRunning'
+	'sendMessage'|'incomeData'|'WORKER_MESSAGE'|'getCONETBalance'|'startProxy'|'registerReferrer'|
+    'SaaSRegister'|'getContainer'|'ipaddress'|'startLiveness'|'stopLiveness'|'isLivenessRunning'|
 	//		from service worker
-	'urlProxy'|'saveDomain'|'getDomain'|'getWorkerClientID'
+	'urlProxy'|'saveDomain'|'getDomain'|'getWorkerClientID'|'referrerList'|'getAllNodes'
 
 type SINodesSortby = 'CUSTOMER_REVIEW'|'TOTAL_ONLINE_TIME'|
 	'STORAGE_PRICE_LOW'|'STORAGE_PRICE_HIGH'|'OUTBOUND_PRICE_HIGH'|'OUTBOUND_PRICE_LOW'
@@ -223,7 +223,7 @@ interface profile extends keyPair {
 	network: {
 		recipients: nodes_info[]
 	}
-
+	referrer: string|null|undefined
 }
 
 interface publicProfile {

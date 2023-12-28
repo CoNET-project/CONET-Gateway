@@ -136,8 +136,9 @@ const udpPackageCmd = async (currentProfile: profile, nodes: nodes_info[], SaaSn
 	return (command)
 }
 
-const createSock5ConnectCmd = async (currentProfile: profile, entryNode: nodes_info|undefined, SaaSnode: nodes_info|undefined, requestData: any[]) => {
-	if (!currentProfile?.pgpKey|| !SaaSnode?.armoredPublicKey || !entryNode ) {
+const createSock5ConnectCmd = async (currentProfile: profile, SaaSnode: nodes_info|undefined, requestData: any[]) => {
+	if (!currentProfile?.pgpKey|| !SaaSnode?.armoredPublicKey ) {
+		logger (Colors.red(`currentProfile?.pgpKey[${currentProfile?.pgpKey}]|| !SaaSnode?.armoredPublicKey[${SaaSnode?.armoredPublicKey}] Error`))
 		return null
 	}
 	const key = Buffer.from(getRandomValues(new Uint8Array(16))).toString('base64')
@@ -157,9 +158,7 @@ const createSock5ConnectCmd = async (currentProfile: profile, entryNode: nodes_i
 	}
 
 	const encryptedCommand = await encrypt_Message( privateKeyObj, SaaSnode.armoredPublicKey, command)
-
-	const url = `https://${ entryNode.pgp_publickey_id }.${CoNET_SI_Network_Domain}/post`
-	command.requestData = [encryptedCommand, url, key]
+	command.requestData = [encryptedCommand, '', key]
 	return (command)
 }
 
@@ -230,8 +229,8 @@ const sendTransferDataToLocalHost = (infoData: ITypeTransferCount) => {
 }
 
 const ConnectToProxyNode = (cmd : SICommandObj, SaaSnode: nodes_info, nodes: nodes_info[], socket: Net.Socket, currentProfile: profile, uuuu: VE_IPptpStream) => {
-	const Url = new URL (cmd.requestData[1])
-	const entryNode = getRandomNode(nodes, SaaSnode)
+
+	const entryNode = getRandomNode(nodes, SaaSnode) //getNodeByIpaddress('18.183.80.90', nodes)//
 	if (!entryNode) {
 		return logger(Colors.red(`ConnectToProxyNode Error! getRandomNode return null nodes!`))
 	}
@@ -259,11 +258,11 @@ const ConnectToProxyNode = (cmd : SICommandObj, SaaSnode: nodes_info, nodes: nod
 	})
 
 	remoteSocket.on('error', err => {
-		logger (Colors.red(`ConnectToProxyNode remote [${entryNode}:${80}] on Error ${err.message} `))
+		logger (Colors.red(`ConnectToProxyNode remote [${entryNode.ip_addr}:${80}] on Error ${err.message} `))
 	})
 
 	remoteSocket.once('close', async () => {
-		logger (Colors.magenta(`ConnectToProxyNode remote [${entryNode}:${80}] on Close `))
+		logger (Colors.magenta(`ConnectToProxyNode remote [${entryNode.ip_addr}:${80}] on Close `))
 		await sendTransferDataToLocalHost(infoData)
 	})
 
@@ -465,8 +464,8 @@ export class proxyServer {
 		if (!upChannel_SaaS_node ) {
 			return logger (Colors.red(`proxyServer makeUpChannel upChannel_SaaS_node Null Error!`))
 		}
-
-		const cmd = await createSock5ConnectCmd (this.currentProfile, getRandomNode(this.nodes, upChannel_SaaS_node), upChannel_SaaS_node, [uuuu])
+		
+		const cmd = await createSock5ConnectCmd (this.currentProfile, upChannel_SaaS_node, [uuuu])
 		if (!cmd) {
 			return logger (Colors.red(`requestGetWay createSock5Connect return Null Error!`))
 		}

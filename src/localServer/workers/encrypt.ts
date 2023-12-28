@@ -27,6 +27,9 @@ const databaseName = 'CoNET'
 const channel = new BroadcastChannel('toMainWroker')
 let activeNodes: nodes_info[]|null= null
 let Liveness: XMLHttpRequest|null = null
+let LivenessCurrentData = ['','']
+const LivenessListen: worker_command[] = []
+
 const CoNETModule: CoNET_Module = {
 	EthCrypto: null,
 	Web3Providers:  null,
@@ -89,7 +92,7 @@ self.onhashchange = () => {
 
 const initEncryptWorker = async () => {
 	
-    const baseUrl = self.name + 'utilities/'
+    const baseUrl = self.name + '/utilities/'
     self.importScripts ( baseUrl + 'Buffer.js' )
     self.importScripts ( baseUrl + 'openpgp.min.js' )
     self.importScripts ( baseUrl + 'UuidV4.js' )
@@ -105,6 +108,7 @@ const initEncryptWorker = async () => {
     self.importScripts ( baseUrl + 'generatePassword.js' )
     self.importScripts ( baseUrl + 'storage.js' )
     self.importScripts ( baseUrl + 'seguroSetup.js' )
+	self.importScripts ( baseUrl + 'utilV2.js' )
     workerReady = true
 	
 	self.addEventListener ('message', encryptWorkerDoCommand)
@@ -131,22 +135,31 @@ const gettPrimaryProfile = () => {
 	return profiles
 }
 
-const getPrimaryBalance = async (cmd: worker_command) => {
+const getPrimaryCONETBalance = async (cmd?: worker_command) => {
 
 	const profile = gettPrimaryProfile()
-
+	
 	if (!profile||!profile.keyID) {
 		logger(`getPrimaryBalance`)
-		cmd.err = 'NOT_STRIPE'
-		return returnUUIDChannel (cmd)
+		if (cmd) {
+			cmd.err = 'NOT_STRIPE'
+			returnUUIDChannel (cmd)
+		}
+		return
 	}
+
 	const eth = new CoNETModule.Web3Eth ( new CoNETModule.Web3Eth.providers.HttpProvider(getRandomCoNETEndPoint()))
 	const uuu = await eth.eth.getBalance(profile.keyID)
-	const balance = parseInt(uuu)/denominator
+	const balance = (parseInt(uuu)/denominator).toString()
+	profile.tokens.conet.balance = balance
+	if (cmd) {
+		cmd.data = [profile.keyID, balance, profile.network.recipients]
+		returnUUIDChannel (cmd)
+	}
+	sendState('system', CoNET_Data)
+	sendState('conet', balance)
 
-	cmd.data = [profile.keyID, balance, profile.network.recipients]
-
-	returnUUIDChannel (cmd)
+	
 }
 
 const returnUUIDChannel = (cmd: worker_command) => {
@@ -374,11 +387,7 @@ const processCmd = async (cmd: worker_command) => {
 			}
 			cmd.data[0] = cmd.data[0].keyID
 			return getFaucet (cmd, () => {
-				if (cmd.err) {
-					return returnUUIDChannel (cmd)
-				}
-
-				return getPrimaryBalance (cmd)
+				returnUUIDChannel (cmd)
 			})
 		}
 
@@ -395,7 +404,7 @@ const processCmd = async (cmd: worker_command) => {
 		}
 
 		case 'getCONETBalance': {
-			return getPrimaryBalance (cmd)
+			return getPrimaryCONETBalance(cmd)
 		}
 
 		case 'encrypt_createPasscode': {
@@ -406,6 +415,7 @@ const processCmd = async (cmd: worker_command) => {
 
             delete cmd.err
 			const password = cmd.data[0]
+			const referrer = cmd.data[2]
             await createNumberPasscode (password)
 			await createPlatformFirstProfile ()
 			if (CoNET_Data) {
@@ -414,6 +424,7 @@ const processCmd = async (cmd: worker_command) => {
 				}
 			}
 			await storage_StoreContainerData ()
+			
 			const data: encrypt_keys_object = {
 				preferences: {
 					preferences: {
@@ -429,6 +440,7 @@ const processCmd = async (cmd: worker_command) => {
 			}
 		
 			cmd.data = [data]
+
 			returnUUIDChannel (cmd)
 		}
 
@@ -436,25 +448,44 @@ const processCmd = async (cmd: worker_command) => {
 
             if ( !cmd.data?.length || !passObj ) {
                 cmd.err = 'INVALID_DATA'
-                return responseLocalHost (cmd)
+                return returnUUIDChannel(cmd)
             }
-
+			
             passObj.password = cmd.data[0]
+			const referrer = cmd.data[1]
             await decodePasscode ()
+			let privatekey
             try {
-                await makeContainerPGPObj()
-                await decryptCoNET_Data_WithContainerKey ()
+                privatekey = await makeContainerPGPObj()
+               
             } catch (ex) {
                 logger (`encrypt_TestPasscode get password error!`)
                 cmd.err = 'FAILURE'
-                return responseLocalHost (cmd)
+                return returnUUIDChannel(cmd)
             }
+			if (CoNET_Data?.passcode?.status === 'UNLOCKED') {
+				if (privatekey.privateKeyObj.isDecrypted()) {
+					cmd.data = [CoNET_Data]
+            		return returnUUIDChannel(cmd)
+				}
+
+                cmd.err = 'FAILURE'
+                return returnUUIDChannel(cmd)
+			}
+			try{
+				await decryptCoNET_Data_WithContainerKey ()
+			} catch (ex){
+				cmd.err = 'FAILURE'
+                return returnUUIDChannel(cmd)
+			}
+			
             delete cmd.err
             if (!CoNET_Data) {
                 logger (`encrypt_TestPasscode Error: Empty CoNET_Data!`)
                 cmd.err = 'FAILURE'
-                return responseLocalHost (cmd)
+                return returnUUIDChannel(cmd)
             }
+
             CoNET_Data.passcode = {
                 status: 'UNLOCKED'
             }
@@ -462,9 +493,10 @@ const processCmd = async (cmd: worker_command) => {
             const profiles = CoNET_Data.profiles
             if ( profiles ) {
                 for ( let i = 0; i < profiles.length; i++ ) {
-                    const key = profiles[i].keyID
+					const profile = profiles[i]
+                    const key = profile.keyID
                     if (key) {
-						const current = profiles[i].tokens
+						const current = profile.tokens
                         current.conet.balance = await getCONETBalance (key)
 						if (!current?.cntp) {
 							current.cntp = {
@@ -472,6 +504,8 @@ const processCmd = async (cmd: worker_command) => {
 								history: []
 							}
 						}
+						
+						profile.referrer = await checkReferee(key)
 						current.cntp.balance = await getCNTPBalance (key)
                         // profiles[i].tokens.usdc.balance = await getUSDCBalance (key)
                     }	
@@ -480,17 +514,27 @@ const processCmd = async (cmd: worker_command) => {
             }
 
             cmd.data = [CoNET_Data]
-            responseLocalHost (cmd)
-
+            returnUUIDChannel(cmd)
+			if (referrer) {
+				registerReferrer(referrer)
+			}
             const profile = gettPrimaryProfile()
             if (activeNodes && activeNodes.length > 0) {
                 const url = `http://localhost:3001/conet-profile`
-                await postToEndpoint(url, true, { profile, activeNodes })
+                postToEndpoint(url, true, { profile, activeNodes })
+				.then(() => {
+					return getAllNodes()
+				})
+				.catch(ex => {
+					logger (`postToEndpoint Error!`, ex)
+					return getAllNodes()
+				})
                 // fetchProxyData(`http://localhost:3001/getProxyusage`, data=> {
                 //     logger (`fetchProxyData GOT DATA FROM locathost `, data)
                 // })
             }
-            return
+
+			return getAllNodes()
         }
 
         case 'SaaSRegister': {
@@ -538,21 +582,55 @@ const processCmd = async (cmd: worker_command) => {
 			return startLiveness(cmd)
 		}
 
+		case 'syncAsset': {
+			return syncAsset()
+		}
+
 		case 'stopLiveness': {
 			return stopLiveness(cmd)
 		}
 
-		case 'isLivenessRunning': {
-			cmd.data['false']
-			if (Liveness) {
-				cmd.data['true']
+		case 'registerReferrer': {
+			const referrer = cmd.data[0]
+			if (!referrer) {
+				cmd.err='FAILURE'
+				returnUUIDChannel(cmd)
+			}
+			const isAddr = CoNETModule.Web3Eth.utils.isAddress(referrer)
+
+			if (!isAddr) {
+				cmd.err='FAILURE'
+				return returnUUIDChannel(cmd)
+			}
+			const result = await registerReferrer(referrer)
+			if (result === false)  {
+				cmd.err='FAILURE'
+				return returnUUIDChannel(cmd)
 			}
 			return returnUUIDChannel(cmd)
 		}
+
+		case 'referrerList': {
+			return referrerList(cmd)
+		}
+
+		case 'isLivenessRunning': {
+			cmd.data = []
+			if (Liveness) {
+				cmd.data = LivenessCurrentData
+				LivenessListen.push(cmd)
+			}
+			return returnUUIDChannel(cmd)
+		}
+
+		case 'getAllNodes': {
+			cmd.data = [{balance:CNTP_Balance, nodes:allNodes}]
+			return returnUUIDChannel(cmd)
+		}
+
 		default: {
 			cmd.err = 'INVALID_COMMAND'
 			responseChannel.postMessage(JSON.stringify(cmd))
-			
 			return console.log (`channelWorkerDoCommand unknow command!`, cmd)
 		}
 	}
@@ -696,34 +774,46 @@ const getContainer = async (cmd: worker_command) => {
 
 const LivenessURL1 = 'https://api.openpgp.online:4001/api/livenessListening'
 
-
 const startLiveness = async (cmd: worker_command) => {
 	const profile = gettPrimaryProfile()
 	if (!profile) {
 		cmd.err = 'NOT_READY'
 		return returnUUIDChannel (cmd)
 	}
-
-	const message =JSON.stringify({ walletAddress: profile.keyID })
+	const referrals = cmd.data[0]
+	const message =JSON.stringify({ walletAddress: profile.keyID, referrals })
 	const messageHash = CoNETModule.EthCrypto.hash.keccak256(message)
 	const signMessage = CoNETModule.EthCrypto.sign( profile.privateKeyArmor, messageHash )
 	const data = {
 		message, signMessage
 	}
+	logger (JSON.stringify(data))
 
 	const last = parseFloat(profile.tokens.cntp.balance)
 	Liveness = postToEndpointSSE(LivenessURL1, true, JSON.stringify(data), async (err, _data) => {
 		if (err) {
 			cmd.err = 'FAILURE'
-			cmd.data=[err]
+			cmd.data=['FAILURE']
 			return returnUUIDChannel ( cmd )
 		}
-		logger (_data)
+		
 		if (profile.keyID) {
 			const balance = await getCNTPBalance(profile.keyID)
 			const _balance = (parseFloat(balance) - last).toFixed(4)
-			cmd.data = [balance, _balance]
-			return returnUUIDChannel(cmd)
+			
+			LivenessCurrentData = cmd.data = [balance, _balance]
+			returnUUIDChannel(cmd)
+			if (LivenessListen.length ) {
+				logger (`LivenessListen length = [${LivenessListen.length}]`)
+				
+				LivenessListen.forEach((n, index) => {
+					if (index < LivenessListen.length - 2) {
+						return
+					}
+					n.data = [balance, _balance]
+					returnUUIDChannel(n)
+				})
+			}
 		}
 		
 	})
@@ -733,7 +823,6 @@ const stopLiveness = async (cmd: worker_command) => {
 	
 	if (Liveness && typeof Liveness.abort === 'function') {
 		Liveness.abort()
-
 	}
 	Liveness = null
 	return returnUUIDChannel(cmd)

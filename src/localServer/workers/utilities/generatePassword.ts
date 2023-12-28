@@ -109,8 +109,9 @@ const decodePasscode = async () => {
 	if ( !passObj?.salt ) {
 		throw new Error (`decodePasscode Error: passObj null`)
 	}
+	
 	passObj._passcode = getPasscode(passObj.password, passObj.charSet)
-	const _passwd1 = buffer.Buffer.from (passObj._passcode)
+	const _passwd1 = buffer.Buffer.from (passObj._passcode||passObj.password)
     //password, salt, N, r, p, dkLen, callback
 	passObj.salt = buffer.Buffer.from (passObj.salt)
 

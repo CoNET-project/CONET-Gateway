@@ -12,7 +12,7 @@ import Ip from "ip"
 
 
 
-const ver = '0.0.12'
+const ver = '0.0.13'
 
 
 const CoNET_SI_Network_Domain = 'openpgp.online'
