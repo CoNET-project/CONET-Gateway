@@ -98,7 +98,6 @@ const getReferees = async () => {
 	return result
 }
 
-type listenState = 'referrer'|'system'|'conet'|'cntp'|'cntp-balance'
 
 const sendState = (state: listenState, value: any) => {
 	const sendChannel = new BroadcastChannel(state)
@@ -136,21 +135,14 @@ const referrerList = async (cmd: worker_command) => {
 	returnUUIDChannel(cmd)
 }
 
-interface nodeType {
-	ip_addr: string
-	minerAddr: string
-	running: boolean
-	wallet_addr: string
-	balance: string
-}
 
 const adminCNTP= '0x44d1FCCce6BAF388617ee972A6FB898b6b5629B1'
 const referrerCNTP= '0x63377154F972f6FC1319e382535EC9691754bd18'
-let nodes: nodeType[] = []
-let nodesGetBalance = []
-const getAllNodes = () => {
 
-	fetch('https://openpgp.online:4001/api/conet-nodes', {
+let nodesGetBalance = []
+const getAllNodesInfo = () => new Promise(resolve=> {
+
+	return fetch('https://openpgp.online:4001/api/conet-nodes', {
 		method: 'GET',
 		headers: {
 			'Content-Type': 'application/json;charset=UTF-8',
@@ -159,37 +151,149 @@ const getAllNodes = () => {
 		cache: 'no-store',
 		referrerPolicy: 'no-referrer'
 	})
-	.then ( async res => res.json())
-	.then( (data: nodeType[]) => {
-		console.log (data)
-		nodes = data
-		
-		checkBalance()
+	.then ( async res => {
+		return res.json()
+	}).then((data: node) => {
+		allNodes = data
+		resolve(data)
+	}).catch(ex=> {
+		resolve(null)
 	})
-}
-let allNodes: nodeType[]
-let CNTP_Balance = 0
-const checkBalance = async () => {
-	const provider = new CoNETModule.Web3Eth(CoNETNet[0])
-	const eth = new CoNETModule.Web3Eth(provider)
-	const contract = new eth.eth.Contract(minERC20ABI, CNTP_Address)
-	const ba1 = await contract.methods.balanceOf(adminCNTP).call()
-	const ba2 = await contract.methods.balanceOf(referrerCNTP).call()
-	const ss1 = weiToEther(eth.utils.fromWei(ba1,'ether'), 0)
-	const ss2 = weiToEther(eth.utils.fromWei(ba2,'ether'), 0)
 
-	async.forEachOf(nodes, async (n: nodeType, index, next ) => {
-		const ba = await contract.methods.balanceOf(n.minerAddr).call()
-		n.balance = weiToEther(eth.utils.fromWei(ba,'ether'), 0)
-		next()
-	}, () => {
-		const balance = 100000000 - parseFloat(ss1) - parseFloat(ss2)
-		allNodes = nodes
-		CNTP_Balance = balance
-		sendState('cntp-balance', {balance, nodes})
-		setTimeout(() => {checkBalance()}, 12000)
-		logger(`checkBalance balance = ${balance}`)
+})
+
+let allNodes: node
+let CNTP_Balance = '0'
+let currentCNTP = '0'
+let getProfileAssetsBalanceLocked = false
+
+let getProfileAssetsBalanceResult: getBalanceAPIresult = {CNTP_Balance: '', CONET_Balance: '', Referee: '', lastTime: 0}
+
+const getProfileAssetsBalance = async (profile: profile, referrals?: string) => {
+
+	const date = new Date().getTime()
+	if (date - getProfileAssetsBalanceResult.lastTime < 12 * 1000) {
+		return getProfileAssetsBalanceResult
+	}
+	if (getProfileAssetsBalanceLocked) {
+		return logger (`getProfileAssetsBalance running!`)
+	}
+	const key = profile.keyID
+	if (key) {
+		getProfileAssetsBalanceLocked = true
+		const current = profile.tokens
+		if (!current?.cntp) {
+			current.cntp = {
+				balance: '0',
+				history: []
+			}
+		}
+		// const message =JSON.stringify({ walletAddress: profile.keyID })
+		// const messageHash = CoNETModule.EthCrypto.hash.keccak256(message)
+		// const signMessage = CoNETModule.EthCrypto.sign( profile.privateKeyArmor, messageHash )
+		// const data = {
+		// 	message, signMessage
+		// }
+
+		const url = `https://scannew.conet.network/api/v2/addresses/${key.toLowerCase()}/tokens?type=ERC-20`
+		const url1 = `https://scannew.conet.network/api/v2/addresses/${key.toLowerCase()}`
 		
-	})
-	
+		return postToEndpoint(url, false, '')
+			.then (response => {
+				
+				//@ts-ignore
+				const data: blockscout_result = response
+				if (data.items[0]) {
+					getProfileAssetsBalanceResult.CNTP_Balance = current.cntp.balance = CNTP_Balance = (parseFloat(data.items[0].value)/10**18).toFixed(4)
+				}
+				return postToEndpoint(url1, false, '')})
+			.then( async response => {
+				//@ts-ignore
+				const data: blockscout_address = response
+				if (data.coin_balance) {
+					getProfileAssetsBalanceResult.CONET_Balance = current.conet.balance = parseFloat(data.coin_balance).toFixed(4)
+					getProfileAssetsBalanceResult.lastTime = date
+				}
+				
+				if (profile.referrer) {
+					await registerReferrer(profile.referrer)
+				} else if (!profile.referrer && referrals) {
+					await registerReferrer(referrals)
+					profile.referrer = referrals
+				}
+				
+				sendState('cntp-balance', {CNTP_Balance: CNTP_Balance, CONET_Balance: profile.tokens.conet.balance, currentCNTP: currentCNTP})
+				const ret = {
+					CNTP_Balance,
+					CONET_Balance: profile.tokens.conet.balance,
+					Referee: profile.referrer
+				}
+				getProfileAssetsBalanceLocked = false
+				return ret
+			})
+			.catch (ex => {
+				getProfileAssetsBalanceLocked = false
+				return null
+			})
+		
+		
+	}
+	return false
 }
+
+// const postMessageWaitingRespon = (cmd: worker_command) => new Promise(resolve => {
+// 	const channel = new BroadcastChannel('systemWaiting')
+    
+//     const kk = (e: any) => {
+//         listeningChannel(e.data)
+//     }
+
+// 	const listenChannel = cmd.uuid ? new BroadcastChannel(cmd.uuid): null
+
+//     const listeningChannel = (data: any) => {
+// 		logger(`postMessageWaitingRespon GOT response uuid = [${cmd.uuid}]`)
+
+// 		if (listenChannel) {
+// 			listenChannel.close()
+// 		}
+		
+       
+// 		return resolve(data)
+
+//     }
+
+// 	if (listenChannel){
+		
+//     	listenChannel.addEventListener('message', kk)
+// 	}
+
+//     channel.postMessage(JSON.stringify(cmd))
+//     channel.close()
+// })
+    
+   
+// const checkBalance = async () => {
+	
+// 	const provider = new CoNETModule.Web3Eth(CoNETNet[0])
+// 	const eth = new CoNETModule.Web3Eth(provider)
+// 	const contract = new eth.eth.Contract(minERC20ABI, CNTP_Address)
+// 	const ba1 = await contract.methods.balanceOf(adminCNTP).call()
+// 	const ba2 = await contract.methods.balanceOf(referrerCNTP).call()
+// 	const ss1 = weiToEther(eth.utils.fromWei(ba1,'ether'), 0)
+// 	const ss2 = weiToEther(eth.utils.fromWei(ba2,'ether'), 0)
+
+// 	async.forEachOf(nodes, async (n: nodeType, index, next ) => {
+// 		const ba = await contract.methods.balanceOf(n.minerAddr).call()
+// 		n.balance = weiToEther(eth.utils.fromWei(ba,'ether'), 0)
+// 		next()
+// 	}, () => {
+// 		const balance = 100000000 - parseFloat(ss1) - parseFloat(ss2)
+// 		allNodes = nodes
+// 		CNTP_Balance = balance
+// 		sendState('cntp-balance', {balance, nodes})
+		
+// 		logger(`checkBalance balance = ${balance}`)
+		
+// 	})
+	
+// }

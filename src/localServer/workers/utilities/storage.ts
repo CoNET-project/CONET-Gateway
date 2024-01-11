@@ -1,6 +1,4 @@
 
-let database
-
 const initNullSystemInitialization = () => {
     const data = {
         passcode: {
@@ -14,12 +12,10 @@ const returnInitNull = async (cmd: worker_command) => {
 	delete cmd.err
     cmd.data = [initNullSystemInitialization()]
     returnCommand ( cmd )
-	await deleteExistDB()
-	database = null
 }
 
 const checkStorage = async () => {
-    database = new PouchDB( databaseName, { auto_compaction: true })
+    const database = new PouchDB( databaseName, { auto_compaction: true })
     const cmd: worker_command = {
         cmd: 'READY',
         data: []
@@ -83,9 +79,10 @@ const checkStorage = async () => {
 }
 
 const getUUIDFragments = async ( uuid: string ) => {
-    if ( !database ) {
-        database = new PouchDB( databaseName, { auto_compaction: true  })
-    }
+	
+   
+    const database = new PouchDB( databaseName, { auto_compaction: true  })
+    
 	let doc
 	try {
 		doc = await database.get (uuid, {latest: true} )
@@ -95,13 +92,11 @@ const getUUIDFragments = async ( uuid: string ) => {
     return doc
 }
 
-const storeUUID_Fragments = async () => {
+const storeUUID_Fragments = async (database) => {
 	if ( !CoNET_Data?.encryptedString) {
 		return logger (`storeUUID_Fragments Error! CoNET_Data?.encryptedString === null`)
 	}
-	if ( !database ) {
-        database = new PouchDB(databaseName, { auto_compaction: true  })
-    }
+	
     const putData = {
         title: CoNET_Data?.encryptedString
     }
@@ -109,14 +104,13 @@ const storeUUID_Fragments = async () => {
 	return systemInitialization_UUID = doc.id
 }
 
-const storeCoNET_initData = async () => {
+const storeCoNET_initData = async (database) => {
 	if ( !containerKeyObj?.publicKeyArmor || !CoNET_Data || !passObj ) {
 		const msg = `storeUUID_Fragments Error: encrypted === null`
+		sendState('beforeunload', false)
 		return logger (msg)
 	}
-    if ( !database ) {
-        database = new PouchDB( databaseName, { auto_compaction: true  })
-    }
+
 	passObj.passcode = passObj._passcode = passObj.password = ''
 	let preferences = {}
 	if (CoNET_Data.preferences) {
@@ -126,12 +120,6 @@ const storeCoNET_initData = async () => {
 		}
 	}
 	
-	try {
-		await database.remove (await database.get ('init', {latest: true}))
-		
-	} catch (ex) {
-		logger (`database.remove 'init' error! keep next`, ex)
-	}
 
 	const CoNETIndexDBInit: CoNETIndexDBInit = {
 		container: {
@@ -140,27 +128,39 @@ const storeCoNET_initData = async () => {
 		},
 		id: passObj,
 		uuid: systemInitialization_UUID,
-		preferences: preferences		
-				
+		preferences: preferences	
+	}
+	let doc
+	try {
+		doc = await database.get ('init', {latest: true})
+		
+	} catch (ex) {
+		logger (`database.get 'init' error! keep next`, ex)
+		
 	}
     const putData = {
         _id: 'init',
         title: buffer.Buffer.from(JSON.stringify (CoNETIndexDBInit)).toString ('base64')
     }
+	
+	if (doc?._rev) {
+		putData['_rev']= doc._rev
+	}
 
-	return await database.post( putData )
+	const uu = await database.put( putData )
+	logger(`storeCoNET_initData database.put return [${uu}]`)
+	sendState('beforeunload', false)
+
 }
 
 const deleteUUID_DFragments = async ( uuid: string) => {
-
+	
 	if ( !uuid ) {
         const err = 'deleteUUID_DFragments have NONE uuid Error'
         logger (err)
         return
     }
-	if ( !database ) {
-		database = new PouchDB( databaseName, { auto_compaction: true  })
-	}
+	const database = new PouchDB( databaseName, { auto_compaction: true  })
 	try {
 		await database.remove (await database.get (uuid, {latest: true}))
 	} catch (ex) {
@@ -177,6 +177,13 @@ const storage_StoreContainerData = async () => {
 		const msg = `storage_StoreContainerData Error: CoNET_Data === null`
 		return logger (msg)
 	}
+	const cmd: worker_command = {
+		cmd:'beforeunload',
+		data: []
+	}
+	sendState('beforeunload', true)
+	logger(`storage_StoreContainerData got response from postMessageWaitingRespon going to process`)
+    const database = new PouchDB( databaseName, { auto_compaction: true  })
 	await encryptCoNET_Data_WithContainerKey()
     const oldUuid = systemInitialization_UUID
     logger ('storage_StoreContainerData start! oldUuid = ', oldUuid)
@@ -184,17 +191,16 @@ const storage_StoreContainerData = async () => {
 	if ( oldUuid ) {
 		await deleteUUID_DFragments (oldUuid)
 	}
-	const ret = await storeUUID_Fragments ()
+	const ret = await storeUUID_Fragments (database)
 	if ( !ret ) {
+		sendState('beforeunload', false)
 		return logger (`storage_StoreContainerData Error: storeUUID_Fragments () === null`)
 	}
-	return storeCoNET_initData ()
+	return storeCoNET_initData (database)
 }
 
 const deleteExistDB = async () => {
-    if ( !database ) {
-        database = new PouchDB( databaseName, { auto_compaction: true  })
-    }
+    const database = new PouchDB( databaseName, { auto_compaction: true  })
     return await database.destroy()
 }
 
@@ -226,9 +232,9 @@ const cacheProfile = async (urlData: urlData) => {
 		return null
 	}
 	const hash = CoNETModule.Web3Utils.sha3(urlData.href)
-	if ( !database ) {
-        database = new PouchDB( databaseName, { auto_compaction: true  })
-    }
+	
+    const database = new PouchDB( databaseName, { auto_compaction: true  })
+    
 
 	let result: fetchCashStorageData
 	try {
@@ -246,10 +252,7 @@ const cacheProfile = async (urlData: urlData) => {
 }
 
 const storageCache = async (urlHash: string, data: fetchCashStorageData ) => {
-	if ( !database ) {
-        database = new PouchDB(databaseName, { auto_compaction: true  })
-    }
-
+	const database = new PouchDB( databaseName, { auto_compaction: true  })
 	const putData = {
         _id: urlHash,
 		title: buffer.Buffer.from(JSON.stringify(data)).toString('base64')

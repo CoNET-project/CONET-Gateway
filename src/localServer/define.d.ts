@@ -143,8 +143,8 @@ interface passInit {
 	password: string
 }
 
-declare type WorkerCommandError = 'NOT_READY'|'INVALID_DATA'|'NO_UUID'|'INVALID_COMMAND'|'OPENPGP_RUNNING_ERROR'|
-'PouchDB_ERROR'|'GENERATE_PASSCODE_ERROR'|'FAILURE'|'COUNTDOWN'| netWorkError | verification
+declare type WorkerCommandError = 'NOT_READY'|'INVALID_DATA'|'NO_UUID'|'INVALID_COMMAND'|'OPENPGP_RUNNING_ERROR'| 'TIMEOUT'|
+'PouchDB_ERROR'|'GENERATE_PASSCODE_ERROR'|'FAILURE'|'COUNTDOWN'| netWorkError | verification |seguroError
 
 declare type netWorkError = 'NOT_INTERNET'|'NOT_STRIPE'|'ALL_EMAIL_SERVER_CAN_NOT_CONNECTING'|'LOCAL_SERVER_ERROR'|'WAITING_SEGURO_RESPONSE_TIMEOUT'|
 'EMAIL_ACCOUNT_AUTH_ERROR'|'UNKNOW_ERROR'|'LOCAL_RESPONE_NO_JSON_DATA'
@@ -156,7 +156,7 @@ declare type seguroError = 'TIMEOUT_EMAIL_SERVER' | 'TIMEOUT_SEGURO_NETWORK' |
 
 declare type verification = 'INCORRECT_CODE'
 
-declare type WorkerCommand = 'READY'|'getRegiestNodes'|
+declare type WorkerCommand = 'READY'|'getRegiestNodes'|'beforeunload'|
 	'encrypt_TestPasscode'|'encrypt_createPasscode'|'encrypt_lock'|'invitation'|'encrypt_deletePasscode'|
 	'storePreferences'|'newProfile'|'storeProfile'|'urlProxy'|'saveDomain'|'getDomain'|'setRegion'|
 	'getFaucet'|'isAddress'|'syncAsset'|'sendAsset'|'getUSDCPrice'|'buyUSDC'|'getWorkerClientID'|
@@ -477,4 +477,81 @@ type proxyLogs =  {
 	upload: number,
 	nodeIpaddress: string,
 	endTime: number
+}
+
+interface nodesBalance {
+	balance: string
+	minerAddr: string
+}
+
+interface startLivenessSSEData {
+	balance: {
+		CONETBalance: string
+		COTPBalance: string
+	}
+	masterBalance: masterBalance
+
+	nodesBalance: nodeType[]
+
+}
+
+
+interface nodeType {
+	ip_addr: string
+	minerAddr: string
+	running: boolean
+	wallet_addr: string
+	balance: string
+}
+
+interface masterBalance {
+	CNTPMasterBalance: string
+	CNTPReferralBalance: string
+}
+
+interface node {
+	masterBalance: masterBalance
+	node: nodeType[]
+}
+
+interface getBalanceAPIresult {
+	CNTP_Balance: string
+	CONET_Balance:string
+	Referee: string
+	lastTime: number
+}
+interface blockscout_token {
+	address: string
+	circulating_market_cap: string
+	decimals: string	
+	exchange_rate: string
+	holders: string
+	icon_url: string
+	name: string
+	symbol: string
+	total_supply: string
+	type: "ERC-20"|"ERC-721"|"ERC-1155"
+}
+interface blockscout_address_token {
+	token: blockscout_token
+	token_id: string
+	token_instance: string
+	value: string
+}
+interface blockscout_result {
+	items: blockscout_address_token[]
+	next_page_params: string
+}
+
+interface blockscout_address {
+	block_number_balance_updated_at: number
+	coin_balance: string
+}
+
+
+type listenState = 'referrer'|'system'|'conet'|'cntp'|'cntp-balance'|'nodes'|'beforeunload'
+
+
+interface CONETPlatfromSystemData {
+	
 }

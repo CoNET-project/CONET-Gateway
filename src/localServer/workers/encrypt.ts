@@ -122,7 +122,7 @@ const initEncryptWorker = async () => {
 	responseChannel.postMessage(JSON.stringify(cmd))
 	
     await checkStorage ()
-
+	
 }
 
 
@@ -135,30 +135,32 @@ const gettPrimaryProfile = () => {
 	return profiles
 }
 
-const getPrimaryCONETBalance = async (cmd?: worker_command) => {
+const getAllNodes = async (cmd?: worker_command) => {
 
 	const profile = gettPrimaryProfile()
 	
 	if (!profile||!profile.keyID) {
-		logger(`getPrimaryBalance`)
 		if (cmd) {
-			cmd.err = 'NOT_STRIPE'
+			cmd.err = 'NOT_READY'
 			returnUUIDChannel (cmd)
 		}
 		return
 	}
 
-	const eth = new CoNETModule.Web3Eth ( new CoNETModule.Web3Eth.providers.HttpProvider(getRandomCoNETEndPoint()))
-	const uuu = await eth.eth.getBalance(profile.keyID)
-	const balance = (parseInt(uuu)/denominator).toString()
-	profile.tokens.conet.balance = balance
-	if (cmd) {
-		cmd.data = [profile.keyID, balance, profile.network.recipients]
-		returnUUIDChannel (cmd)
+	const nodes = await getAllNodesInfo()
+	if (!nodes) {
+		if (cmd) {
+			cmd.err = 'TIMEOUT'
+			returnUUIDChannel (cmd)
+		}
+		return
 	}
-	sendState('system', CoNET_Data)
-	sendState('conet', balance)
-
+	
+	sendState('nodes', nodes)
+	if (cmd) {
+		cmd.data = [nodes]
+		return returnUUIDChannel (cmd)
+	}
 	
 }
 
@@ -231,7 +233,6 @@ const sendCONET = async (node: nodes_info, amount: string, profile: profile) => 
 	return node
 }
 
-
 const getNodeCollect = async (cmd: worker_command) => {
 	const uu:regionType = cmd.data[0]
 	const profile = gettPrimaryProfile()
@@ -240,8 +241,6 @@ const getNodeCollect = async (cmd: worker_command) => {
 		cmd.err = 'NOT_READY'
 		return returnUUIDChannel(cmd)
 	}
-
-	await getAllProfileBalance ()
 	const conetTokenBalance = profile.tokens.conet.balance
 	if (conetTokenBalance <= '0') {
 		cmd.err = 'FAILURE'
@@ -330,6 +329,8 @@ const responseLocalHost = async (cmd: worker_command) => {
     })
 }
 
+let getFaucetCount = 0
+
 const processCmd = async (cmd: worker_command) => {
     switch (cmd.cmd) {
 		case 'urlProxy': {
@@ -380,13 +381,14 @@ const processCmd = async (cmd: worker_command) => {
 
 		case 'getFaucet' : {
 			cmd.data[0] = gettPrimaryProfile ()
-
+			getFaucetCount++
 			if (!cmd.data[0] || !cmd.data[0].keyID) {
 				cmd.err = 'NO_UUID'
 				return returnUUIDChannel (cmd)
 			}
 			cmd.data[0] = cmd.data[0].keyID
 			return getFaucet (cmd, () => {
+				logger (`getFaucetCount = [${getFaucetCount}]`)
 				returnUUIDChannel (cmd)
 			})
 		}
@@ -403,8 +405,8 @@ const processCmd = async (cmd: worker_command) => {
 			return getRegiestNodes (cmd)
 		}
 
-		case 'getCONETBalance': {
-			return getPrimaryCONETBalance(cmd)
+		case 'getAllNodes': {
+			return getAllNodes(cmd)
 		}
 
 		case 'encrypt_createPasscode': {
@@ -441,7 +443,7 @@ const processCmd = async (cmd: worker_command) => {
 		
 			cmd.data = [data]
 
-			returnUUIDChannel (cmd)
+			return returnUUIDChannel (cmd)
 		}
 
         case 'encrypt_TestPasscode': {
@@ -490,34 +492,25 @@ const processCmd = async (cmd: worker_command) => {
                 status: 'UNLOCKED'
             }
         
-            const profiles = CoNET_Data.profiles
-            if ( profiles ) {
-                for ( let i = 0; i < profiles.length; i++ ) {
-					const profile = profiles[i]
-                    const key = profile.keyID
-                    if (key) {
-						const current = profile.tokens
-                        current.conet.balance = await getCONETBalance (key)
-						if (!current?.cntp) {
-							current.cntp = {
-								balance: '0',
-								history: []
-							}
-						}
-						
-						profile.referrer = await checkReferee(key)
-						current.cntp.balance = await getCNTPBalance (key)
-                        // profiles[i].tokens.usdc.balance = await getUSDCBalance (key)
-                    }	
+            // const profiles = CoNET_Data.profiles
+            // if ( profiles ) {
+            //     for ( let i = 0; i < profiles.length; i++ ) {
+			// 		const profile = profiles[i]
+					
                     
-                }
-            }
+			// 		// const current = profile.tokens
+					
+			// 		// current.cntp.balance = parseFloat(data.CNTP_Balance).toFixed(4)
+			// 		// current.conet.balance = parseFloat(data.CONET_Balance).toFixed(4)
+			// 		// profile.referrer = data.Referee === '0x0000000000000000000000000000000000000000' ? '': data.Referee
+            //     }
+                    
+            // }
+            
 
             cmd.data = [CoNET_Data]
             returnUUIDChannel(cmd)
-			if (referrer) {
-				registerReferrer(referrer)
-			}
+			
             const profile = gettPrimaryProfile()
             if (activeNodes && activeNodes.length > 0) {
                 const url = `http://localhost:3001/conet-profile`
@@ -533,7 +526,9 @@ const processCmd = async (cmd: worker_command) => {
                 //     logger (`fetchProxyData GOT DATA FROM locathost `, data)
                 // })
             }
-
+			if (profile) {
+				getProfileAssetsBalance(profile, referrer)
+			}
 			return getAllNodes()
         }
 
@@ -546,7 +541,7 @@ const processCmd = async (cmd: worker_command) => {
 			cmd.data = [initNullSystemInitialization()]
 			returnUUIDChannel (cmd)
 			await deleteExistDB()
-			return database = null
+			
         }
 
 		case 'startProxy': {
@@ -583,7 +578,11 @@ const processCmd = async (cmd: worker_command) => {
 		}
 
 		case 'syncAsset': {
-			return syncAsset()
+			const profile = gettPrimaryProfile()
+			if (profile) {
+				return getProfileAssetsBalance(profile)
+			}
+			
 		}
 
 		case 'stopLiveness': {
@@ -718,12 +717,10 @@ const returnNullContainerUUIDChannel = async (cmd: worker_command) => {
     initNullSystemInitialization()
     cmd.data = ['NoContainer']
     returnUUIDChannel ( cmd )
-	await deleteExistDB()
-	database = null
 }
 
 const getContainer = async (cmd: worker_command) => {
-    database = new PouchDB( databaseName, { auto_compaction: true })
+    const database = new PouchDB( databaseName, { auto_compaction: true })
     let doc
 	let initData: CoNETIndexDBInit
     try {
@@ -784,46 +781,72 @@ const startLiveness = async (cmd: worker_command) => {
 	const message =JSON.stringify({ walletAddress: profile.keyID, referrals })
 	const messageHash = CoNETModule.EthCrypto.hash.keccak256(message)
 	const signMessage = CoNETModule.EthCrypto.sign( profile.privateKeyArmor, messageHash )
-	const data = {
+	const request = {
 		message, signMessage
 	}
-	logger (JSON.stringify(data))
+	const initBalance = await getProfileAssetsBalance(profile)
 
-	const last = parseFloat(profile.tokens.cntp.balance)
-	Liveness = postToEndpointSSE(LivenessURL1, true, JSON.stringify(data), async (err, _data) => {
-		if (err) {
-			cmd.err = 'FAILURE'
-			cmd.data=['FAILURE']
-			return returnUUIDChannel ( cmd )
-		}
+	if (initBalance) {
+		profile.tokens.conet.balance = initBalance.CONET_Balance
+		CNTP_Balance = profile.tokens.cntp.balance = initBalance.CNTP_Balance
+	}
+
+	let first = true
+	const startCNTP_balance = parseFloat(CNTP_Balance)
+	Liveness = postToEndpointSSE(LivenessURL1, true, JSON.stringify(request), async (err, data) => {
 		
-		if (profile.keyID) {
-			const balance = await getCNTPBalance(profile.keyID)
-			const _balance = (parseFloat(balance) - last).toFixed(4)
-			
-			LivenessCurrentData = cmd.data = [balance, _balance]
-			returnUUIDChannel(cmd)
-			if (LivenessListen.length ) {
-				logger (`LivenessListen length = [${LivenessListen.length}]`)
-				
-				LivenessListen.forEach((n, index) => {
-					if (index < LivenessListen.length - 2) {
-						return
-					}
-					n.data = [balance, _balance]
-					returnUUIDChannel(n)
-				})
+		if (first) {
+			if (err) {
+				cmd.data = [err]
+				return returnUUIDChannel(cmd)
 			}
+			first = false
+			LivenessCurrentData = cmd.data = [CNTP_Balance, "0"]
+			return returnUUIDChannel(cmd)
 		}
+
+		const initBalance = await getProfileAssetsBalance(profile)
+		if (initBalance) {
+			const current_CNTP_balance = parseFloat(initBalance.CNTP_Balance) - startCNTP_balance
+			profile.tokens.conet.balance = initBalance.CONET_Balance
+			CNTP_Balance = profile.tokens.cntp.balance = initBalance.CNTP_Balance
+			LivenessCurrentData = cmd.data = [initBalance.CNTP_Balance, current_CNTP_balance.toFixed(4)]
+			sendState('cntp-balance', {CNTP_Balance, CONET_Balance: profile.tokens.conet.balance, currentCNTP: current_CNTP_balance.toFixed(4)})
+			returnUUIDChannel(cmd)
+			LivenessListen.forEach(n => {
+				n.data = [initBalance.CNTP_Balance, current_CNTP_balance.toFixed(4)]
+				return returnUUIDChannel(n)
+			})
+			
+		}
+
 		
 	})
 }
 
+const stopLivenessUrl = 'https://api.openpgp.online:4001/api/livenessStop'
 const stopLiveness = async (cmd: worker_command) => {
-	
+	const profile = gettPrimaryProfile()
+	if (!profile) {
+		cmd.err = 'NOT_READY'
+		return returnUUIDChannel (cmd)
+	}
+
 	if (Liveness && typeof Liveness.abort === 'function') {
 		Liveness.abort()
 	}
 	Liveness = null
+	const message =JSON.stringify({ walletAddress: profile.keyID })
+	const messageHash = CoNETModule.EthCrypto.hash.keccak256(message)
+	const signMessage = CoNETModule.EthCrypto.sign( profile.privateKeyArmor, messageHash )
+	const data = {
+		message, signMessage
+	}
+	const url = `https://api.openpgp.online:4001/api/stop-liveness`
+	const response = await postToEndpoint(url, true, data)
 	return returnUUIDChannel(cmd)
+}
+
+const systemData = {
+
 }

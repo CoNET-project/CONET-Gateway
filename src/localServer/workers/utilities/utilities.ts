@@ -134,6 +134,7 @@ const encryptCoNET_Data_WithContainerKey = async () => {
         signingKeys: containerKeyObj?.keyObj.privateKeyObj,
 		config: { preferredCompressionAlgorithm: openpgp.enums.compression.zlib } 		// compress the data with zlib
     }
+	CoNET_Data
 	CoNET_Data.encryptedString = await openpgp.encrypt(encryptObj)
 	return
 }
@@ -363,14 +364,6 @@ const makeContainerPGPObj = async () => {
 // }
 
 
-const getCONETBalance = async (Addr: string) => {
-	const provider = new CoNETModule.Web3Eth(CoNETNet[0])
-	const eth = new CoNETModule.Web3Eth(provider)
-
-	const uuu = await eth.eth.getBalance(Addr)
-	const balance = eth.utils.fromWei(uuu,'ether')
-	return weiToEther(balance, 4)
-}
 const minERC20ABI = [
 	// balanceOf
 	{
@@ -445,24 +438,6 @@ const getCNTPBalance: (Addr: string) => Promise<string> = (Addr: string) => {
 // 	}
 // }
 
-const getAllProfileBalance = () => {
-	const profiles = CoNET_Data?.profiles
-	if ( !profiles || !profiles.length ) {
-		return logger (`getAllProfileCoNETBalance error: have no CoNET_Data?.profiles!`)
-	}
-	return new Promise (async (resolve) => {
-		for ( let n of profiles ) {
-			if ( n.keyID ) {
-				n.tokens.conet.balance = await getCONETBalance (n.keyID)
-				n.tokens.cntp.balance = await getCNTPBalance(n.keyID)
-			}
-		}
-
-		return resolve (null)
-	})
-	
-}
-
 
 const XMLHttpRequestTimeout = 30 * 1000
 
@@ -486,14 +461,15 @@ const postToEndpoint = ( url: string, post: boolean, jsonData ) => {
 					ret = JSON.parse(jsonText)
 				} catch (ex) {
 					if ( post ) {
-						return resolve (null)
+						return resolve ('')
 					}
 					return resolve(xhr.responseText)
 				}
 				return resolve (ret)
 			}
-			logger(`postToEndpoint [${url}] xhr.status[${xhr.status === 200}] !== 200 Error`)
-			return reject(new Error (`${ url } status is not 200 Error${ xhr.responseText }`))
+
+			logger(`postToEndpoint [${url}] xhr.status [${xhr.status === 200}] !== 200 Error`)
+			return resolve (false)
 		}
 
 		xhr.open( post? 'POST': 'GET', url, true )
@@ -502,8 +478,8 @@ const postToEndpoint = ( url: string, post: boolean, jsonData ) => {
 		xhr.send(jsonData? JSON.stringify(jsonData): '')
 
 		const timeCount = setTimeout (() => {
-			const Err = `postToEndpoint Timeout!`
-			logger (`postToEndpoint Timeout Error`, Err )
+			const Err = `Timeout!`
+			logger (`postToEndpoint ${url} Timeout Error`, Err )
 			reject (new Error ( Err ))
 		}, XMLHttpRequestTimeout )
 	})
@@ -575,15 +551,6 @@ const getFaucet = async ( cmd: worker_command, callback ) => {
 	}
 	
 	return storeProfile (cmd, callback)
-}
-
-
-const syncAsset = async () => {
-
-	await getAllProfileBalance ()
-	sendState('system', CoNET_Data)
-	sendState('conet', '')
-	sendState('cntp', '')
 }
 
 
@@ -886,7 +853,7 @@ const _getSINodes = async (sortby: SINodesSortby, region: SINodesRegion) => {
 
 		rows.forEach ( async n => {
 			n.disable = n.entryChecked = n.recipientChecked = false
-			n.customs_review_total = parseFloat(n.customs_review_total.toString())
+			//n.customs_review_total = parseFloat(n.customs_review_total.toString())
 			// n.armoredPublicKey = await _getNftArmoredPublicKey (n)
 		})
 		
@@ -918,24 +885,23 @@ const generateAesKey = async (length = 256) => {
 }
 
 
-const postToEndpointSSE = ( url: string, post: boolean, jsonData, CallBack:(err: string, data: string[]|null) => void) => {
+const postToEndpointSSE = ( url: string, post: boolean, jsonData, CallBack:(err: string, data: string) => void) => {
 
 		const xhr = new XMLHttpRequest()
-		xhr.onreadystatechange = async (e) => {
-			return logger (`xhr.onreadystatechange xhr.readyState = ${xhr.readyState} xhr.status [${xhr.status}]`)
-		}
-		let chunk = ''
+		
+		let chunk = 0
 		xhr.onprogress = async (e) => {
 			clearTimeout (timeCount)
 			logger (`postToEndpointSSE xhr.onprogress!  ${xhr.readyState} xhr.status [${xhr.status}]`)
 		
 			if (xhr.status !== 200) {
-				return CallBack(xhr.status.toString(), null)
+				return CallBack('FAILURE','')
 			}
 			const data = await xhr.responseText
-			
+			const currentData = data.substring(chunk)
 			const responseText = data.split('\r\n\r\n')
-			CallBack ('', responseText)
+			chunk = data.length
+			CallBack ('', currentData)
 		}
 
 		xhr.open( post? 'POST': 'GET', url, true )
@@ -945,7 +911,7 @@ const postToEndpointSSE = ( url: string, post: boolean, jsonData, CallBack:(err:
 		const timeCount = setTimeout (() => {
 			const Err = `postToEndpoint Timeout!`
 			logger (`postToEndpoint Error`, Err )
-			CallBack ('timeout',null)
+			CallBack ('TIMEOUT','')
 		}, 5000 )
 
 		return xhr
