@@ -167,9 +167,17 @@ let CNTP_Balance = '0'
 let currentCNTP = '0'
 let getProfileAssetsBalanceLocked = false
 
-let getProfileAssetsBalanceResult: getBalanceAPIresult = {CNTP_Balance: '', CONET_Balance: '', Referee: '', lastTime: 0}
-
-const getProfileAssetsBalance = async (profile: profile, referrals?: string) => {
+let getProfileAssetsBalanceResult: getBalanceAPIresult = {CNTP_Balance: '0', CONET_Balance: '0', Referee: '0', lastTime: 0}
+let scanPoint = 0
+const scanSide =['https://scannew.conet.network/', 'https://scanapi.conet.network/', 'https://scan.conet.network/']
+const getscanUrl = (path: string) => {
+	
+	if (++scanPoint > scanSide.length-1) {
+		scanPoint = 0
+	}
+	return `${scanSide[scanPoint]}${path}`
+}
+const getProfileAssetsBalance = async (profile: profile) => {
 
 	const date = new Date().getTime()
 	if (date - getProfileAssetsBalanceResult.lastTime < 12 * 1000) {
@@ -195,32 +203,41 @@ const getProfileAssetsBalance = async (profile: profile, referrals?: string) => 
 		// 	message, signMessage
 		// }
 
-		const url = `https://scannew.conet.network/api/v2/addresses/${key.toLowerCase()}/tokens?type=ERC-20`
-		const url1 = `https://scannew.conet.network/api/v2/addresses/${key.toLowerCase()}`
+		const url = getscanUrl(`api/v2/addresses/${key.toLowerCase()}/tokens?type=ERC-20`)
+		const url1 = getscanUrl(`api/v2/addresses/${key.toLowerCase()}`)
 		
 		return postToEndpoint(url, false, '')
 			.then (response => {
 				
 				//@ts-ignore
 				const data: blockscout_result = response
-				if (data.items[0]) {
-					getProfileAssetsBalanceResult.CNTP_Balance = current.cntp.balance = CNTP_Balance = (parseFloat(data.items[0].value)/10**18).toFixed(4)
+				if (data?.items) {
+
+					const balance = parseFloat(data.items[0].value)/10**18
+					if (!isNaN(balance)) {
+						getProfileAssetsBalanceResult.CNTP_Balance = current.cntp.balance = CNTP_Balance = balance.toFixed(4)
+						getProfileAssetsBalanceResult.lastTime = date
+					}
+					
 				}
 				return postToEndpoint(url1, false, '')})
 			.then( async response => {
 				//@ts-ignore
 				const data: blockscout_address = response
-				if (data.coin_balance) {
-					getProfileAssetsBalanceResult.CONET_Balance = current.conet.balance = parseFloat(data.coin_balance).toFixed(4)
-					getProfileAssetsBalanceResult.lastTime = date
+				if (data?.coin_balance) {
+					const balance = parseFloat(data.coin_balance)
+					if (!isNaN(balance)) {
+						getProfileAssetsBalanceResult.CONET_Balance = current.conet.balance = balance.toFixed(4)
+						getProfileAssetsBalanceResult.lastTime = date
+					}
 				}
 				
-				if (profile.referrer) {
-					await registerReferrer(profile.referrer)
-				} else if (!profile.referrer && referrals) {
-					await registerReferrer(referrals)
-					profile.referrer = referrals
-				}
+				// if (profile.referrer) {
+				// 	await registerReferrer(profile.referrer)
+				// } else if (!profile.referrer && referrals) {
+				// 	await registerReferrer(referrals)
+				// 	profile.referrer = referrals
+				// }
 				
 				sendState('cntp-balance', {CNTP_Balance: CNTP_Balance, CONET_Balance: profile.tokens.conet.balance, currentCNTP: currentCNTP})
 				const ret = {

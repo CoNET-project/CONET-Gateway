@@ -894,7 +894,13 @@ const postToEndpointSSE = ( url: string, post: boolean, jsonData, CallBack:(err:
 			clearTimeout (timeCount)
 			logger (`postToEndpointSSE xhr.onprogress!  ${xhr.readyState} xhr.status [${xhr.status}]`)
 		
-			if (xhr.status !== 200) {
+			if (xhr.status ===401) {
+				return CallBack('SAMEIP','')
+			}
+			if (xhr.status ===402) {
+				return CallBack('sameInstance','')
+			}
+			if (xhr.status !==200) {
 				return CallBack('FAILURE','')
 			}
 			const data = await xhr.responseText
@@ -903,7 +909,12 @@ const postToEndpointSSE = ( url: string, post: boolean, jsonData, CallBack:(err:
 			chunk = data.length
 			CallBack ('', currentData)
 		}
-
+		xhr.upload.onabort = () => {
+			logger(`xhr.upload.onabort`)
+		}
+		xhr.upload.onerror=(err)=> {
+			logger(`xhr.upload.onerror`, err)
+		}
 		xhr.open( post? 'POST': 'GET', url, true )
 		xhr.setRequestHeader('Content-Type', 'application/json;charset=UTF-8')
 		xhr.send(typeof jsonData !=='string' ? JSON.stringify(jsonData): jsonData)

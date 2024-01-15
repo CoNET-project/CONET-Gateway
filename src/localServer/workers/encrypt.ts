@@ -27,7 +27,7 @@ const databaseName = 'CoNET'
 const channel = new BroadcastChannel('toMainWroker')
 let activeNodes: nodes_info[]|null= null
 let Liveness: XMLHttpRequest|null = null
-let LivenessCurrentData = ['','']
+
 const LivenessListen: worker_command[] = []
 
 const CoNETModule: CoNET_Module = {
@@ -527,8 +527,14 @@ const processCmd = async (cmd: worker_command) => {
                 // })
             }
 			if (profile) {
-				getProfileAssetsBalance(profile, referrer)
+				getProfileAssetsBalance(profile)
+				if (!profile.referrer && referrer) {
+					await registerReferrer(referrer)
+					profile.referrer = referrer
+				}
 			}
+			
+
 			return getAllNodes()
         }
 
@@ -769,7 +775,18 @@ const getContainer = async (cmd: worker_command) => {
     // })
 }
 
+
+//	for production
 const LivenessURL1 = 'https://api.openpgp.online:4001/api/livenessListening'
+const LivenessStopUrl = `https://api.openpgp.online:4001/api/stop-liveness`
+
+
+
+//	for debug
+// const LivenessURL1 = 'http://104.152.210.149:4001/api/livenessListening'
+// const LivenessStopUrl = `http://104.152.210.149:4001/api/stop-liveness`
+
+let LivenessCurrentData = ['','',null]
 
 const startLiveness = async (cmd: worker_command) => {
 	const profile = gettPrimaryProfile()
@@ -792,35 +809,49 @@ const startLiveness = async (cmd: worker_command) => {
 	}
 
 	let first = true
-	const startCNTP_balance = parseFloat(CNTP_Balance)
-	Liveness = postToEndpointSSE(LivenessURL1, true, JSON.stringify(request), async (err, data) => {
+	let startCNTP_balance = isNaN(parseFloat(CNTP_Balance))?0:parseFloat(CNTP_Balance)
+	let init = false
+	let data = null
+	Liveness = postToEndpointSSE(LivenessURL1, true, JSON.stringify(request), async (err, _data) => {
 		
+		
+		try{
+			data = JSON.parse(_data)
+		} catch(ex) {
+			logger(`Liveness response Unexpected JSON!`, _data)
+		}
+
+
 		if (first) {
 			if (err) {
 				cmd.data = [err]
 				return returnUUIDChannel(cmd)
 			}
-			first = false
-			LivenessCurrentData = cmd.data = [CNTP_Balance, "0"]
-			return returnUUIDChannel(cmd)
-		}
 
+			first = false
+			LivenessCurrentData = cmd.data = [CNTP_Balance, "0", data]
+            return returnUUIDChannel(cmd)
+		}
+		
 		const initBalance = await getProfileAssetsBalance(profile)
 		if (initBalance) {
+			if (getProfileAssetsBalanceResult.lastTime && !init) {
+				init = true
+				startCNTP_balance = parseFloat(initBalance.CNTP_Balance)
+			}
 			const current_CNTP_balance = parseFloat(initBalance.CNTP_Balance) - startCNTP_balance
+			LivenessCurrentData = [initBalance.CNTP_Balance, current_CNTP_balance.toFixed(4), data]
 			profile.tokens.conet.balance = initBalance.CONET_Balance
-			CNTP_Balance = profile.tokens.cntp.balance = initBalance.CNTP_Balance
-			LivenessCurrentData = cmd.data = [initBalance.CNTP_Balance, current_CNTP_balance.toFixed(4)]
-			sendState('cntp-balance', {CNTP_Balance, CONET_Balance: profile.tokens.conet.balance, currentCNTP: current_CNTP_balance.toFixed(4)})
-			returnUUIDChannel(cmd)
-			LivenessListen.forEach(n => {
-				n.data = [initBalance.CNTP_Balance, current_CNTP_balance.toFixed(4)]
-				return returnUUIDChannel(n)
-			})
-			
 		}
-
-		
+		LivenessCurrentData[2] = data
+	
+		cmd.data = LivenessCurrentData
+		sendState('cntp-balance', {CNTP_Balance, CONET_Balance: profile.tokens.conet.balance, currentCNTP: LivenessCurrentData[1]})
+		returnUUIDChannel(cmd)
+		LivenessListen.forEach(n => {
+			n.data = LivenessCurrentData
+			return returnUUIDChannel(n)
+		})
 	})
 }
 
@@ -842,11 +873,10 @@ const stopLiveness = async (cmd: worker_command) => {
 	const data = {
 		message, signMessage
 	}
-	const url = `https://api.openpgp.online:4001/api/stop-liveness`
-	const response = await postToEndpoint(url, true, data)
-	return returnUUIDChannel(cmd)
-}
-
-const systemData = {
-
+	postToEndpoint(LivenessStopUrl, true, data).then(n => {
+		return returnUUIDChannel(cmd)
+	}).catch(ex=> {
+		return returnUUIDChannel(cmd)
+	})
+	
 }
