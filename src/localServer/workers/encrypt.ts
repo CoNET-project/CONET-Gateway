@@ -788,6 +788,11 @@ const LivenessStopUrl = `https://api.openpgp.online:4001/api/stop-liveness`
 
 let LivenessCurrentData = ['','',null]
 
+
+//	Detect interruption of information from the server
+const listenServerTime = 6 * 1000
+const listenServerTimeCountMaximum = 4
+
 const startLiveness = async (cmd: worker_command) => {
 	const profile = gettPrimaryProfile()
 	if (!profile) {
@@ -812,8 +817,23 @@ const startLiveness = async (cmd: worker_command) => {
 	let startCNTP_balance = isNaN(parseFloat(CNTP_Balance))?0:parseFloat(CNTP_Balance)
 	let init = false
 	let data = null
+	let listenServerTimeout:NodeJS.Timeout|0 = 0
+	let listenServerTimeoutCount = -1
+
+	const listenServerTimeoutProcess = () => {
+		if (++listenServerTimeoutCount<listenServerTimeCountMaximum) {
+			return listenServerTimeout = setTimeout(listenServerTimeoutProcess, listenServerTime)
+			
+		}
+		cmd.data = ['DISCONNECT']
+		Liveness = null
+		returnUUIDChannel(cmd)
+		LivenessListen.forEach(n => {
+			return returnUUIDChannel(cmd)
+		})
+	}
+
 	Liveness = postToEndpointSSE(LivenessURL1, true, JSON.stringify(request), async (err, _data) => {
-		
 		
 		try{
 			data = JSON.parse(_data)
@@ -821,18 +841,22 @@ const startLiveness = async (cmd: worker_command) => {
 			logger(`Liveness response Unexpected JSON!`, _data)
 		}
 
-
 		if (first) {
 			if (err) {
 				cmd.data = [err]
+				Liveness = null
 				return returnUUIDChannel(cmd)
 			}
-
+			listenServerTimeoutProcess()
 			first = false
 			LivenessCurrentData = cmd.data = [CNTP_Balance, "0", data]
             return returnUUIDChannel(cmd)
 		}
+		clearTimeout(listenServerTimeout)
+		listenServerTimeoutCount = -1
+		listenServerTimeoutProcess()
 		
+
 		const initBalance = await getProfileAssetsBalance(profile)
 		if (initBalance) {
 			if (getProfileAssetsBalanceResult.lastTime && !init) {

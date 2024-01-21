@@ -909,12 +909,17 @@ const postToEndpointSSE = ( url: string, post: boolean, jsonData, CallBack:(err:
 			chunk = data.length
 			CallBack ('', currentData)
 		}
+
 		xhr.upload.onabort = () => {
 			logger(`xhr.upload.onabort`)
 		}
+		
 		xhr.upload.onerror=(err)=> {
+			clearTimeout (timeCount)
+			CallBack('NOINTERNET', '')
 			logger(`xhr.upload.onerror`, err)
 		}
+
 		xhr.open( post? 'POST': 'GET', url, true )
 		xhr.setRequestHeader('Content-Type', 'application/json;charset=UTF-8')
 		xhr.send(typeof jsonData !=='string' ? JSON.stringify(jsonData): jsonData)
@@ -926,7 +931,6 @@ const postToEndpointSSE = ( url: string, post: boolean, jsonData, CallBack:(err:
 		}, 5000 )
 
 		return xhr
-	
 	
 }
 

@@ -214,7 +214,8 @@ const getProfileAssetsBalance = async (profile: profile) => {
 				if (data?.items) {
 
 					const balance = parseFloat(data.items[0].value)/10**18
-					if (!isNaN(balance)) {
+					const beforeBalance = parseFloat(getProfileAssetsBalanceResult.CNTP_Balance)
+					if (!isNaN(balance) && balance - beforeBalance > 0 ) {
 						getProfileAssetsBalanceResult.CNTP_Balance = current.cntp.balance = CNTP_Balance = balance.toFixed(4)
 						getProfileAssetsBalanceResult.lastTime = date
 					}
@@ -224,9 +225,11 @@ const getProfileAssetsBalance = async (profile: profile) => {
 			.then( async response => {
 				//@ts-ignore
 				const data: blockscout_address = response
-				if (data?.coin_balance) {
+				
+				if (data?.coin_balance ) {
 					const balance = parseFloat(data.coin_balance)
-					if (!isNaN(balance)) {
+					const beforeBalance = parseFloat(getProfileAssetsBalanceResult.CONET_Balance)
+					if (!isNaN(balance) && balance -beforeBalance >0) {
 						getProfileAssetsBalanceResult.CONET_Balance = current.conet.balance = balance.toFixed(4)
 						getProfileAssetsBalanceResult.lastTime = date
 					}
