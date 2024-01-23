@@ -821,7 +821,10 @@ const startLiveness = async (cmd: worker_command) => {
 	let listenServerTimeoutCount = -1
 
 	const listenServerTimeoutProcess = () => {
-		if (++listenServerTimeoutCount<listenServerTimeCountMaximum) {
+		clearTimeout(listenServerTimeout)
+		++listenServerTimeoutCount
+		logger(`listenServerTimeoutCount =[${listenServerTimeoutCount}]`)
+		if (listenServerTimeoutCount<listenServerTimeCountMaximum) {
 			return listenServerTimeout = setTimeout(listenServerTimeoutProcess, listenServerTime)
 			
 		}
@@ -852,6 +855,7 @@ const startLiveness = async (cmd: worker_command) => {
 			LivenessCurrentData = cmd.data = [CNTP_Balance, "0", data]
             return returnUUIDChannel(cmd)
 		}
+
 		clearTimeout(listenServerTimeout)
 		listenServerTimeoutCount = -1
 		listenServerTimeoutProcess()
