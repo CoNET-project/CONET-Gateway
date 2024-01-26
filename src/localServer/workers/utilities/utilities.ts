@@ -1176,33 +1176,33 @@ const sendRequestToNode: (_cmd: SICommandObj_Command, currentProfile: profile, e
 
 
 
-const connectToRecipient = async (cmd: worker_command) => {
-	if (!CoNET_Data?.profiles?.length) {
-		cmd.err = 'NOT_READY'
-		return returnCommand (cmd)
-	}
-	const currentProfile = CoNET_Data.profiles[CoNET_Data.profiles.findIndex(n => n.isPrimary)]
+// const connectToRecipient = async (cmd: worker_command) => {
+// 	if (!CoNET_Data?.profiles?.length) {
+// 		cmd.err = 'NOT_READY'
+// 		return returnCommand (cmd)
+// 	}
+// 	const currentProfile = CoNET_Data.profiles[CoNET_Data.profiles.findIndex(n => n.isPrimary)]
 	
-	if (!currentProfile.network?.recipients.length ) {
-		cmd.err = 'NOT_READY'
-		return returnCommand (cmd)
-	}
-	const entryNode = await getRandomNode ()
+// 	if (!currentProfile.network?.recipients.length ) {
+// 		cmd.err = 'NOT_READY'
+// 		return returnCommand (cmd)
+// 	}
+// 	const entryNode = await getRandomNode ()
 
-	if (!entryNode) {
-		cmd.err = 'NOT_READY'
-		return returnCommand (cmd)
-	}
-	const recipientNode =  currentProfile.network.recipients[0]
+// 	if (!entryNode) {
+// 		cmd.err = 'NOT_READY'
+// 		return returnCommand (cmd)
+// 	}
+// 	const recipientNode =  currentProfile.network.recipients[0]
 
-	const wRequest1: any = await longConnectToNode('connecting', currentProfile, entryNode, recipientNode, [],cmd)
-	if (!wRequest1) {
-		cmd.err = 'FAILURE'
-		return returnCommand (cmd)
-	}
-	returnCommand (cmd)
+// 	const wRequest1: any = await longConnectToNode('connecting', currentProfile, entryNode, recipientNode, [],cmd)
+// 	if (!wRequest1) {
+// 		cmd.err = 'FAILURE'
+// 		return returnCommand (cmd)
+// 	}
+// 	returnCommand (cmd)
 
-}
+// }
 
 const regiestProfile = async (profile: profile, recipientNode: nodes_info) => {
 	if (!recipientNode?.armoredPublicKey || !profile.keyID || !profile?.pgpKey ) {

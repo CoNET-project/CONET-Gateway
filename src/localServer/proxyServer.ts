@@ -485,4 +485,3 @@ export class proxyServer {
 			this.startLocalProxy()
 		}
 }
-

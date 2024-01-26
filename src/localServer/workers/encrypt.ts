@@ -82,6 +82,8 @@ const CoNETModule: CoNET_Module = {
 	}
 }
 
+
+
 let ClientIDworker = ''
 const backGroundPoolWorker: clientPoolWroker[] = []
 
@@ -233,54 +235,54 @@ const sendCONET = async (node: nodes_info, amount: string, profile: profile) => 
 	return node
 }
 
-const getNodeCollect = async (cmd: worker_command) => {
-	const uu:regionType = cmd.data[0]
-	const profile = gettPrimaryProfile()
+// const getNodeCollect = async (cmd: worker_command) => {
+// 	const uu:regionType = cmd.data[0]
+// 	const profile = gettPrimaryProfile()
 
-	if (!activeNodes?.length || !CoNET_Data || !uu ||!profile ||!profile.keyID) {
-		cmd.err = 'NOT_READY'
-		return returnUUIDChannel(cmd)
-	}
-	const conetTokenBalance = profile.tokens.conet.balance
-	if (conetTokenBalance <= '0') {
-		cmd.err = 'FAILURE'
-		return returnUUIDChannel(cmd)
-	}
+// 	if (!activeNodes?.length || !CoNET_Data || !uu ||!profile ||!profile.keyID) {
+// 		cmd.err = 'NOT_READY'
+// 		return returnUUIDChannel(cmd)
+// 	}
+// 	const conetTokenBalance = profile.tokens.conet.balance
+// 	if (conetTokenBalance <= '0') {
+// 		cmd.err = 'FAILURE'
+// 		return returnUUIDChannel(cmd)
+// 	}
 	
-	const _nodes = activeNodes
-	const k: string[] = []
-	if (uu.sp) k.push('ES')
-	if (uu.us) k.push ('US')
-	if (uu.fr) k.push ('FR')
-	if (uu.uk) k.push ('GB')
-	if (uu.ge) k.push('DE')
-	let SaaSNodes: nodes_info[]
-	switch (k.length) {
+// 	const _nodes = activeNodes
+// 	const k: string[] = []
+// 	if (uu.sp) k.push('ES')
+// 	if (uu.us) k.push ('US')
+// 	if (uu.fr) k.push ('FR')
+// 	if (uu.uk) k.push ('GB')
+// 	if (uu.ge) k.push('DE')
+// 	let SaaSNodes: nodes_info[]
+// 	switch (k.length) {
 		
-		case 2: {
-			SaaSNodes = [...getRandomRegionNode(filterNodes(_nodes, k[0]), 1), ...getRandomRegionNode(filterNodes(_nodes, k[1]), 1)]
-			break
-		}
-		default :
-		case 1: {
-			SaaSNodes = getRandomRegionNode(filterNodes(_nodes, k[0]), 2)
-			break
-		}
-	}
-	const balance = parseFloat(profile.tokens.conet.balance)
-	const sendAmount = balance / SaaSNodes.length
-	for (let i = 0; i < SaaSNodes.length; i ++) {
-		SaaSNodes[i]  = await sendCONET(SaaSNodes[i], sendAmount.toString(), profile)
-	}
+// 		case 2: {
+// 			SaaSNodes = [...getRandomRegionNode(filterNodes(_nodes, k[0]), 1), ...getRandomRegionNode(filterNodes(_nodes, k[1]), 1)]
+// 			break
+// 		}
+// 		default :
+// 		case 1: {
+// 			SaaSNodes = getRandomRegionNode(filterNodes(_nodes, k[0]), 2)
+// 			break
+// 		}
+// 	}
+// 	const balance = parseFloat(profile.tokens.conet.balance)
+// 	const sendAmount = balance / SaaSNodes.length
+// 	for (let i = 0; i < SaaSNodes.length; i ++) {
+// 		SaaSNodes[i]  = await sendCONET(SaaSNodes[i], sendAmount.toString(), profile)
+// 	}
 
-	profile.network.recipients.unshift(...SaaSNodes)
-	cmd.data[0] = profile.network.recipients
-	const url = `http://localhost:3001/conet-profile`
-	postToEndpoint(url, true, { profile, activeNodes })
-	return storeProfile (cmd, () => {
-		return returnUUIDChannel (cmd)
-	})
-}
+// 	profile.network.recipients.unshift(...SaaSNodes)
+// 	cmd.data[0] = profile.network.recipients
+// 	const url = `http://localhost:3001/conet-profile`
+// 	postToEndpoint(url, true, { profile, activeNodes })
+// 	return storeProfile (cmd, () => {
+// 		return returnUUIDChannel (cmd)
+// 	})
+// }
 
 const getRegiestNodes = (cmd: worker_command) => {
 	const profile = gettPrimaryProfile()
@@ -397,9 +399,9 @@ const processCmd = async (cmd: worker_command) => {
             return getContainer(cmd)
         }
 
-		case 'setRegion': {
-			return getNodeCollect(cmd)
-		}
+		// case 'setRegion': {
+		// 	return getNodeCollect(cmd)
+		// }
 
 		case 'getRegiestNodes': {
 			return getRegiestNodes (cmd)
@@ -512,20 +514,20 @@ const processCmd = async (cmd: worker_command) => {
             returnUUIDChannel(cmd)
 			
             const profile = gettPrimaryProfile()
-            if (activeNodes && activeNodes.length > 0) {
-                const url = `http://localhost:3001/conet-profile`
-                postToEndpoint(url, true, { profile, activeNodes })
-				.then(() => {
-					return getAllNodes()
-				})
-				.catch(ex => {
-					logger (`postToEndpoint Error!`, ex)
-					return getAllNodes()
-				})
-                // fetchProxyData(`http://localhost:3001/getProxyusage`, data=> {
-                //     logger (`fetchProxyData GOT DATA FROM locathost `, data)
-                // })
-            }
+            // if (activeNodes && activeNodes.length > 0) {
+            //     const url = `http://localhost:3001/conet-profile`
+            //     postToEndpoint(url, true, { profile, activeNodes })
+			// 	.then(() => {
+			// 		return getAllNodes()
+			// 	})
+			// 	.catch(ex => {
+			// 		logger (`postToEndpoint Error!`, ex)
+			// 		return getAllNodes()
+			// 	})
+            //     // fetchProxyData(`http://localhost:3001/getProxyusage`, data=> {
+            //     //     logger (`fetchProxyData GOT DATA FROM locathost `, data)
+            //     // })
+            // }
 			if (profile) {
 				getProfileAssetsBalance(profile)
 				if (!profile.referrer && referrer) {
@@ -546,26 +548,31 @@ const processCmd = async (cmd: worker_command) => {
             
 			cmd.data = [initNullSystemInitialization()]
 			returnUUIDChannel (cmd)
-			await deleteExistDB()
+			return await deleteExistDB()
 			
         }
 
 		case 'startProxy': {
 			const profile = gettPrimaryProfile()
-			if (!activeNodes?.length ) {
-				activeNodes = await _getSINodes ('CUSTOMER_REVIEW', 'USA')
-				logger (activeNodes)
-			}
-
-			if (profile && activeNodes && activeNodes.length > 0) {
+			const region: string = cmd.data[0]
+			const nodes = await getAllNodesInfo()
+			if (profile && nodes !== null && nodes.node.length ) {
+				const activeNodes = nodes.node
+				let _activeNodes = activeNodes
+				if (region ) {
+					_activeNodes = nodes.node.filter(n => n.country === region )
+				}
+				//@ts-ignore
+				profile.network.recipients = _activeNodes
 				
 				const url = `http://localhost:3001/conet-profile`
-                await postToEndpoint(url, true, { profile, activeNodes })
-                // fetchProxyData(`http://localhost:3001/getProxyusage`, '', data=> {
-                //     logger (`fetchProxyData GOT DATA FROM locathost `, data)
-                // })
+				await postToEndpoint(url, true, { profile, activeNodes })
+				// fetchProxyData(`http://localhost:3001/getProxyusage`, '', data=> {
+				//     logger (`fetchProxyData GOT DATA FROM locathost `, data)
+				// })
 				return returnUUIDChannel(cmd)
 			}
+			
 			cmd.err = 'FAILURE'
 			return returnUUIDChannel(cmd)
 		}
@@ -588,7 +595,7 @@ const processCmd = async (cmd: worker_command) => {
 			if (profile) {
 				return getProfileAssetsBalance(profile)
 			}
-			
+			return
 		}
 
 		case 'stopLiveness': {
@@ -625,11 +632,6 @@ const processCmd = async (cmd: worker_command) => {
 				cmd.data = LivenessCurrentData
 				LivenessListen.push(cmd)
 			}
-			return returnUUIDChannel(cmd)
-		}
-
-		case 'getAllNodes': {
-			cmd.data = [{balance:CNTP_Balance, nodes:allNodes}]
 			return returnUUIDChannel(cmd)
 		}
 
@@ -822,11 +824,14 @@ const startLiveness = async (cmd: worker_command) => {
 
 	const listenServerTimeoutProcess = () => {
 		clearTimeout(listenServerTimeout)
+		if (!Liveness) {
+			return logger(`listenServerTimeoutProcess stop because Liveness is NULL!`)
+		}
 		++listenServerTimeoutCount
 		logger(`listenServerTimeoutCount =[${listenServerTimeoutCount}]`)
+		
 		if (listenServerTimeoutCount<listenServerTimeCountMaximum) {
 			return listenServerTimeout = setTimeout(listenServerTimeoutProcess, listenServerTime)
-			
 		}
 		cmd.data = ['DISCONNECT']
 		Liveness = null

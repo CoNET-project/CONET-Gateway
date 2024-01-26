@@ -140,7 +140,7 @@ const adminCNTP= '0x44d1FCCce6BAF388617ee972A6FB898b6b5629B1'
 const referrerCNTP= '0x63377154F972f6FC1319e382535EC9691754bd18'
 
 let nodesGetBalance = []
-const getAllNodesInfo = () => new Promise(resolve=> {
+const getAllNodesInfo: () => Promise<node|null> = () => new Promise(resolve=> {
 
 	return fetch('https://openpgp.online:4001/api/conet-nodes', {
 		method: 'GET',

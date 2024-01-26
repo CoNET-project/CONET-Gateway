@@ -502,6 +502,7 @@ interface nodeType {
 	running: boolean
 	wallet_addr: string
 	balance: string
+	country: string
 }
 
 interface masterBalance {
