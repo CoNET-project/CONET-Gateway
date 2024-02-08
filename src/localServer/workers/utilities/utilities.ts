@@ -121,23 +121,23 @@ const encrypt_Message = async (privatePgpObj: any, armoredPublicKey: string, mes
 	return await openpgp.encrypt(encryptObj)
 }
 
-const encryptCoNET_Data_WithContainerKey = async () => {
+// const encryptCoNET_Data_WithContainerKey = async () => {
 
-	if (!CoNET_Data||!containerKeyObj||!containerKeyObj.keyObj) {
-		const msg = `encryptCoNET_Data_WithContainerKey Error: CoNET_Data === null`
-		return logger (msg)
-	}
-	CoNET_Data.encryptedString = ''
-    const encryptObj = {
-        message: await openpgp.createMessage({text: buffer.Buffer.from(JSON.stringify (CoNET_Data)).toString('base64')}),
-        encryptionKeys: containerKeyObj.keyObj.publicKeyObj,
-        signingKeys: containerKeyObj?.keyObj.privateKeyObj,
-		config: { preferredCompressionAlgorithm: openpgp.enums.compression.zlib } 		// compress the data with zlib
-    }
-	CoNET_Data
-	CoNET_Data.encryptedString = await openpgp.encrypt(encryptObj)
-	return
-}
+// 	if (!CoNET_Data) {
+// 		const msg = `encryptCoNET_Data_WithContainerKey Error: CoNET_Data === null`
+// 		return logger (msg)
+// 	}
+// 	CoNET_Data.encryptedString = ''
+//     const encryptObj = {
+//         message: await openpgp.createMessage({text: buffer.Buffer.from(JSON.stringify (CoNET_Data)).toString('base64')}),
+//         encryptionKeys: containerKeyObj.keyObj.publicKeyObj,
+//         signingKeys: containerKeyObj?.keyObj.privateKeyObj,
+// 		config: { preferredCompressionAlgorithm: openpgp.enums.compression.zlib } 		// compress the data with zlib
+//     }
+
+// 	CoNET_Data.encryptedString = await openpgp.encrypt(encryptObj)
+// 	return
+// }
 
 const decryptCoNET_Data_WithContainerKey = async () => {
 	if (!CoNET_Data || !containerKeyObj || !containerKeyObj?.keyObj || !CoNET_Data?.encryptedString ) {
@@ -157,10 +157,15 @@ const decryptCoNET_Data_WithContainerKey = async () => {
 	}
 	
 	CoNET_Data.encryptedString = ''
-	if (!CoNET_Data.clientPool) {
-		CoNET_Data.clientPool = []
-	}
 	preferences = CoNET_Data.preferences
+}
+
+
+const decryptCoNET_Data_WithPasswd = async () => {
+	if (!CoNET_Data || !CoNET_Data?.encryptedString ) {
+		throw new Error(`decryptCoNET_Data_WithContainerKey Error: have no containerKeyObj?.keyObj || CoNET_Data?.encryptedString`)
+	}
+	
 }
 
 const localServerErrorBridge = ( status: number, CallBack : ( err: netWorkError|seguroError|null, payload?: any ) => void ) => {
@@ -317,28 +322,32 @@ const initProfileTokens = () => {
 }
 
 const initCoNET_Data = ( passcode = '' ) => {
+	
+    //const acc = createKey (1)
+	CoNET_Data = null
+	const acc = createKeyHDWallets()
+	if (!acc) {
+		return 
+	}
 	CoNET_Data = {
 		isReady: true,
 		// CoNETCash: {
 		// 	Total: 0,
 		// 	assets: []
 		// },
-		clientPool: []
+		mnemonicPhrase: acc.mnemonic.phrase
 	}
-    const acc = createKey (1)
-
 	const profile: profile = {
 		tokens: initProfileTokens(),
-		publicKeyArmor: CoNETModule.EthCrypto.publicKeyByPrivateKey (acc[0].privateKey),
-		keyID: acc[0].address.substring(0,2) + acc[0].address.substring(2).toUpperCase(),
+		publicKeyArmor: acc.publicKey,
+		keyID: acc.address,
 		isPrimary: true,
 		referrer: null,
-		privateKeyArmor: acc[0].privateKey,
+		privateKeyArmor: acc.chainCode,
 		network: {
 			recipients: []
 		}
 	}
-	
 	return  CoNET_Data.profiles = [profile]
 }
 
@@ -511,120 +520,120 @@ const getProfileFromKeyID = (keyID: string) => {
 	return CoNET_Data.profiles[profileIndex]
 }
 
-const getFaucet = async ( cmd: worker_command, callback ) => {
-	const keyID = cmd.data[0]
-	let profile: null| profile
+// const getFaucet = async ( cmd: worker_command, callback ) => {
+// 	const keyID = cmd.data[0]
+// 	let profile: null| profile
 
-	if (!keyID || !(profile = getProfileFromKeyID (keyID))) {
-		cmd.err = 'INVALID_DATA'
-		return callback? callback (cmd) : returnCommand (cmd)
-	}
+// 	if (!keyID || !(profile = getProfileFromKeyID (keyID))) {
+// 		cmd.err = 'INVALID_DATA'
+// 		return callback? callback (cmd) : returnCommand (cmd)
+// 	}
 
-	delete cmd.err
-	let result
-	try {
-		result = await postToEndpoint(conet_DL_endpoint, true, { walletAddr: keyID })
-	} catch (ex) {
-		logger (`postToEndpoint [${conet_DL_endpoint}] error! `, ex)
-		cmd.err = 'FAILURE'
-		callback ? callback(cmd) : returnCommand (cmd)
-		return logger (`postToEndpoint ${conet_DL_endpoint} ERROR!`)
-	}
+// 	delete cmd.err
+// 	let result
+// 	try {
+// 		result = await postToEndpoint(conet_DL_endpoint, true, { walletAddr: keyID })
+// 	} catch (ex) {
+// 		logger (`postToEndpoint [${conet_DL_endpoint}] error! `, ex)
+// 		cmd.err = 'FAILURE'
+// 		callback ? callback(cmd) : returnCommand (cmd)
+// 		return logger (`postToEndpoint ${conet_DL_endpoint} ERROR!`)
+// 	}
 	
-	if (!result?.txHash ) {
+// 	if (!result?.txHash ) {
 		
-		cmd.err = 'FAILURE'
-		callback? callback (cmd) : returnCommand (cmd)
-		return logger (`postToEndpoint ${conet_DL_endpoint} ERROR!`)
-	}
+// 		cmd.err = 'FAILURE'
+// 		callback? callback (cmd) : returnCommand (cmd)
+// 		return logger (`postToEndpoint ${conet_DL_endpoint} ERROR!`)
+// 	}
 
-	logger (`postToEndpoint [${ conet_DL_endpoint }] SUCCESS`)
+// 	logger (`postToEndpoint [${ conet_DL_endpoint }] SUCCESS`)
 	
-	logger (`result = ${result}` )
+// 	logger (`result = ${result}` )
 
-	if ( result.txHash) {
-		let receipt = await getTxhashInfo (result.txHash, getRandomCoNETEndPoint())
-		receipt.isSend = false
-		receipt.time = new Date().toISOString()
-		receipt = changeBigIntToString(receipt)
-		profile.tokens.conet.history.push (receipt)
-	}
+// 	if ( result.txHash) {
+// 		let receipt = await getTxhashInfo (result.txHash, getRandomCoNETEndPoint())
+// 		receipt.isSend = false
+// 		receipt.time = new Date().toISOString()
+// 		receipt = changeBigIntToString(receipt)
+// 		profile.tokens.conet.history.push (receipt)
+// 	}
 	
-	return storeProfile (cmd, callback)
-}
+// 	return storeProfile (cmd, callback)
+// }
 
 
-const sendAsset = async (cmd: worker_command) => {
-	const [fromAddr, total, toAddr, asset] = cmd.data[0]
-	if ( !fromAddr || !total || !toAddr || !CoNET_Data?.profiles ) {
-		cmd.err = 'FAILURE'
-		return returnCommand (cmd)
-	}
+// const sendAsset = async (cmd: worker_command) => {
+// 	const [fromAddr, total, toAddr, asset] = cmd.data[0]
+// 	if ( !fromAddr || !total || !toAddr || !CoNET_Data?.profiles ) {
+// 		cmd.err = 'FAILURE'
+// 		return returnCommand (cmd)
+// 	}
 
-	const index = CoNET_Data.profiles.findIndex (val => {
-		return val.keyID === fromAddr
-	})
+// 	const index = CoNET_Data.profiles.findIndex (val => {
+// 		return val.keyID === fromAddr
+// 	})
 
-	if (index < 0 ) {
-		cmd.err = 'FAILURE'
-		return returnCommand (cmd)
-	}
+// 	if (index < 0 ) {
+// 		cmd.err = 'FAILURE'
+// 		return returnCommand (cmd)
+// 	}
 
-	const profile = CoNET_Data.profiles[index]
+// 	const profile = CoNET_Data.profiles[index]
 
-	let network = ''
-	let history: any = null
+// 	let network = ''
+// 	let history: any = null
 
-		network = getRandomCoNETEndPoint()
-		history = profile.tokens.conet.history
-
-
-	// } else {
-	// 	history = profile.tokens.usdc.history
-	// 	balance = profile.tokens.usdc.balance
-	// }
-
-	const {eth} = new CoNETModule.Web3Eth ( new CoNETModule.Web3Eth.providers.HttpProvider(network))
-	const sendObj = {
-		from     : '0x'+ profile.keyID?.substring(2),
-		to       : '0x'+ toAddr.substring(2),
-		data     : ''
-	}
-
-	const balance = (await eth.getBalance(profile.keyID)).toString()
+// 		network = getRandomCoNETEndPoint()
+// 		history = profile.tokens.conet.history
 
 
-	const gas = (await eth.estimateGas(sendObj)).toString()
-	const gasPrice = (await eth.getGasPrice()).toString()
-	const totalGas = gas * gasPrice
-	sendObj['gas'] = gas
-	sendObj['gasPrice'] = gasPrice
+// 	// } else {
+// 	// 	history = profile.tokens.usdc.history
+// 	// 	balance = profile.tokens.usdc.balance
+// 	// }
 
-	let _amount = parseFloat(total)* wei + totalGas
-	if ( balance < _amount) {
-		_amount = balance - totalGas
-	}
+// 	const {eth} = new CoNETModule.Web3Eth ( new CoNETModule.Web3Eth.providers.HttpProvider(network))
+// 	const sendObj = {
+// 		from     : '0x'+ profile.keyID?.substring(2),
+// 		to       : '0x'+ toAddr.substring(2),
+// 		data     : ''
+// 	}
 
-	sendObj['value'] = _amount.toString()
+// 	const balance = (await eth.getBalance(profile.keyID)).toString()
 
-	const createTransaction111 = await eth.accounts.signTransaction( sendObj,'0x'+profile.privateKeyArmor.substring(2))
 
-	let receipt1111: CryptoAssetHistory
-	try {
-		receipt1111 = await eth.sendSignedTransaction (createTransaction111.rawTransaction )
-	} catch (ex) {
-		logger (`sendCONET eth.sendSignedTransaction Error`, ex)
-		return
-	}
+// 	const gas = (await eth.estimateGas(sendObj)).toString()
+// 	const gasPrice = (await eth.getGasPrice()).toString()
+// 	const totalGas = gas * gasPrice
+// 	sendObj['gas'] = gas
+// 	sendObj['gasPrice'] = gasPrice
 
-	receipt1111.value = _amount/10**18
-	receipt1111.isSend = true
-	receipt1111.time = new Date().toISOString()
-	receipt1111 = changeBigIntToString (receipt1111)
-	history.unshift (receipt1111)
+// 	let _amount = parseFloat(total)* wei + totalGas
+// 	if ( balance < _amount) {
+// 		_amount = balance - totalGas
+// 	}
 
-	return storeProfile (cmd)
-}
+// 	sendObj['value'] = _amount.toString()
+
+// 	const createTransaction111 = await eth.accounts.signTransaction( sendObj,'0x'+profile.privateKeyArmor.substring(2))
+
+// 	let receipt1111: CryptoAssetHistory
+// 	try {
+// 		receipt1111 = await eth.sendSignedTransaction (createTransaction111.rawTransaction )
+// 	} catch (ex) {
+// 		logger (`sendCONET eth.sendSignedTransaction Error`, ex)
+// 		return
+// 	}
+
+// 	receipt1111.value = _amount/10**18
+// 	receipt1111.isSend = true
+// 	receipt1111.time = new Date().toISOString()
+// 	receipt1111 = changeBigIntToString (receipt1111)
+// 	history.unshift (receipt1111)
+
+// 	return storeProfile (cmd)
+// }
 
 // const getUSDCPrice = async (cmd: worker_command) => {
 // 	logger (`getUSDCPrice START`)
@@ -952,114 +961,111 @@ const decrypteMessage = (encryptedMessage: string, privatePgpObj: any) => {
 }
 
 
-const longConnectToNode = async (_cmd: SICommandObj_Command, currentProfile: profile, entryNode: nodes_info, node: nodes_info, requestData: any[], cmd: worker_command ) => {
-	return new Promise ( async resolve => {
-		if (!currentProfile?.pgpKey?.publicKeyArmor || !node.armoredPublicKey ) {
-			return resolve (null)
-		}
-		const key = await crypto.subtle.generateKey({
-			name: 'AES-CBC',
-			length: 256
-		}, true, ['encrypt', 'decrypt'])
+// const longConnectToNode = async (_cmd: SICommandObj_Command, currentProfile: profile, entryNode: nodes_info, node: nodes_info, requestData: any[], cmd: worker_command ) => {
+// 	return new Promise ( async resolve => {
+// 		if (!currentProfile?.pgpKey?.publicKeyArmor || !node.armoredPublicKey ) {
+// 			return resolve (null)
+// 		}
+// 		const key = await crypto.subtle.generateKey({
+// 			name: 'AES-CBC',
+// 			length: 256
+// 		}, true, ['encrypt', 'decrypt'])
 
-		const iv = crypto.getRandomValues(new Uint8Array(16))
-		const command: SICommandObj = {
-			command: _cmd,
-			publicKeyArmored: currentProfile.pgpKey.publicKeyArmor,
-			algorithm: 'aes-256-cbc',
-			iv: buffer.Buffer.from(iv).toString('base64'),
-			Securitykey: JSON.stringify(await crypto.subtle.exportKey('jwk', key)),
-			requestData
-		}
+// 		const iv = crypto.getRandomValues(new Uint8Array(16))
+// 		const command: SICommandObj = {
+// 			command: _cmd,
+// 			publicKeyArmored: currentProfile.pgpKey.publicKeyArmor,
+// 			algorithm: 'aes-256-cbc',
+// 			iv: buffer.Buffer.from(iv).toString('base64'),
+// 			Securitykey: JSON.stringify(await crypto.subtle.exportKey('jwk', key)),
+// 			requestData
+// 		}
 
-		let privateKeyObj = null
+// 		let privateKeyObj = null
 
-		try {
-			privateKeyObj = await makePrivateKeyObj (currentProfile.pgpKey.privateKeyArmor)
-		} catch (ex){
-			logger (ex)
-		}
+// 		try {
+// 			privateKeyObj = await makePrivateKeyObj (currentProfile.pgpKey.privateKeyArmor)
+// 		} catch (ex){
+// 			logger (ex)
+// 		}
 	
-		const encryptedCommand = await encrypt_Message( privateKeyObj, node.armoredPublicKey, command)
+// 		const encryptedCommand = await encrypt_Message( privateKeyObj, node.armoredPublicKey, command)
 		
-		const url = `https://${ entryNode.pgp_publickey_id }.${CoNET_SI_Network_Domain}/post`
+// 		const url = `https://${ entryNode.pgp_publickey_id }.${CoNET_SI_Network_Domain}/post`
 
-		logger (`connect to ${url}`)
+// 		logger (`connect to ${url}`)
 
-		return postToEndpointSSE(url, true, {data: encryptedCommand}, async (err, data ) => {
+// 		return postToEndpointSSE(url, true, {data: encryptedCommand}, async (err, data ) => {
 
-			if (err) {
-				return resolve (null)
-			}
-			if (!data) {
-				return resolve (null)
-			}
-			if (/-----BEGIN PGP MESSAGE-----/.test(data[0])) {
-				const clearText:any = await decrypteMessage (data[0], privateKeyObj)
-				if ( !clearText.data ||!clearText.signatures||!CoNET_Data) {
-					return
-				}
+// 			if (err) {
+// 				return resolve (null)
+// 			}
+// 			if (!data) {
+// 				return resolve (null)
+// 			}
+// 			if (/-----BEGIN PGP MESSAGE-----/.test(data[0])) {
+// 				const clearText:any = await decrypteMessage (data[0], privateKeyObj)
+// 				if ( !clearText.data ||!clearText.signatures||!CoNET_Data) {
+// 					return
+// 				}
 				
-				try {
-					clearText.obj =  JSON.parse (buffer.Buffer.from(clearText.data,'base64').toString())
-				} catch (ex) {
-					return
-				}
-				const key = clearText.signatures[0].keyID.toHex()
-				clearText.signatures[0].keyIDHex = key
-				let index = -1
+// 				try {
+// 					clearText.obj =  JSON.parse (buffer.Buffer.from(clearText.data,'base64').toString())
+// 				} catch (ex) {
+// 					return
+// 				}
+// 				const key = clearText.signatures[0].keyID.toHex()
+// 				clearText.signatures[0].keyIDHex = key
+// 				let index = -1
 
-				if (!CoNET_Data.clientPool?.length) {
-					CoNET_Data.clientPool = []
-				}
 
-				if ((index = CoNET_Data.clientPool.findIndex (n => n.walletAddr.toUpperCase() === key.toUpperCase())) < 0) {
+// 				if ((index = CoNET_Data.clientPool.findIndex (n => n.walletAddr.toUpperCase() === key.toUpperCase())) < 0) {
 					
-					let result
-					try {
-						result = await postToEndpoint (`${openSourceEndpoint}${key.toUpperCase()}`, false, null )
-					} catch (ex) {
-						return logger (`longConnectToNode have not find ${key} ERROR`)
-					}
-					CoNET_Data.clientPool.push (result)
-					logger (result)
-					clearText.profile = result
-				} else {
-					clearText.profile = CoNET_Data.clientPool[index]
-				}
+// 					let result
+// 					try {
+// 						result = await postToEndpoint (`${openSourceEndpoint}${key.toUpperCase()}`, false, null )
+// 					} catch (ex) {
+// 						return logger (`longConnectToNode have not find ${key} ERROR`)
+// 					}
+// 					CoNET_Data.clientPool.push (result)
+// 					logger (result)
+// 					clearText.profile = result
+// 				} else {
+// 					clearText.profile = CoNET_Data.clientPool[index]
+// 				}
 				
-				delete cmd.err
-				cmd.data[0]= clearText
-				return returnCommand(cmd)
-			}
-			let res
-			try {
-				const ciphertext = buffer.Buffer.from (data, 'base64')
-				res = await crypto.subtle.decrypt({ name: "AES-CBC",iv}, key, ciphertext)
+// 				delete cmd.err
+// 				cmd.data[0]= clearText
+// 				return returnCommand(cmd)
+// 			}
+// 			let res
+// 			try {
+// 				const ciphertext = buffer.Buffer.from (data, 'base64')
+// 				res = await crypto.subtle.decrypt({ name: "AES-CBC",iv}, key, ciphertext)
 				
-			} catch (ex){
-				return resolve (null)
-			}
+// 			} catch (ex){
+// 				return resolve (null)
+// 			}
 
 			
 			
-			const dec = new TextDecoder()
-			const _ret = dec.decode(res)
+// 			const dec = new TextDecoder()
+// 			const _ret = dec.decode(res)
 			
 			
-			let ret: SICommandObj
+// 			let ret: SICommandObj
 
-			try {
-				ret = JSON.parse (_ret)
-			} catch (ex) {
-				return resolve (null)
-			}
+// 			try {
+// 				ret = JSON.parse (_ret)
+// 			} catch (ex) {
+// 				return resolve (null)
+// 			}
 
-			return resolve (ret)
-		})
+// 			return resolve (ret)
+// 		})
 		
-	})
-}
+// 	})
+// }
 
 const sendForwardToNode = (currentProfile: profile, client: clientProfile, messageObj: any ) => {
 	return new Promise ( async resolve => {
@@ -1245,85 +1251,85 @@ const regiestProfile = async (profile: profile, recipientNode: nodes_info) => {
 
 }
 
-const getProfile = async (cmd: worker_command) => {
-	const key = cmd.data[0]
-	const ret = CoNETModule.Web3Utils.isAddress (key)
-	const keyUp = key.toUpperCase()
-	if (!ret || !CoNET_Data) {
-		cmd.err = 'INVALID_DATA'
-		returnCommand (cmd)
-		return logger (`getProfile have not KEY ERROR!`)
-	}
+// const getProfile = async (cmd: worker_command) => {
+// 	const key = cmd.data[0]
+// 	const ret = CoNETModule.Web3Utils.isAddress (key)
+// 	const keyUp = key.toUpperCase()
+// 	if (!ret || !CoNET_Data) {
+// 		cmd.err = 'INVALID_DATA'
+// 		returnCommand (cmd)
+// 		return logger (`getProfile have not KEY ERROR!`)
+// 	}
 
-	if (CoNET_Data.clientPool.length) {
-		const index = CoNET_Data.clientPool.findIndex( n => n.walletAddr === keyUp)
-		if (index > -1 ) {
-			cmd.data[0] = CoNET_Data.clientPool[index]
-			return returnCommand (cmd)
-		}
-	}
-	let result
-	try {
-		result = await postToEndpoint (`${openSourceEndpoint}${keyUp}`, false, null )
-	} catch (ex) {
-		return logger (`regiestProfile POST to conet_DL_regiestProfile ${conet_DL_regiestProfile} get ERROR`)
-	}
+// 	if (CoNET_Data.clientPool.length) {
+// 		const index = CoNET_Data.clientPool.findIndex( n => n.walletAddr === keyUp)
+// 		if (index > -1 ) {
+// 			cmd.data[0] = CoNET_Data.clientPool[index]
+// 			return returnCommand (cmd)
+// 		}
+// 	}
+// 	let result
+// 	try {
+// 		result = await postToEndpoint (`${openSourceEndpoint}${keyUp}`, false, null )
+// 	} catch (ex) {
+// 		return logger (`regiestProfile POST to conet_DL_regiestProfile ${conet_DL_regiestProfile} get ERROR`)
+// 	}
 
-	if (CoNET_Data) {
-		CoNET_Data.clientPool.push (result)
+// 	if (CoNET_Data) {
+// 		CoNET_Data.clientPool.push (result)
 
-	}
+// 	}
 	
-	logger (result)
-	cmd.data[0] = result
-	returnCommand (cmd)
-	await storage_StoreContainerData ()
+// 	logger (result)
+// 	cmd.data[0] = result
+// 	returnCommand (cmd)
+// 	await storage_StoreContainerData ()
 	
-}
+// }
 
-const sendMessage = async (cmd: worker_command) => {
-	const key = cmd.data[0]
-	const message = cmd.data[1]
-	if (!CoNET_Data) {
-		cmd.err = 'NOT_READY'
-		return returnCommand (cmd)
-	}
-	const index = CoNET_Data.clientPool.findIndex (n => n.walletAddr.toUpperCase() === key.toUpperCase())
-	if (index<0 || !CoNET_Data?.profiles) {
-		cmd.err = 'INVALID_DATA'
-		return returnCommand (cmd)
-	}
-	const client = CoNET_Data.clientPool[index]
+// const sendMessage = async (cmd: worker_command) => {
+// 	const key = cmd.data[0]
+// 	const message = cmd.data[1]
+// 	if (!CoNET_Data) {
+// 		cmd.err = 'NOT_READY'
+// 		return returnCommand (cmd)
+// 	}
+// 	const index = CoNET_Data.clientPool.findIndex (n => n.walletAddr.toUpperCase() === key.toUpperCase())
+// 	if (index<0 || !CoNET_Data?.profiles) {
+// 		cmd.err = 'INVALID_DATA'
+// 		return returnCommand (cmd)
+// 	}
+// 	const client = CoNET_Data.clientPool[index]
 
-	const currentProfile = CoNET_Data.profiles[CoNET_Data.profiles.findIndex(n => n.isPrimary)]
-	if (!currentProfile.pgpKey?.privateKeyArmor ) {
-		cmd.err = 'INVALID_DATA'
-		return returnCommand (cmd)
-	}
-	let privateKeyObj = null
+// 	const currentProfile = CoNET_Data.profiles[CoNET_Data.profiles.findIndex(n => n.isPrimary)]
+// 	if (!currentProfile.pgpKey?.privateKeyArmor ) {
+// 		cmd.err = 'INVALID_DATA'
+// 		return returnCommand (cmd)
+// 	}
+// 	let privateKeyObj = null
 
-	try {
-		privateKeyObj = await makePrivateKeyObj (currentProfile.pgpKey?.privateKeyArmor)
-	} catch (ex){
-		logger (ex)
-		cmd.err = 'INVALID_DATA'
-		return returnCommand (cmd)
-	}
-	const sendMessage = {
-		cmd: 'message',
-		conect: message,
-		totalPart: 1,
-		currentPart: 1,
-		timestamp: new Date().getTime()
-	}
+// 	try {
+// 		privateKeyObj = await makePrivateKeyObj (currentProfile.pgpKey?.privateKeyArmor)
+// 	} catch (ex){
+// 		logger (ex)
+// 		cmd.err = 'INVALID_DATA'
+// 		return returnCommand (cmd)
+// 	}
+// 	const sendMessage = {
+// 		cmd: 'message',
+// 		conect: message,
+// 		totalPart: 1,
+// 		currentPart: 1,
+// 		timestamp: new Date().getTime()
+// 	}
 
-	const send = await sendForwardToNode (currentProfile, client, sendMessage)
-	if (send) {
-		return returnCommand (cmd)
-	}
-	cmd.err = 'FAILURE'
-	return returnCommand (cmd)
-}
+// 	const send = await sendForwardToNode (currentProfile, client, sendMessage)
+// 	if (send) {
+// 		return returnCommand (cmd)
+// 	}
+// 	cmd.err = 'FAILURE'
+// 	return returnCommand (cmd)
+// }
 
 const getHeader = (text: string, header: string) => {
 	const rex = RegExp (header + ': ', 'gi')
@@ -1860,19 +1866,12 @@ const createPlatformFirstProfile = async () => {
 	if ( !CoNET_Data|| !CoNET_Data.profiles?.length) {
 		return logger (`createPlatformFirstProfile initCoNET_Data got damaged!`)
 	}
-    const data = await createGPGKey( passObj?.passcode || '', '', '')			//			containerKeyPair
 
-	containerKeyObj = {
-		publicKeyArmor: data.publicKey,
-		privateKeyArmor: data.privateKey
-	}
 	const key = await createGPGKey('', '', '')
 	CoNET_Data.profiles[0].pgpKey = {
 		privateKeyArmor: key.privateKey,
 		publicKeyArmor: key.publicKey
 	}
-	
-	return makeContainerPGPObj()
 }
 
 const encryptWorkerDoCommand = async ( e ) => {
@@ -1889,31 +1888,30 @@ const encryptWorkerDoCommand = async ( e ) => {
 	}
 
     switch ( cmd.cmd ) {
-        case 'encrypt_createPasscode': {
-            if ( !cmd.data || cmd.data.length < 2) {
-                cmd.err = 'INVALID_DATA'
-                return returnCommand ( cmd )
-            }
-            delete cmd.err
-			const password = cmd.data[0]
-            await createNumberPasscode (password)
-			await createPlatformFirstProfile ()
-			await storage_StoreContainerData ()
-			const data: encrypt_keys_object = {
-				preferences: {
-					preferences: preferences
-				},
-				passcode: {
-					status: 'UNLOCKED'
-				},
-				profiles: CoNET_Data?.profiles,
-				isReady: true,
-				clientPool: []
-			}
+        // case 'encrypt_createPasscode': {
+        //     if ( !cmd.data || cmd.data.length < 2) {
+        //         cmd.err = 'INVALID_DATA'
+        //         return returnCommand ( cmd )
+        //     }
+        //     delete cmd.err
+		// 	const password = cmd.data[0]
+        //     await createNumberPasscode (password)
+		// 	await createPlatformFirstProfile ()
+		// 	await storage_StoreContainerData ()
+		// 	const data: encrypt_keys_object = {
+		// 		preferences: {
+		// 			preferences: preferences
+		// 		},
+		// 		passcode: {
+		// 			status: 'UNLOCKED'
+		// 		},
+		// 		profiles: CoNET_Data?.profiles,
+		// 		isReady: true
+		// 	}
 		
-			cmd.data = [data]
-			returnCommand (cmd)
-		}
+		// 	cmd.data = [data]
+		// 	returnCommand (cmd)
+		// }
 
         case 'encrypt_lock': {
             const data = {
@@ -1936,38 +1934,30 @@ const encryptWorkerDoCommand = async ( e ) => {
 
 		// }
 
-        case 'storePreferences': {
-			if ( !cmd.data || !cmd.data.length || !CoNET_Data?.isReady || !containerKeyObj ) {
-				logger (`storePreferences ERROR have not attach preferences DATA`)
-				cmd.err = 'INVALID_DATA'
-				return returnCommand (cmd)
-			}
-			delete cmd.err
-			CoNET_Data.preferences = preferences = cmd.data[0]
-			await encryptCoNET_Data_WithContainerKey()
-			storage_StoreContainerData ()
-            return returnCommand (cmd)
-        }
+        // case 'storePreferences': {
+		// 	if ( !cmd.data || !cmd.data.length || !CoNET_Data?.isReady || !containerKeyObj ) {
+		// 		logger (`storePreferences ERROR have not attach preferences DATA`)
+		// 		cmd.err = 'INVALID_DATA'
+		// 		return returnCommand (cmd)
+		// 	}
+		// 	delete cmd.err
+		// 	CoNET_Data.preferences = preferences = cmd.data[0]
+		// 	await encryptCoNET_Data_WithContainerKey()
+		// 	storage_StoreContainerData ()
+        //     return returnCommand (cmd)
+        // }
 
         case 'newProfile': {
             return //newProfile (cmd)
         }
 
-        case 'storeProfile': {
-            return storeProfile (cmd)
-        }
-
-		// case 'getUSDCPrice': {
-		// 	return getUSDCPrice (cmd)
+		// case 'getFaucet': {
+		// 	return getFaucet (cmd, null)
 		// }
 
-		case 'getFaucet': {
-			return getFaucet (cmd, null)
-		}
-
-		case 'sendAsset': {
-			return sendAsset (cmd)
-		}
+		// case 'sendAsset': {
+		// 	return sendAsset (cmd)
+		// }
 
 		// case 'buyUSDC': {
 		// 	return buyUSDC (cmd)
@@ -1988,14 +1978,6 @@ const encryptWorkerDoCommand = async ( e ) => {
 			const sortby = cmd.data[0][0]
 			const region = cmd.data[0][1]
 			return getSINodes (sortby, region, cmd)
-		}
-
-		case 'getUserProfile': {
-			return getProfile (cmd)
-		}
-
-		case 'sendMessage': {
-			return sendMessage (cmd)
 		}
 
         default: {

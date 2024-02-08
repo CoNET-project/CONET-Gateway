@@ -12,9 +12,10 @@ const returnInitNull = async (cmd: worker_command) => {
 	delete cmd.err
     cmd.data = [initNullSystemInitialization()]
     returnCommand ( cmd )
+	platform.passcode = 'NONE'
 }
 
-const checkStorage = async () => {
+const checkStorage = async (plarformChannel: BroadcastChannel) => {
     const database = new PouchDB( databaseName, { auto_compaction: true })
     const cmd: worker_command = {
         cmd: 'READY',
@@ -23,54 +24,42 @@ const checkStorage = async () => {
 
 	let doc
 	let initData: CoNETIndexDBInit
+	CoNET_Data = {
+		isReady: false,
+		encryptedString: '',
+		mnemonicPhrase: ''
+	}
     try {
 		doc = await database.get ('init', {latest: true})
 		initData = JSON.parse ( buffer.Buffer.from (doc.title,'base64').toString ())
+		passObj = initData.id
+		preferences = initData.preferences
+		doc = await database.get (initData.uuid, {latest: true})
+		CoNET_Data.encryptedString = buffer.Buffer.from (doc.title,'base64').toString ()
 		
 	} catch (ex) {
         logger (`checkStorage have no CoNET data in IndexDB, INIT CoNET data`)
+		plarformChannel.postMessage('NONE')
 		return returnInitNull (cmd)
 	}
 
-
-	if ( !initData.container || !initData.id ) {
-		logger (`checkStorage have not USER profile!`)
-		return returnInitNull (cmd)
+	if (initData.container) {
+		containerKeyObj = {
+			privateKeyArmor: initData.container.privateKeyArmor,
+			publicKeyArmor: initData.container.publicKeyArmor
+		}
 	}
-
-	containerKeyObj = {
-		privateKeyArmor: initData.container.privateKeyArmor,
-		publicKeyArmor: initData.container.publicKeyArmor
-	}
-
-	passObj = initData.id
-	preferences = initData.preferences
-	systemInitialization_UUID = initData.uuid
-	doc = await getUUIDFragments (systemInitialization_UUID)
-
-	if (!doc?.title) {
-		logger (`checkStorage getUUIDFragments had NUll, IndexDB has DAMAGE` )
-		return returnInitNull (cmd)
-	}
-
-	CoNET_Data = {
-		isReady: false,
-		encryptedString: doc.title,
-		clientPool: []
-	}
-
+	
 	const data: systemInitialization = {
 		preferences: preferences,
 		passcode: {
 			status: 'LOCKED'
 		},
 	}
-	
+	platform.passcode = 'LOCKED'
 	cmd.data = [data]
+	plarformChannel.postMessage('LOCKED')
 	returnCommand (cmd)
-	if (!activeNodes?.length ) {
-		activeNodes = await _getSINodes ('CUSTOMER_REVIEW', 'USA')
-	}
 
     //          already init database
     // fetchProxyData(`http://localhost:3001/connecting`, data => {
@@ -78,153 +67,10 @@ const checkStorage = async () => {
     // })
 }
 
-const getUUIDFragments = async ( uuid: string ) => {
-	
-   
-    const database = new PouchDB( databaseName, { auto_compaction: true  })
-    
-	let doc
-	try {
-		doc = await database.get (uuid, {latest: true} )
-	} catch (ex) {
-		return null
-	}
-    return doc
-}
-
-const storeUUID_Fragments = async (database) => {
-	if ( !CoNET_Data?.encryptedString) {
-		return logger (`storeUUID_Fragments Error! CoNET_Data?.encryptedString === null`)
-	}
-	
-    const putData = {
-        title: CoNET_Data?.encryptedString
-    }
-	const doc = await database.post( putData )
-	return systemInitialization_UUID = doc.id
-}
-
-const storeCoNET_initData = async (database) => {
-	if ( !containerKeyObj?.publicKeyArmor || !CoNET_Data || !passObj ) {
-		const msg = `storeUUID_Fragments Error: encrypted === null`
-		sendState('beforeunload', false)
-		return logger (msg)
-	}
-
-	passObj.passcode = passObj._passcode = passObj.password = ''
-	let preferences = {}
-	if (CoNET_Data.preferences) {
-		preferences =  {
-			language: CoNET_Data.preferences?.langurge,
-			theme: CoNET_Data.preferences?.theme
-		}
-	}
-	
-
-	const CoNETIndexDBInit: CoNETIndexDBInit = {
-		container: {
-			privateKeyArmor: containerKeyObj.privateKeyArmor,
-			publicKeyArmor: containerKeyObj.publicKeyArmor
-		},
-		id: passObj,
-		uuid: systemInitialization_UUID,
-		preferences: preferences	
-	}
-	let doc
-	try {
-		doc = await database.get ('init', {latest: true})
-		
-	} catch (ex) {
-		logger (`database.get 'init' error! keep next`, ex)
-		
-	}
-    const putData = {
-        _id: 'init',
-        title: buffer.Buffer.from(JSON.stringify (CoNETIndexDBInit)).toString ('base64')
-    }
-	
-	if (doc?._rev) {
-		putData['_rev']= doc._rev
-	}
-
-	const uu = await database.put( putData )
-	logger(`storeCoNET_initData database.put return [${uu}]`)
-	sendState('beforeunload', false)
-
-}
-
-const deleteUUID_DFragments = async ( uuid: string) => {
-	
-	if ( !uuid ) {
-        const err = 'deleteUUID_DFragments have NONE uuid Error'
-        logger (err)
-        return
-    }
-	const database = new PouchDB( databaseName, { auto_compaction: true  })
-	try {
-		await database.remove (await database.get (uuid, {latest: true}))
-	} catch (ex) {
-		return
-	}
-	
-	return await database.compact()
-	
-}
-
-const storage_StoreContainerData = async () => {
-    
-	if (!CoNET_Data) {
-		const msg = `storage_StoreContainerData Error: CoNET_Data === null`
-		return logger (msg)
-	}
-	const cmd: worker_command = {
-		cmd:'beforeunload',
-		data: []
-	}
-	sendState('beforeunload', true)
-	logger(`storage_StoreContainerData got response from postMessageWaitingRespon going to process`)
-    const database = new PouchDB( databaseName, { auto_compaction: true  })
-	await encryptCoNET_Data_WithContainerKey()
-    const oldUuid = systemInitialization_UUID
-    logger ('storage_StoreContainerData start! oldUuid = ', oldUuid)
-
-	if ( oldUuid ) {
-		await deleteUUID_DFragments (oldUuid)
-	}
-	const ret = await storeUUID_Fragments (database)
-	if ( !ret ) {
-		sendState('beforeunload', false)
-		return logger (`storage_StoreContainerData Error: storeUUID_Fragments () === null`)
-	}
-	return storeCoNET_initData (database)
-}
 
 const deleteExistDB = async () => {
     const database = new PouchDB( databaseName, { auto_compaction: true  })
     return await database.destroy()
-}
-
-const storeProfile = async (cmd: worker_command, callback?) => {
-	const _profiles: profile[] = cmd?.data[0]
-	if ( !CoNET_Data || !CoNET_Data.profiles ) {
-		cmd.err = 'INVALID_DATA'
-		return callback ? callback () : returnCommand (cmd)
-	}
-	delete cmd.err
-	callback ? callback () : returnCommand (cmd)
-
-	if ( _profiles.length && typeof _profiles.filter === 'function'){
-		CoNET_Data.profiles = CoNET_Data.profiles.map (n => {
-			const prof = _profiles.filter (nn => nn.keyID === n.keyID)[0]
-			if ( prof ) {
-				prof.tokens = n.tokens
-				return prof
-			}
-			return n
-		})
-	}
-	
-	await storage_StoreContainerData ()
 }
 
 const cacheProfile = async (urlData: urlData) => {

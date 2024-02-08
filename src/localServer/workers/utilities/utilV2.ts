@@ -1,3 +1,5 @@
+
+declare const ethers
 const CONET_ReferralsAbi = [
 	{
 		"inputs": [],
@@ -126,7 +128,7 @@ const registerReferrer = async (referrer: string) => {
 	profile.referrer = result.referrer
 	sendState('system', CoNET_Data)
 	sendState('referrer', result.referrer)
-	await storage_StoreContainerData ()
+	await storeSystemData ()
 	return true
 }
 
@@ -261,59 +263,148 @@ const getProfileAssetsBalance = async (profile: profile) => {
 	return false
 }
 
-// const postMessageWaitingRespon = (cmd: worker_command) => new Promise(resolve => {
-// 	const channel = new BroadcastChannel('systemWaiting')
-    
-//     const kk = (e: any) => {
-//         listeningChannel(e.data)
-//     }
+const storeSystemData = async () => {
+	if (!CoNET_Data||!passObj?.passcode) {
+		return
+	}
+	const password = passObj.passcode.toString()
+	CoNET_Data.encryptedString = await CoNETModule.aesGcmEncrypt (buffer.Buffer.from(JSON.stringify (CoNET_Data)).toString('base64'), password)
+	if (!CoNET_Data.encryptedString) {
+		return logger(`encryptStoreData aesGcmEncrypt Error!`)
+	}
+    const putData = {
+        title: buffer.Buffer.from(CoNET_Data.encryptedString).toString('base64')
+    }
+	const database = new PouchDB( databaseName, { auto_compaction: true  })
+	sendState('beforeunload', true)
+	const doc = await database.post( putData )
+	await CoNET_initData_save (database, doc.id)
+	sendState('beforeunload', false)
+}
 
-// 	const listenChannel = cmd.uuid ? new BroadcastChannel(cmd.uuid): null
-
-//     const listeningChannel = (data: any) => {
-// 		logger(`postMessageWaitingRespon GOT response uuid = [${cmd.uuid}]`)
-
-// 		if (listenChannel) {
-// 			listenChannel.close()
-// 		}
-		
-       
-// 		return resolve(data)
-
-//     }
-
-// 	if (listenChannel){
-		
-//     	listenChannel.addEventListener('message', kk)
-// 	}
-
-//     channel.postMessage(JSON.stringify(cmd))
-//     channel.close()
-// })
-    
-   
-// const checkBalance = async () => {
+const createAccount = async (cmd: worker_command) => {
+	const passcode: string = cmd.data[0]
+	const _referrer = cmd.data[1]
+	//	create passObj
+	await createNumberPasscode (passcode)
+	//	create GPG OBJ
+	await createPlatformFirstProfile ()
+	//	Error 
+	if (!CoNET_Data) {
+		cmd.data[0] = ''
+		return returnUUIDChannel (cmd)
+	}
+	const referrerSuccess = await registerReferrer(_referrer)
+	if (referrerSuccess) {
+		CoNET_Data.preferences
+	}
+	// storage Data
+	await storeSystemData ()
+	cmd.data[0] = CoNET_Data.mnemonicPhrase
+	returnUUIDChannel (cmd)
 	
-// 	const provider = new CoNETModule.Web3Eth(CoNETNet[0])
-// 	const eth = new CoNETModule.Web3Eth(provider)
-// 	const contract = new eth.eth.Contract(minERC20ABI, CNTP_Address)
-// 	const ba1 = await contract.methods.balanceOf(adminCNTP).call()
-// 	const ba2 = await contract.methods.balanceOf(referrerCNTP).call()
-// 	const ss1 = weiToEther(eth.utils.fromWei(ba1,'ether'), 0)
-// 	const ss2 = weiToEther(eth.utils.fromWei(ba2,'ether'), 0)
+}
 
-// 	async.forEachOf(nodes, async (n: nodeType, index, next ) => {
-// 		const ba = await contract.methods.balanceOf(n.minerAddr).call()
-// 		n.balance = weiToEther(eth.utils.fromWei(ba,'ether'), 0)
-// 		next()
-// 	}, () => {
-// 		const balance = 100000000 - parseFloat(ss1) - parseFloat(ss2)
-// 		allNodes = nodes
-// 		CNTP_Balance = balance
-// 		sendState('cntp-balance', {balance, nodes})
-		
-// 		logger(`checkBalance balance = ${balance}`)
-		
-// 	})
+const testPasscode = async (cmd: worker_command) => {
+	const passcode: string = cmd.data[0]
+	const referrer = cmd.data[1]
+	if ( !passcode || !passObj ) {
+		cmd.err = 'INVALID_DATA'
+		return returnUUIDChannel(cmd)
+	}
+	passObj.password = passcode
+	await decodePasscode ()
+	try {
+		await decryptSystemData ()
+	} catch (ex) {
+		logger (`encrypt_TestPasscode get password error!`)
+		cmd.err = 'FAILURE'
+		return returnUUIDChannel(cmd)
+	}
+
+	return returnUUIDChannel(cmd)
+}
+
+const createKeyHDWallets = () => {
+	let root
+	try {
+		root = ethers.Wallet.createRandom()
+		return root
+	} catch (ex) {
+		return null
+	}
 	
-// }
+}
+
+const decryptSystemData = async () => {
+	//	old version data
+
+	if (containerKeyObj) {
+		const privatekey = await makeContainerPGPObj()
+		if (CoNET_Data?.passcode?.status === 'UNLOCKED') {
+			if (privatekey.privateKeyObj.isDecrypted()) {
+				return 
+			}
+
+			throw new Error(`Password Error!`)
+		}
+		await decryptCoNET_Data_WithContainerKey()
+		await storeSystemData()
+	} else {
+		const password = passObj?.passcode.toString()
+		if (!password) {
+			throw new Error(`Password Error!`)
+		}
+		const objText = await CoNETModule.aesGcmDecrypt (buffer.Buffer.from(CoNET_Data?.encryptedString).toString(), password)
+		if(CoNET_Data?.passcode?.status === 'UNLOCKED') {
+			return
+		}
+		CoNET_Data = JSON.parse(buffer.Buffer.from( objText,'base64').toString())
+		
+	}
+}
+
+const CoNET_initData_save = async (database, systemInitialization_uuid: string) => {
+	if ( !CoNET_Data || !passObj ) {
+		const msg = `storeUUID_Fragments Error: encrypted === null`
+		
+		return logger (msg)
+	}
+	
+	passObj.passcode = passObj._passcode = passObj.password = ''
+	let preferences = {}
+	if (CoNET_Data.preferences) {
+		preferences =  {
+			language: CoNET_Data.preferences?.langurge,
+			theme: CoNET_Data.preferences?.theme
+		}
+	}
+	
+
+	const CoNETIndexDBInit: CoNETIndexDBInit = {
+		id: passObj,
+		uuid: systemInitialization_uuid,
+		preferences: preferences	
+	}
+	let doc
+	try {
+		doc = await database.get ('init', {latest: true})
+		
+	} catch (ex) {
+		logger (`database.get 'init' error! keep next`, ex)
+		
+	}
+    const putData = {
+        _id: 'init',
+        title: buffer.Buffer.from(JSON.stringify (CoNETIndexDBInit)).toString ('base64')
+    }
+	
+	if (doc?._rev) {
+		putData['_rev']= doc._rev
+	}
+	sendState('beforeunload', true)
+	const uu = await database.put( putData )
+	logger(`storeCoNET_initData database.put return [${uu}]`)
+	sendState('beforeunload', false)
+
+}

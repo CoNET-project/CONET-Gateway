@@ -97,11 +97,6 @@ const createNumberPasscode = async (passcode: string) => {
     const _passwd1 = buffer.Buffer.from (passObj._passcode)
     //password, salt, N, r, p, dkLen, callback
 	
-	if (!passObj ) {
-		const msg = `createNumberPasscode Error: passObj === null`
-		logger (msg)
-		return null
-	}
 	return passObj.passcode = buffer.Buffer.from((await scrypt.scrypt(_passwd1, passObj.salt, passObj.N, passObj.r, passObj.p, passObj.dkLen))).toString('base64')
 }
 

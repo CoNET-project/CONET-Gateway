@@ -156,7 +156,7 @@ declare type seguroError = 'TIMEOUT_EMAIL_SERVER' | 'TIMEOUT_SEGURO_NETWORK' |
 
 declare type verification = 'INCORRECT_CODE'
 
-declare type WorkerCommand = 'READY'|'getRegiestNodes'|'beforeunload'|
+declare type WorkerCommand = 'READY'|'getRegiestNodes'|'beforeunload'|'createAccount'|'testPasscode'|
 	'encrypt_TestPasscode'|'encrypt_createPasscode'|'encrypt_lock'|'invitation'|'encrypt_deletePasscode'|
 	'storePreferences'|'newProfile'|'storeProfile'|'urlProxy'|'saveDomain'|'getDomain'|'setRegion'|
 	'getFaucet'|'isAddress'|'syncAsset'|'sendAsset'|'getUSDCPrice'|'buyUSDC'|'getWorkerClientID'|
@@ -263,12 +263,10 @@ type recipientNode = {
 type encrypt_keys_object = {
     profiles?: profile[]
 	isReady: boolean
-	CoNETCash?: CoNETCash
 	preferences?: any
 	encryptedString?: string
 	passcode?: Passcode
-	clientPool:clientProfile[]
-
+	mnemonicPhrase: string
 }
 
 type pgpKeyPair = {
@@ -337,8 +335,8 @@ interface CoNET_Module {
 	Web3Eth: any
 	Web3Utils: any
 	forge: any
-	aesGcmEncrypt: (plaintext: string, password: string) => void
-	aesGcmDecrypt: (ciphertext: string, password: string) => void
+	aesGcmEncrypt: (plaintext: string, password: string) => Promise<string> 
+	aesGcmDecrypt: (ciphertext: string, password: string) => Promise<string> 
 }
 
 type systemInitialization = {
@@ -347,7 +345,7 @@ type systemInitialization = {
 }
 
 type CoNETIndexDBInit = {
-	container: pgpKeyPair
+	container?: pgpKeyPair
 	id: passInit
 	uuid: string
 	preferences: any
@@ -556,3 +554,9 @@ type listenState = 'referrer'|'system'|'conet'|'cntp'|'cntp-balance'|'nodes'|'be
 interface CONETPlatfromSystemData {
 	
 }
+
+interface conetPlatform {
+	passcode: 'LOCKED'|'UNLOCKED'|'NONE'
+}
+
+

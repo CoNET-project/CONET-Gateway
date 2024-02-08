@@ -1,6 +1,6 @@
 
 let passObj: passInit| null = null
-let systemInitialization_UUID = ''
+
 let workerReady = false
 let CoNET_Data: encrypt_keys_object | null = null
 let containerKeyObj: keyPair|null = null
@@ -27,6 +27,20 @@ const databaseName = 'CoNET'
 const channel = new BroadcastChannel('toMainWroker')
 let activeNodes: nodes_info[]|null= null
 let Liveness: XMLHttpRequest|null = null
+
+/**
+ * 				CONET Platform
+ * 
+ */
+
+const workerReadyChannel = 'conet-platform'
+const workerProcessChannel = 'workerLoader'
+const channelWrokerListenName = 'toMainWroker'
+
+/** */
+let platform: conetPlatform = {
+	passcode: 'NONE'
+}
 
 const LivenessListen: worker_command[] = []
 
@@ -95,24 +109,35 @@ self.onhashchange = () => {
 const initEncryptWorker = async () => {
 	
     const baseUrl = self.name + '/utilities/'
+	const channelLoading = new BroadcastChannel(workerProcessChannel)
+	const channelPlatform = new BroadcastChannel(workerReadyChannel)
     self.importScripts ( baseUrl + 'Buffer.js' )
-    self.importScripts ( baseUrl + 'openpgp.min.js' )
-    self.importScripts ( baseUrl + 'UuidV4.js' )
-    self.importScripts ( baseUrl + 'Pouchdb.js' )
-    self.importScripts ( baseUrl + 'PouchdbFind.js' )
-    self.importScripts ( baseUrl + 'PouchdbMemory.js' )
+	channelLoading.postMessage(10)
+    self.importScripts ( 'https://cdn.jsdelivr.net/npm/openpgp@5.11.0/dist/openpgp.min.js' )
+    self.importScripts ( 'https://cdnjs.cloudflare.com/ajax/libs/uuid/8.3.2/uuid.min.js' )
+	self.importScripts ( 'https://cdnjs.cloudflare.com/ajax/libs/pouchdb/8.0.1/pouchdb.min.js' )
+	self.importScripts ( 'https://cdnjs.cloudflare.com/ajax/libs/async/3.2.5/async.min.js' )
+	self.importScripts ( 'https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js' )
+	channelLoading.postMessage(30)
+	// self.importScripts ( 'https://cdnjs.cloudflare.com/ajax/libs/forge/1.3.1/forge.min.js' )
+    //self.importScripts ( baseUrl + 'Pouchdb.js' )
+    // self.importScripts (  baseUrl + 'PouchdbFind.js' )
+    // self.importScripts ( baseUrl + 'PouchdbMemory.js' )
     self.importScripts ( baseUrl + 'scrypt.js' )
-    self.importScripts ( baseUrl + 'async.js' )
+    // self.importScripts ( baseUrl + 'async.js' )
     self.importScripts ( baseUrl + 'forge.all.min.js' )	
-    self.importScripts ( baseUrl + 'jszip.min.js' )
+	channelLoading.postMessage(50)
+    // self.importScripts ( baseUrl + 'jszip.min.js' )
     self.importScripts ( baseUrl + 'utilities.js' )
-	self.importScripts ( baseUrl + 'web3.js' )
+	//self.importScripts ( baseUrl + 'web3.js' )
     self.importScripts ( baseUrl + 'generatePassword.js' )
     self.importScripts ( baseUrl + 'storage.js' )
+	channelLoading.postMessage(70)
     self.importScripts ( baseUrl + 'seguroSetup.js' )
 	self.importScripts ( baseUrl + 'utilV2.js' )
+	self.importScripts ( 'https://cdnjs.cloudflare.com/ajax/libs/ethers/6.10.0/ethers.umd.min.js' )
     workerReady = true
-	
+	channelLoading.postMessage(90)
 	self.addEventListener ('message', encryptWorkerDoCommand)
     channel.addEventListener('message', channelWorkerDoCommand )
 
@@ -123,7 +148,7 @@ const initEncryptWorker = async () => {
 
 	responseChannel.postMessage(JSON.stringify(cmd))
 	
-    await checkStorage ()
+    await checkStorage (channelPlatform)
 	
 }
 
@@ -381,22 +406,27 @@ const processCmd = async (cmd: worker_command) => {
 		}
 		//****************************************************************************************** */
 
-		case 'getFaucet' : {
-			cmd.data[0] = gettPrimaryProfile ()
-			getFaucetCount++
-			if (!cmd.data[0] || !cmd.data[0].keyID) {
-				cmd.err = 'NO_UUID'
-				return returnUUIDChannel (cmd)
-			}
-			cmd.data[0] = cmd.data[0].keyID
-			return getFaucet (cmd, () => {
-				logger (`getFaucetCount = [${getFaucetCount}]`)
-				returnUUIDChannel (cmd)
-			})
+		// case 'getFaucet' : {
+		// 	cmd.data[0] = gettPrimaryProfile ()
+		// 	getFaucetCount++
+		// 	if (!cmd.data[0] || !cmd.data[0].keyID) {
+		// 		cmd.err = 'NO_UUID'
+		// 		return returnUUIDChannel (cmd)
+		// 	}
+		// 	cmd.data[0] = cmd.data[0].keyID
+		// 	return getFaucet (cmd, () => {
+		// 		logger (`getFaucetCount = [${getFaucetCount}]`)
+		// 		returnUUIDChannel (cmd)
+		// 	})
+		// }
+
+		case 'createAccount': {
+			return createAccount(cmd)
 		}
 
         case 'getContainer': {
-            return getContainer(cmd)
+			cmd.data = [platform]
+            return returnUUIDChannel ( cmd )
         }
 
 		// case 'setRegion': {
@@ -409,43 +439,6 @@ const processCmd = async (cmd: worker_command) => {
 
 		case 'getAllNodes': {
 			return getAllNodes(cmd)
-		}
-
-		case 'encrypt_createPasscode': {
-			if ( !cmd.data || cmd.data.length < 2) {
-                cmd.err = 'INVALID_DATA'
-                return returnUUIDChannel ( cmd )
-            }
-
-            delete cmd.err
-			const password = cmd.data[0]
-			const referrer = cmd.data[2]
-            await createNumberPasscode (password)
-			await createPlatformFirstProfile ()
-			if (CoNET_Data) {
-				CoNET_Data.preferences = {
-					langurge: cmd.data[1]
-				}
-			}
-			await storage_StoreContainerData ()
-			
-			const data: encrypt_keys_object = {
-				preferences: {
-					preferences: {
-						language: cmd.data[1]
-					}
-				},
-				passcode: {
-					status: 'UNLOCKED'
-				},
-				profiles: CoNET_Data?.profiles,
-				isReady: true,
-				clientPool: []
-			}
-		
-			cmd.data = [data]
-
-			return returnUUIDChannel (cmd)
 		}
 
         case 'encrypt_TestPasscode': {
@@ -467,6 +460,7 @@ const processCmd = async (cmd: worker_command) => {
                 cmd.err = 'FAILURE'
                 return returnUUIDChannel(cmd)
             }
+			
 			if (CoNET_Data?.passcode?.status === 'UNLOCKED') {
 				if (privatekey.privateKeyObj.isDecrypted()) {
 					cmd.data = [CoNET_Data]
@@ -540,6 +534,12 @@ const processCmd = async (cmd: worker_command) => {
 			return getAllNodes()
         }
 
+		case 'testPasscode': {
+			return testPasscode(cmd)
+		}
+
+		
+
         case 'SaaSRegister': {
             return logger (`processCmd on SaaSRegister`)
         }
@@ -558,19 +558,22 @@ const processCmd = async (cmd: worker_command) => {
 			const nodes = await getAllNodesInfo()
 			if (profile && nodes !== null && nodes.node.length ) {
 				const activeNodes = nodes.node
-				let _activeNodes = activeNodes
-				if (region ) {
+				let _activeNodes = JSON.parse(JSON.stringify(nodes.node))
+				if (region && region !=='none' ) {
 					_activeNodes = nodes.node.filter(n => n.country === region )
 				}
-				//@ts-ignore
-				profile.network.recipients = _activeNodes
+				if (_activeNodes?.length) {
+					//@ts-ignore
+					profile.network.recipients = _activeNodes
+					
+					const url = `http://localhost:3001/conet-profile`
+					await postToEndpoint(url, true, { profile, activeNodes })
+					// fetchProxyData(`http://localhost:3001/getProxyusage`, '', data=> {
+					//     logger (`fetchProxyData GOT DATA FROM locathost `, data)
+					// })
+					return returnUUIDChannel(cmd)
+				}
 				
-				const url = `http://localhost:3001/conet-profile`
-				await postToEndpoint(url, true, { profile, activeNodes })
-				// fetchProxyData(`http://localhost:3001/getProxyusage`, '', data=> {
-				//     logger (`fetchProxyData GOT DATA FROM locathost `, data)
-				// })
-				return returnUUIDChannel(cmd)
 			}
 			
 			cmd.err = 'FAILURE'
@@ -725,56 +728,6 @@ const returnNullContainerUUIDChannel = async (cmd: worker_command) => {
     initNullSystemInitialization()
     cmd.data = ['NoContainer']
     returnUUIDChannel ( cmd )
-}
-
-const getContainer = async (cmd: worker_command) => {
-    const database = new PouchDB( databaseName, { auto_compaction: true })
-    let doc
-	let initData: CoNETIndexDBInit
-    try {
-		doc = await database.get ('init', {latest: true})
-		initData = JSON.parse ( buffer.Buffer.from (doc.title,'base64').toString ())
-	} catch (ex) {
-        logger (`checkStorage have no CoNET data in IndexDB, INIT CoNET data`)
-		return returnNullContainerUUIDChannel (cmd)
-	}
-    if ( !initData.container || !initData.id ) {
-		logger (`checkStorage have not USER profile!`)
-		return returnNullContainerUUIDChannel (cmd)
-	}
-
-    containerKeyObj = {
-		privateKeyArmor: initData.container.privateKeyArmor,
-		publicKeyArmor: initData.container.publicKeyArmor
-	}
-
-	passObj = initData.id
-	preferences = initData.preferences
-	systemInitialization_UUID = initData.uuid
-	doc = await getUUIDFragments (systemInitialization_UUID)
-
-    CoNET_Data = {
-		isReady: false,
-		encryptedString: doc.title,
-		clientPool: []
-	}
-
-	const data: systemInitialization = {
-		preferences: preferences,
-		passcode: {
-			status: 'LOCKED'
-		},
-	}
-	cmd.data = ['ContainerLocked']
-	returnUUIDChannel (cmd)
-	if (!activeNodes?.length ) {
-		activeNodes = await _getSINodes ('CUSTOMER_REVIEW', 'USA')
-		logger (activeNodes)
-	}
-             //already init database
-    // fetchProxyData(`http://localhost:3001/connecting`,'', data => {
-    //     processCmd (data)
-    // })
 }
 
 
