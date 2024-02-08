@@ -1874,7 +1874,7 @@ const createPlatformFirstProfile = async () => {
 	}
 }
 
-const encryptWorkerDoCommand = async ( e ) => {
+const encryptWorkerDoCommand = async ( e: MessageEvent<any> ) => {
 	const jsonData = buffer.Buffer.from ( e.data ).toString()
 	let cmd: worker_command
 	try {
@@ -1886,7 +1886,7 @@ const encryptWorkerDoCommand = async ( e ) => {
 		cmd.err = 'NOT_READY'
 		return returnCommand ( cmd )
 	}
-
+	
     switch ( cmd.cmd ) {
         // case 'encrypt_createPasscode': {
         //     if ( !cmd.data || cmd.data.length < 2) {

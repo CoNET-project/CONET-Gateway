@@ -143,7 +143,8 @@ const initEncryptWorker = async () => {
 
 	const cmd: worker_command = {
 		cmd: 'READY',
-		data: []
+		data: [],
+
 	}
 
 	responseChannel.postMessage(JSON.stringify(cmd))
@@ -327,6 +328,7 @@ const channelWorkerDoCommand = (async e => {
 	} catch ( ex ) {
 		return console.dir ( ex )
 	}
+
 	if ( !workerReady ) {
 		cmd.err = 'NOT_READY'
 		return returnCommand ( cmd )

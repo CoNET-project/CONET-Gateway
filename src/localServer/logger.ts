@@ -15,7 +15,3 @@ export const hexDebug = ( buffer: Buffer, length: number= 256 ) => {
     console.log(colors.underline(colors.green(`TOTAL LENGTH [${ buffer.length }]`)))
     console.log(colors.grey( hexdump( buffer.slice( 0, length ))))
 }
-
-
-const root = Ethers.Wallet.createRandom()
-root.mnemonic?.phrase

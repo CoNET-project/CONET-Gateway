@@ -175,6 +175,7 @@ type worker_command = {
 	data: any[]
 	uuid?: string
 	err?: WorkerCommandError
+	clientID?: string
 }
 type walletKey = {
 	address: string
