@@ -1,5 +1,6 @@
 
 declare const ethers
+declare const uuid
 const CONET_ReferralsAbi = [
 	{
 		"inputs": [],
@@ -109,7 +110,7 @@ const sendState = (state: listenState, value: any) => {
 
 const registerReferrer = async (referrer: string) => {
 	const profile = gettPrimaryProfile()
-	if (!profile) {
+	if (!profile||!referrer) {
 		return false
 	}
 	if (referrer.toUpperCase() === profile.keyID?.toUpperCase()) {
@@ -168,6 +169,7 @@ let allNodes: node
 let CNTP_Balance = '0'
 let currentCNTP = '0'
 let getProfileAssetsBalanceLocked = false
+let authorization_key = ''
 
 let getProfileAssetsBalanceResult: getBalanceAPIresult = {CNTP_Balance: '0', CONET_Balance: '0', Referee: '0', lastTime: 0}
 let scanPoint = 0
@@ -321,7 +323,7 @@ const testPasscode = async (cmd: worker_command) => {
 		cmd.err = 'FAILURE'
 		return returnUUIDChannel(cmd)
 	}
-
+	authorization_key = cmd.data[0] = uuid.v4()
 	return returnUUIDChannel(cmd)
 }
 
@@ -362,6 +364,17 @@ const decryptSystemData = async () => {
 		CoNET_Data = JSON.parse(buffer.Buffer.from( objText,'base64').toString())
 		
 	}
+}
+
+const showSRP = (cmd: worker_command) => {
+	const _authorization_key: string = cmd.data[0]
+	if (!CoNET_Data || authorization_key!== _authorization_key) {
+		cmd.err = 'FAILURE'
+		return returnUUIDChannel(cmd)
+	}
+
+	cmd.data = [CoNET_Data.mnemonicPhrase]
+	return returnUUIDChannel(cmd)
 }
 
 const CoNET_initData_save = async (database, systemInitialization_uuid: string) => {

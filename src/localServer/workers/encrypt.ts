@@ -395,6 +395,10 @@ const processCmd = async (cmd: worker_command) => {
 			
 			return responseChannel.postMessage(JSON.stringify(cmd))
 		}
+
+		case 'showSRP': {
+			return showSRP(cmd)
+		}
 	
 		case 'READY': {
 			ClientIDworker = cmd.data[0]
