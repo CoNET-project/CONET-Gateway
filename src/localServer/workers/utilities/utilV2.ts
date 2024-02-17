@@ -377,6 +377,16 @@ const showSRP = (cmd: worker_command) => {
 	return returnUUIDChannel(cmd)
 }
 
+const getAllProfiles = (cmd: worker_command) => {
+	const _authorization_key: string = cmd.data[0]
+	if (!CoNET_Data || authorization_key!== _authorization_key) {
+		cmd.err = 'FAILURE'
+		return returnUUIDChannel(cmd)
+	}
+	cmd.data = [CoNET_Data.profiles]
+	return returnUUIDChannel(cmd)
+}
+
 const CoNET_initData_save = async (database, systemInitialization_uuid: string) => {
 	if ( !CoNET_Data || !passObj ) {
 		const msg = `storeUUID_Fragments Error: encrypted === null`

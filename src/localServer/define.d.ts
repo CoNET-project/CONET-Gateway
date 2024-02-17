@@ -164,7 +164,7 @@ declare type WorkerCommand = 'READY'|'getRegiestNodes'|'beforeunload'|'createAcc
 	'sendMessage'|'incomeData'|'WORKER_MESSAGE'|'getCONETBalance'|'startProxy'|'registerReferrer'|
     'SaaSRegister'|'getContainer'|'ipaddress'|'startLiveness'|'stopLiveness'|'isLivenessRunning'|
 	//		from service worker
-	'urlProxy'|'saveDomain'|'getDomain'|'getWorkerClientID'|'referrerList'|'getAllNodes'
+	'urlProxy'|'saveDomain'|'getDomain'|'getWorkerClientID'|'referrerList'|'getAllNodes'|'getAllProfiles'
 
 type SINodesSortby = 'CUSTOMER_REVIEW'|'TOTAL_ONLINE_TIME'|
 	'STORAGE_PRICE_LOW'|'STORAGE_PRICE_HIGH'|'OUTBOUND_PRICE_HIGH'|'OUTBOUND_PRICE_LOW'
