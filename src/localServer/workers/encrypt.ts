@@ -214,52 +214,52 @@ const filterNodes = (_nodes: nodes_info[], key: string) => {
 	return ret
 }
 
-const sendCONET = async (node: nodes_info, amount: string, profile: profile) => {
-	const network = getRandomCoNETEndPoint()
-	const wallet = node.wallet_addr
-	const history = profile.tokens.conet.history
+// const sendCONET = async (node: nodes_info, amount: string, profile: profile) => {
+// 	const network = getRandomCoNETEndPoint()
+// 	const wallet = node.wallet_addr
+// 	const history = profile.tokens.conet.history
 
-	const {eth} = new CoNETModule.Web3Eth ( new CoNETModule.Web3Eth.providers.HttpProvider(network))
-	const sendObj = {
-		from     : '0x'+ profile.keyID?.substring(2),
-		to       : '0x'+ wallet.substring(2),
-		data     : ''
-	}
+// 	const {eth} = new CoNETModule.Web3Eth ( new CoNETModule.Web3Eth.providers.HttpProvider(network))
+// 	const sendObj = {
+// 		from     : '0x'+ profile.keyID?.substring(2),
+// 		to       : '0x'+ wallet.substring(2),
+// 		data     : ''
+// 	}
 
-	const balance = (await eth.getBalance(profile.keyID)).toString()
+// 	const balance = (await eth.getBalance(profile.keyID)).toString()
 
 
-	const gas = (await eth.estimateGas(sendObj)).toString()
-	const gasPrice = (await eth.getGasPrice()).toString()
-	const totalGas = gas * gasPrice
-	sendObj['gas'] = gas
-	sendObj['gasPrice'] = gasPrice
+// 	const gas = (await eth.estimateGas(sendObj)).toString()
+// 	const gasPrice = (await eth.getGasPrice()).toString()
+// 	const totalGas = gas * gasPrice
+// 	sendObj['gas'] = gas
+// 	sendObj['gasPrice'] = gasPrice
 
-	let _amount = parseFloat(amount)* wei - totalGas
-	if ( balance < _amount) {
-		_amount = balance - totalGas
-	}
-	sendObj['value'] = _amount.toString()
-	const createTransaction = await eth.accounts.signTransaction( sendObj,'0x'+profile.privateKeyArmor.substring(2))
+// 	let _amount = parseFloat(amount)* wei - totalGas
+// 	if ( balance < _amount) {
+// 		_amount = balance - totalGas
+// 	}
+// 	sendObj['value'] = _amount.toString()
+// 	const createTransaction = await eth.accounts.signTransaction( sendObj,'0x'+profile.privateKeyArmor.substring(2))
 	
-	let receipt: CryptoAssetHistory
-	try {
-		receipt = await eth.sendSignedTransaction (createTransaction.rawTransaction )
-	} catch (ex) {
-		logger (`sendCONET eth.sendSignedTransaction Error`, ex)
-		return node
-	}
-	receipt.value = _amount/10**18
-	receipt.isSend = true
-	receipt.time = new Date().toISOString()
-	receipt = changeBigIntToString (receipt)
-	history.unshift (receipt)
-	if (!node.receipt) {
-		node.receipt = []
-	}
-	node.receipt.unshift(receipt)
-	return node
-}
+// 	let receipt: CryptoAssetHistory
+// 	try {
+// 		receipt = await eth.sendSignedTransaction (createTransaction.rawTransaction )
+// 	} catch (ex) {
+// 		logger (`sendCONET eth.sendSignedTransaction Error`, ex)
+// 		return node
+// 	}
+// 	receipt.value = _amount/10**18
+// 	receipt.isSend = true
+// 	receipt.time = new Date().toISOString()
+// 	receipt = changeBigIntToString (receipt)
+// 	history.unshift (receipt)
+// 	if (!node.receipt) {
+// 		node.receipt = []
+// 	}
+// 	node.receipt.unshift(receipt)
+// 	return node
+// }
 
 // const getNodeCollect = async (cmd: worker_command) => {
 // 	const uu:regionType = cmd.data[0]
@@ -447,104 +447,13 @@ const processCmd = async (cmd: worker_command) => {
 			return getAllNodes(cmd)
 		}
 
-        case 'encrypt_TestPasscode': {
-
-            if ( !cmd.data?.length || !passObj ) {
-                cmd.err = 'INVALID_DATA'
-                return returnUUIDChannel(cmd)
-            }
-			
-            passObj.password = cmd.data[0]
-			const referrer = cmd.data[1]
-            await decodePasscode ()
-			let privatekey
-            try {
-                privatekey = await makeContainerPGPObj()
-               
-            } catch (ex) {
-                logger (`encrypt_TestPasscode get password error!`)
-                cmd.err = 'FAILURE'
-                return returnUUIDChannel(cmd)
-            }
-			
-			if (CoNET_Data?.passcode?.status === 'UNLOCKED') {
-				if (privatekey.privateKeyObj.isDecrypted()) {
-					cmd.data = [CoNET_Data]
-            		return returnUUIDChannel(cmd)
-				}
-
-                cmd.err = 'FAILURE'
-                return returnUUIDChannel(cmd)
-			}
-			try{
-				await decryptCoNET_Data_WithContainerKey ()
-			} catch (ex){
-				cmd.err = 'FAILURE'
-                return returnUUIDChannel(cmd)
-			}
-			
-            delete cmd.err
-            if (!CoNET_Data) {
-                logger (`encrypt_TestPasscode Error: Empty CoNET_Data!`)
-                cmd.err = 'FAILURE'
-                return returnUUIDChannel(cmd)
-            }
-
-            CoNET_Data.passcode = {
-                status: 'UNLOCKED'
-            }
-        
-            // const profiles = CoNET_Data.profiles
-            // if ( profiles ) {
-            //     for ( let i = 0; i < profiles.length; i++ ) {
-			// 		const profile = profiles[i]
-					
-                    
-			// 		// const current = profile.tokens
-					
-			// 		// current.cntp.balance = parseFloat(data.CNTP_Balance).toFixed(4)
-			// 		// current.conet.balance = parseFloat(data.CONET_Balance).toFixed(4)
-			// 		// profile.referrer = data.Referee === '0x0000000000000000000000000000000000000000' ? '': data.Referee
-            //     }
-                    
-            // }
-            
-
-            cmd.data = [CoNET_Data]
-            returnUUIDChannel(cmd)
-			
-            const profile = gettPrimaryProfile()
-            // if (activeNodes && activeNodes.length > 0) {
-            //     const url = `http://localhost:3001/conet-profile`
-            //     postToEndpoint(url, true, { profile, activeNodes })
-			// 	.then(() => {
-			// 		return getAllNodes()
-			// 	})
-			// 	.catch(ex => {
-			// 		logger (`postToEndpoint Error!`, ex)
-			// 		return getAllNodes()
-			// 	})
-            //     // fetchProxyData(`http://localhost:3001/getProxyusage`, data=> {
-            //     //     logger (`fetchProxyData GOT DATA FROM locathost `, data)
-            //     // })
-            // }
-			if (profile) {
-				getProfileAssetsBalance(profile)
-				if (!profile.referrer && referrer) {
-					await registerReferrer(referrer)
-					profile.referrer = referrer
-				}
-			}
-			
-
-			return getAllNodes()
-        }
-
 		case 'testPasscode': {
 			return testPasscode(cmd)
 		}
 
-		
+		case 'importWallet': {
+			return importWallet(cmd)
+		}
 
         case 'SaaSRegister': {
             return logger (`processCmd on SaaSRegister`)
@@ -646,6 +555,10 @@ const processCmd = async (cmd: worker_command) => {
 
 		case 'getAllProfiles': {
 			return getAllProfiles(cmd)
+		}
+
+		case 'updateProfile': {
+			return updateProfile(cmd)
 		}
 
 		default: {

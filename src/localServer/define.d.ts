@@ -162,9 +162,9 @@ declare type WorkerCommand = 'READY'|'getRegiestNodes'|'beforeunload'|'createAcc
 	'getFaucet'|'isAddress'|'syncAsset'|'sendAsset'|'getUSDCPrice'|'buyUSDC'|'getWorkerClientID'|
 	'mintCoNETCash'|'getSINodes'|'getRecipientCoNETCashAddress'|'getUserProfile'|
 	'sendMessage'|'incomeData'|'WORKER_MESSAGE'|'getCONETBalance'|'startProxy'|'registerReferrer'|
-    'SaaSRegister'|'getContainer'|'ipaddress'|'startLiveness'|'stopLiveness'|'isLivenessRunning'|
+    'SaaSRegister'|'getContainer'|'ipaddress'|'startLiveness'|'stopLiveness'|'isLivenessRunning'|'importWallet'|
 	//		from service worker
-	'urlProxy'|'saveDomain'|'getDomain'|'getWorkerClientID'|'referrerList'|'getAllNodes'|'getAllProfiles'
+	'urlProxy'|'saveDomain'|'getDomain'|'getWorkerClientID'|'referrerList'|'getAllNodes'|'getAllProfiles'|'updateProfile'
 
 type SINodesSortby = 'CUSTOMER_REVIEW'|'TOTAL_ONLINE_TIME'|
 	'STORAGE_PRICE_LOW'|'STORAGE_PRICE_HIGH'|'OUTBOUND_PRICE_HIGH'|'OUTBOUND_PRICE_LOW'
@@ -192,10 +192,10 @@ type CoNETCash = {
 }
 
 interface keyPair {
-	publicKeyArmor: string
-	privateKeyArmor: string
 	keyID?: string
-	keyObj?: {
+	publicKeyArmor?: string
+	privateKeyArmor?: string
+	keyObj?:{
 		publicKeyObj: any
 		privateKeyObj: any
 	}
@@ -208,14 +208,9 @@ type regionType = {
     fr: boolean
 }
 interface profile extends keyPair {
-    nickname?: string
-    tags?: string[]
-	alias?: string
-	bio?: string
-    profileImg?: string
-	note?: string[]
 	isPrimary?: boolean
 	pgpKey?: pgpKeyPair
+	privateKeyArmor?: string
 	emailAddr?: string
 	tokens: {
 		conet:CryptoAsset
@@ -225,6 +220,7 @@ interface profile extends keyPair {
 		recipients: nodes_info[]
 	}
 	referrer: string|null|undefined
+	data?: any
 }
 
 interface publicProfile {
@@ -273,6 +269,8 @@ type encrypt_keys_object = {
 type pgpKeyPair = {
 	privateKeyArmor: string
 	publicKeyArmor: string
+	publicKeyObj?: any
+	privateKeyObj?: any
 }
 
 type Passcode = {

@@ -81,10 +81,10 @@ const makePrivateKeyObj = async ( privateArmor: string, password = '' ) => {
 	return privateKey
 }
 
-const loadWalletAddress = ( keypair: keyPair, password ) => {
-	const account = new CoNETModule.Web3EthAccounts ()
-	return account.wallet.decrypt ( keypair.privateKeyArmor, password )
-}
+// const loadWalletAddress = ( keypair: keyPair, password ) => {
+// 	const account = new CoNETModule.Web3EthAccounts ()
+// 	return account.wallet.decrypt ( keypair.privateKeyArmor, password )
+// }
 
 const decryptWithContainerKey = ( encryptedMessage: string, CallBack: (err: Error|null, text?: string) => void) => {
     let ret = ''
@@ -1210,46 +1210,46 @@ const sendRequestToNode: (_cmd: SICommandObj_Command, currentProfile: profile, e
 
 // }
 
-const regiestProfile = async (profile: profile, recipientNode: nodes_info) => {
-	if (!recipientNode?.armoredPublicKey || !profile.keyID || !profile?.pgpKey ) {
-		return logger (`regiestProfile !recipientNode?.armoredPublicKey || !profile.keyID || !profile?.pgpKey Error!`)
-	}
-	const DL_publiy: any = await postToEndpoint (conet_DL_publishGPGKeyArmored, false, '' )
+// const regiestProfile = async (profile: profile, recipientNode: nodes_info) => {
+// 	if (!recipientNode?.armoredPublicKey || !profile.keyID || !profile?.pgpKey ) {
+// 		return logger (`regiestProfile !recipientNode?.armoredPublicKey || !profile.keyID || !profile?.pgpKey Error!`)
+// 	}
+// 	const DL_publiy: any = await postToEndpoint (conet_DL_publishGPGKeyArmored, false, '' )
 
-	if ( !DL_publiy?.publishGPGKey ) {
-		return logger (`regiestProfile conet_DL_publishGPGKeyArmored have null Error!`)
-	}
+// 	if ( !DL_publiy?.publishGPGKey ) {
+// 		return logger (`regiestProfile conet_DL_publishGPGKeyArmored have null Error!`)
+// 	}
 
-	const data: ICoNET_Profile = {
-		profileImg: profile?.profileImg ? profile.profileImg: '',
-		nickName: profile?.nickname ? profile.nickname : '',
-		emailAddr: profile?.emailAddr ? profile.emailAddr: '',
-		routerPublicKeyID: recipientNode.pgp_publickey_id,
-		routerArmoredPublicKey: recipientNode.armoredPublicKey,
-		armoredPublicKey: profile.pgpKey.publicKeyArmor,
-		walletAddr: profile.keyID,
-		walletAddrSign: CoNETModule.EthCrypto.sign(profile.privateKeyArmor, CoNETModule.EthCrypto.hash.keccak256(profile.keyID))
-	}
+// 	const data: ICoNET_Profile = {
+// 		profileImg: profile?.profileImg ? profile.profileImg: '',
+// 		nickName: profile?.nickname ? profile.nickname : '',
+// 		emailAddr: profile?.emailAddr ? profile.emailAddr: '',
+// 		routerPublicKeyID: recipientNode.pgp_publickey_id,
+// 		routerArmoredPublicKey: recipientNode.armoredPublicKey,
+// 		armoredPublicKey: profile.pgpKey.publicKeyArmor,
+// 		walletAddr: profile.keyID,
+// 		walletAddrSign: CoNETModule.EthCrypto.sign(profile.privateKeyArmor, CoNETModule.EthCrypto.hash.keccak256(profile.keyID))
+// 	}
 
-	let privateKeyObj = null
+// 	let privateKeyObj = null
 
-	try {
-		privateKeyObj = await makePrivateKeyObj (profile.pgpKey.privateKeyArmor)
-	} catch (ex){
-		logger (ex)
-	}
+// 	try {
+// 		privateKeyObj = await makePrivateKeyObj (profile.pgpKey.privateKeyArmor)
+// 	} catch (ex){
+// 		logger (ex)
+// 	}
 
-	const encryptedCommand = await encrypt_Message( privateKeyObj, DL_publiy.publishGPGKey, data)
-	Math.min(3,4)
-	let result
-	try {
-		result = await postToEndpoint (conet_DL_regiestProfile, true, {pgpMessage: encryptedCommand} )
-	} catch (ex) {
-		return logger (`regiestProfile POST to conet_DL_regiestProfile ${conet_DL_regiestProfile} get ERROR`)
-	}
-	logger (`regiestProfile FINISHED!`)
+// 	const encryptedCommand = await encrypt_Message( privateKeyObj, DL_publiy.publishGPGKey, data)
+// 	Math.min(3,4)
+// 	let result
+// 	try {
+// 		result = await postToEndpoint (conet_DL_regiestProfile, true, {pgpMessage: encryptedCommand} )
+// 	} catch (ex) {
+// 		return logger (`regiestProfile POST to conet_DL_regiestProfile ${conet_DL_regiestProfile} get ERROR`)
+// 	}
+// 	logger (`regiestProfile FINISHED!`)
 
-}
+// }
 
 // const getProfile = async (cmd: worker_command) => {
 // 	const key = cmd.data[0]

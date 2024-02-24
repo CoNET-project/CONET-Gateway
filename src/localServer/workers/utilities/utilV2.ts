@@ -431,3 +431,61 @@ const CoNET_initData_save = async (database, systemInitialization_uuid: string) 
 	sendState('beforeunload', false)
 
 }
+
+const importWallet = async (cmd: worker_command) => {
+	const _authorization_key: string = cmd.data[0]
+	const privateKey = cmd.data[1]
+	const data = cmd.data[2]
+	cmd.data = []
+	if (!CoNET_Data || !CoNET_Data?.profiles || authorization_key !== _authorization_key) {
+		cmd.err = 'FAILURE'
+		return returnUUIDChannel(cmd)
+	}
+	let wallet
+	try {
+		wallet = new ethers.Wallet(privateKey)
+	} catch (ex) {
+		cmd.err = 'FAILURE'
+		return returnUUIDChannel(cmd)
+	}
+	const key = await createGPGKey('', '', '')
+
+	const profile: profile = {
+		isPrimary: false,
+		keyID: wallet.address,
+		privateKeyArmor: privateKey,
+		pgpKey: {
+			privateKeyArmor: key.privateKey,
+			publicKeyArmor: key.publicKey
+		},
+		referrer: null,
+		network: {
+			recipients: []
+		},
+		tokens: initProfileTokens(),
+		data
+	}
+	CoNET_Data.profiles.push(profile)
+	await storeSystemData ()
+	cmd.data[0] = CoNET_Data.profiles
+	return returnUUIDChannel(cmd)
+
+}
+
+const updateProfile = async (cmd: worker_command) => {
+	const _authorization_key: string = cmd.data[0]
+	const _profile:profile = cmd.data[1]
+	if (!CoNET_Data || !CoNET_Data?.profiles|| !_profile.keyID || authorization_key !== _authorization_key) {
+		cmd.err = 'FAILURE'
+		return returnUUIDChannel(cmd)
+	}
+	const index = CoNET_Data.profiles.findIndex(n => n.keyID === _profile.keyID)
+	if(index < 0) {
+		cmd.err = 'FAILURE'
+		return returnUUIDChannel(cmd)
+	}
+	CoNET_Data.profiles[index].data = _profile.data
+	await storeSystemData ()
+	cmd.data[0] = CoNET_Data.profiles
+	return returnUUIDChannel(cmd)
+}
