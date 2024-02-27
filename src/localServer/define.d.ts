@@ -164,7 +164,7 @@ declare type WorkerCommand = 'READY'|'getRegiestNodes'|'beforeunload'|'createAcc
 	'sendMessage'|'incomeData'|'WORKER_MESSAGE'|'getCONETBalance'|'startProxy'|'registerReferrer'|
     'SaaSRegister'|'getContainer'|'ipaddress'|'startLiveness'|'stopLiveness'|'isLivenessRunning'|'importWallet'|
 	//		from service worker
-	'urlProxy'|'saveDomain'|'getDomain'|'getWorkerClientID'|'referrerList'|'getAllNodes'|'getAllProfiles'|'updateProfile'
+	'urlProxy'|'saveDomain'|'getDomain'|'getWorkerClientID'|'referrerList'|'getAllNodes'|'getAllProfiles'|'updateProfile'|'addProfile'|'resetPasscode'
 
 type SINodesSortby = 'CUSTOMER_REVIEW'|'TOTAL_ONLINE_TIME'|
 	'STORAGE_PRICE_LOW'|'STORAGE_PRICE_HIGH'|'OUTBOUND_PRICE_HIGH'|'OUTBOUND_PRICE_LOW'
@@ -207,11 +207,14 @@ type regionType = {
     sp: boolean,
     fr: boolean
 }
+
 interface profile extends keyPair {
 	isPrimary?: boolean
 	pgpKey?: pgpKeyPair
 	privateKeyArmor?: string
 	emailAddr?: string
+	hdPath: string
+	index: number
 	tokens: {
 		conet:CryptoAsset
 		cntp:CryptoAsset

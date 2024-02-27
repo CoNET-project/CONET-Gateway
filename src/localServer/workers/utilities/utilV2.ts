@@ -125,7 +125,6 @@ const registerReferrer = async (referrer: string) => {
 	const conet_DL_endpoint = `${ CoNET_SI_Network_Domain }/api/registerReferrer`
 	const result: any = await postToEndpoint(conet_DL_endpoint, true, data)
 
-
 	profile.referrer = result.referrer
 	sendState('system', CoNET_Data)
 	sendState('referrer', result.referrer)
@@ -266,7 +265,7 @@ const getProfileAssetsBalance = async (profile: profile) => {
 }
 
 const storeSystemData = async () => {
-	if (!CoNET_Data||!passObj?.passcode) {
+	if (!CoNET_Data||! passObj?.passcode) {
 		return
 	}
 	const password = passObj.passcode.toString()
@@ -296,10 +295,13 @@ const createAccount = async (cmd: worker_command) => {
 		cmd.data[0] = ''
 		return returnUUIDChannel (cmd)
 	}
+
 	const referrerSuccess = await registerReferrer(_referrer)
-	if (referrerSuccess) {
-		CoNET_Data.preferences
+
+	if(referrerSuccess) {
+		CoNET_Data.preferences = _referrer
 	}
+	
 	// storage Data
 	await storeSystemData ()
 	cmd.data[0] = CoNET_Data.mnemonicPhrase
@@ -331,11 +333,10 @@ const createKeyHDWallets = () => {
 	let root
 	try {
 		root = ethers.Wallet.createRandom()
-		return root
 	} catch (ex) {
 		return null
 	}
-	
+	return root
 }
 
 const decryptSystemData = async () => {
@@ -454,6 +455,8 @@ const importWallet = async (cmd: worker_command) => {
 		isPrimary: false,
 		keyID: wallet.address,
 		privateKeyArmor: privateKey,
+		hdPath: '',
+		index: -1,
 		pgpKey: {
 			privateKeyArmor: key.privateKey,
 			publicKeyArmor: key.publicKey
@@ -487,5 +490,64 @@ const updateProfile = async (cmd: worker_command) => {
 	CoNET_Data.profiles[index].data = _profile.data
 	await storeSystemData ()
 	cmd.data[0] = CoNET_Data.profiles
+	return returnUUIDChannel(cmd)
+}
+
+const addProfile =  async (cmd: worker_command) => {
+	const _authorization_key: string = cmd.data[0]
+	if (!CoNET_Data || !CoNET_Data?.profiles|| authorization_key !== _authorization_key) {
+		cmd.err = 'FAILURE'
+		return returnUUIDChannel(cmd)
+	}
+	const UIData = cmd.data[1]
+	const indexMap = CoNET_Data.profiles.map(n=> n.index)
+	const nextIndex = indexMap.sort((a,b) => b-a)[0] + 1
+	const root = ethers.Wallet.fromPhrase(CoNET_Data.mnemonicPhrase)
+	const rootPath = root.path
+	const nextPath = rootPath.replace('\/0$',`/${nextIndex}`)
+	const newAcc = root.derivePath(nextPath)
+	const key = await createGPGKey('', '', '')
+	const profile: profile = {
+		isPrimary: false,
+		keyID: newAcc.address,
+		privateKeyArmor: newAcc.chainCode,
+		hdPath: newAcc.path,
+		index: newAcc.index,
+		pgpKey: {
+			privateKeyArmor: key.privateKey,
+			publicKeyArmor: key.publicKey
+		},
+		referrer: null,
+		network: {
+			recipients: []
+		},
+		tokens: initProfileTokens(),
+		data: UIData
+	}
+	CoNET_Data.profiles.push(profile)
+	await storeSystemData ()
+	cmd.data[0] = CoNET_Data.profiles
+	return returnUUIDChannel(cmd)
+}
+
+const resetPasscode = async (cmd: worker_command) => {
+	const oldPasscode: string = cmd.data[0]
+	const newPasscode: string = cmd.data[1]
+	if ( !oldPasscode || !passObj ) {
+		cmd.err = 'INVALID_DATA'
+		return returnUUIDChannel(cmd)
+	}
+	passObj.password = oldPasscode
+	await decodePasscode ()
+	try {
+		await decryptSystemData ()
+	} catch (ex) {
+		logger (`encrypt_TestPasscode get password error!`)
+		cmd.err = 'FAILURE'
+		return returnUUIDChannel(cmd)
+	}
+	await createNumberPasscode (newPasscode)
+	await storeSystemData()
+	authorization_key = cmd.data[0] = uuid.v4()
 	return returnUUIDChannel(cmd)
 }

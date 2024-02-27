@@ -561,6 +561,14 @@ const processCmd = async (cmd: worker_command) => {
 			return updateProfile(cmd)
 		}
 
+		case 'addProfile': {
+			return addProfile (cmd)
+		}
+
+		case 'resetPasscode': {
+			return resetPasscode (cmd)
+		}
+
 		default: {
 			cmd.err = 'INVALID_COMMAND'
 			responseChannel.postMessage(JSON.stringify(cmd))

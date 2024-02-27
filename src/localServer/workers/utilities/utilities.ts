@@ -344,6 +344,8 @@ const initCoNET_Data = ( passcode = '' ) => {
 		isPrimary: true,
 		referrer: null,
 		privateKeyArmor: acc.chainCode,
+		hdPath: acc.path,
+		index: acc.index,
 		network: {
 			recipients: []
 		}
