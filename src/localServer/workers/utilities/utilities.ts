@@ -321,37 +321,7 @@ const initProfileTokens = () => {
 	}
 }
 
-const initCoNET_Data = ( passcode = '' ) => {
-	
-    //const acc = createKey (1)
-	CoNET_Data = null
-	const acc = createKeyHDWallets()
-	if (!acc) {
-		return 
-	}
-	CoNET_Data = {
-		isReady: true,
-		// CoNETCash: {
-		// 	Total: 0,
-		// 	assets: []
-		// },
-		mnemonicPhrase: acc.mnemonic.phrase
-	}
-	const profile: profile = {
-		tokens: initProfileTokens(),
-		publicKeyArmor: acc.publicKey,
-		keyID: acc.address,
-		isPrimary: true,
-		referrer: null,
-		privateKeyArmor: acc.chainCode,
-		hdPath: acc.path,
-		index: acc.index,
-		network: {
-			recipients: []
-		}
-	}
-	return  CoNET_Data.profiles = [profile]
-}
+
 
 const makeContainerPGPObj = async () => {
 	if (!containerKeyObj?.privateKeyArmor || !containerKeyObj?.publicKeyArmor ) {
@@ -1862,19 +1832,6 @@ const createGPGKey = ( passwd: string, name: string, email: string ) => {
 	return openpgp.generateKey ( option )
 }
 
-const createPlatformFirstProfile = async () => {
-    
-    initCoNET_Data ()
-	if ( !CoNET_Data|| !CoNET_Data.profiles?.length) {
-		return logger (`createPlatformFirstProfile initCoNET_Data got damaged!`)
-	}
-
-	const key = await createGPGKey('', '', '')
-	CoNET_Data.profiles[0].pgpKey = {
-		privateKeyArmor: key.privateKey,
-		publicKeyArmor: key.publicKey
-	}
-}
 
 const encryptWorkerDoCommand = async ( e: MessageEvent<any> ) => {
 	const jsonData = buffer.Buffer.from ( e.data ).toString()

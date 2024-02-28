@@ -283,14 +283,16 @@ const storeSystemData = async () => {
 	sendState('beforeunload', false)
 }
 
+
+
 const createAccount = async (cmd: worker_command) => {
 	const passcode: string = cmd.data[0]
 	const _referrer = cmd.data[1]
 	//	create passObj
 	await createNumberPasscode (passcode)
 	//	create GPG OBJ
-	await createPlatformFirstProfile ()
-	//	Error 
+	await initCoNET_Data ()
+	//	Error
 	if (!CoNET_Data) {
 		cmd.data[0] = ''
 		return returnUUIDChannel (cmd)
@@ -551,3 +553,64 @@ const resetPasscode = async (cmd: worker_command) => {
 	authorization_key = cmd.data[0] = uuid.v4()
 	return returnUUIDChannel(cmd)
 }
+
+const recoverAccount = async (cmd: worker_command) => {
+	const SRP: string = cmd.data[0]
+	const passcode: string = cmd.data[1]
+	let acc
+	try {
+		acc = ethers.Wallet.fromPhrase(SRP)
+	} catch (ex) {
+		logger(`recoverAccount Phrase SRP Error! [${SRP}]`)
+		cmd.err = 'FAILURE'
+		return returnUUIDChannel(cmd)
+	}
+	initSystemData(acc)
+	await createNumberPasscode (passcode)
+	await storeSystemData ()
+	authorization_key = cmd.data[0] = uuid.v4()
+	return returnUUIDChannel(cmd)
+}
+
+const initCoNET_Data = ( passcode = '' ) => {
+	
+    //const acc = createKey (1)
+	CoNET_Data = null
+	const acc = createKeyHDWallets()
+	if (!acc) {
+		return 
+	}
+	initSystemData(acc)
+}
+
+const initSystemData = async (acc) => {
+	CoNET_Data = {
+		isReady: true,
+		// CoNETCash: {
+		// 	Total: 0,
+		// 	assets: []
+		// },
+		mnemonicPhrase: acc.mnemonic.phrase
+	}
+	const key = await createGPGKey('', '', '')
+
+	const profile: profile = {
+		tokens: initProfileTokens(),
+		publicKeyArmor: acc.publicKey,
+		keyID: acc.address,
+		isPrimary: true,
+		referrer: null,
+		pgpKey: {
+			privateKeyArmor: key.privateKey,
+			publicKeyArmor: key.publicKey
+		},
+		privateKeyArmor: acc.chainCode,
+		hdPath: acc.path,
+		index: acc.index,
+		network: {
+			recipients: []
+		}
+	}
+	return  CoNET_Data.profiles = [profile]
+}
+
