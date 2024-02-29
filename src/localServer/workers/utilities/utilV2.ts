@@ -318,8 +318,18 @@ const testPasscode = async (cmd: worker_command) => {
 		cmd.err = 'INVALID_DATA'
 		return returnUUIDChannel(cmd)
 	}
-	passObj.password = passcode
+	const _tempPass = passObj?.password
+	
 	await decodePasscode ()
+	if (_tempPass) {
+		if (passObj?.password !== _tempPass) {
+			logger (`encrypt_TestPasscode get password error!`)
+			cmd.err = 'FAILURE'
+			return returnUUIDChannel(cmd)
+		}
+		authorization_key = cmd.data[0] = uuid.v4()
+		return returnUUIDChannel(cmd)
+	}
 	try {
 		await decryptSystemData ()
 	} catch (ex) {

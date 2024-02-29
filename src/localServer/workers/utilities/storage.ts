@@ -35,7 +35,7 @@ const checkStorage = async (plarformChannel: BroadcastChannel) => {
 		passObj = initData.id
 		preferences = initData.preferences
 		doc = await database.get (initData.uuid, {latest: true})
-		CoNET_Data.encryptedString = buffer.Buffer.from (doc.title,'base64').toString ()
+		CoNET_Data.encryptedString = /^-----BEGIN PGP MESSAGE-----\n\n/.test(doc.title) ? doc.title: buffer.Buffer.from (doc.title,'base64').toString ()
 		
 	} catch (ex) {
         logger (`checkStorage have no CoNET data in IndexDB, INIT CoNET data`)
