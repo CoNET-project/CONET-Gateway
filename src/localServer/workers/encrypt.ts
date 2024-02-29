@@ -544,6 +544,10 @@ const processCmd = async (cmd: worker_command) => {
 			return referrerList(cmd)
 		}
 
+		case 'recoverAccount': {
+			return recoverAccount(cmd)
+		}
+
 		case 'isLivenessRunning': {
 			cmd.data = []
 			if (Liveness) {
