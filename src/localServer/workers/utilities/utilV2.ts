@@ -274,7 +274,7 @@ const storeSystemData = async () => {
 		return logger(`encryptStoreData aesGcmEncrypt Error!`)
 	}
     const putData = {
-        title: buffer.Buffer.from(CoNET_Data.encryptedString).toString('base64')
+        title: CoNET_Data.encryptedString
     }
 	const database = new PouchDB( databaseName, { auto_compaction: true  })
 	sendState('beforeunload', true)
