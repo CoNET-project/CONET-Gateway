@@ -319,17 +319,8 @@ const testPasscode = async (cmd: worker_command) => {
 		return returnUUIDChannel(cmd)
 	}
 	const _tempPass = passObj?.password
-	
+	passObj.password = passcode
 	await decodePasscode ()
-	if (_tempPass) {
-		if (passObj?.password !== _tempPass) {
-			logger (`encrypt_TestPasscode get password error!`)
-			cmd.err = 'FAILURE'
-			return returnUUIDChannel(cmd)
-		}
-		authorization_key = cmd.data[0] = uuid.v4()
-		return returnUUIDChannel(cmd)
-	}
 	try {
 		await decryptSystemData ()
 	} catch (ex) {
@@ -575,33 +566,25 @@ const recoverAccount = async (cmd: worker_command) => {
 		cmd.err = 'FAILURE'
 		return returnUUIDChannel(cmd)
 	}
-	initSystemData(acc)
+	initSystemDataV1(acc)
 	await createNumberPasscode (passcode)
 	await storeSystemData ()
 	authorization_key = cmd.data[0] = uuid.v4()
 	return returnUUIDChannel(cmd)
 }
 
-const initCoNET_Data = ( passcode = '' ) => {
+const initCoNET_Data = async ( passcode = '' ) => {
 	
     //const acc = createKey (1)
-	CoNET_Data = null
 	const acc = createKeyHDWallets()
 	if (!acc) {
 		return 
 	}
-	initSystemData(acc)
+	await initSystemDataV1(acc)
 }
 
-const initSystemData = async (acc) => {
-	CoNET_Data = {
-		isReady: true,
-		// CoNETCash: {
-		// 	Total: 0,
-		// 	assets: []
-		// },
-		mnemonicPhrase: acc.mnemonic.phrase
-	}
+const initSystemDataV1 = async (acc) => {
+	
 	const key = await createGPGKey('', '', '')
 
 	const profile: profile = {
@@ -621,6 +604,15 @@ const initSystemData = async (acc) => {
 			recipients: []
 		}
 	}
-	return  CoNET_Data.profiles = [profile]
+	CoNET_Data = {
+		isReady: true,
+		// CoNETCash: {
+		// 	Total: 0,
+		// 	assets: []
+		// },
+		mnemonicPhrase: acc.mnemonic.phrase,
+		profiles:[profile]
+	}
+	
 }
 

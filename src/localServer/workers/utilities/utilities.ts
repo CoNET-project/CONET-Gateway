@@ -1816,7 +1816,7 @@ const createKey = ( length: number ) => {
 	return acc
 }
 
-const createGPGKey = ( passwd: string, name: string, email: string ) => {
+const createGPGKey = async ( passwd: string, name: string, email: string ) => {
 	const userId = {
 		name: name,
 		email: email
@@ -1824,12 +1824,12 @@ const createGPGKey = ( passwd: string, name: string, email: string ) => {
 	const option = {
         type: 'ecc',
 		passphrase: passwd,
-		userIDs: [ userId ],
+		userIDs: [userId],
 		curve: 'curve25519',
         format: 'armored'
 	}
 
-	return openpgp.generateKey ( option )
+	return await openpgp.generateKey ( option )
 }
 
 
