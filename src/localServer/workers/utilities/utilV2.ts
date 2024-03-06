@@ -398,7 +398,7 @@ const CoNET_initData_save = async (database, systemInitialization_uuid: string) 
 		return logger (msg)
 	}
 	
-	passObj.passcode = passObj._passcode = passObj.password = ''
+	
 	let preferences = {}
 	if (CoNET_Data.preferences) {
 		preferences =  {
