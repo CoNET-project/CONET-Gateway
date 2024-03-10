@@ -592,14 +592,12 @@ const addProfile =  async (cmd: worker_command) => {
 	const indexMap = CoNET_Data.profiles.map(n=> n.index)
 	const nextIndex = indexMap.sort((a,b) => b-a)[0] + 1
 	const root = ethers.Wallet.fromPhrase(CoNET_Data.mnemonicPhrase)
-	const rootPath = root.path
-	const nextPath = rootPath.replace('\/0$',`/${nextIndex}`)
-	const newAcc = root.derivePath(nextPath)
+	const newAcc = root.deriveChild(nextIndex)
 	const key = await createGPGKey('', '', '')
 	const profile: profile = {
 		isPrimary: false,
 		keyID: newAcc.address,
-		privateKeyArmor: newAcc.chainCode,
+		privateKeyArmor: newAcc.signingKey.privateKey,
 		hdPath: newAcc.path,
 		index: newAcc.index,
 		pgpKey: {
@@ -613,7 +611,9 @@ const addProfile =  async (cmd: worker_command) => {
 		tokens: initProfileTokens(),
 		data: UIData
 	}
+
 	CoNET_Data.profiles.push(profile)
+	++CoNET_Data.ver
 	await storeSystemData ()
 	cmd.data[0] = CoNET_Data.profiles
 	return returnUUIDChannel(cmd)
