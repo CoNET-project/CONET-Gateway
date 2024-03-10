@@ -135,7 +135,8 @@ const initEncryptWorker = async () => {
 	channelLoading.postMessage(70)
     self.importScripts ( baseUrl + 'seguroSetup.js' )
 	self.importScripts ( baseUrl + 'utilV2.js' )
-	self.importScripts ( 'https://cdnjs.cloudflare.com/ajax/libs/ethers/6.10.0/ethers.umd.min.js' )
+	self.importScripts ( baseUrl + 'CoNETModule.js' )
+	self.importScripts ( 'https://cdnjs.cloudflare.com/ajax/libs/ethers/6.11.1/ethers.umd.min.js' )
     workerReady = true
 	channelLoading.postMessage(90)
 	self.addEventListener ('message', encryptWorkerDoCommand)

@@ -1,12 +1,8 @@
 
 
-const CoNETNet = [`https://holeskyrpc1.conet.network`]
 
-// const usdcNet = 'https://rpc1.openpgp.online/usdc'
 
-const getRandomCoNETEndPoint = () => {
-	return CoNETNet[0]			//Math.round(Math.random() * 3)]
-}
+
 const returnCommand = ( cmd: worker_command ) => {
     self.postMessage ( JSON.stringify ( cmd ))
 }
@@ -372,7 +368,7 @@ const weiToEther = (wei: string, length: number) => {
 	return kkk.toFixed(length)
 }
 const getCNTPBalance: (Addr: string) => Promise<string> = (Addr: string) => {
-	const provider = new CoNETModule.Web3Eth(CoNETNet[0])
+	const provider = new CoNETModule.Web3Eth(conet_rpc)
 	const eth = new CoNETModule.Web3Eth(provider)
 	const contract = new eth.eth.Contract(minERC20ABI, CNTP_Address)
 	
@@ -1811,7 +1807,7 @@ const preProxyConnect = async (cmd: worker_command) => {
 
 const createKey = ( length: number ) => {
 
-	const eth = new CoNETModule.Web3Eth(CoNETNet)
+	const eth = new CoNETModule.Web3Eth(conet_rpc)
 	const acc = eth.wallet.create(length)
 	return acc
 }

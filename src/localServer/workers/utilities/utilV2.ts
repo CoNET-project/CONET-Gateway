@@ -64,12 +64,101 @@ const CONET_ReferralsAbi = [
 		"type": "function"
 	}
 ]
-
+const conet_storageAbi=[
+	{
+		"inputs": [],
+		"stateMutability": "nonpayable",
+		"type": "constructor"
+	},
+	{
+		"anonymous": false,
+		"inputs": [
+			{
+				"indexed": true,
+				"internalType": "address",
+				"name": "from",
+				"type": "address"
+			},
+			{
+				"indexed": true,
+				"internalType": "address",
+				"name": "to",
+				"type": "address"
+			},
+			{
+				"indexed": true,
+				"internalType": "uint256",
+				"name": "index",
+				"type": "uint256"
+			},
+			{
+				"indexed": false,
+				"internalType": "string",
+				"name": "data",
+				"type": "string"
+			}
+		],
+		"name": "FragmentsStorage",
+		"type": "event"
+	},
+	{
+		"inputs": [
+			{
+				"internalType": "address",
+				"name": "to",
+				"type": "address"
+			},
+			{
+				"internalType": "string",
+				"name": "data",
+				"type": "string"
+			}
+		],
+		"name": "_storageFragments",
+		"outputs": [],
+		"stateMutability": "nonpayable",
+		"type": "function"
+	},
+	{
+		"inputs": [
+			{
+				"internalType": "address",
+				"name": "",
+				"type": "address"
+			}
+		],
+		"name": "count",
+		"outputs": [
+			{
+				"internalType": "uint256",
+				"name": "",
+				"type": "uint256"
+			}
+		],
+		"stateMutability": "view",
+		"type": "function"
+	},
+	{
+		"inputs": [
+			{
+				"internalType": "string",
+				"name": "data",
+				"type": "string"
+			}
+		],
+		"name": "storageFragments",
+		"outputs": [],
+		"stateMutability": "nonpayable",
+		"type": "function"
+	}
+]
+const conet_rpc = 'https://rpc.conet.network'
+const api_endpoint = `https://api.conet.network`
 const ReferralsAddress = '0x8f6be4704a3735024F4D2CBC5BAC3722c0C8a0BD'
 
 const checkReferee = async (myKeyID:string) => {
 
-	const {eth} = new CoNETModule.Web3Eth ( new CoNETModule.Web3Eth.providers.HttpProvider(getRandomCoNETEndPoint()))
+	const {eth} = new CoNETModule.Web3Eth ( new CoNETModule.Web3Eth.providers.HttpProvider(conet_rpc))
 	const referralsContract = new eth.Contract(CONET_ReferralsAbi, ReferralsAddress)
 	let result: string
 	try {
@@ -89,7 +178,7 @@ const getReferees = async () => {
 	if (!profile) {
 		return []
 	}
-	const {eth} = new CoNETModule.Web3Eth ( new CoNETModule.Web3Eth.providers.HttpProvider(getRandomCoNETEndPoint()))
+	const {eth} = new CoNETModule.Web3Eth ( new CoNETModule.Web3Eth.providers.HttpProvider(conet_rpc))
 	const referralsContract = new eth.Contract(CONET_ReferralsAbi, ReferralsAddress)
 	let result: string
 	try {
@@ -136,7 +225,6 @@ const referrerList = async (cmd: worker_command) => {
 	cmd.data = [await getReferees()]
 	returnUUIDChannel(cmd)
 }
-
 
 const adminCNTP= '0x44d1FCCce6BAF388617ee972A6FB898b6b5629B1'
 const referrerCNTP= '0x63377154F972f6FC1319e382535EC9691754bd18'
@@ -283,8 +371,6 @@ const storeSystemData = async () => {
 	sendState('beforeunload', false)
 }
 
-
-
 const createAccount = async (cmd: worker_command) => {
 	const passcode: string = cmd.data[0]
 	const _referrer = cmd.data[1]
@@ -318,7 +404,6 @@ const testPasscode = async (cmd: worker_command) => {
 		cmd.err = 'INVALID_DATA'
 		return returnUUIDChannel(cmd)
 	}
-	const _tempPass = passObj?.password
 	passObj.password = passcode
 	await decodePasscode ()
 	try {
@@ -328,6 +413,7 @@ const testPasscode = async (cmd: worker_command) => {
 		cmd.err = 'FAILURE'
 		return returnUUIDChannel(cmd)
 	}
+	await checkCoNET_DataVersion()
 	authorization_key = cmd.data[0] = uuid.v4()
 	return returnUUIDChannel(cmd)
 }
@@ -597,7 +683,7 @@ const initSystemDataV1 = async (acc) => {
 			privateKeyArmor: key.privateKey,
 			publicKeyArmor: key.publicKey
 		},
-		privateKeyArmor: acc.chainCode,
+		privateKeyArmor: acc.signingKey.privateKey,
 		hdPath: acc.path,
 		index: acc.index,
 		network: {
@@ -605,14 +691,50 @@ const initSystemDataV1 = async (acc) => {
 		}
 	}
 	CoNET_Data = {
-		isReady: true,
-		// CoNETCash: {
-		// 	Total: 0,
-		// 	assets: []
-		// },
 		mnemonicPhrase: acc.mnemonic.phrase,
-		profiles:[profile]
+		profiles:[profile],
+		ver: 0,
+		isReady: true
 	}
 	
 }
 
+
+
+const regiestAccount = async () => {
+	const url = `${api_endpoint}/api/storageFragments`
+	if (!CoNET_Data?.mnemonicPhrase||!CoNET_Data?.profiles) {
+		return logger (`regiestAccount CoNET_Data object null Error! Stop process!`)
+	}
+	const pass = CoNETModule.EthCrypto.hash.keccak256(CoNET_Data.mnemonicPhrase)
+	const data = await CoNETModule.aesGcmEncrypt(buffer.Buffer.from(JSON.stringify(CoNET_Data)).toString('base64'), pass)
+	const profile = CoNET_Data.profiles[0]
+	const message =JSON.stringify({ walletAddress: profile.keyID, data})
+	const messageHash = CoNETModule.EthCrypto.hash.keccak256(message)
+	const wallet = new ethers.Wallet(profile.privateKeyArmor)
+	const wallet_sign = await wallet.signMessage(messageHash)
+	const signMessage = CoNETModule.EthCrypto.sign( profile.privateKeyArmor, messageHash )
+	const sendData = {
+		message, signMessage
+	}
+	const result: any = await postToEndpoint(url, true, sendData)
+
+}
+const conet_storage_contract_address = `0xd94532f8346d4FA5Bee21e8C5af2c341A0B7f511`
+const checkCoNET_DataVersion = () => {
+	if (!CoNET_Data?.mnemonicPhrase||!CoNET_Data?.profiles) {
+		return logger (`regiestAccount CoNET_Data object null Error! Stop process!`)
+	}
+	const profile = CoNET_Data.profiles[0]
+	const provide = new ethers.JsonRpcProvider(conet_rpc)
+	const wallet = new ethers.Wallet(profile.privateKeyArmor, provide)
+	const conet_storage = new ethers.Contract(conet_storage_contract_address, conet_storageAbi, provide)
+	Promise.all([
+		conet_storage.count(profile.keyID)
+	]).then(([count]) => {
+		logger(`checkCoNET_DataVersion count = [${count}]`)
+	}).catch(ex=>{
+		logger(`checkCoNET_DataVersion error!`, ex)
+	})
+	
+}

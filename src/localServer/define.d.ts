@@ -264,6 +264,7 @@ type recipientNode = {
 type encrypt_keys_object = {
     profiles?: profile[]
 	isReady: boolean
+	ver: number
 	preferences?: any
 	encryptedString?: string
 	passcode?: Passcode

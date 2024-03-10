@@ -27,7 +27,8 @@ const checkStorage = async (plarformChannel: BroadcastChannel) => {
 	CoNET_Data = {
 		isReady: false,
 		encryptedString: '',
-		mnemonicPhrase: ''
+		mnemonicPhrase: '',
+		ver: 0
 	}
     try {
 		doc = await database.get ('init', {latest: true})
