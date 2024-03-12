@@ -152,44 +152,84 @@ const conet_storageAbi=[
 		"type": "function"
 	}
 ]
+
 const conet_rpc = 'https://rpc.conet.network'
 const api_endpoint = `https://api.conet.network`
 const ReferralsAddress = '0x8f6be4704a3735024F4D2CBC5BAC3722c0C8a0BD'
 
+
 const checkReferee = async (myKeyID:string) => {
-
-	const {eth} = new CoNETModule.Web3Eth ( new CoNETModule.Web3Eth.providers.HttpProvider(conet_rpc))
-	const referralsContract = new eth.Contract(CONET_ReferralsAbi, ReferralsAddress)
-	let result: string
+	const provideNewCONET = new ethers.JsonRpcProvider(conet_rpc)
+	const CNTP_Referrals = new ethers.Contract(ReferralsAddress, CONET_ReferralsAbi, provideNewCONET)
+	let referrer: string
 	try {
-		result = await referralsContract.methods.getReferrer(myKeyID).call({from:myKeyID})
+		referrer = await CNTP_Referrals.getReferrer(myKeyID)
 	} catch (ex) {
-		logger (`checkReferee getReferrer Error!`, ex)
+		return logger(`checkReferee Error!`, ex)
+	}
+	const add = referrer.toLowerCase()
+	if (add === '0x0000000000000000000000000000000000000000') {
 		return null
 	}
-	if (result === '0x0000000000000000000000000000000000000000') {
-		return null
+	return add
+	// const {eth} = new CoNETModule.Web3Eth ( new CoNETModule.Web3Eth.providers.HttpProvider(conet_rpc))
+	// const referralsContract = new eth.Contract(CONET_ReferralsAbi, ReferralsAddress)
+	// let result: string
+	// try {
+	// 	result = await referralsContract.methods.getReferrer(myKeyID).call({from:myKeyID})
+	// } catch (ex) {
+	// 	logger (`checkReferee getReferrer Error!`, ex)
+	// 	return null
+	// }
+	// if (result === '0x0000000000000000000000000000000000000000') {
+	// 	return null
+	// }
+	// return result
+}
+
+const getReferees = async (wallet: string, CNTP_Referrals) => {
+	
+
+	let result: string[] = []
+	try {
+		result = await CNTP_Referrals.getReferees(wallet)
+	} catch (ex) {
+		logger (`checkReferee getReferrer Error!`, ex)
+		return []
 	}
 	return result
 }
 
-const getReferees = async () => {
-	const profile = gettPrimaryProfile()
-	if (!profile) {
-		return []
-	}
-	const {eth} = new CoNETModule.Web3Eth ( new CoNETModule.Web3Eth.providers.HttpProvider(conet_rpc))
-	const referralsContract = new eth.Contract(CONET_ReferralsAbi, ReferralsAddress)
-	let result: string
-	try {
-		result = await referralsContract.methods.getReferees(profile.keyID).call({from:profile.keyID })
-	} catch (ex) {
-		logger (`checkReferee getReferrer Error!`, ex)
-		return []
-	}
-	return result
-}
+const getAllReferees = async (_wallet: string, CNTP_Referrals) => {
 
+	const firstArray: string[] = await getReferees(_wallet, CNTP_Referrals)
+	if (!firstArray.length) {
+		return []
+	}
+	const ret: any = []
+	const getData = async (wallet: string) => {
+		const kkk = await getReferees(wallet, CNTP_Referrals)
+		const data = JSON.parse(`{"${wallet}": ${JSON.stringify(kkk)}}`)
+		return data
+	}
+	for (let i = 0; i < firstArray.length; i++) {
+		const kk = await getReferees(firstArray[i], CNTP_Referrals)
+		const ret1: any[] = []
+
+		if (kk.length) {
+			
+			for (let j = 0; j < kk.length; j ++) {
+				ret1.push(await getData(kk[j]))
+			}
+
+		}
+		const data = `{"${firstArray[i]}": ${JSON.stringify(ret1)}}`
+		const k = JSON.parse(data)
+		ret.push(k)
+	}
+	
+	return ret
+}
 
 const sendState = (state: listenState, value: any) => {
 	const sendChannel = new BroadcastChannel(state)
@@ -202,27 +242,39 @@ const registerReferrer = async (referrer: string) => {
 	if (!profile||!referrer) {
 		return false
 	}
-	if (referrer.toUpperCase() === profile.keyID?.toUpperCase()) {
+
+	if (referrer.toLowerCase() === profile.keyID?.toLowerCase() || profile?.referrer) {
 		return false
 	}
+
 	const message =JSON.stringify({ walletAddress: profile.keyID, referrer })
 	const messageHash = CoNETModule.EthCrypto.hash.keccak256(message)
 	const signMessage = CoNETModule.EthCrypto.sign( profile.privateKeyArmor, messageHash )
 	const data = {
 		message, signMessage
 	}
-	const conet_DL_endpoint = `${ CoNET_SI_Network_Domain }/api/registerReferrer`
+	const conet_DL_endpoint = `${ api_endpoint }/api/registerReferrer`
 	const result: any = await postToEndpoint(conet_DL_endpoint, true, data)
-
-	profile.referrer = result.referrer
-	sendState('system', CoNET_Data)
-	sendState('referrer', result.referrer)
-	await storeSystemData ()
-	return true
+	if (result?.referrer) {
+		profile.referrer = result.referrer
+		sendState('system', CoNET_Data)
+		sendState('referrer', result.referrer)
+		return true
+	}
+	return false
+	
 }
 
-const referrerList = async (cmd: worker_command) => {
-	cmd.data = [await getReferees()]
+const getReferrerList = async (cmd: worker_command) => {
+	const _authorization_key: string = cmd.data[0]
+	const referrer = cmd.data[1]
+	if (authorization_key !== _authorization_key) {
+		cmd.err = 'FAILURE'
+		return returnUUIDChannel(cmd)
+	}
+	const provideNewCONET = new ethers.JsonRpcProvider(conet_rpc)
+	const CNTP_Referrals = new ethers.Contract(ReferralsAddress, CONET_ReferralsAbi, provideNewCONET)
+	cmd.data = [await getAllReferees(referrer, CNTP_Referrals)]
 	returnUUIDChannel(cmd)
 }
 
@@ -383,12 +435,15 @@ const createAccount = async (cmd: worker_command) => {
 		cmd.data[0] = ''
 		return returnUUIDChannel (cmd)
 	}
+	CoNET_Data.preferences = _referrer
 
-	const referrerSuccess = await registerReferrer(_referrer)
-
-	if(referrerSuccess) {
-		CoNET_Data.preferences = _referrer
+	if (_referrer) {
+		const referrer = await registerReferrer(_referrer)
+		if (!referrer) {
+			logger(`createAccount referrer dosen't regirst!`)
+		}
 	}
+
 	
 	// storage Data
 	await storeSystemData ()
@@ -413,9 +468,21 @@ const testPasscode = async (cmd: worker_command) => {
 		cmd.err = 'FAILURE'
 		return returnUUIDChannel(cmd)
 	}
-	await checkCoNET_DataVersion()
 	authorization_key = cmd.data[0] = uuid.v4()
-	return returnUUIDChannel(cmd)
+	returnUUIDChannel(cmd)
+
+	if ( referrer ) {
+		const profile = gettPrimaryProfile()
+		if (profile && !profile?.referrer) {
+			await registerReferrer (referrer)
+		}
+		const provideNewCONET = new ethers.JsonRpcProvider(conet_rpc)
+		const CNTP_Referrals = new ethers.Contract(ReferralsAddress, CONET_ReferralsAbi, provideNewCONET)
+		const kkk = await getAllReferees('0x04441E4BC3A8842473Fe974DB4351f0b126940be', CNTP_Referrals)
+		logger(kkk)
+	}
+	
+	await checkCoNET_DataVersion()
 }
 
 const createKeyHDWallets = () => {
@@ -713,14 +780,14 @@ const regiestAccount = async () => {
 	const messageHash = CoNETModule.EthCrypto.hash.keccak256(message)
 	const wallet = new ethers.Wallet(profile.privateKeyArmor)
 	const wallet_sign = await wallet.signMessage(messageHash)
-	const signMessage = CoNETModule.EthCrypto.sign( profile.privateKeyArmor, messageHash )
 	const sendData = {
-		message, signMessage
+		message, wallet_sign
 	}
 	const result: any = await postToEndpoint(url, true, sendData)
 
 }
 const conet_storage_contract_address = `0xd94532f8346d4FA5Bee21e8C5af2c341A0B7f511`
+
 const checkCoNET_DataVersion = () => {
 	if (!CoNET_Data?.mnemonicPhrase||!CoNET_Data?.profiles) {
 		return logger (`regiestAccount CoNET_Data object null Error! Stop process!`)
@@ -728,13 +795,28 @@ const checkCoNET_DataVersion = () => {
 	const profile = CoNET_Data.profiles[0]
 	const provide = new ethers.JsonRpcProvider(conet_rpc)
 	const wallet = new ethers.Wallet(profile.privateKeyArmor, provide)
-	const conet_storage = new ethers.Contract(conet_storage_contract_address, conet_storageAbi, provide)
+	const conet_storage = new ethers.Contract(conet_storage_contract_address, conet_storageAbi, wallet)
 	Promise.all([
 		conet_storage.count(profile.keyID)
 	]).then(([count]) => {
-		logger(`checkCoNET_DataVersion count = [${count}]`)
+		
+		if (!CoNET_Data) {
+			return logger(`checkCoNET_DataVersion Promise.all CoNET_Data is NULL ERROR!`)
+		}
+		const _count = parseInt(count)
+		if (_count > CoNET_Data.ver) {
+			return updateProfiles(_count)
+		}
+		return logger(`checkCoNET_DataVersion current version [${count}] is updated!`)
 	}).catch(ex=>{
 		logger(`checkCoNET_DataVersion error!`, ex)
+		return checkCoNET_DataVersion()
 	})
-	
+}
+const storageProfilesTo_dCloud = (newVer: number) => {
+
+}
+
+const updateProfiles = (newVer: number) => {
+	logger(`new profile ver [${newVer}] ready! update it`)
 }

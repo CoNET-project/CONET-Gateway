@@ -541,8 +541,8 @@ const processCmd = async (cmd: worker_command) => {
 			return returnUUIDChannel(cmd)
 		}
 
-		case 'referrerList': {
-			return referrerList(cmd)
+		case 'getRefereesList': {
+			return getReferrerList(cmd)
 		}
 
 		case 'recoverAccount': {
