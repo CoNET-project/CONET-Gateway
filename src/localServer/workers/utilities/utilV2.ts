@@ -65,92 +65,92 @@ const CONET_ReferralsAbi = [
 	}
 ]
 const conet_storageAbi=[
-	{
-		"inputs": [],
-		"stateMutability": "nonpayable",
-		"type": "constructor"
-	},
-	{
-		"anonymous": false,
-		"inputs": [
-			{
-				"indexed": true,
-				"internalType": "address",
-				"name": "from",
-				"type": "address"
-			},
-			{
-				"indexed": true,
-				"internalType": "address",
-				"name": "to",
-				"type": "address"
-			},
-			{
-				"indexed": true,
-				"internalType": "uint256",
-				"name": "index",
-				"type": "uint256"
-			},
-			{
-				"indexed": false,
-				"internalType": "string",
-				"name": "data",
-				"type": "string"
-			}
-		],
-		"name": "FragmentsStorage",
-		"type": "event"
-	},
-	{
-		"inputs": [
-			{
-				"internalType": "address",
-				"name": "to",
-				"type": "address"
-			},
-			{
-				"internalType": "string",
-				"name": "data",
-				"type": "string"
-			}
-		],
-		"name": "_storageFragments",
-		"outputs": [],
-		"stateMutability": "nonpayable",
-		"type": "function"
-	},
-	{
-		"inputs": [
-			{
-				"internalType": "address",
-				"name": "",
-				"type": "address"
-			}
-		],
-		"name": "count",
-		"outputs": [
-			{
-				"internalType": "uint256",
-				"name": "",
-				"type": "uint256"
-			}
-		],
-		"stateMutability": "view",
-		"type": "function"
-	},
-	{
-		"inputs": [
-			{
-				"internalType": "string",
-				"name": "data",
-				"type": "string"
-			}
-		],
-		"name": "storageFragments",
-		"outputs": [],
-		"stateMutability": "nonpayable",
-		"type": "function"
-	}
+    {
+        "inputs": [],
+        "stateMutability": "nonpayable",
+        "type": "constructor"
+    },
+    {
+        "anonymous": false,
+        "inputs": [
+            {
+                "indexed": true,
+                "internalType": "address",
+                "name": "from",
+                "type": "address"
+            },
+            {
+                "indexed": true,
+                "internalType": "address",
+                "name": "to",
+                "type": "address"
+            },
+            {
+                "indexed": true,
+                "internalType": "uint256",
+                "name": "index",
+                "type": "uint256"
+            },
+            {
+                "indexed": false,
+                "internalType": "string",
+                "name": "data",
+                "type": "string"
+            }
+        ],
+        "name": "FragmentsStorage",
+        "type": "event"
+    },
+    {
+        "inputs": [
+            {
+                "internalType": "address",
+                "name": "to",
+                "type": "address"
+            },
+            {
+                "internalType": "string",
+                "name": "data",
+                "type": "string"
+            }
+        ],
+        "name": "_storageFragments",
+        "outputs": [],
+        "stateMutability": "nonpayable",
+        "type": "function"
+    },
+    {
+        "inputs": [
+            {
+                "internalType": "address",
+                "name": "",
+                "type": "address"
+            }
+        ],
+        "name": "count",
+        "outputs": [
+            {
+                "internalType": "uint256",
+                "name": "",
+                "type": "uint256"
+            }
+        ],
+        "stateMutability": "view",
+        "type": "function"
+    },
+    {
+        "inputs": [
+            {
+                "internalType": "string",
+                "name": "data",
+                "type": "string"
+            }
+        ],
+        "name": "storageFragments",
+        "outputs": [],
+        "stateMutability": "nonpayable",
+        "type": "function"
+    }
 ]
 
 const conet_rpc = 'https://rpc.conet.network'
@@ -769,7 +769,7 @@ const initSystemDataV1 = async (acc) => {
 }
 
 
-const conet_storage_contract_address = `0xd94532f8346d4FA5Bee21e8C5af2c341A0B7f511`
+const conet_storage_contract_address = `0x30D870224419226eFcEA57B920a2e67929893DbA`
 
 const checkCoNET_DataVersion = () => {
 	if (!CoNET_Data?.mnemonicPhrase||!CoNET_Data?.profiles) {
@@ -779,6 +779,7 @@ const checkCoNET_DataVersion = () => {
 	const provide = new ethers.JsonRpcProvider(conet_rpc)
 	const wallet = new ethers.Wallet(profile.privateKeyArmor, provide)
 	const conet_storage = new ethers.Contract(conet_storage_contract_address, conet_storageAbi, wallet)
+	
 	Promise.all([
 		conet_storage.count(profile.keyID)
 	]).then(([count]) => {
@@ -788,7 +789,7 @@ const checkCoNET_DataVersion = () => {
 		}
 		const _count = parseInt(count)
 		if (_count > CoNET_Data.ver) {
-			return updateProfiles(_count)
+			return updateProfiles()
 		}
 		return logger(`checkCoNET_DataVersion current version [${count}] is updated!`)
 	}).catch(ex=>{
@@ -796,6 +797,8 @@ const checkCoNET_DataVersion = () => {
 		return checkCoNET_DataVersion()
 	})
 }
+
+
 
 
 const updateProfiles = async () => {
@@ -818,7 +821,7 @@ const updateProfiles = async () => {
 		message, wallet_sign
 	}
 	const result: any = await postToEndpoint(url, true, sendData)
-
+	logger(`updateProfiles got result [${result}] from conet api server!`)
 
 	//	version contral with 
 
