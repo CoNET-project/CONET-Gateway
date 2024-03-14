@@ -113,7 +113,7 @@ const initEncryptWorker = async () => {
 	const channelPlatform = new BroadcastChannel(workerReadyChannel)
     self.importScripts ( baseUrl + 'Buffer.js' )
 	channelLoading.postMessage(10)
-    self.importScripts ( 'https://cdn.jsdelivr.net/npm/openpgp@5.10.2/dist/openpgp.min.js' )
+    self.importScripts ( 'https://cdn.jsdelivr.net/npm/openpgp@5.11.1/dist/openpgp.min.js' )
     self.importScripts ( 'https://cdnjs.cloudflare.com/ajax/libs/uuid/8.3.2/uuid.min.js' )
 	self.importScripts ( 'https://cdnjs.cloudflare.com/ajax/libs/pouchdb/8.0.1/pouchdb.min.js' )
 	self.importScripts ( 'https://cdnjs.cloudflare.com/ajax/libs/async/3.2.5/async.min.js' )
