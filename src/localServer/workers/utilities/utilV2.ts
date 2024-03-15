@@ -155,8 +155,13 @@ const conet_storageAbi=[
 
 const conet_rpc = 'https://rpc.conet.network'
 const api_endpoint = `https://api.conet.network`
-const ReferralsAddress = '0x8f6be4704a3735024F4D2CBC5BAC3722c0C8a0BD'
+const cloudStorageEndpointUrl = 'https://s3.us-east-1.wasabisys.com/conet-mvp/storage/'
+const blastRpc = 'https://rpc.ankr.com/blast_testnet_sepolia'
 
+const ReferralsAddress = '0x8f6be4704a3735024F4D2CBC5BAC3722c0C8a0BD'
+const conet_storage_contract_address = `0x30D870224419226eFcEA57B920a2e67929893DbA`
+const adminCNTP= '0x44d1FCCce6BAF388617ee972A6FB898b6b5629B1'
+const referrerCNTP= '0x63377154F972f6FC1319e382535EC9691754bd18'
 
 const checkReferee = async (myKeyID:string) => {
 	const provideNewCONET = new ethers.JsonRpcProvider(conet_rpc)
@@ -278,8 +283,7 @@ const getReferrerList = async (cmd: worker_command) => {
 	returnUUIDChannel(cmd)
 }
 
-const adminCNTP= '0x44d1FCCce6BAF388617ee972A6FB898b6b5629B1'
-const referrerCNTP= '0x63377154F972f6FC1319e382535EC9691754bd18'
+
 
 let nodesGetBalance = []
 const getAllNodesInfo: () => Promise<node|null> = () => new Promise(resolve=> {
@@ -307,32 +311,16 @@ const getAllNodesInfo: () => Promise<node|null> = () => new Promise(resolve=> {
 let allNodes: node
 let CNTP_Balance = '0'
 let currentCNTP = '0'
-let getProfileAssetsBalanceLocked = false
 let authorization_key = ''
 
 let getProfileAssetsBalanceResult: getBalanceAPIresult = {CNTP_Balance: '0', CONET_Balance: '0', Referee: '0', lastTime: 0}
 let scanPoint = 0
-const scanSide =['https://scannew.conet.network/', 'https://scanapi.conet.network/', 'https://scan.conet.network/']
-const getscanUrl = (path: string) => {
-	
-	if (++scanPoint > scanSide.length-1) {
-		scanPoint = 0
-	}
-	return `${scanSide[scanPoint]}${path}`
-}
 
 const getProfileAssetsBalance = async (profile: profile) => {
-
-	const date = new Date().getTime()
-	if (date - getProfileAssetsBalanceResult.lastTime < 12 * 1000) {
-		return getProfileAssetsBalanceResult
-	}
-	if (getProfileAssetsBalanceLocked) {
-		return logger (`getProfileAssetsBalance running!`)
-	}
 	const key = profile.keyID
+	const date = new Date().getTime()
+	
 	if (key) {
-		getProfileAssetsBalanceLocked = true
 		const current = profile.tokens
 		if (!current?.cntp) {
 			current.cntp = {
@@ -340,15 +328,9 @@ const getProfileAssetsBalance = async (profile: profile) => {
 				history: []
 			}
 		}
-		// const message =JSON.stringify({ walletAddress: profile.keyID })
-		// const messageHash = CoNETModule.EthCrypto.hash.keccak256(message)
-		// const signMessage = CoNETModule.EthCrypto.sign( profile.privateKeyArmor, messageHash )
-		// const data = {
-		// 	message, signMessage
-		// }
-
-		const url = getscanUrl(`api/v2/addresses/${key.toLowerCase()}/tokens?type=ERC-20`)
-		const url1 = getscanUrl(`api/v2/addresses/${key.toLowerCase()}`)
+		
+		const 
+		
 		
 		return postToEndpoint(url, false, '')
 			.then (response => {
@@ -402,6 +384,7 @@ const getProfileAssetsBalance = async (profile: profile) => {
 		
 		
 	}
+
 	return false
 }
 
@@ -772,9 +755,6 @@ const initSystemDataV1 = async (acc) => {
 	
 }
 
-
-const conet_storage_contract_address = `0x30D870224419226eFcEA57B920a2e67929893DbA`
-
 const checkCoNET_DataVersion = async (callback?: (ver: number) => void) => {
 	if (!CoNET_Data?.mnemonicPhrase||!CoNET_Data?.profiles) {
 		return logger (`regiestAccount CoNET_Data object null Error! Stop process!`)
@@ -796,11 +776,9 @@ const checkCoNET_DataVersion = async (callback?: (ver: number) => void) => {
 	}
 }
 
-const cloudStorageEndpointUrl = 'https://s3.us-east-1.wasabisys.com/conet-mvp/storage/'
-
 const checkUpdateAccount = () => {
 	logger(`checkUpdateAccount`)
-	checkCoNET_DataVersion( async _ver => {
+	return checkCoNET_DataVersion( async _ver => {
 		logger(`checkUpdateAccount checkCoNET_DataVersion ver [${_ver}]`)
 		if (!CoNET_Data || !CoNET_Data.profiles?.length) {
 			return logger(`checkUpdateAccount CoNET_Data or CoNET_Data.profiles hasn't ready Error!`)
@@ -885,4 +863,8 @@ const updateProfiles = () => {
 	})
 	
 	//	version contral with 
+}
+
+const checkAllAssets = () => {
+
 }
