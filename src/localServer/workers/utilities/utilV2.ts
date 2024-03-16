@@ -155,8 +155,12 @@ const conet_storageAbi=[
 
 const conet_rpc = 'https://rpc.conet.network'
 const api_endpoint = `https://api.conet.network`
+const blast_rpc = 'https://rpc.blast.io'
 const ReferralsAddress = '0x8f6be4704a3735024F4D2CBC5BAC3722c0C8a0BD'
-
+const adminCNTP= '0x44d1FCCce6BAF388617ee972A6FB898b6b5629B1'
+const referrerCNTP= '0x63377154F972f6FC1319e382535EC9691754bd18'
+const conet_storage_contract_address = `0x30D870224419226eFcEA57B920a2e67929893DbA`
+const cloudStorageEndpointUrl = 'https://s3.us-east-1.wasabisys.com/conet-mvp/storage/'
 
 const checkReferee = async (myKeyID:string) => {
 	const provideNewCONET = new ethers.JsonRpcProvider(conet_rpc)
@@ -199,7 +203,6 @@ const getReferees = async (wallet: string, CNTP_Referrals) => {
 	}
 	return result
 }
-
 const getAllReferees = async (_wallet: string, CNTP_Referrals) => {
 
 	const firstArray: string[] = await getReferees(_wallet, CNTP_Referrals)
@@ -272,14 +275,14 @@ const getReferrerList = async (cmd: worker_command) => {
 		cmd.err = 'FAILURE'
 		return returnUUIDChannel(cmd)
 	}
+
 	const provideNewCONET = new ethers.JsonRpcProvider(conet_rpc)
 	const CNTP_Referrals = new ethers.Contract(ReferralsAddress, CONET_ReferralsAbi, provideNewCONET)
 	cmd.data = [await getAllReferees(referrer, CNTP_Referrals)]
 	returnUUIDChannel(cmd)
 }
 
-const adminCNTP= '0x44d1FCCce6BAF388617ee972A6FB898b6b5629B1'
-const referrerCNTP= '0x63377154F972f6FC1319e382535EC9691754bd18'
+
 
 let nodesGetBalance = []
 const getAllNodesInfo: () => Promise<node|null> = () => new Promise(resolve=> {
@@ -307,12 +310,12 @@ const getAllNodesInfo: () => Promise<node|null> = () => new Promise(resolve=> {
 let allNodes: node
 let CNTP_Balance = '0'
 let currentCNTP = '0'
-let getProfileAssetsBalanceLocked = false
 let authorization_key = ''
 
 let getProfileAssetsBalanceResult: getBalanceAPIresult = {CNTP_Balance: '0', CONET_Balance: '0', Referee: '0', lastTime: 0}
 let scanPoint = 0
 const scanSide =['https://scannew.conet.network/', 'https://scanapi.conet.network/', 'https://scan.conet.network/']
+
 const getscanUrl = (path: string) => {
 	
 	if (++scanPoint > scanSide.length-1) {
@@ -321,18 +324,16 @@ const getscanUrl = (path: string) => {
 	return `${scanSide[scanPoint]}${path}`
 }
 
+const scanCNTP = (walletAddr: string) => {
+	const provideCNTP = new ethers.JsonRpcProvider(blast_rpc)
+	const CNTP = new ethers.Contract(ReferralsAddress, CONET_ReferralsAbi, provideCNTP)
+}
+
 const getProfileAssetsBalance = async (profile: profile) => {
 
-	const date = new Date().getTime()
-	if (date - getProfileAssetsBalanceResult.lastTime < 12 * 1000) {
-		return getProfileAssetsBalanceResult
-	}
-	if (getProfileAssetsBalanceLocked) {
-		return logger (`getProfileAssetsBalance running!`)
-	}
 	const key = profile.keyID
 	if (key) {
-		getProfileAssetsBalanceLocked = true
+		
 		const current = profile.tokens
 		if (!current?.cntp) {
 			current.cntp = {
@@ -340,68 +341,11 @@ const getProfileAssetsBalance = async (profile: profile) => {
 				history: []
 			}
 		}
-		// const message =JSON.stringify({ walletAddress: profile.keyID })
-		// const messageHash = CoNETModule.EthCrypto.hash.keccak256(message)
-		// const signMessage = CoNETModule.EthCrypto.sign( profile.privateKeyArmor, messageHash )
-		// const data = {
-		// 	message, signMessage
-		// }
+		const cntpBalance = await scanCNTP(key)
 
-		const url = getscanUrl(`api/v2/addresses/${key.toLowerCase()}/tokens?type=ERC-20`)
-		const url1 = getscanUrl(`api/v2/addresses/${key.toLowerCase()}`)
-		
-		return postToEndpoint(url, false, '')
-			.then (response => {
-				
-				//@ts-ignore
-				const data: blockscout_result = response
-				if (data?.items) {
-
-					const balance = parseFloat(data.items[0].value)/10**18
-					const beforeBalance = parseFloat(getProfileAssetsBalanceResult.CNTP_Balance)
-					if (!isNaN(balance) && balance - beforeBalance > 0 ) {
-						getProfileAssetsBalanceResult.CNTP_Balance = current.cntp.balance = CNTP_Balance = balance.toFixed(4)
-						getProfileAssetsBalanceResult.lastTime = date
-					}
-					
-				}
-				return postToEndpoint(url1, false, '')})
-			.then( async response => {
-				//@ts-ignore
-				const data: blockscout_address = response
-				
-				if (data?.coin_balance ) {
-					const balance = parseFloat(data.coin_balance)
-					const beforeBalance = parseFloat(getProfileAssetsBalanceResult.CONET_Balance)
-					if (!isNaN(balance) && balance -beforeBalance >0) {
-						getProfileAssetsBalanceResult.CONET_Balance = current.conet.balance = balance.toFixed(4)
-						getProfileAssetsBalanceResult.lastTime = date
-					}
-				}
-				
-				// if (profile.referrer) {
-				// 	await registerReferrer(profile.referrer)
-				// } else if (!profile.referrer && referrals) {
-				// 	await registerReferrer(referrals)
-				// 	profile.referrer = referrals
-				// }
-				
-				sendState('cntp-balance', {CNTP_Balance: CNTP_Balance, CONET_Balance: profile.tokens.conet.balance, currentCNTP: currentCNTP})
-				const ret = {
-					CNTP_Balance,
-					CONET_Balance: profile.tokens.conet.balance,
-					Referee: profile.referrer
-				}
-				getProfileAssetsBalanceLocked = false
-				return ret
-			})
-			.catch (ex => {
-				getProfileAssetsBalanceLocked = false
-				return null
-			})
-		
-		
+		return true
 	}
+
 	return false
 }
 
@@ -772,9 +716,6 @@ const initSystemDataV1 = async (acc) => {
 	
 }
 
-
-const conet_storage_contract_address = `0x30D870224419226eFcEA57B920a2e67929893DbA`
-
 const checkCoNET_DataVersion = async (callback?: (ver: number) => void) => {
 	if (!CoNET_Data?.mnemonicPhrase||!CoNET_Data?.profiles) {
 		return logger (`regiestAccount CoNET_Data object null Error! Stop process!`)
@@ -796,11 +737,10 @@ const checkCoNET_DataVersion = async (callback?: (ver: number) => void) => {
 	}
 }
 
-const cloudStorageEndpointUrl = 'https://s3.us-east-1.wasabisys.com/conet-mvp/storage/'
 
 const checkUpdateAccount = () => {
 	logger(`checkUpdateAccount`)
-	checkCoNET_DataVersion( async _ver => {
+	return checkCoNET_DataVersion( async _ver => {
 		logger(`checkUpdateAccount checkCoNET_DataVersion ver [${_ver}]`)
 		if (!CoNET_Data || !CoNET_Data.profiles?.length) {
 			return logger(`checkUpdateAccount CoNET_Data or CoNET_Data.profiles hasn't ready Error!`)
@@ -856,7 +796,7 @@ const checkUpdateAccount = () => {
 
 const updateProfiles = () => {
 	logger(`updateProfiles`)
-	checkCoNET_DataVersion( async ver=> {
+	return checkCoNET_DataVersion( async ver=> {
 		logger(`updateProfiles checkCoNET_DataVersion ver [${ver}]`)
 		const url = `${ api_endpoint }/api/storageFragments`
 

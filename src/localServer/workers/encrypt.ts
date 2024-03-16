@@ -506,7 +506,7 @@ const processCmd = async (cmd: worker_command) => {
 		}
 
 		case 'startLiveness': {
-			return startLiveness(cmd)
+			return //startLiveness(cmd)
 		}
 
 		case 'syncAsset': {
@@ -684,98 +684,98 @@ let LivenessCurrentData = ['','',null]
 const listenServerTime = 6 * 1000
 const listenServerTimeCountMaximum = 4
 
-const startLiveness = async (cmd: worker_command) => {
-	const profile = gettPrimaryProfile()
-	if (!profile) {
-		cmd.err = 'NOT_READY'
-		return returnUUIDChannel (cmd)
-	}
-	const referrals = cmd.data[0]
-	const message =JSON.stringify({ walletAddress: profile.keyID, referrals })
-	const messageHash = CoNETModule.EthCrypto.hash.keccak256(message)
-	const signMessage = CoNETModule.EthCrypto.sign( profile.privateKeyArmor, messageHash )
-	const request = {
-		message, signMessage
-	}
-	const initBalance = await getProfileAssetsBalance(profile)
+// const startLiveness = async (cmd: worker_command) => {
+// 	const profile = gettPrimaryProfile()
+// 	if (!profile) {
+// 		cmd.err = 'NOT_READY'
+// 		return returnUUIDChannel (cmd)
+// 	}
+// 	const referrals = cmd.data[0]
+// 	const message =JSON.stringify({ walletAddress: profile.keyID, referrals })
+// 	const messageHash = CoNETModule.EthCrypto.hash.keccak256(message)
+// 	const signMessage = CoNETModule.EthCrypto.sign( profile.privateKeyArmor, messageHash )
+// 	const request = {
+// 		message, signMessage
+// 	}
+// 	const initBalance = await getProfileAssetsBalance(profile)
 
-	if (initBalance) {
-		profile.tokens.conet.balance = initBalance.CONET_Balance
-		CNTP_Balance = profile.tokens.cntp.balance = initBalance.CNTP_Balance
-	}
+// 	if (initBalance) {
+// 		profile.tokens.conet.balance = initBalance.CONET_Balance
+// 		CNTP_Balance = profile.tokens.cntp.balance = initBalance.CNTP_Balance
+// 	}
 
-	let first = true
-	let startCNTP_balance = isNaN(parseFloat(CNTP_Balance))?0:parseFloat(CNTP_Balance)
-	let init = false
-	let data = null
-	let listenServerTimeout:NodeJS.Timeout|0 = 0
-	let listenServerTimeoutCount = -1
+// 	let first = true
+// 	let startCNTP_balance = isNaN(parseFloat(CNTP_Balance))?0:parseFloat(CNTP_Balance)
+// 	let init = false
+// 	let data = null
+// 	let listenServerTimeout:NodeJS.Timeout|0 = 0
+// 	let listenServerTimeoutCount = -1
 
-	const listenServerTimeoutProcess = () => {
-		clearTimeout(listenServerTimeout)
-		if (!Liveness) {
-			return logger(`listenServerTimeoutProcess stop because Liveness is NULL!`)
-		}
-		++listenServerTimeoutCount
-		logger(`listenServerTimeoutCount =[${listenServerTimeoutCount}]`)
+// 	const listenServerTimeoutProcess = () => {
+// 		clearTimeout(listenServerTimeout)
+// 		if (!Liveness) {
+// 			return logger(`listenServerTimeoutProcess stop because Liveness is NULL!`)
+// 		}
+// 		++listenServerTimeoutCount
+// 		logger(`listenServerTimeoutCount =[${listenServerTimeoutCount}]`)
 		
-		if (listenServerTimeoutCount<listenServerTimeCountMaximum) {
-			return listenServerTimeout = setTimeout(listenServerTimeoutProcess, listenServerTime)
-		}
-		cmd.data = ['DISCONNECT']
-		Liveness = null
-		returnUUIDChannel(cmd)
-		LivenessListen.forEach(n => {
-			return returnUUIDChannel(cmd)
-		})
-	}
+// 		if (listenServerTimeoutCount<listenServerTimeCountMaximum) {
+// 			return listenServerTimeout = setTimeout(listenServerTimeoutProcess, listenServerTime)
+// 		}
+// 		cmd.data = ['DISCONNECT']
+// 		Liveness = null
+// 		returnUUIDChannel(cmd)
+// 		LivenessListen.forEach(n => {
+// 			return returnUUIDChannel(cmd)
+// 		})
+// 	}
 
-	Liveness = postToEndpointSSE(LivenessURL1, true, JSON.stringify(request), async (err, _data) => {
+// 	Liveness = postToEndpointSSE(LivenessURL1, true, JSON.stringify(request), async (err, _data) => {
 		
-		try{
-			data = JSON.parse(_data)
-		} catch(ex) {
-			logger(`Liveness response Unexpected JSON!`, _data)
-		}
+// 		try{
+// 			data = JSON.parse(_data)
+// 		} catch(ex) {
+// 			logger(`Liveness response Unexpected JSON!`, _data)
+// 		}
 
-		if (first) {
-			if (err) {
-				cmd.data = [err]
-				Liveness = null
-				return returnUUIDChannel(cmd)
-			}
-			listenServerTimeoutProcess()
-			first = false
-			LivenessCurrentData = cmd.data = [CNTP_Balance, "0", data]
-            return returnUUIDChannel(cmd)
-		}
+// 		if (first) {
+// 			if (err) {
+// 				cmd.data = [err]
+// 				Liveness = null
+// 				return returnUUIDChannel(cmd)
+// 			}
+// 			listenServerTimeoutProcess()
+// 			first = false
+// 			LivenessCurrentData = cmd.data = [CNTP_Balance, "0", data]
+//             return returnUUIDChannel(cmd)
+// 		}
 
-		clearTimeout(listenServerTimeout)
-		listenServerTimeoutCount = -1
-		listenServerTimeoutProcess()
+// 		clearTimeout(listenServerTimeout)
+// 		listenServerTimeoutCount = -1
+// 		listenServerTimeoutProcess()
 		
 
-		const initBalance = await getProfileAssetsBalance(profile)
-		if (initBalance) {
-			if (getProfileAssetsBalanceResult.lastTime && !init) {
-				init = true
-				startCNTP_balance = parseFloat(initBalance.CNTP_Balance)
-			}
-			const current_CNTP_balance = parseFloat(initBalance.CNTP_Balance) - startCNTP_balance
-			LivenessCurrentData = [initBalance.CNTP_Balance, current_CNTP_balance.toFixed(4), data]
-			profile.tokens.conet.balance = initBalance.CONET_Balance
-		}
-		LivenessCurrentData[2] = data
+// 		const initBalance = await getProfileAssetsBalance(profile)
+// 		if (initBalance) {
+// 			if (getProfileAssetsBalanceResult.lastTime && !init) {
+// 				init = true
+// 				startCNTP_balance = parseFloat(initBalance.CNTP_Balance)
+// 			}
+// 			const current_CNTP_balance = parseFloat(initBalance.CNTP_Balance) - startCNTP_balance
+// 			LivenessCurrentData = [initBalance.CNTP_Balance, current_CNTP_balance.toFixed(4), data]
+// 			profile.tokens.conet.balance = initBalance.CONET_Balance
+// 		}
+// 		LivenessCurrentData[2] = data
 	
-		cmd.data = LivenessCurrentData
-		sendState('cntp-balance', {CNTP_Balance, CONET_Balance: profile.tokens.conet.balance, currentCNTP: LivenessCurrentData[1]})
-		returnUUIDChannel(cmd)
-		LivenessListen.forEach(n => {
-			n.data = LivenessCurrentData
-			return returnUUIDChannel(n)
-		})
-	})
-}
+// 		cmd.data = LivenessCurrentData
+// 		sendState('cntp-balance', {CNTP_Balance, CONET_Balance: profile.tokens.conet.balance, currentCNTP: LivenessCurrentData[1]})
+// 		returnUUIDChannel(cmd)
+// 		LivenessListen.forEach(n => {
+// 			n.data = LivenessCurrentData
+// 			return returnUUIDChannel(n)
+// 		})
+// 	})
+// }
 
 const stopLivenessUrl = 'https://api.openpgp.online:4001/api/livenessStop'
 const stopLiveness = async (cmd: worker_command) => {

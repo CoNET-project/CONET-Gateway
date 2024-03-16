@@ -318,7 +318,6 @@ const initProfileTokens = () => {
 }
 
 
-
 const makeContainerPGPObj = async () => {
 	if (!containerKeyObj?.privateKeyArmor || !containerKeyObj?.publicKeyArmor ) {
 		throw new Error (`makeContainerPGPObj Error: have no KeyArmor!`)
