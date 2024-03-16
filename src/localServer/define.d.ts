@@ -159,7 +159,7 @@ declare type verification = 'INCORRECT_CODE'
 declare type WorkerCommand = 'READY'|'getRegiestNodes'|'beforeunload'|'createAccount'|'testPasscode'|'showSRP'|
 	'encrypt_TestPasscode'|'encrypt_createPasscode'|'encrypt_lock'|'invitation'|'encrypt_deletePasscode'|
 	'storePreferences'|'newProfile'|'storeProfile'|'urlProxy'|'saveDomain'|'getDomain'|'setRegion'|
-	'getFaucet'|'isAddress'|'syncAsset'|'sendAsset'|'getUSDCPrice'|'buyUSDC'|'getWorkerClientID'|
+	'getFaucet'|'isAddress'|'syncAssetV1'|'sendAsset'|'getUSDCPrice'|'buyUSDC'|'getWorkerClientID'|
 	'mintCoNETCash'|'getSINodes'|'getRecipientCoNETCashAddress'|'getUserProfile'|
 	'sendMessage'|'incomeData'|'WORKER_MESSAGE'|'getCONETBalance'|'startProxy'|'registerReferrer'|
     'SaaSRegister'|'getContainer'|'ipaddress'|'startLiveness'|'stopLiveness'|'isLivenessRunning'|'importWallet'|
@@ -193,7 +193,7 @@ type CoNETCash = {
 }
 
 interface keyPair {
-	keyID?: string
+	keyID: string
 	publicKeyArmor?: string
 	privateKeyArmor?: string
 	keyObj?:{
@@ -219,6 +219,9 @@ interface profile extends keyPair {
 	tokens: {
 		conet:CryptoAsset
 		cntp:CryptoAsset
+		cntpb: CryptoAsset
+		usdc:CryptoAsset
+		usdt:CryptoAsset
 	}
 	network: {
 		recipients: nodes_info[]

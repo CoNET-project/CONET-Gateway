@@ -509,7 +509,7 @@ const processCmd = async (cmd: worker_command) => {
 			return //startLiveness(cmd)
 		}
 
-		case 'syncAsset': {
+		case 'syncAssetV1': {
 			const profile = gettPrimaryProfile()
 			if (profile) {
 				return getProfileAssetsBalance(profile)

@@ -153,17 +153,356 @@ const conet_storageAbi=[
     }
 ]
 
+const blast_CNTPAbi = [
+    {
+        "inputs": [],
+        "stateMutability": "nonpayable",
+        "type": "constructor"
+    },
+    {
+        "inputs": [
+            {
+                "internalType": "address",
+                "name": "spender",
+                "type": "address"
+            },
+            {
+                "internalType": "uint256",
+                "name": "allowance",
+                "type": "uint256"
+            },
+            {
+                "internalType": "uint256",
+                "name": "needed",
+                "type": "uint256"
+            }
+        ],
+        "name": "ERC20InsufficientAllowance",
+        "type": "error"
+    },
+    {
+        "inputs": [
+            {
+                "internalType": "address",
+                "name": "sender",
+                "type": "address"
+            },
+            {
+                "internalType": "uint256",
+                "name": "balance",
+                "type": "uint256"
+            },
+            {
+                "internalType": "uint256",
+                "name": "needed",
+                "type": "uint256"
+            }
+        ],
+        "name": "ERC20InsufficientBalance",
+        "type": "error"
+    },
+    {
+        "inputs": [
+            {
+                "internalType": "address",
+                "name": "approver",
+                "type": "address"
+            }
+        ],
+        "name": "ERC20InvalidApprover",
+        "type": "error"
+    },
+    {
+        "inputs": [
+            {
+                "internalType": "address",
+                "name": "receiver",
+                "type": "address"
+            }
+        ],
+        "name": "ERC20InvalidReceiver",
+        "type": "error"
+    },
+    {
+        "inputs": [
+            {
+                "internalType": "address",
+                "name": "sender",
+                "type": "address"
+            }
+        ],
+        "name": "ERC20InvalidSender",
+        "type": "error"
+    },
+    {
+        "inputs": [
+            {
+                "internalType": "address",
+                "name": "spender",
+                "type": "address"
+            }
+        ],
+        "name": "ERC20InvalidSpender",
+        "type": "error"
+    },
+    {
+        "anonymous": false,
+        "inputs": [
+            {
+                "indexed": true,
+                "internalType": "address",
+                "name": "owner",
+                "type": "address"
+            },
+            {
+                "indexed": true,
+                "internalType": "address",
+                "name": "spender",
+                "type": "address"
+            },
+            {
+                "indexed": false,
+                "internalType": "uint256",
+                "name": "value",
+                "type": "uint256"
+            }
+        ],
+        "name": "Approval",
+        "type": "event"
+    },
+    {
+        "anonymous": false,
+        "inputs": [
+            {
+                "indexed": true,
+                "internalType": "address",
+                "name": "from",
+                "type": "address"
+            },
+            {
+                "indexed": true,
+                "internalType": "address",
+                "name": "to",
+                "type": "address"
+            },
+            {
+                "indexed": false,
+                "internalType": "uint256",
+                "name": "value",
+                "type": "uint256"
+            }
+        ],
+        "name": "Transfer",
+        "type": "event"
+    },
+    {
+        "inputs": [
+            {
+                "internalType": "address",
+                "name": "owner",
+                "type": "address"
+            },
+            {
+                "internalType": "address",
+                "name": "spender",
+                "type": "address"
+            }
+        ],
+        "name": "allowance",
+        "outputs": [
+            {
+                "internalType": "uint256",
+                "name": "",
+                "type": "uint256"
+            }
+        ],
+        "stateMutability": "view",
+        "type": "function"
+    },
+    {
+        "inputs": [
+            {
+                "internalType": "address",
+                "name": "spender",
+                "type": "address"
+            },
+            {
+                "internalType": "uint256",
+                "name": "value",
+                "type": "uint256"
+            }
+        ],
+        "name": "approve",
+        "outputs": [
+            {
+                "internalType": "bool",
+                "name": "",
+                "type": "bool"
+            }
+        ],
+        "stateMutability": "nonpayable",
+        "type": "function"
+    },
+    {
+        "inputs": [
+            {
+                "internalType": "address",
+                "name": "account",
+                "type": "address"
+            }
+        ],
+        "name": "balanceOf",
+        "outputs": [
+            {
+                "internalType": "uint256",
+                "name": "",
+                "type": "uint256"
+            }
+        ],
+        "stateMutability": "view",
+        "type": "function"
+    },
+    {
+        "inputs": [],
+        "name": "decimals",
+        "outputs": [
+            {
+                "internalType": "uint8",
+                "name": "",
+                "type": "uint8"
+            }
+        ],
+        "stateMutability": "view",
+        "type": "function"
+    },
+    {
+        "inputs": [
+            {
+                "internalType": "address[]",
+                "name": "_addresses",
+                "type": "address[]"
+            },
+            {
+                "internalType": "uint256[]",
+                "name": "_amounts",
+                "type": "uint256[]"
+            }
+        ],
+        "name": "multiTransferToken",
+        "outputs": [],
+        "stateMutability": "nonpayable",
+        "type": "function"
+    },
+    {
+        "inputs": [],
+        "name": "name",
+        "outputs": [
+            {
+                "internalType": "string",
+                "name": "",
+                "type": "string"
+            }
+        ],
+        "stateMutability": "view",
+        "type": "function"
+    },
+    {
+        "inputs": [],
+        "name": "symbol",
+        "outputs": [
+            {
+                "internalType": "string",
+                "name": "",
+                "type": "string"
+            }
+        ],
+        "stateMutability": "view",
+        "type": "function"
+    },
+    {
+        "inputs": [],
+        "name": "totalSupply",
+        "outputs": [
+            {
+                "internalType": "uint256",
+                "name": "",
+                "type": "uint256"
+            }
+        ],
+        "stateMutability": "view",
+        "type": "function"
+    },
+    {
+        "inputs": [
+            {
+                "internalType": "address",
+                "name": "to",
+                "type": "address"
+            },
+            {
+                "internalType": "uint256",
+                "name": "value",
+                "type": "uint256"
+            }
+        ],
+        "name": "transfer",
+        "outputs": [
+            {
+                "internalType": "bool",
+                "name": "",
+                "type": "bool"
+            }
+        ],
+        "stateMutability": "nonpayable",
+        "type": "function"
+    },
+    {
+        "inputs": [
+            {
+                "internalType": "address",
+                "name": "from",
+                "type": "address"
+            },
+            {
+                "internalType": "address",
+                "name": "to",
+                "type": "address"
+            },
+            {
+                "internalType": "uint256",
+                "name": "value",
+                "type": "uint256"
+            }
+        ],
+        "name": "transferFrom",
+        "outputs": [
+            {
+                "internalType": "bool",
+                "name": "",
+                "type": "bool"
+            }
+        ],
+        "stateMutability": "nonpayable",
+        "type": "function"
+    }
+]
+
+
 const conet_rpc = 'https://rpc.conet.network'
 const api_endpoint = `https://api.conet.network`
 
 const cloudStorageEndpointUrl = 'https://s3.us-east-1.wasabisys.com/conet-mvp/storage/'
-const blastRpc = 'https://rpc.ankr.com/blast_testnet_sepolia'
+const blastRpc = 'https://sepolia.blast.io'
+const ethRpc = 'https://rpc.ankr.com/eth'
 
 const ReferralsAddress = '0x8f6be4704a3735024F4D2CBC5BAC3722c0C8a0BD'
 const conet_storage_contract_address = `0x30D870224419226eFcEA57B920a2e67929893DbA`
 const adminCNTP= '0x44d1FCCce6BAF388617ee972A6FB898b6b5629B1'
 const referrerCNTP= '0x63377154F972f6FC1319e382535EC9691754bd18'
-
+const blast_CNTP = '0x53634b1285c256aE64BAd795301322E0e911153D'
+const CNTPB_contract = '0x6056473ADD8bC89a95325845F6a431CCD7A849bb'
+const eth_usdc_contract = '0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48'
+const eth_usdt_contract = '0xdac17f958d2ee523a2206206994597c13d831ec7'
 
 const checkReferee = async (myKeyID:string) => {
 	const provideNewCONET = new ethers.JsonRpcProvider(conet_rpc)
@@ -172,6 +511,7 @@ const checkReferee = async (myKeyID:string) => {
 	try {
 		referrer = await CNTP_Referrals.getReferrer(myKeyID)
 	} catch (ex) {
+		provideNewCONET.disable
 		return logger(`checkReferee Error!`, ex)
 	}
 	const add = referrer.toLowerCase()
@@ -319,14 +659,67 @@ let getProfileAssetsBalanceResult: getBalanceAPIresult = {CNTP_Balance: '0', CON
 let scanPoint = 0
 
 
-const scanCNTP = (walletAddr: string) => {
-	const provideCNTP = new ethers.JsonRpcProvider(blast_rpc)
-	const CNTP = new ethers.Contract(ReferralsAddress, CONET_ReferralsAbi, provideCNTP)
+const scanCNTP = async (walletAddr: string) => {
+	const provideCNTP = new ethers.JsonRpcProvider(blastRpc)
+	const CNTP = new ethers.Contract(blast_CNTP, blast_CNTPAbi, provideCNTP)
+	try {
+		const ret = await CNTP.balanceOf(walletAddr)
+		return ret
+
+	} catch (ex) {
+		logger(`scanCNTP [${walletAddr}]`, ex)
+	}
+
+}
+
+const scanCNTPB =  async (walletAddr: string) => {
+	const provideCNTP = new ethers.JsonRpcProvider(conet_rpc)
+	const CNTPB = new ethers.Contract(CNTPB_contract, blast_CNTPAbi, provideCNTP)
+	try {
+		const ret = await CNTPB.balanceOf(walletAddr)
+		return ret
+
+	} catch (ex) {
+		logger(`scanCNTPB [${walletAddr}]`, ex)
+	}
+}
+
+const scanUSDC = async (walletAddr: string) => {
+	const provideETH = new ethers.JsonRpcProvider(ethRpc)
+	const usdc = new ethers.Contract(eth_usdc_contract, blast_CNTPAbi, provideETH)
+	try {
+		const ret = await usdc.balanceOf(walletAddr)
+		return ret
+
+	} catch (ex) {
+		logger(`scanCNTPB [${walletAddr}]`, ex)
+	}
+}
+
+const scanUSDT = async (walletAddr: string) => {
+	const provideETH = new ethers.JsonRpcProvider(ethRpc)
+	const usdc = new ethers.Contract(eth_usdt_contract, blast_CNTPAbi, provideETH)
+	try {
+		const ret = await usdc.balanceOf(walletAddr)
+		return ret
+
+	} catch (ex) {
+		logger(`scanCNTPB [${walletAddr}]`, ex)
+	}
+}
+
+const getAllProfileAssetsBalance = async () => {
+	if (!CoNET_Data?.profiles) {
+		return logger(`getAllProfileAssetsBalance Error! CoNET_Data.profiles empty!`)
+	}
+	for (let profile of CoNET_Data.profiles) {
+		await getProfileAssetsBalance(profile)
+	}
 }
 
 const getProfileAssetsBalance = async (profile: profile) => {
+
 	const key = profile.keyID
-	const date = new Date().getTime()
 	
 	if (key) {
 		const current = profile.tokens
@@ -336,58 +729,75 @@ const getProfileAssetsBalance = async (profile: profile) => {
 				history: []
 			}
 		}
-		const 
-		
-		
-		return postToEndpoint(url, false, '')
-			.then (response => {
+		if (!current?.cntpb) {
+			current.cntpb = {
+				balance: '0',
+				history: []
+			}
+		}
+		if (!current?.usdc) {
+			current.usdc = {
+				balance: '0',
+				history: []
+			}
+		}
+		const balanceCNTP = await scanCNTP (key)
+		const balanceCNTPB = await scanCNTPB (key)
+		const balanceUSDC = await scanUSDC (key)
+		const balanceUSDT = await scanUSDT (key)
+		current.cntp.balance = balanceCNTP === BigInt(0) ? '0' : parseFloat(ethers.formatEther(balanceCNTP)).toFixed(4)
+		current.cntpb.balance = balanceCNTPB === BigInt(0) ? '0' : parseFloat(ethers.formatEther(balanceCNTPB)).toFixed(4)
+		current.usdc.balance = balanceUSDC === BigInt(0) ? '0' : parseFloat(ethers.formatEther(balanceUSDC)).toFixed(4)
+		current.usdt.balance = balanceUSDT === BigInt(0) ? '0' : parseFloat(ethers.formatEther(balanceUSDT)).toFixed(4)
+		// return postToEndpoint(url, false, '')
+		// 	.then (response => {
 				
-				//@ts-ignore
-				const data: blockscout_result = response
-				if (data?.items) {
+		// 		//@ts-ignore
+		// 		const data: blockscout_result = response
+		// 		if (data?.items) {
 
-					const balance = parseFloat(data.items[0].value)/10**18
-					const beforeBalance = parseFloat(getProfileAssetsBalanceResult.CNTP_Balance)
-					if (!isNaN(balance) && balance - beforeBalance > 0 ) {
-						getProfileAssetsBalanceResult.CNTP_Balance = current.cntp.balance = CNTP_Balance = balance.toFixed(4)
-						getProfileAssetsBalanceResult.lastTime = date
-					}
+		// 			const balance = parseFloat(data.items[0].value)/10**18
+		// 			const beforeBalance = parseFloat(getProfileAssetsBalanceResult.CNTP_Balance)
+		// 			if (!isNaN(balance) && balance - beforeBalance > 0 ) {
+		// 				getProfileAssetsBalanceResult.CNTP_Balance = current.cntp.balance = CNTP_Balance = balance.toFixed(4)
+		// 				getProfileAssetsBalanceResult.lastTime = date
+		// 			}
 					
-				}
-				return postToEndpoint(url1, false, '')})
-			.then( async response => {
-				//@ts-ignore
-				const data: blockscout_address = response
+		// 		}
+		// 		return postToEndpoint(url1, false, '')})
+		// 	.then( async response => {
+		// 		//@ts-ignore
+		// 		const data: blockscout_address = response
 				
-				if (data?.coin_balance ) {
-					const balance = parseFloat(data.coin_balance)
-					const beforeBalance = parseFloat(getProfileAssetsBalanceResult.CONET_Balance)
-					if (!isNaN(balance) && balance -beforeBalance >0) {
-						getProfileAssetsBalanceResult.CONET_Balance = current.conet.balance = balance.toFixed(4)
-						getProfileAssetsBalanceResult.lastTime = date
-					}
-				}
+		// 		if (data?.coin_balance ) {
+		// 			const balance = parseFloat(data.coin_balance)
+		// 			const beforeBalance = parseFloat(getProfileAssetsBalanceResult.CONET_Balance)
+		// 			if (!isNaN(balance) && balance -beforeBalance >0) {
+		// 				getProfileAssetsBalanceResult.CONET_Balance = current.conet.balance = balance.toFixed(4)
+		// 				getProfileAssetsBalanceResult.lastTime = date
+		// 			}
+		// 		}
 				
-				// if (profile.referrer) {
-				// 	await registerReferrer(profile.referrer)
-				// } else if (!profile.referrer && referrals) {
-				// 	await registerReferrer(referrals)
-				// 	profile.referrer = referrals
-				// }
+		// 		// if (profile.referrer) {
+		// 		// 	await registerReferrer(profile.referrer)
+		// 		// } else if (!profile.referrer && referrals) {
+		// 		// 	await registerReferrer(referrals)
+		// 		// 	profile.referrer = referrals
+		// 		// }
 				
-				sendState('cntp-balance', {CNTP_Balance: CNTP_Balance, CONET_Balance: profile.tokens.conet.balance, currentCNTP: currentCNTP})
-				const ret = {
-					CNTP_Balance,
-					CONET_Balance: profile.tokens.conet.balance,
-					Referee: profile.referrer
-				}
-				getProfileAssetsBalanceLocked = false
-				return ret
-			})
-			.catch (ex => {
-				getProfileAssetsBalanceLocked = false
-				return null
-			})
+		// 		sendState('cntp-balance', {CNTP_Balance: CNTP_Balance, CONET_Balance: profile.tokens.conet.balance, currentCNTP: currentCNTP})
+		// 		const ret = {
+		// 			CNTP_Balance,
+		// 			CONET_Balance: profile.tokens.conet.balance,
+		// 			Referee: profile.referrer
+		// 		}
+		// 		getProfileAssetsBalanceLocked = false
+		// 		return ret
+		// 	})
+		// 	.catch (ex => {
+		// 		getProfileAssetsBalanceLocked = false
+		// 		return null
+		// 	})
 		
 
 	}
@@ -460,8 +870,7 @@ const testPasscode = async (cmd: worker_command) => {
 		cmd.err = 'FAILURE'
 		return returnUUIDChannel(cmd)
 	}
-	authorization_key = cmd.data[0] = uuid.v4()
-	returnUUIDChannel(cmd)
+	
 
 	if ( referrer ) {
 		const profile = gettPrimaryProfile()
@@ -475,7 +884,9 @@ const testPasscode = async (cmd: worker_command) => {
 		// logger(kkk)
 	}
 	
-	await checkUpdateAccount()
+	authorization_key = cmd.data[0] = uuid.v4()
+
+	returnUUIDChannel(cmd)
 }
 
 const createKeyHDWallets = () => {
@@ -527,12 +938,14 @@ const showSRP = (cmd: worker_command) => {
 	return returnUUIDChannel(cmd)
 }
 
-const getAllProfiles = (cmd: worker_command) => {
+const getAllProfiles = async (cmd: worker_command) => {
 	const _authorization_key: string = cmd.data[0]
 	if (!CoNET_Data || authorization_key!== _authorization_key) {
 		cmd.err = 'FAILURE'
 		return returnUUIDChannel(cmd)
 	}
+	await checkUpdateAccount()
+	await getAllProfileAssetsBalance()
 	cmd.data = [CoNET_Data.profiles]
 	return returnUUIDChannel(cmd)
 }
@@ -719,7 +1132,6 @@ const recoverAccount = async (cmd: worker_command) => {
 	await storeSystemData ()
 	authorization_key = cmd.data[0] = uuid.v4()
 	returnUUIDChannel(cmd)
-	checkUpdateAccount()
 }
 
 const initCoNET_Data = async ( passcode = '' ) => {
@@ -784,59 +1196,66 @@ const checkCoNET_DataVersion = async (callback?: (ver: number) => void) => {
 }
 
 const checkUpdateAccount = () => {
-	logger(`checkUpdateAccount`)
-	return checkCoNET_DataVersion( async _ver => {
-		logger(`checkUpdateAccount checkCoNET_DataVersion ver [${_ver}]`)
-		if (!CoNET_Data || !CoNET_Data.profiles?.length) {
-			return logger(`checkUpdateAccount CoNET_Data or CoNET_Data.profiles hasn't ready Error!`)
-		}
-		const profile = CoNET_Data.profiles[0]
 
-		if (_ver > CoNET_Data.ver) {
-			logger (`checkUpdateAccount current account [${CoNET_Data.ver}] version is old! Update it`)
-			const privateKeyHash = ethers.id(profile.keyID)
-			const filename = '0x' + (BigInt(privateKeyHash) + BigInt(_ver)).toString(16)
-			const fileUrl = cloudStorageEndpointUrl + `${profile.keyID}/${filename}`
-			return fetchWithTimeout (fileUrl, 
-				{
-					method: 'GET',
-					headers: {
-						'Content-Type': 'application/json;charset=UTF-8',
-						'Connection': 'close',
-					},
-					cache: 'no-store',
-					referrerPolicy: 'no-referrer'
-				}).then ( res => {
-					if (res.status!== 200) {
-						logger(`checkUpdateAccount can't get new version profiles ${_ver} Error!`)
-						return ''
-					}
-					return res.text()
-				}).then( async text => {
-					logger(`checkUpdateAccount got new Profile [${_ver}] [${fileUrl}]`)
-					if (text) {
-						if (!CoNET_Data) {
-							return logger(`checkUpdateAccount CoNET_Data or CoNET_Data.profiles hasn't ready Error!`)
+	return new Promise(resolve=> {
+		checkCoNET_DataVersion( async _ver => {
+			logger(`checkUpdateAccount checkCoNET_DataVersion ver [${_ver}]`)
+			if (!CoNET_Data || !CoNET_Data.profiles?.length) {
+				resolve(false)
+				return logger(`checkUpdateAccount CoNET_Data or CoNET_Data.profiles hasn't ready Error!`)
+			}
+			const profile = CoNET_Data.profiles[0]
+	
+			if (_ver > CoNET_Data.ver) {
+				logger (`checkUpdateAccount current account [${CoNET_Data.ver}] version is old! Update it`)
+				const privateKeyHash = ethers.id(profile.keyID)
+				const filename = '0x' + (BigInt(privateKeyHash) + BigInt(_ver)).toString(16)
+				const fileUrl = cloudStorageEndpointUrl + `${profile.keyID}/${filename}`
+				return fetchWithTimeout (fileUrl, 
+					{
+						method: 'GET',
+						headers: {
+							'Content-Type': 'application/json;charset=UTF-8',
+							'Connection': 'close',
+						},
+						cache: 'no-store',
+						referrerPolicy: 'no-referrer'
+					}).then ( res => {
+						if (res.status!== 200) {
+							logger(`checkUpdateAccount can't get new version profiles ${_ver} Error!`)
+							return ''
 						}
-						const pass = ethers.id(CoNET_Data.mnemonicPhrase)
+						return res.text()
+					}).then( async text => {
+						logger(`checkUpdateAccount got new Profile [${_ver}] [${fileUrl}]`)
+						if (text) {
+							if (!CoNET_Data) {
+								resolve(false)
+								return logger(`checkUpdateAccount CoNET_Data or CoNET_Data.profiles hasn't ready Error!`)
+							}
+							const pass = ethers.id(CoNET_Data.mnemonicPhrase)
+							
+							try {
+								const decryptedData = await CoNETModule.aesGcmDecrypt(text, pass)
+								CoNET_Data.profiles = JSON.parse(decryptedData)
+								CoNET_Data.ver = _ver
+	
+							} catch (ex) {
+								resolve(false)
+								return logger(`checkUpdateAccount decrypt & JSON.parse profiles Error!`, ex)
+							}
+							await storeSystemData ()
+							resolve(true)
+						}	
 						
-						try {
-							const decryptedData = await CoNETModule.aesGcmDecrypt(text, pass)
-							CoNET_Data.profiles = JSON.parse(decryptedData)
-							CoNET_Data.ver = _ver
-
-						} catch (ex) {
-							return logger(`checkUpdateAccount decrypt & JSON.parse profiles Error!`, ex)
-						}
-						await storeSystemData ()
-						
-					}	
-					
-				}).catch(ex=> {
-					logger(`checkUpdateAccount updated file[${fileUrl}] Error!`, ex)
-				})
-		}
+					}).catch(ex=> {
+						logger(`checkUpdateAccount updated file[${fileUrl}] Error!`, ex)
+					})
+			}
+			return resolve(false)
+		})
 	})
+
 }
 
 const updateProfiles = () => {

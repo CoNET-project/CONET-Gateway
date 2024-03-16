@@ -313,6 +313,18 @@ const initProfileTokens = () => {
 		cntp: {
 			balance: '0',
 			history: []
+		},
+		cntpb: {
+			balance: '0',
+			history: []
+		},
+		usdc: {
+			balance: '0',
+			history: []
+		},
+		usdt: {
+			balance: '0',
+			history: []
 		}
 	}
 }

@@ -44,12 +44,12 @@ const checkStorage = async (plarformChannel: BroadcastChannel) => {
 		return returnInitNull (cmd)
 	}
 
-	if (initData.container) {
-		containerKeyObj = {
-			privateKeyArmor: initData.container.privateKeyArmor,
-			publicKeyArmor: initData.container.publicKeyArmor
-		}
-	}
+	// if (initData.container) {
+	// 	containerKeyObj = {
+	// 		privateKeyArmor: initData.container.privateKeyArmor,
+	// 		publicKeyArmor: initData.container.publicKeyArmor
+	// 	}
+	// }
 	
 	const data: systemInitialization = {
 		preferences: preferences,
