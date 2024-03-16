@@ -155,12 +155,15 @@ const conet_storageAbi=[
 
 const conet_rpc = 'https://rpc.conet.network'
 const api_endpoint = `https://api.conet.network`
-const blast_rpc = 'https://rpc.blast.io'
+
+const cloudStorageEndpointUrl = 'https://s3.us-east-1.wasabisys.com/conet-mvp/storage/'
+const blastRpc = 'https://rpc.ankr.com/blast_testnet_sepolia'
+
 const ReferralsAddress = '0x8f6be4704a3735024F4D2CBC5BAC3722c0C8a0BD'
+const conet_storage_contract_address = `0x30D870224419226eFcEA57B920a2e67929893DbA`
 const adminCNTP= '0x44d1FCCce6BAF388617ee972A6FB898b6b5629B1'
 const referrerCNTP= '0x63377154F972f6FC1319e382535EC9691754bd18'
-const conet_storage_contract_address = `0x30D870224419226eFcEA57B920a2e67929893DbA`
-const cloudStorageEndpointUrl = 'https://s3.us-east-1.wasabisys.com/conet-mvp/storage/'
+
 
 const checkReferee = async (myKeyID:string) => {
 	const provideNewCONET = new ethers.JsonRpcProvider(conet_rpc)
@@ -314,15 +317,7 @@ let authorization_key = ''
 
 let getProfileAssetsBalanceResult: getBalanceAPIresult = {CNTP_Balance: '0', CONET_Balance: '0', Referee: '0', lastTime: 0}
 let scanPoint = 0
-const scanSide =['https://scannew.conet.network/', 'https://scanapi.conet.network/', 'https://scan.conet.network/']
 
-const getscanUrl = (path: string) => {
-	
-	if (++scanPoint > scanSide.length-1) {
-		scanPoint = 0
-	}
-	return `${scanSide[scanPoint]}${path}`
-}
 
 const scanCNTP = (walletAddr: string) => {
 	const provideCNTP = new ethers.JsonRpcProvider(blast_rpc)
@@ -330,10 +325,10 @@ const scanCNTP = (walletAddr: string) => {
 }
 
 const getProfileAssetsBalance = async (profile: profile) => {
-
 	const key = profile.keyID
+	const date = new Date().getTime()
+	
 	if (key) {
-		
 		const current = profile.tokens
 		if (!current?.cntp) {
 			current.cntp = {
@@ -341,9 +336,60 @@ const getProfileAssetsBalance = async (profile: profile) => {
 				history: []
 			}
 		}
-		const cntpBalance = await scanCNTP(key)
+		const 
+		
+		
+		return postToEndpoint(url, false, '')
+			.then (response => {
+				
+				//@ts-ignore
+				const data: blockscout_result = response
+				if (data?.items) {
 
-		return true
+					const balance = parseFloat(data.items[0].value)/10**18
+					const beforeBalance = parseFloat(getProfileAssetsBalanceResult.CNTP_Balance)
+					if (!isNaN(balance) && balance - beforeBalance > 0 ) {
+						getProfileAssetsBalanceResult.CNTP_Balance = current.cntp.balance = CNTP_Balance = balance.toFixed(4)
+						getProfileAssetsBalanceResult.lastTime = date
+					}
+					
+				}
+				return postToEndpoint(url1, false, '')})
+			.then( async response => {
+				//@ts-ignore
+				const data: blockscout_address = response
+				
+				if (data?.coin_balance ) {
+					const balance = parseFloat(data.coin_balance)
+					const beforeBalance = parseFloat(getProfileAssetsBalanceResult.CONET_Balance)
+					if (!isNaN(balance) && balance -beforeBalance >0) {
+						getProfileAssetsBalanceResult.CONET_Balance = current.conet.balance = balance.toFixed(4)
+						getProfileAssetsBalanceResult.lastTime = date
+					}
+				}
+				
+				// if (profile.referrer) {
+				// 	await registerReferrer(profile.referrer)
+				// } else if (!profile.referrer && referrals) {
+				// 	await registerReferrer(referrals)
+				// 	profile.referrer = referrals
+				// }
+				
+				sendState('cntp-balance', {CNTP_Balance: CNTP_Balance, CONET_Balance: profile.tokens.conet.balance, currentCNTP: currentCNTP})
+				const ret = {
+					CNTP_Balance,
+					CONET_Balance: profile.tokens.conet.balance,
+					Referee: profile.referrer
+				}
+				getProfileAssetsBalanceLocked = false
+				return ret
+			})
+			.catch (ex => {
+				getProfileAssetsBalanceLocked = false
+				return null
+			})
+		
+
 	}
 
 	return false
@@ -737,7 +783,6 @@ const checkCoNET_DataVersion = async (callback?: (ver: number) => void) => {
 	}
 }
 
-
 const checkUpdateAccount = () => {
 	logger(`checkUpdateAccount`)
 	return checkCoNET_DataVersion( async _ver => {
@@ -825,4 +870,8 @@ const updateProfiles = () => {
 	})
 	
 	//	version contral with 
+}
+
+const checkAllAssets = () => {
+
 }
