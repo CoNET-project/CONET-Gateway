@@ -487,13 +487,18 @@ const blast_CNTPAbi = [
     }
 ]
 
+const blast_usdbAbi = [
+	{"inputs":[{"internalType":"address","name":"_admin","type":"address"}],"stateMutability":"nonpayable","type":"constructor"},{"anonymous":false,"inputs":[{"indexed":false,"internalType":"address","name":"previousAdmin","type":"address"},{"indexed":false,"internalType":"address","name":"newAdmin","type":"address"}],"name":"AdminChanged","type":"event"},{"anonymous":false,"inputs":[{"indexed":true,"internalType":"address","name":"implementation","type":"address"}],"name":"Upgraded","type":"event"},{"stateMutability":"payable","type":"fallback"},{"inputs":[],"name":"admin","outputs":[{"internalType":"address","name":"","type":"address"}],"stateMutability":"nonpayable","type":"function"},{"inputs":[{"internalType":"address","name":"_admin","type":"address"}],"name":"changeAdmin","outputs":[],"stateMutability":"nonpayable","type":"function"},{"inputs":[],"name":"implementation","outputs":[{"internalType":"address","name":"","type":"address"}],"stateMutability":"nonpayable","type":"function"},{"inputs":[{"internalType":"address","name":"_implementation","type":"address"}],"name":"upgradeTo","outputs":[],"stateMutability":"nonpayable","type":"function"},{"inputs":[{"internalType":"address","name":"_implementation","type":"address"},{"internalType":"bytes","name":"_data","type":"bytes"}],"name":"upgradeToAndCall","outputs":[{"internalType":"bytes","name":"","type":"bytes"}],"stateMutability":"payable","type":"function"},{"stateMutability":"payable","type":"receive"}
+]
+
 
 const conet_rpc = 'https://rpc.conet.network'
 const api_endpoint = `https://api.conet.network`
 
 const cloudStorageEndpointUrl = 'https://s3.us-east-1.wasabisys.com/conet-mvp/storage/'
-const blastRpc = 'https://sepolia.blast.io'
+const blast_sepoliaRpc = 'https://sepolia.blast.io'
 const ethRpc = 'https://rpc.ankr.com/eth'
+const blast_mainnet = ' https://rpc.blast.io'
 
 const ReferralsAddress = '0x8f6be4704a3735024F4D2CBC5BAC3722c0C8a0BD'
 const conet_storage_contract_address = `0x30D870224419226eFcEA57B920a2e67929893DbA`
@@ -503,6 +508,8 @@ const blast_CNTP = '0x53634b1285c256aE64BAd795301322E0e911153D'
 const CNTPB_contract = '0x6056473ADD8bC89a95325845F6a431CCD7A849bb'
 const eth_usdc_contract = '0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48'
 const eth_usdt_contract = '0xdac17f958d2ee523a2206206994597c13d831ec7'
+const blast_usdb_contract = '0x4300000000000000000000000000000000000003'
+
 
 const checkReferee = async (myKeyID:string) => {
 	const provideNewCONET = new ethers.JsonRpcProvider(conet_rpc)
@@ -659,52 +666,89 @@ let getProfileAssetsBalanceResult: getBalanceAPIresult = {CNTP_Balance: '0', CON
 let scanPoint = 0
 
 
-const scanCNTP = async (walletAddr: string) => {
-	const provideCNTP = new ethers.JsonRpcProvider(blastRpc)
-	const CNTP = new ethers.Contract(blast_CNTP, blast_CNTPAbi, provideCNTP)
+const scanCNTP = async (walletAddr: string, privideBlast: any) => {
+	
+	const CNTP = new ethers.Contract(blast_CNTP, blast_CNTPAbi, privideBlast)
 	try {
 		const ret = await CNTP.balanceOf(walletAddr)
 		return ret
 
 	} catch (ex) {
 		logger(`scanCNTP [${walletAddr}]`, ex)
+		return await scanCNTP (walletAddr, privideBlast)
 	}
 
 }
 
-const scanCNTPB =  async (walletAddr: string) => {
-	const provideCNTP = new ethers.JsonRpcProvider(conet_rpc)
-	const CNTPB = new ethers.Contract(CNTPB_contract, blast_CNTPAbi, provideCNTP)
+const scanCNTPB =  async (walletAddr: string, provideCONET: any) => {
+	
+	const CNTPB = new ethers.Contract(CNTPB_contract, blast_CNTPAbi, provideCONET)
 	try {
 		const ret = await CNTPB.balanceOf(walletAddr)
 		return ret
 
 	} catch (ex) {
+
 		logger(`scanCNTPB [${walletAddr}]`, ex)
+		return await scanCNTPB(walletAddr, provideCONET)
 	}
 }
 
-const scanUSDC = async (walletAddr: string) => {
-	const provideETH = new ethers.JsonRpcProvider(ethRpc)
+const scanUSDC = async (walletAddr: string, provideETH: any) => {
+	
 	const usdc = new ethers.Contract(eth_usdc_contract, blast_CNTPAbi, provideETH)
-	try {
-		const ret = await usdc.balanceOf(walletAddr)
-		return ret
 
+	try {
+		return await usdc.balanceOf(walletAddr)
+		
 	} catch (ex) {
-		logger(`scanCNTPB [${walletAddr}]`, ex)
+		logger(`scanUSDC [${walletAddr}]`, ex)
+		return await scanCNTPB(walletAddr, provideETH)
 	}
 }
 
-const scanUSDT = async (walletAddr: string) => {
-	const provideETH = new ethers.JsonRpcProvider(ethRpc)
-	const usdc = new ethers.Contract(eth_usdt_contract, blast_CNTPAbi, provideETH)
+
+const scanUSDT = async (walletAddr: string, provideETH: any) => {
+	
+	const usdt = new ethers.Contract(eth_usdt_contract, blast_CNTPAbi, provideETH)
 	try {
-		const ret = await usdc.balanceOf(walletAddr)
-		return ret
+		return await usdt.balanceOf(walletAddr)
 
 	} catch (ex) {
-		logger(`scanCNTPB [${walletAddr}]`, ex)
+		logger(`scanUSDT [${walletAddr}]`, ex)
+		return await scanUSDT(walletAddr, provideETH)
+	}
+}
+
+const scanUSDB = async (walletAddr: string) => {
+	const provideBlast = new ethers.JsonRpcProvider(blast_mainnet)
+	const usdb = new ethers.Contract(blast_usdb_contract, blast_CNTPAbi, provideBlast)
+	try {
+		return await usdb.balanceOf(walletAddr)
+
+	} catch (ex) {
+		logger(`scanUSDB [${walletAddr}]`, ex)
+		return await scanUSDB(walletAddr)
+	}
+}
+
+const scanETH = async (walletAddr: string, provideETH: any) => {
+	try {
+		return await provideETH.getBalance(walletAddr)
+
+	} catch (ex) {
+		logger(`scanETH Error!`, ex)
+		return await scanETH(walletAddr, provideETH)
+	}
+}
+
+const scanBlastETH = async (walletAddr: string, provideBlast: any) => {
+	try {
+		return await provideBlast.getBalance(walletAddr)
+
+	} catch (ex) {
+		logger(`scanBlastETH Error!`, ex)
+		return await scanBlastETH(walletAddr, provideBlast)
 	}
 }
 
@@ -723,32 +767,32 @@ const getProfileAssetsBalance = async (profile: profile) => {
 	
 	if (key) {
 		const current = profile.tokens
-		if (!current?.cntp) {
-			current.cntp = {
-				balance: '0',
-				history: []
-			}
-		}
-		if (!current?.cntpb) {
-			current.cntpb = {
-				balance: '0',
-				history: []
-			}
-		}
-		if (!current?.usdc) {
-			current.usdc = {
-				balance: '0',
-				history: []
-			}
-		}
-		const balanceCNTP = await scanCNTP (key)
-		const balanceCNTPB = await scanCNTPB (key)
-		const balanceUSDC = await scanUSDC (key)
-		const balanceUSDT = await scanUSDT (key)
+		checkTokenStauct(current)
+
+		const provideETH = new ethers.JsonRpcProvider(ethRpc)
+		const provideBlast = new ethers.JsonRpcProvider(blast_sepoliaRpc)
+		const provideCONET = new ethers.JsonRpcProvider(conet_rpc)
+		// const walletETH = new ethers.Wallet(profile.privateKeyArmor, provideETH)
+		const [balanceCNTP, balanceCNTPB, balanceUSDC, balanceUSDT, ETH, blastETH] = await Promise.all([
+			scanCNTP (key, provideBlast),
+			scanCNTPB (key, provideCONET),
+			scanUSDC (key, provideETH),
+			scanUSDT (key, provideETH),
+			scanETH (key, provideETH),
+			scanBlastETH (key, provideBlast)
+		])
+		
+
 		current.cntp.balance = balanceCNTP === BigInt(0) ? '0' : parseFloat(ethers.formatEther(balanceCNTP)).toFixed(4)
 		current.cntpb.balance = balanceCNTPB === BigInt(0) ? '0' : parseFloat(ethers.formatEther(balanceCNTPB)).toFixed(4)
 		current.usdc.balance = balanceUSDC === BigInt(0) ? '0' : parseFloat(ethers.formatEther(balanceUSDC)).toFixed(4)
 		current.usdt.balance = balanceUSDT === BigInt(0) ? '0' : parseFloat(ethers.formatEther(balanceUSDT)).toFixed(4)
+		current.eth.balance = ETH === BigInt(0) ? '0' : parseFloat(ethers.formatEther(ETH)).toFixed(4)
+		current.blastETH.balance = blastETH === BigInt(0) ? '0' : parseFloat(ethers.formatEther(blastETH)).toFixed(4)
+
+		//current.usdb.balance = balanceUSDB === BigInt(0) ? '0' : parseFloat(ethers.formatEther(balanceUSDB)).toFixed(4)
+
+
 		// return postToEndpoint(url, false, '')
 		// 	.then (response => {
 				
@@ -1144,6 +1188,51 @@ const initCoNET_Data = async ( passcode = '' ) => {
 	await initSystemDataV1(acc)
 }
 
+const checkTokenStauct = (token: any) => {
+	if (!token?.cntp) {
+		token.cntp = {
+			balance: '0',
+			history: []
+		}
+	}
+	if (!token?.cntpb) {
+		token.cntpb = {
+			balance: '0',
+			history: []
+		}
+	}
+	if (!token?.usdc) {
+		token.usdc = {
+			balance: '0',
+			history: []
+		};
+	}
+	if (!token?.usdt) {
+		token.usdt = {
+			balance: '0',
+			history: []
+		}
+	}
+	if (!token?.usdb) {
+		token.usdb = {
+			balance: '0',
+			history: []
+		}
+	}
+	if (!token?.eth) {
+		token.eth = {
+			balance: '0',
+			history: []
+		}
+	}
+	if (!token?.blastETH) {
+		token.blastETH = {
+			balance: '0',
+			history: []
+		}
+	}
+}
+
 const initSystemDataV1 = async (acc) => {
 	
 	const key = await createGPGKey('', '', '')
@@ -1291,6 +1380,40 @@ const updateProfiles = () => {
 	//	version contral with 
 }
 
-const checkAllAssets = () => {
 
+const initProfileTokens = () => {
+	return {
+		conet: {
+			balance: '0',
+			history: []
+		},
+		cntp: {
+			balance: '0',
+			history: []
+		},
+		cntpb: {
+			balance: '0',
+			history: []
+		},
+		usdc: {
+			balance: '0',
+			history: []
+		},
+		usdt: {
+			balance: '0',
+			history: []
+		},
+		usdb: {
+			balance: '0',
+			history: []
+		},
+		eth: {
+			balance: '0',
+			history: []
+		},
+		blastETH: {
+			balance: '0',
+			history: []
+		}
+	}
 }

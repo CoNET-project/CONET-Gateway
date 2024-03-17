@@ -222,6 +222,9 @@ interface profile extends keyPair {
 		cntpb: CryptoAsset
 		usdc:CryptoAsset
 		usdt:CryptoAsset
+		usdb: CryptoAsset
+		eth: CryptoAsset
+		blastETH: CryptoAsset
 	}
 	network: {
 		recipients: nodes_info[]

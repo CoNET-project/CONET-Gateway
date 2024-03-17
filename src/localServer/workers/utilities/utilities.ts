@@ -304,31 +304,6 @@ const unZIP = (compress: string) => {
     
 }
 
-const initProfileTokens = () => {
-	return {
-		conet: {
-			balance: '0',
-			history: []
-		},
-		cntp: {
-			balance: '0',
-			history: []
-		},
-		cntpb: {
-			balance: '0',
-			history: []
-		},
-		usdc: {
-			balance: '0',
-			history: []
-		},
-		usdt: {
-			balance: '0',
-			history: []
-		}
-	}
-}
-
 
 const makeContainerPGPObj = async () => {
 	if (!containerKeyObj?.privateKeyArmor || !containerKeyObj?.publicKeyArmor ) {
