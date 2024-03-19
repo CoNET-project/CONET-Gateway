@@ -128,6 +128,9 @@ interface TokenPreferences {
 interface CryptoAsset {
 	balance: string
 	history: CryptoAssetHistory[]
+	network: string
+	decimal: number
+	contract: string
 }
 
 
@@ -217,14 +220,24 @@ interface profile extends keyPair {
 	hdPath: string
 	index: number
 	tokens: {
+		//	CONET Holesky
 		conet:CryptoAsset
-		cntp:CryptoAsset
 		cntpb: CryptoAsset
-		usdc:CryptoAsset
-		usdt:CryptoAsset
-		usdb: CryptoAsset
-		eth: CryptoAsset
+
+		//	blast mainchain
+		cntp:CryptoAsset
 		blastETH: CryptoAsset
+		usdb: CryptoAsset
+
+		//	ETH
+		eth: CryptoAsset
+		usdt:CryptoAsset
+
+		//	BSC
+		wbnb: CryptoAsset
+		wusdt: CryptoAsset
+
+		
 	}
 	network: {
 		recipients: nodes_info[]

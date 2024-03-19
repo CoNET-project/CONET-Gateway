@@ -1,6 +1,7 @@
 
 declare const ethers
 declare const uuid
+declare const Jimp
 const CONET_ReferralsAbi = [
 	{
 		"inputs": [],
@@ -498,20 +499,23 @@ const api_endpoint = `https://api.conet.network`
 const cloudStorageEndpointUrl = 'https://s3.us-east-1.wasabisys.com/conet-mvp/storage/'
 const blast_sepoliaRpc = 'https://sepolia.blast.io'
 const ethRpc = 'https://rpc.ankr.com/eth'
-const blast_mainnet = ' https://rpc.blast.io'
+const blast_mainnet = 'https://rpc.blast.io'
+const bsc_mainchain = 'https://bsc-dataseed.binance.org/'
 
 const ReferralsAddress = '0x8f6be4704a3735024F4D2CBC5BAC3722c0C8a0BD'
 const conet_storage_contract_address = `0x30D870224419226eFcEA57B920a2e67929893DbA`
 const adminCNTP= '0x44d1FCCce6BAF388617ee972A6FB898b6b5629B1'
 const referrerCNTP= '0x63377154F972f6FC1319e382535EC9691754bd18'
+
 const blast_CNTP = '0x53634b1285c256aE64BAd795301322E0e911153D'
 const CNTPB_contract = '0x6056473ADD8bC89a95325845F6a431CCD7A849bb'
-const eth_usdc_contract = '0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48'
 const eth_usdt_contract = '0xdac17f958d2ee523a2206206994597c13d831ec7'
 const blast_usdb_contract = '0x4300000000000000000000000000000000000003'
 
+const bnb_wbnb_contract = '0xbb4CdB9CBd36B01bD1cBaEBF2De08d9173bc095c'
+const bnb_usdt_contract = '0x55d398326f99059fF775485246999027B3197955'
 
-const checkReferee = async (myKeyID:string) => {
+const checkRefereeV1 = async (myKeyID:string) => {
 	const provideNewCONET = new ethers.JsonRpcProvider(conet_rpc)
 	const CNTP_Referrals = new ethers.Contract(ReferralsAddress, CONET_ReferralsAbi, provideNewCONET)
 	let referrer: string
@@ -548,8 +552,8 @@ const getReferees = async (wallet: string, CNTP_Referrals) => {
 	try {
 		result = await CNTP_Referrals.getReferees(wallet)
 	} catch (ex) {
-		logger (`checkReferee getReferrer Error!`, ex)
-		return []
+		logger(`getReferees [${wallet}] Error! try again!`)
+		return await getReferees (wallet, CNTP_Referrals)
 	}
 	return result
 }
@@ -591,7 +595,11 @@ const sendState = (state: listenState, value: any) => {
 }
 
 const registerReferrer = async (referrer: string) => {
-	const profile = gettPrimaryProfile()
+	if (!CoNET_Data?.profiles) {
+		return logger(`registerReferrer CoNET_Data?.profiles Empty error!`)
+	}
+
+	const profile = CoNET_Data.profiles[0]
 	if (!profile||!referrer) {
 		return false
 	}
@@ -610,6 +618,7 @@ const registerReferrer = async (referrer: string) => {
 	const result: any = await postToEndpoint(conet_DL_endpoint, true, data)
 	if (result?.referrer) {
 		profile.referrer = result.referrer
+
 		sendState('system', CoNET_Data)
 		sendState('referrer', result.referrer)
 		return true
@@ -632,9 +641,6 @@ const getReferrerList = async (cmd: worker_command) => {
 	returnUUIDChannel(cmd)
 }
 
-
-
-let nodesGetBalance = []
 const getAllNodesInfo: () => Promise<node|null> = () => new Promise(resolve=> {
 
 	return fetch('https://openpgp.online:4001/api/conet-nodes', {
@@ -688,25 +694,9 @@ const scanCNTPB =  async (walletAddr: string, provideCONET: any) => {
 		return ret
 
 	} catch (ex) {
-
-		logger(`scanCNTPB [${walletAddr}]`, ex)
 		return await scanCNTPB(walletAddr, provideCONET)
 	}
 }
-
-const scanUSDC = async (walletAddr: string, provideETH: any) => {
-	
-	const usdc = new ethers.Contract(eth_usdc_contract, blast_CNTPAbi, provideETH)
-
-	try {
-		return await usdc.balanceOf(walletAddr)
-		
-	} catch (ex) {
-		logger(`scanUSDC [${walletAddr}]`, ex)
-		return await scanCNTPB(walletAddr, provideETH)
-	}
-}
-
 
 const scanUSDT = async (walletAddr: string, provideETH: any) => {
 	
@@ -720,15 +710,15 @@ const scanUSDT = async (walletAddr: string, provideETH: any) => {
 	}
 }
 
-const scanUSDB = async (walletAddr: string) => {
-	const provideBlast = new ethers.JsonRpcProvider(blast_mainnet)
+const scanUSDB = async (walletAddr: string, provideBlast: any) => {
+
 	const usdb = new ethers.Contract(blast_usdb_contract, blast_CNTPAbi, provideBlast)
 	try {
 		return await usdb.balanceOf(walletAddr)
 
 	} catch (ex) {
 		logger(`scanUSDB [${walletAddr}]`, ex)
-		return await scanUSDB(walletAddr)
+		return await scanUSDB(walletAddr, provideBlast)
 	}
 }
 
@@ -752,6 +742,28 @@ const scanBlastETH = async (walletAddr: string, provideBlast: any) => {
 	}
 }
 
+const scanWBNB = async (walletAddr: string, provideBNB: any) => {
+	const wbnb = new ethers.Contract(bnb_wbnb_contract, blast_CNTPAbi, provideBNB)
+	try {
+		return await wbnb.balanceOf(walletAddr)
+
+	} catch (ex) {
+		logger(`scanBlastETH Error!`, ex)
+		return await scanWBNB(walletAddr, provideBNB)
+	}
+}
+
+const scanWUSDT = async (walletAddr: string, provideBNB: any) => {
+	const wusdt = new ethers.Contract(bnb_usdt_contract, blast_CNTPAbi, provideBNB)
+	try {
+		return await wusdt.balanceOf(walletAddr)
+
+	} catch (ex) {
+		logger(`scanBlastETH Error!`, ex)
+		return await scanWUSDT(walletAddr, provideBNB)
+	}
+}
+
 const getAllProfileAssetsBalance = async () => {
 	if (!CoNET_Data?.profiles) {
 		return logger(`getAllProfileAssetsBalance Error! CoNET_Data.profiles empty!`)
@@ -772,23 +784,29 @@ const getProfileAssetsBalance = async (profile: profile) => {
 		const provideETH = new ethers.JsonRpcProvider(ethRpc)
 		const provideBlast = new ethers.JsonRpcProvider(blast_sepoliaRpc)
 		const provideCONET = new ethers.JsonRpcProvider(conet_rpc)
+		const provideBlastMainChain = new ethers.JsonRpcProvider(blast_mainnet)
+		const provideBNB = new ethers.JsonRpcProvider(bsc_mainchain)
 		// const walletETH = new ethers.Wallet(profile.privateKeyArmor, provideETH)
-		const [balanceCNTP, balanceCNTPB, balanceUSDC, balanceUSDT, ETH, blastETH] = await Promise.all([
+		const [balanceCNTP, balanceCNTPB, balanceUSDT, ETH, blastETH, usdb, wbnb, wusdt] = await Promise.all([
 			scanCNTP (key, provideBlast),
 			scanCNTPB (key, provideCONET),
-			scanUSDC (key, provideETH),
 			scanUSDT (key, provideETH),
 			scanETH (key, provideETH),
-			scanBlastETH (key, provideBlast)
+			scanBlastETH (key, provideBlast),
+			scanUSDB (key, provideBlastMainChain),
+			scanWUSDT (key,provideBNB),
+			scanWBNB (key,provideBNB)
 		])
 		
 
 		current.cntp.balance = balanceCNTP === BigInt(0) ? '0' : parseFloat(ethers.formatEther(balanceCNTP)).toFixed(4)
 		current.cntpb.balance = balanceCNTPB === BigInt(0) ? '0' : parseFloat(ethers.formatEther(balanceCNTPB)).toFixed(4)
-		current.usdc.balance = balanceUSDC === BigInt(0) ? '0' : parseFloat(ethers.formatEther(balanceUSDC)).toFixed(4)
 		current.usdt.balance = balanceUSDT === BigInt(0) ? '0' : parseFloat(ethers.formatEther(balanceUSDT)).toFixed(4)
 		current.eth.balance = ETH === BigInt(0) ? '0' : parseFloat(ethers.formatEther(ETH)).toFixed(4)
 		current.blastETH.balance = blastETH === BigInt(0) ? '0' : parseFloat(ethers.formatEther(blastETH)).toFixed(4)
+		current.usdb.balance = usdb === BigInt(0) ? '0' : parseFloat(ethers.formatEther(usdb)).toFixed(4)
+		current.wbnb.balance = wbnb === BigInt(0) ? '0' : parseFloat(ethers.formatEther(wbnb)).toFixed(4)
+		current.wusdt.balance = wusdt === BigInt(0) ? '0' : parseFloat(ethers.formatEther(wusdt)).toFixed(4)
 
 		//current.usdb.balance = balanceUSDB === BigInt(0) ? '0' : parseFloat(ethers.formatEther(balanceUSDB)).toFixed(4)
 
@@ -1093,6 +1111,11 @@ const updateProfile = async (cmd: worker_command) => {
 		cmd.err = 'FAILURE'
 		return returnUUIDChannel(cmd)
 	}
+	const profileImg = _profile?.data?.profileImg
+	if (profileImg) {
+		const resized: any = await resizeImage(profileImg, 180, 180)
+		_profile.data.profileImg = 'data:image/png;base64,' + resized.rawData
+	}
 	CoNET_Data.profiles[index].data = _profile.data
 	await storeSystemData ()
 	cmd.data[0] = CoNET_Data.profiles
@@ -1107,11 +1130,17 @@ const addProfile =  async (cmd: worker_command) => {
 		return returnUUIDChannel(cmd)
 	}
 	const UIData = cmd.data[1]
+
 	const indexMap = CoNET_Data.profiles.map(n=> n.index)
 	const nextIndex = indexMap.sort((a,b) => b-a)[0] + 1
 	const root = ethers.Wallet.fromPhrase(CoNET_Data.mnemonicPhrase)
 	const newAcc = root.deriveChild(nextIndex)
 	const key = await createGPGKey('', '', '')
+	const profileImg = UIData?.data?.profileImg
+	if (profileImg) {
+		const resized: any = await resizeImage(profileImg, 180, 180)
+		UIData.data.profileImg = 'data:image/png;base64,' + resized.rawData
+	}
 	const profile: profile = {
 		isPrimary: false,
 		keyID: newAcc.address,
@@ -1192,43 +1221,82 @@ const checkTokenStauct = (token: any) => {
 	if (!token?.cntp) {
 		token.cntp = {
 			balance: '0',
-			history: []
+			history: [],
+			network: 'Blast Mainnet',
+			decimal: 18,
+			contract: blast_CNTP
 		}
 	}
 	if (!token?.cntpb) {
 		token.cntpb = {
 			balance: '0',
-			history: []
+			history: [],
+			network: 'CONET Holesky',
+			decimal: 18,
+			contract: CNTPB_contract
 		}
-	}
-	if (!token?.usdc) {
-		token.usdc = {
-			balance: '0',
-			history: []
-		};
 	}
 	if (!token?.usdt) {
 		token.usdt = {
 			balance: '0',
-			history: []
+			history: [],
+			network: 'ETH',
+			decimal: 6,
+			contract: eth_usdt_contract
 		}
 	}
 	if (!token?.usdb) {
 		token.usdb = {
 			balance: '0',
-			history: []
+			history: [],
+			network: 'Blast Mainnet',
+			decimal: 18,
+			contract: eth_usdt_contract
 		}
 	}
 	if (!token?.eth) {
 		token.eth = {
 			balance: '0',
-			history: []
+			history: [],
+			network: 'ETH',
+			decimal: 18,
+			contract: ''
 		}
 	}
 	if (!token?.blastETH) {
 		token.blastETH = {
 			balance: '0',
-			history: []
+			history: [],
+			network: 'Blast Mainnet',
+			decimal: 18,
+			contract: ''
+		}
+	}
+	if (!token?.conet) {
+		token.conet = {
+			balance: '0',
+			history: [],
+			network: 'CONET Holesky',
+			decimal: 18,
+			contract: ''
+		}
+	}
+	if (!token?.wbnb) {
+		token.wbnb = {
+			balance: '0',
+			history: [],
+			network: 'BSC',
+			decimal: 18,
+			contract: bnb_wbnb_contract
+		}
+	}
+	if (!token?.wusdt) {
+		token.wusdt = {
+			balance: '0',
+			history: [],
+			network: 'BSC',
+			decimal: 18,
+			contract: bnb_usdt_contract
 		}
 	}
 }
@@ -1380,40 +1448,122 @@ const updateProfiles = () => {
 	//	version contral with 
 }
 
-
 const initProfileTokens = () => {
 	return {
 		conet: {
 			balance: '0',
-			history: []
+			history: [],
+			network: 'CONET Holesky',
+			decimal: 18,
+			contract: ''
 		},
 		cntp: {
 			balance: '0',
-			history: []
+			history: [],
+			network: 'Blast Mainnet',
+			decimal: 18,
+			contract: blast_CNTP
 		},
 		cntpb: {
 			balance: '0',
-			history: []
-		},
-		usdc: {
-			balance: '0',
-			history: []
+			history: [],
+			network: 'CONET Holesky',
+			decimal: 18,
+			contract: CNTPB_contract
 		},
 		usdt: {
 			balance: '0',
-			history: []
+			history: [],
+			network: 'ETH',
+			decimal: 6,
+			contract: eth_usdt_contract
 		},
 		usdb: {
 			balance: '0',
-			history: []
+			history: [],
+			network: 'Blast Mainnet',
+			decimal: 18,
+			contract: eth_usdt_contract
 		},
 		eth: {
 			balance: '0',
-			history: []
+			history: [],
+			network: 'ETH',
+			decimal: 18,
+			contract: ''
 		},
 		blastETH: {
 			balance: '0',
-			history: []
+			history: [],
+			network: 'Blast Mainnet',
+			decimal: 18,
+			contract: ''
+		},
+		wbnb: {
+			balance: '0',
+			history: [],
+			network: 'BSC',
+			decimal: 18,
+			contract: bnb_wbnb_contract
+		},
+		wusdt: {
+			balance: '0',
+			history: [],
+			network: 'BSC',
+			decimal: 18,
+			contract: bnb_usdt_contract
 		}
 	}
+}
+
+const resizeImage = ( mediaData: string, imageMaxWidth: number, imageMaxHeight: number ) => {
+	return new Promise(resolve => {
+		const media = mediaData.split(',')
+		const _media = buffer.Buffer.from ( media[1], 'base64')
+		
+		const ret = {
+			total_bytes: media[1].length,
+			media_type: 'image/png',
+			rawData: media[1],
+			media_id_string: null
+		}
+		
+		
+		//if ( mediaData.length > maxImageLength) {
+		const exportImage = ( _type, img ) => {
+			return img.getBuffer ( _type, ( err, _buf: Buffer ) => {
+				if ( err ) {
+					return resolve ( false )
+				}
+				ret.rawData = _buf.toString( 'base64' )
+				ret.total_bytes = _buf.length
+	
+				return resolve ( ret )
+			})
+		}
+	
+		return Jimp.read ( _media, ( err, image ) => {
+			if ( err ) {
+				return resolve ( false )
+			}
+			const uu = image.bitmap
+	
+			if ( uu.height +  uu.width > imageMaxHeight + imageMaxWidth ) {
+				if ( uu.height > uu.widt ) {
+					image.resize ( Jimp.AUTO, imageMaxHeight )
+				} else {
+					image.resize ( imageMaxWidth, Jimp.AUTO )
+				}
+			
+			}
+			//		to PNG
+	
+			return image.deflateStrategy ( 2, () => {
+				return exportImage ( ret.media_type, image )
+			})
+			
+		})
+	})
+
+	
 }

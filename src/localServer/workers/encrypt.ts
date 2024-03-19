@@ -118,6 +118,7 @@ const initEncryptWorker = async () => {
 	self.importScripts ( 'https://cdnjs.cloudflare.com/ajax/libs/pouchdb/8.0.1/pouchdb.min.js' )
 	self.importScripts ( 'https://cdnjs.cloudflare.com/ajax/libs/async/3.2.5/async.min.js' )
 	self.importScripts ( 'https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js' )
+	self.importScripts ( 'https://cdnjs.cloudflare.com/ajax/libs/jimp/0.22.12/jimp.min.js')
 	channelLoading.postMessage(30)
 	// self.importScripts ( 'https://cdnjs.cloudflare.com/ajax/libs/forge/1.3.1/forge.min.js' )
     //self.importScripts ( baseUrl + 'Pouchdb.js' )
