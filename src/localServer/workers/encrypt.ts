@@ -155,7 +155,6 @@ const initEncryptWorker = async () => {
 	
 }
 
-
 const gettPrimaryProfile = () => {
 	if (!CoNET_Data ||!CoNET_Data?.profiles) {
 		return ''
@@ -548,6 +547,10 @@ const processCmd = async (cmd: worker_command) => {
 
 		case 'recoverAccount': {
 			return recoverAccount(cmd)
+		}
+
+		case 'getAssetsPrice': {
+			return getAssetsPrice(cmd)
 		}
 
 		case 'isLivenessRunning': {

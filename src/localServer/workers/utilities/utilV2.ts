@@ -489,7 +489,16 @@ const blast_CNTPAbi = [
 ]
 
 const blast_usdbAbi = [
-	{"inputs":[{"internalType":"address","name":"_admin","type":"address"}],"stateMutability":"nonpayable","type":"constructor"},{"anonymous":false,"inputs":[{"indexed":false,"internalType":"address","name":"previousAdmin","type":"address"},{"indexed":false,"internalType":"address","name":"newAdmin","type":"address"}],"name":"AdminChanged","type":"event"},{"anonymous":false,"inputs":[{"indexed":true,"internalType":"address","name":"implementation","type":"address"}],"name":"Upgraded","type":"event"},{"stateMutability":"payable","type":"fallback"},{"inputs":[],"name":"admin","outputs":[{"internalType":"address","name":"","type":"address"}],"stateMutability":"nonpayable","type":"function"},{"inputs":[{"internalType":"address","name":"_admin","type":"address"}],"name":"changeAdmin","outputs":[],"stateMutability":"nonpayable","type":"function"},{"inputs":[],"name":"implementation","outputs":[{"internalType":"address","name":"","type":"address"}],"stateMutability":"nonpayable","type":"function"},{"inputs":[{"internalType":"address","name":"_implementation","type":"address"}],"name":"upgradeTo","outputs":[],"stateMutability":"nonpayable","type":"function"},{"inputs":[{"internalType":"address","name":"_implementation","type":"address"},{"internalType":"bytes","name":"_data","type":"bytes"}],"name":"upgradeToAndCall","outputs":[{"internalType":"bytes","name":"","type":"bytes"}],"stateMutability":"payable","type":"function"},{"stateMutability":"payable","type":"receive"}
+	{
+		"inputs":[{"internalType":"address","name":"_admin","type":"address"}],"stateMutability":"nonpayable","type":"constructor"},
+		{"anonymous":false,"inputs":[{"indexed":false,"internalType":"address","name":"previousAdmin","type":"address"},
+		{"indexed":false,"internalType":"address","name":"newAdmin","type":"address"}],"name":"AdminChanged","type":"event"},
+		{"anonymous":false,"inputs":[{"indexed":true,"internalType":"address","name":"implementation","type":"address"}],"name":"Upgraded","type":"event"},
+		{"stateMutability":"payable","type":"fallback"},{"inputs":[],"name":"admin","outputs":[{"internalType":"address","name":"","type":"address"}],"stateMutability":"nonpayable","type":"function"},
+		{"inputs":[{"internalType":"address","name":"_admin","type":"address"}],"name":"changeAdmin","outputs":[],"stateMutability":"nonpayable","type":"function"},
+		{"inputs":[],"name":"implementation","outputs":[{"internalType":"address","name":"","type":"address"}],"stateMutability":"nonpayable","type":"function"},
+		{"inputs":[{"internalType":"address","name":"_implementation","type":"address"}],"name":"upgradeTo","outputs":[],"stateMutability":"nonpayable","type":"function"},
+		{"inputs":[{"internalType":"address","name":"_implementation","type":"address"},{"internalType":"bytes","name":"_data","type":"bytes"}],"name":"upgradeToAndCall","outputs":[{"internalType":"bytes","name":"","type":"bytes"}],"stateMutability":"payable","type":"function"},{"stateMutability":"payable","type":"receive"}
 ]
 
 
@@ -530,19 +539,6 @@ const checkRefereeV1 = async (myKeyID:string) => {
 		return null
 	}
 	return add
-	// const {eth} = new CoNETModule.Web3Eth ( new CoNETModule.Web3Eth.providers.HttpProvider(conet_rpc))
-	// const referralsContract = new eth.Contract(CONET_ReferralsAbi, ReferralsAddress)
-	// let result: string
-	// try {
-	// 	result = await referralsContract.methods.getReferrer(myKeyID).call({from:myKeyID})
-	// } catch (ex) {
-	// 	logger (`checkReferee getReferrer Error!`, ex)
-	// 	return null
-	// }
-	// if (result === '0x0000000000000000000000000000000000000000') {
-	// 	return null
-	// }
-	// return result
 }
 
 const getReferees = async (wallet: string, CNTP_Referrals) => {
@@ -557,6 +553,7 @@ const getReferees = async (wallet: string, CNTP_Referrals) => {
 	}
 	return result
 }
+
 const getAllReferees = async (_wallet: string, CNTP_Referrals) => {
 
 	const firstArray: string[] = await getReferees(_wallet, CNTP_Referrals)
@@ -939,15 +936,9 @@ const testPasscode = async (cmd: worker_command) => {
 		if (profile && !profile?.referrer) {
 			await registerReferrer (referrer)
 		}
-
-		// const provideNewCONET = new ethers.JsonRpcProvider(conet_rpc)
-		// const CNTP_Referrals = new ethers.Contract(ReferralsAddress, CONET_ReferralsAbi, provideNewCONET)
-		// const kkk = await getAllReferees('0x04441E4BC3A8842473Fe974DB4351f0b126940be', CNTP_Referrals)
-		// logger(kkk)
 	}
 	
 	authorization_key = cmd.data[0] = uuid.v4()
-
 	returnUUIDChannel(cmd)
 }
 
@@ -1565,5 +1556,33 @@ const resizeImage = ( mediaData: string, imageMaxWidth: number, imageMaxHeight: 
 		})
 	})
 
+	
+}
+
+const getAssetsPrice = (cmd: worker_command) => {
+	cmd.data =[]
+	const url = 'https://min-api.cryptocompare.com/data/pricemulti?fsyms=usdt,bnb,ETH&tsyms=USD'
+	return fetch(url, {
+		method: 'GET',
+		headers: {
+			'Content-Type': 'application/json;charset=UTF-8',
+			'Connection': 'close',
+		},
+		cache: 'no-store',
+		referrerPolicy: 'no-referrer'
+	}).then ( async res => {
+		if (res.status!== 200) {
+			getAssetsPrice(cmd)
+			return logger(`getPrice [${url}] response not 200 Error! try again!`)
+		}
+		return res.json()
+	}).then((data) => {
+		cmd.data = [data]
+		returnUUIDChannel(cmd)
+	}).catch(ex=> {
+		logger(`getPrice [${url}] catch err`, ex)
+		cmd.err = 'FAILURE'
+		returnUUIDChannel(cmd)
+	})
 	
 }
