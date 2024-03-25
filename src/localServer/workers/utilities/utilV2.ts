@@ -805,12 +805,19 @@ const getProfileAssetsBalance = async (profile: profile) => {
 }
 
 const storeSystemData = async () => {
+
 	if (!CoNET_Data||! passObj?.passcode) {
 		return
 	}
+
 	const password = passObj.passcode.toString()
+	if (CoNET_Data.ver > 0) {
+		CoNET_Data.fragmentClass = new Fragment(CoNET_Data)
+	}
+	
 
 	CoNET_Data.encryptedString = await CoNETModule.aesGcmEncrypt (buffer.Buffer.from(CoNET_Data.mnemonicPhrase), password)
+	
 	if (!CoNET_Data.encryptedString) {
 		return logger(`encryptStoreData aesGcmEncrypt Error!`)
 	}
@@ -841,9 +848,10 @@ const createAccount = async (cmd: worker_command) => {
 	const ff = await getFaucet (mainProfile.keyID)
 	if ( ff !== false && _referrer ) {
 		await registerReferrer (_referrer)
+		
 	}
 	// storage Data
-	// await storeSystemData ()
+	await storeSystemData ()
 	cmd.data[0] = CoNET_Data.mnemonicPhrase
 	returnUUIDChannel (cmd)
 	
@@ -924,6 +932,7 @@ const showSRP = (cmd: worker_command) => {
 	cmd.data = [CoNET_Data.mnemonicPhrase]
 	return returnUUIDChannel(cmd)
 }
+
 let getAllProfilesCount = 0
 let lastTimeGetAllProfilesCount = 0
 const minTimeStamp = 1000 * 15
@@ -1558,13 +1567,27 @@ const getFaucet = async (keyID: string) => {
 
 }
 
-const getFirstFragmentName = (SRP: string, ver: number) => {
-	const root = ethers.Wallet.fromPhrase(SRP)
-	const FragmentNameWallet = root.deriveChild(FragmentNameDeriveChildIndex)
-	const firVerFileName = ethers.id(FragmentNameWallet.address)
-	const currentVer = '0x' + (BigInt(firVerFileName) + BigInt(ver)).toString(16)
-	const mainFragmentName = ethers.id( ethers.id( ethers.id(currentVer)))
-	return mainFragmentName
+
+class Fragment {
+	private SRP: string
+	private ver: number
+	private root
+	private FragmentNameWallet
+	public mainFragmentName: string
+	constructor(private CoNET_Data: encrypt_keys_object) {
+		if (CoNET_Data) {
+			this.SRP = CoNET_Data.mnemonicPhrase
+			this.ver = CoNET_Data.ver
+			this.root = ethers.Wallet.fromPhrase(CoNET_Data.mnemonicPhrase)
+			this.FragmentNameWallet = this.root.deriveChild(FragmentNameDeriveChildIndex)
+			const firVerFileName = ethers.id(this.FragmentNameWallet.address)
+			const currentVer = '0x' + (BigInt(firVerFileName) + BigInt(this.ver)).toString(16)
+			this.mainFragmentName = ethers.id( ethers.id( ethers.id(currentVer)))
+		}
+	}
+	public nextFragmentName () {
+
+	}
 }
 
 const recoverProfileFromSRP = () => {

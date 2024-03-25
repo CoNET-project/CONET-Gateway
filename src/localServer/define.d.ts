@@ -279,6 +279,9 @@ type recipientNode = {
 	publicKey: string
 }
 
+interface FragmentClass {
+	mainFragmentName: string
+}
 
 type encrypt_keys_object = {
     profiles?: profile[]
@@ -288,6 +291,7 @@ type encrypt_keys_object = {
 	encryptedString?: string
 	passcode?: Passcode
 	mnemonicPhrase: string
+	fragmentClass?: FragmentClass
 }
 
 type pgpKeyPair = {
