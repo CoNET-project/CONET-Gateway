@@ -1278,7 +1278,34 @@ const initSystemDataV1 = async (acc) => {
 	
 }
 
+<<<<<<< Updated upstream
 const checkCoNET_DataVersion = async (callback?: (ver: number) => void) => {
+=======
+
+
+const regiestAccount = async () => {
+	const url = `${api_endpoint}/api/storageFragments`
+	if (!CoNET_Data?.mnemonicPhrase||!CoNET_Data?.profiles) {
+		return logger (`regiestAccount CoNET_Data object null Error! Stop process!`)
+	}
+	const pass = CoNETModule.EthCrypto.hash.keccak256(CoNET_Data.mnemonicPhrase)
+	const data = await CoNETModule.aesGcmEncrypt(buffer.Buffer.from(JSON.stringify(CoNET_Data)).toString('base64'), pass)
+	const profile = CoNET_Data.profiles[0]
+	const message =JSON.stringify({ walletAddress: profile.keyID, data})
+	const messageHash = CoNETModule.EthCrypto.hash.keccak256(message)
+	const wallet = new ethers.Wallet(profile.privateKeyArmor)
+	const wallet_sign = await wallet.signMessage(messageHash)
+	const signMessage = CoNETModule.EthCrypto.sign( profile.privateKeyArmor, messageHash )
+	const sendData = {
+		message, signMessage
+	}
+	const result: any = await postToEndpoint(url, true, sendData)
+
+}
+
+const conet_storage_contract_address = `0xd94532f8346d4FA5Bee21e8C5af2c341A0B7f511`
+const checkCoNET_DataVersion = () => {
+>>>>>>> Stashed changes
 	if (!CoNET_Data?.mnemonicPhrase||!CoNET_Data?.profiles) {
 		return logger (`regiestAccount CoNET_Data object null Error! Stop process!`)
 	}
