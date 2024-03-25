@@ -2,69 +2,85 @@
 declare const ethers
 declare const uuid
 declare const Jimp
+
 const CONET_ReferralsAbi = [
-	{
-		"inputs": [],
-		"stateMutability": "nonpayable",
-		"type": "constructor"
-	},
-	{
-		"inputs": [
-			{
-				"internalType": "address",
-				"name": "referee",
-				"type": "address"
-			},
-			{
-				"internalType": "address",
-				"name": "referrer",
-				"type": "address"
-			}
-		],
-		"name": "addReferrer",
-		"outputs": [],
-		"stateMutability": "nonpayable",
-		"type": "function"
-	},
-	{
-		"inputs": [
-			{
-				"internalType": "address",
-				"name": "referrer",
-				"type": "address"
-			}
-		],
-		"name": "getReferees",
-		"outputs": [
-			{
-				"internalType": "address[]",
-				"name": "referees",
-				"type": "address[]"
-			}
-		],
-		"stateMutability": "view",
-		"type": "function"
-	},
-	{
-		"inputs": [
-			{
-				"internalType": "address",
-				"name": "referee",
-				"type": "address"
-			}
-		],
-		"name": "getReferrer",
-		"outputs": [
-			{
-				"internalType": "address",
-				"name": "referrer",
-				"type": "address"
-			}
-		],
-		"stateMutability": "view",
-		"type": "function"
-	}
+    {
+        "inputs": [
+            {
+                "internalType": "address",
+                "name": "referrer",
+                "type": "address"
+            }
+        ],
+        "name": "addReferrer",
+        "outputs": [],
+        "stateMutability": "nonpayable",
+        "type": "function"
+    },
+    {
+        "inputs": [
+            {
+                "internalType": "address",
+                "name": "refere",
+                "type": "address"
+            },
+            {
+                "internalType": "address[]",
+                "name": "referees",
+                "type": "address[]"
+            }
+        ],
+        "name": "checkReferees",
+        "outputs": [
+            {
+                "internalType": "bool",
+                "name": "hasAddress",
+                "type": "bool"
+            }
+        ],
+        "stateMutability": "view",
+        "type": "function"
+    },
+    {
+        "inputs": [
+            {
+                "internalType": "address",
+                "name": "referrer",
+                "type": "address"
+            }
+        ],
+        "name": "getReferees",
+        "outputs": [
+            {
+                "internalType": "address[]",
+                "name": "referees",
+                "type": "address[]"
+            }
+        ],
+        "stateMutability": "view",
+        "type": "function"
+    },
+    {
+        "inputs": [
+            {
+                "internalType": "address",
+                "name": "referee",
+                "type": "address"
+            }
+        ],
+        "name": "getReferrer",
+        "outputs": [
+            {
+                "internalType": "address",
+                "name": "referrer",
+                "type": "address"
+            }
+        ],
+        "stateMutability": "view",
+        "type": "function"
+    }
 ]
+
 const conet_storageAbi=[
     {
         "inputs": [],
@@ -504,7 +520,7 @@ const blast_usdbAbi = [
 
 const conet_rpc = 'https://rpc.conet.network'
 const api_endpoint = `https://api.conet.network`
-
+const FragmentNameDeriveChildIndex = 65536
 const cloudStorageEndpointUrl = 'https://s3.us-east-1.wasabisys.com/conet-mvp/storage/'
 const blast_sepoliaRpc = 'https://sepolia.blast.io'
 const ethRpc = 'https://rpc.ankr.com/eth'
@@ -512,6 +528,7 @@ const blast_mainnet = 'https://rpc.blast.io'
 const bsc_mainchain = 'https://bsc-dataseed.binance.org/'
 
 const ReferralsAddress = '0x8f6be4704a3735024F4D2CBC5BAC3722c0C8a0BD'
+const ReferralsAddressV2 = '0x64Cab6D2217c665730e330a78be85a070e4706E7'
 const conet_storage_contract_address = `0x30D870224419226eFcEA57B920a2e67929893DbA`
 const adminCNTP= '0x44d1FCCce6BAF388617ee972A6FB898b6b5629B1'
 const referrerCNTP= '0x63377154F972f6FC1319e382535EC9691754bd18'
@@ -609,27 +626,22 @@ const registerReferrer = async (referrer: string) => {
 		return false
 	}
 
-	if (referrer.toLowerCase() === profile.keyID?.toLowerCase() || profile?.referrer) {
+	if (referrer.toLowerCase() === profile.keyID.toLowerCase() || profile.referrer) {
 		return false
 	}
 
-	const message =JSON.stringify({ walletAddress: profile.keyID, referrer })
-	const messageHash = CoNETModule.EthCrypto.hash.keccak256(message)
-	const signMessage = CoNETModule.EthCrypto.sign( profile.privateKeyArmor, messageHash )
-	const data = {
-		message, signMessage
-	}
-	const conet_DL_endpoint = `${ api_endpoint }/api/registerReferrer`
-	const result: any = await postToEndpoint(conet_DL_endpoint, true, data)
-	if (result?.referrer) {
-		profile.referrer = result.referrer
+	const provideNewCONET = new ethers.JsonRpcProvider(conet_rpc)
+	const wallet = new ethers.Wallet(profile.privateKeyArmor, provideNewCONET)
+	const CNTP_Referrals = new ethers.Contract(ReferralsAddressV2, CONET_ReferralsAbi, wallet)
 
-		sendState('system', CoNET_Data)
-		sendState('referrer', result.referrer)
-		return true
+	try {
+		await CNTP_Referrals.addReferrer(referrer)
+	} catch (ex) {
+		logger(`registerReferrer Error`, ex)
+		return false
 	}
-	return false
-	
+	profile.referrer = referrer
+	return true
 }
 
 const getAddress = (addr: string) => {
@@ -651,7 +663,7 @@ const getReferrerList = async (cmd: worker_command) => {
 	}
 
 	const provideNewCONET = new ethers.JsonRpcProvider(conet_rpc)
-	const CNTP_Referrals = new ethers.Contract(ReferralsAddress, CONET_ReferralsAbi, provideNewCONET)
+	const CNTP_Referrals = new ethers.Contract(ReferralsAddressV2, CONET_ReferralsAbi, provideNewCONET)
 	cmd.data = [await getAllReferees(referrer, CNTP_Referrals)]
 	returnUUIDChannel(cmd)
 }
@@ -687,119 +699,6 @@ let getProfileAssetsBalanceResult: getBalanceAPIresult = {CNTP_Balance: '0', CON
 let scanPoint = 0
 
 
-const scanCNTP = async (walletAddr: string, privideCONET: any) => {
-	
-	const CNTP = new ethers.Contract(blast_CNTP, blast_CNTPAbi, privideCONET)
-	try {
-		const ret = await CNTP.balanceOf(walletAddr)
-		return ret
-
-	} catch (ex) {
-		logger(`scanCNTP [${walletAddr}]`, ex)
-		return setTimeout(async () => {
-			return await scanCNTP(walletAddr, privideCONET)
-		}, 500)
-	}
-
-}
-
-const scanCNTPB =  async (walletAddr: string, provideCONET: any) => {
-	
-	const CNTPB = new ethers.Contract(CNTPB_contract, blast_CNTPAbi, provideCONET)
-	try {
-		const ret = await CNTPB.balanceOf(walletAddr)
-		return ret
-
-	} catch (ex) {
-		logger(`scanCNTPB Error, try again!`)
-		return setTimeout(async () => {
-			return await scanCNTPB(walletAddr, provideCONET)
-		}, 1000)
-		
-	}
-}
-
-const scanUSDT = async (walletAddr: string, provideETH: any) => {
-	
-	const usdt = new ethers.Contract(eth_usdt_contract, blast_CNTPAbi, provideETH)
-	try {
-		return await usdt.balanceOf(walletAddr)
-
-	} catch (ex) {
-		logger(`scanUSDT [${walletAddr}]`, ex)
-		return setTimeout(async () => {
-			return await scanUSDT(walletAddr, provideETH)
-		}, 500)
-	}
-}
-
-const scanUSDB = async (walletAddr: string, provideBlast: any) => {
-
-	const usdb = new ethers.Contract(blast_usdb_contract, blast_CNTPAbi, provideBlast)
-	try {
-		return await usdb.balanceOf(walletAddr)
-
-	} catch (ex) {
-		logger(`scanUSDB [${walletAddr}]`, ex)
-		return setTimeout(async () => {
-			return await scanUSDB(walletAddr, provideBlast)
-		}, 500)
-		
-	}
-}
-
-const scanETH = async (walletAddr: string, provideETH: any) => {
-	try {
-		return await provideETH.getBalance(walletAddr)
-
-	} catch (ex) {
-		logger(`scanETH Error! try again!`)
-		return setTimeout(async () => {
-			return await scanETH(walletAddr, provideETH)
-		}, 1000)
-		
-	}
-}
-
-const scanBlastETH = async (walletAddr: string, provideBlast: any) => {
-	try {
-		return await provideBlast.getBalance(walletAddr)
-
-	} catch (ex) {
-		logger(`scanBlastETH Error!`, ex)
-		return setTimeout(async () => {
-			return await scanBlastETH(walletAddr, provideBlast)
-		}, 1000)
-		
-	}
-}
-
-const scanWBNB = async (walletAddr: string, provideBNB: any) => {
-	const wbnb = new ethers.Contract(bnb_wbnb_contract, blast_CNTPAbi, provideBNB)
-	try {
-		return await wbnb.balanceOf(walletAddr)
-
-	} catch (ex) {
-		logger(`scanWBNB Error! try again!`)
-		return setTimeout(async () => {
-			return await scanWBNB(walletAddr, provideBNB)
-		}, 1000)
-	}
-}
-
-const scanWUSDT = async (walletAddr: string, provideBNB: any) => {
-	const wusdt = new ethers.Contract(bnb_usdt_contract, blast_CNTPAbi, provideBNB)
-	try {
-		return await wusdt.balanceOf(walletAddr)
-
-	} catch (ex) {
-		logger(`scanWUSDT Error!`)
-		return setTimeout(async () => {
-			return await scanWUSDT(walletAddr, provideBNB)
-		}, 1000)
-	}
-}
-
 const getAllProfileAssetsBalance = async () => {
 	if (!CoNET_Data?.profiles) {
 		return logger(`getAllProfileAssetsBalance Error! CoNET_Data.profiles empty!`)
@@ -823,7 +722,7 @@ const getProfileAssetsBalance = async (profile: profile) => {
 		const provideBlastMainChain = new ethers.JsonRpcProvider(blast_mainnet)
 		const provideBNB = new ethers.JsonRpcProvider(bsc_mainchain)
 		// const walletETH = new ethers.Wallet(profile.privateKeyArmor, provideETH)
-		const [balanceCNTP, balanceCNTPB, balanceUSDT, ETH, blastETH, usdb, wbnb, wusdt] = await Promise.all([
+		const [balanceCNTP, balanceCNTPB, balanceUSDT, ETH, blastETH, usdb, wbnb, wusdt, conet_Holesky] = await Promise.all([
 			scanCNTP (key, provideBlast),
 			scanCNTPB (key, provideCONET),
 			scanUSDT (key, provideETH),
@@ -831,7 +730,8 @@ const getProfileAssetsBalance = async (profile: profile) => {
 			scanBlastETH (key, provideBlast),
 			scanUSDB (key, provideBlastMainChain),
 			scanWUSDT (key,provideBNB),
-			scanWBNB (key,provideBNB)
+			scanWBNB (key,provideBNB),
+			scanCONETHolesky(key, provideCONET)
 		])
 		
 
@@ -843,6 +743,7 @@ const getProfileAssetsBalance = async (profile: profile) => {
 		current.usdb.balance = usdb === BigInt(0) ? '0' : parseFloat(ethers.formatEther(usdb)).toFixed(4)
 		current.wbnb.balance = wbnb === BigInt(0) ? '0' : parseFloat(ethers.formatEther(wbnb)).toFixed(4)
 		current.wusdt.balance = wusdt === BigInt(0) ? '0' : parseFloat(ethers.formatEther(wusdt)).toFixed(4)
+		current.conet.balance = conet_Holesky === BigInt(0) ? '0' : parseFloat(ethers.formatEther(conet_Holesky)).toFixed(4)
 
 		//current.usdb.balance = balanceUSDB === BigInt(0) ? '0' : parseFloat(ethers.formatEther(balanceUSDB)).toFixed(4)
 
@@ -907,12 +808,13 @@ const storeSystemData = async () => {
 	if (!CoNET_Data||! passObj?.passcode) {
 		return
 	}
-
 	const password = passObj.passcode.toString()
-	CoNET_Data.encryptedString = await CoNETModule.aesGcmEncrypt (buffer.Buffer.from(JSON.stringify (CoNET_Data)).toString('base64'), password)
+
+	CoNET_Data.encryptedString = await CoNETModule.aesGcmEncrypt (buffer.Buffer.from(CoNET_Data.mnemonicPhrase), password)
 	if (!CoNET_Data.encryptedString) {
 		return logger(`encryptStoreData aesGcmEncrypt Error!`)
 	}
+
     const putData = {
         title: CoNET_Data.encryptedString
     }
@@ -931,22 +833,17 @@ const createAccount = async (cmd: worker_command) => {
 	//	create GPG OBJ
 	await initCoNET_Data ()
 	//	Error
-	if (!CoNET_Data) {
+	if (!CoNET_Data?.profiles) {
 		cmd.data[0] = ''
 		return returnUUIDChannel (cmd)
 	}
-	CoNET_Data.preferences = _referrer
-
-	if (_referrer) {
-		const referrer = await registerReferrer(_referrer)
-		if (!referrer) {
-			logger(`createAccount referrer dosen't regirst!`)
-		}
+	const mainProfile = CoNET_Data.profiles[0]
+	const ff = await getFaucet (mainProfile.keyID)
+	if ( ff !== false && _referrer ) {
+		await registerReferrer (_referrer)
 	}
-
-	
 	// storage Data
-	await storeSystemData ()
+	// await storeSystemData ()
 	cmd.data[0] = CoNET_Data.mnemonicPhrase
 	returnUUIDChannel (cmd)
 	
@@ -959,17 +856,21 @@ const testPasscode = async (cmd: worker_command) => {
 		cmd.err = 'INVALID_DATA'
 		return returnUUIDChannel(cmd)
 	}
+
 	passObj.password = passcode
 	await decodePasscode ()
+	const provideCONET = new ethers.JsonRpcProvider(conet_rpc)
 	try {
 		await decryptSystemData ()
+		await recoverProfileFromSRP()
 	} catch (ex) {
 		logger (`encrypt_TestPasscode get password error!`)
 		cmd.err = 'FAILURE'
 		return returnUUIDChannel(cmd)
 	}
+
 	if (!CoNET_Data?.profiles) {
-		cmd.err = 'INVALID_DATA'
+		cmd.err = 'FAILURE'
 		returnUUIDChannel(cmd)
 		return logger(`testPasscode CoNET_Data?.profiles Empty error!`)
 	}
@@ -977,17 +878,7 @@ const testPasscode = async (cmd: worker_command) => {
 	const mainProfile = CoNET_Data.profiles[0]
 	
 	if ( referrer ) {
-		
-		if (!mainProfile?.referrer) {
-			await registerReferrer (referrer)
-		}
-	}
-
-	if (!mainProfile.referrer) {
-		await checkRefereeV1()
-		if (mainProfile.referrer) {
-			await storeSystemData ()
-		}
+		await registerReferrer (referrer)
 	}
 	
 	authorization_key = cmd.data[0] = uuid.v4()
@@ -1007,29 +898,20 @@ const createKeyHDWallets = () => {
 const decryptSystemData = async () => {
 	//	old version data
 
-	if (containerKeyObj) {
-		const privatekey = await makeContainerPGPObj()
-		if (CoNET_Data?.passcode?.status === 'UNLOCKED') {
-			if (privatekey.privateKeyObj.isDecrypted()) {
-				return 
-			}
-
-			throw new Error(`Password Error!`)
-		}
-		await decryptCoNET_Data_WithContainerKey()
-		await storeSystemData()
-	} else {
+	
 		const password = passObj?.passcode.toString()
 		if (!password) {
 			throw new Error(`Password Error!`)
 		}
+
 		const objText = await CoNETModule.aesGcmDecrypt (buffer.Buffer.from(CoNET_Data?.encryptedString).toString(), password)
-		if(CoNET_Data?.passcode?.status === 'UNLOCKED') {
-			return
+
+		if(!CoNET_Data || CoNET_Data?.passcode?.status === 'UNLOCKED') {
+			return new Error(`Password Error!`)
 		}
-		CoNET_Data = JSON.parse(buffer.Buffer.from( objText,'base64').toString())
-		
-	}
+
+		CoNET_Data.mnemonicPhrase = objText	
+	
 }
 
 const showSRP = (cmd: worker_command) => {
@@ -1042,6 +924,9 @@ const showSRP = (cmd: worker_command) => {
 	cmd.data = [CoNET_Data.mnemonicPhrase]
 	return returnUUIDChannel(cmd)
 }
+let getAllProfilesCount = 0
+let lastTimeGetAllProfilesCount = 0
+const minTimeStamp = 1000 * 15
 
 const getAllProfiles = async (cmd: worker_command) => {
 	const _authorization_key: string = cmd.data[0]
@@ -1049,9 +934,19 @@ const getAllProfiles = async (cmd: worker_command) => {
 		cmd.err = 'FAILURE'
 		return returnUUIDChannel(cmd)
 	}
+	logger(`getAllProfiles [${++getAllProfilesCount}]`)
+	const timeStamp = new Date().getTime()
+	if (timeStamp - lastTimeGetAllProfilesCount < minTimeStamp) {
+		--getAllProfilesCount
+		cmd.data = [CoNET_Data.profiles]
+		return returnUUIDChannel(cmd)
+	}
+
 	await checkUpdateAccount()
 	await getAllProfileAssetsBalance()
 	cmd.data = [CoNET_Data.profiles]
+	--getAllProfilesCount
+	lastTimeGetAllProfilesCount = timeStamp
 	return returnUUIDChannel(cmd)
 }
 
@@ -1638,3 +1533,222 @@ const getAssetsPrice = (cmd: worker_command) => {
 	})
 	
 }
+
+let getFaucetRoop = 0
+const getFaucet = async (keyID: string) => {
+	return new Promise (async resolve => {
+		if (++getFaucetRoop > 6) {
+			getFaucetRoop = 0
+			logger(`getFaucet Roop > 6 STOP process!`)
+			return resolve(null)
+		}
+		const url = `${api_endpoint}/api/conet-faucet`
+		let result
+		try {
+			result = await postToEndpoint(url, true, { walletAddr: keyID })
+		} catch (ex) {
+			logger (`getFaucet postToEndpoint [${url}] error! `, ex)
+			return setTimeout(() => {
+				return getFaucet (keyID)
+			}, 500)
+		}
+		getFaucetRoop = 0
+		return resolve(result)
+	})
+
+}
+
+const getFirstFragmentName = (SRP: string, ver: number) => {
+	const root = ethers.Wallet.fromPhrase(SRP)
+	const FragmentNameWallet = root.deriveChild(FragmentNameDeriveChildIndex)
+	const firVerFileName = ethers.id(FragmentNameWallet.address)
+	const currentVer = '0x' + (BigInt(firVerFileName) + BigInt(ver)).toString(16)
+	const mainFragmentName = ethers.id( ethers.id( ethers.id(currentVer)))
+	return mainFragmentName
+}
+
+const recoverProfileFromSRP = () => {
+	return new Promise((resolve, reject) => {
+		if (!CoNET_Data || !CoNET_Data?.mnemonicPhrase) {
+			const errMessage = 'recoverProfileFromSRP CoNET_Data.mnemonicPhrase is null Error!'
+			return reject(new Error(errMessage))
+		}
+		const SRP = CoNET_Data.mnemonicPhrase
+		let acc
+		try {
+			acc = ethers.Wallet.fromPhrase(SRP)
+		} catch (ex) {
+			logger(`recoverAccount Phrase SRP Error! [${SRP}]`)
+			return reject (ex)
+		}
+
+		const privateKey = acc.signingKey.privateKey
+		const publicKey = acc.address
+
+		return checkProfileVersion(publicKey, async ver => {
+			
+			//		network error!
+			if (ver < 0) {
+				const errMessage =`recoverProfileFromSRP checkProfileVersion RoopCount > 5! Stop trying!`
+				return reject (new Error(errMessage))
+			}
+			//		init
+			if (ver === 0) {
+				await initSystemDataV1(acc)
+				await getFaucet (publicKey)
+				return resolve(true)
+			}
+			const firstprice = getFirstFragmentName(SRP, ver)
+			
+		})
+	})
+
+}
+
+let checkProfileVersionRoopCount = 0
+
+const checkProfileVersion = (publicKeyID: string, callback: (ver: number) => void) => {
+	if (++checkProfileVersionRoopCount > 5) {
+		return callback(-1)
+	}
+	const provide = new ethers.JsonRpcProvider(conet_rpc)
+	const conet_storage = new ethers.Contract(conet_storage_contract_address, conet_storageAbi, provide)
+	conet_storage.count(publicKeyID)
+	.then (count => {
+		checkProfileVersionRoopCount = 0
+		return callback (parseInt(count.toString()))
+	}).catch (ex => {
+		logger(`checkCoNET_DataVersion error! Try again! roop = [${checkProfileVersionRoopCount}]`, ex)
+		return setTimeout(() => {
+			return checkProfileVersion(publicKeyID, callback)
+		}, 1000)
+		
+	})
+}
+
+//*		scan assets
+		const scanCONETHolesky = async (walletAddr: string, privideCONET: any) => {
+			try{
+				const ret = privideCONET.getBalance(walletAddr)
+				return ret
+			} catch (ex) {
+				logger(`scanCONETHolesky [${walletAddr}] try Again!`, ex)
+				return setTimeout(async () => {
+					return await scanCONETHolesky(walletAddr, privideCONET)
+				}, 500)
+			}
+			
+		}
+
+		const scanCNTP = async (walletAddr: string, privideCONET: any) => {
+			
+			const CNTP = new ethers.Contract(blast_CNTP, blast_CNTPAbi, privideCONET)
+			try {
+				const ret = await CNTP.balanceOf(walletAddr)
+				return ret
+			} catch (ex) {
+				logger(`scanCNTP [${walletAddr}]`, ex)
+				return setTimeout(async () => {
+					return await scanCNTP(walletAddr, privideCONET)
+				}, 500)
+			}
+
+		}
+
+		const scanCNTPB =  async (walletAddr: string, provideCONET: any) => {
+			
+			const CNTPB = new ethers.Contract(CNTPB_contract, blast_CNTPAbi, provideCONET)
+			try {
+				const ret = await CNTPB.balanceOf(walletAddr)
+				return ret
+
+			} catch (ex) {
+				logger(`scanCNTPB Error, try again!`)
+				return setTimeout(async () => {
+					return await scanCNTPB(walletAddr, provideCONET)
+				}, 1000)
+				
+			}
+		}
+
+		const scanUSDT = async (walletAddr: string, provideETH: any) => {
+			
+			const usdt = new ethers.Contract(eth_usdt_contract, blast_CNTPAbi, provideETH)
+			try {
+				return await usdt.balanceOf(walletAddr)
+
+			} catch (ex) {
+				logger(`scanUSDT [${walletAddr}]`, ex)
+				return setTimeout(async () => {
+					return await scanUSDT(walletAddr, provideETH)
+				}, 500)
+			}
+		}
+
+		const scanUSDB = async (walletAddr: string, provideBlast: any) => {
+
+			const usdb = new ethers.Contract(blast_usdb_contract, blast_CNTPAbi, provideBlast)
+			try {
+				return await usdb.balanceOf(walletAddr)
+
+			} catch (ex) {
+				logger(`scanUSDB [${walletAddr}]`, ex)
+				return setTimeout(async () => {
+					return await scanUSDB(walletAddr, provideBlast)
+				}, 500)
+				
+			}
+		}
+
+		const scanETH = async (walletAddr: string, provideETH: any) => {
+			try {
+				return await provideETH.getBalance(walletAddr)
+
+			} catch (ex) {
+				logger(`scanETH Error! try again!`)
+				return setTimeout(async () => {
+					return await scanETH(walletAddr, provideETH)
+				}, 1000)
+				
+			}
+		}
+
+		const scanBlastETH = async (walletAddr: string, provideBlast: any) => {
+			try {
+				return await provideBlast.getBalance(walletAddr)
+
+			} catch (ex) {
+				logger(`scanBlastETH Error!`, ex)
+				return setTimeout(async () => {
+					return await scanBlastETH(walletAddr, provideBlast)
+				}, 1000)
+				
+			}
+		}
+
+		const scanWBNB = async (walletAddr: string, provideBNB: any) => {
+			const wbnb = new ethers.Contract(bnb_wbnb_contract, blast_CNTPAbi, provideBNB)
+			try {
+				return await wbnb.balanceOf(walletAddr)
+
+			} catch (ex) {
+				logger(`scanWBNB Error! try again!`)
+				return setTimeout(async () => {
+					return await scanWBNB(walletAddr, provideBNB)
+				}, 1000)
+			}
+		}
+
+		const scanWUSDT = async (walletAddr: string, provideBNB: any) => {
+			const wusdt = new ethers.Contract(bnb_usdt_contract, blast_CNTPAbi, provideBNB)
+			try {
+				return await wusdt.balanceOf(walletAddr)
+
+			} catch (ex) {
+				logger(`scanWUSDT Error!`)
+				return setTimeout(async () => {
+					return await scanWUSDT(walletAddr, provideBNB)
+				}, 1000)
+			}
+		}
+//
