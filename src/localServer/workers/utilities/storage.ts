@@ -30,13 +30,12 @@ const checkStorage = async (plarformChannel: BroadcastChannel) => {
 		mnemonicPhrase: '',
 		ver: 0
 	}
+
     try {
 		doc = await database.get ('init', {latest: true})
 		initData = JSON.parse ( buffer.Buffer.from (doc.title,'base64').toString ())
 		passObj = initData.id
 		preferences = initData.preferences
-		doc = await database.get (initData.uuid, {latest: true})
-		CoNET_Data.encryptedString = doc.title
 		
 	} catch (ex) {
         logger (`checkStorage have no CoNET data in IndexDB, INIT CoNET data`)
@@ -105,4 +104,25 @@ const storageCache = async (urlHash: string, data: fetchCashStorageData ) => {
 		title: buffer.Buffer.from(JSON.stringify(data)).toString('base64')
     }
 	await database.post( putData )
+}
+
+const storageHashData = async (hash: string, data: string) => {
+	const database = new PouchDB( databaseName, { auto_compaction: true  })
+	const putData = {
+        _id: hash,
+		title: data
+    }
+	await database.post( putData )
+}
+
+const getHashData = async (hash: string) => {
+	const database = new PouchDB( databaseName, { auto_compaction: true  })
+	try{
+		const doc = await database.get (hash, {latest: true})
+		return doc.title
+	} catch (ex) {
+		logger(`getHashData Error!`,ex)
+	}
+	return ''
+
 }

@@ -811,30 +811,45 @@ const storeSystemData = async () => {
 	}
 
 	const password = passObj.passcode.toString()
+	const filename = ethers.id(ethers.id(ethers.id(password)))
 	if (CoNET_Data.ver > 0) {
 		CoNET_Data.fragmentClass = new Fragment(CoNET_Data)
 	}
-	
 
-	CoNET_Data.encryptedString = await CoNETModule.aesGcmEncrypt (buffer.Buffer.from(CoNET_Data.mnemonicPhrase), password)
+	const data = {
+		mnemonicPhrase: CoNET_Data.mnemonicPhrase,
+		dammy: buffer.Buffer.allocUnsafeSlow(1024*(20 + (Math.random()*20)))
+	}
+	
+	CoNET_Data.encryptedString = await CoNETModule.aesGcmEncrypt (buffer.Buffer.from(JSON.stringify(data)), password)
 	
 	if (!CoNET_Data.encryptedString) {
 		return logger(`encryptStoreData aesGcmEncrypt Error!`)
 	}
+	passObj.passcode = passObj.password = passObj._passcode = ''
 
-    const putData = {
-        title: CoNET_Data.encryptedString
-    }
-	const database = new PouchDB( databaseName, { auto_compaction: true  })
+	const CoNETIndexDBInit: CoNETIndexDBInit = {
+		id: passObj,
+		preferences: CoNET_Data.preferences
+	}
+
+
 	sendState('beforeunload', true)
-	const doc = await database.post( putData )
-	await CoNET_initData_save (database, doc.id)
+
+	try {
+		await storageHashData ('init', buffer.Buffer.from(JSON.stringify (CoNETIndexDBInit)).toString ('base64'))
+		await storageHashData (filename, CoNET_Data.encryptedString)
+	} catch (ex) {
+		logger(`storeSystemData storageHashData Error!`, ex)
+	}
+
 	sendState('beforeunload', false)
 }
 
 const createAccount = async (cmd: worker_command) => {
 	const passcode: string = cmd.data[0]
 	const _referrer = cmd.data[1]
+
 	//	create passObj
 	await createNumberPasscode (passcode)
 	//	create GPG OBJ
@@ -844,11 +859,12 @@ const createAccount = async (cmd: worker_command) => {
 		cmd.data[0] = ''
 		return returnUUIDChannel (cmd)
 	}
+
 	const mainProfile = CoNET_Data.profiles[0]
+	CoNET_Data.preferences = cmd.data[2] || null
 	const ff = await getFaucet (mainProfile.keyID)
 	if ( ff !== false && _referrer ) {
 		await registerReferrer (_referrer)
-		
 	}
 	// storage Data
 	await storeSystemData ()
@@ -868,6 +884,8 @@ const testPasscode = async (cmd: worker_command) => {
 	passObj.password = passcode
 	await decodePasscode ()
 	const provideCONET = new ethers.JsonRpcProvider(conet_rpc)
+	
+
 	try {
 		await decryptSystemData ()
 		await recoverProfileFromSRP()
@@ -906,20 +924,18 @@ const createKeyHDWallets = () => {
 const decryptSystemData = async () => {
 	//	old version data
 
-	
+		if (!CoNET_Data) {
+			return new Error(`decryptSystemData Have no CoNET_Data Error!`)
+		}
 		const password = passObj?.passcode.toString()
 		if (!password) {
-			throw new Error(`Password Error!`)
+			throw new Error(`decryptSystemData Password Empty Error!`)
 		}
 
-		const objText = await CoNETModule.aesGcmDecrypt (buffer.Buffer.from(CoNET_Data?.encryptedString).toString(), password)
-
-		if(!CoNET_Data || CoNET_Data?.passcode?.status === 'UNLOCKED') {
-			return new Error(`Password Error!`)
-		}
-
-		CoNET_Data.mnemonicPhrase = objText	
-	
+		const encryptedObj = await getHashData(ethers.id(ethers.id(ethers.id(password))))
+		const objText = await CoNETModule.aesGcmDecrypt (encryptedObj, password)
+		const obj = JSON.parse(objText)
+		CoNET_Data.mnemonicPhrase = obj.mnemonicPhrase
 }
 
 const showSRP = (cmd: worker_command) => {
@@ -978,7 +994,6 @@ const CoNET_initData_save = async (database, systemInitialization_uuid: string) 
 
 	const CoNETIndexDBInit: CoNETIndexDBInit = {
 		id: passObj,
-		uuid: systemInitialization_uuid,
 		preferences: preferences	
 	}
 	let doc
@@ -1278,11 +1293,6 @@ const initSystemDataV1 = async (acc) => {
 	
 }
 
-<<<<<<< Updated upstream
-const checkCoNET_DataVersion = async (callback?: (ver: number) => void) => {
-=======
-
-
 const regiestAccount = async () => {
 	const url = `${api_endpoint}/api/storageFragments`
 	if (!CoNET_Data?.mnemonicPhrase||!CoNET_Data?.profiles) {
@@ -1303,9 +1313,9 @@ const regiestAccount = async () => {
 
 }
 
-const conet_storage_contract_address = `0xd94532f8346d4FA5Bee21e8C5af2c341A0B7f511`
-const checkCoNET_DataVersion = () => {
->>>>>>> Stashed changes
+
+const checkCoNET_DataVersion = async (callback) => {
+
 	if (!CoNET_Data?.mnemonicPhrase||!CoNET_Data?.profiles) {
 		return logger (`regiestAccount CoNET_Data object null Error! Stop process!`)
 	}
@@ -1601,7 +1611,7 @@ class Fragment {
 	private root
 	private FragmentNameWallet
 	public mainFragmentName: string
-	constructor(private CoNET_Data: encrypt_keys_object) {
+	constructor(CoNET_Data: encrypt_keys_object) {
 		if (CoNET_Data) {
 			this.SRP = CoNET_Data.mnemonicPhrase
 			this.ver = CoNET_Data.ver
@@ -1645,10 +1655,10 @@ const recoverProfileFromSRP = () => {
 			//		init
 			if (ver === 0) {
 				await initSystemDataV1(acc)
-				await getFaucet (publicKey)
+				// await getFaucet (publicKey)
 				return resolve(true)
 			}
-			const firstprice = getFirstFragmentName(SRP, ver)
+			//const firstprice = getFirstFragmentName(SRP, ver)
 			
 		})
 	})

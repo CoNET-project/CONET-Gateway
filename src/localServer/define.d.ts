@@ -372,9 +372,7 @@ type systemInitialization = {
 }
 
 type CoNETIndexDBInit = {
-	container?: pgpKeyPair
 	id: passInit
-	uuid: string
 	preferences: any
 }
 
