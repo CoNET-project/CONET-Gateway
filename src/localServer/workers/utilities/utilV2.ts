@@ -809,19 +809,27 @@ const storeSystemData = async () => {
 	if (!CoNET_Data||! passObj?.passcode) {
 		return
 	}
-
 	const password = passObj.passcode.toString()
-	const filename = ethers.id(ethers.id(ethers.id(password)))
+	const data = {
+		mnemonicPhrase: CoNET_Data.mnemonicPhrase,
+		dammy: buffer.Buffer.allocUnsafeSlow( 1024 * ( 20 + ( Math.random()*20)))
+	}
+	const waitEntryptData = buffer.Buffer.from(JSON.stringify(data))
+	
+	const filenameIterate1 = ethers.id(password)
+	const filenameIterate2 = ethers.id(filenameIterate1)
+	const filenameIterate3 = ethers.id(ethers.id(ethers.id(filenameIterate2)))
+
+	const encryptIterate1 = await CoNETModule.aesGcmEncrypt (waitEntryptData, password)
+	const encryptIterate2 = await CoNETModule.aesGcmEncrypt (encryptIterate1, filenameIterate1)
+	const encryptIterate3 = await CoNETModule.aesGcmEncrypt (encryptIterate2, filenameIterate2)
+	
+	const filename =  filenameIterate3
 	if (CoNET_Data.ver > 0) {
 		CoNET_Data.fragmentClass = new Fragment(CoNET_Data)
 	}
 
-	const data = {
-		mnemonicPhrase: CoNET_Data.mnemonicPhrase,
-		dammy: buffer.Buffer.allocUnsafeSlow(1024*(20 + (Math.random()*20)))
-	}
-	
-	CoNET_Data.encryptedString = await CoNETModule.aesGcmEncrypt (buffer.Buffer.from(JSON.stringify(data)), password)
+	CoNET_Data.encryptedString = encryptIterate3
 	
 	if (!CoNET_Data.encryptedString) {
 		return logger(`encryptStoreData aesGcmEncrypt Error!`)
@@ -924,17 +932,31 @@ const createKeyHDWallets = () => {
 const decryptSystemData = async () => {
 	//	old version data
 
-		if (!CoNET_Data) {
+		if (!CoNET_Data||!passObj) {
 			return new Error(`decryptSystemData Have no CoNET_Data Error!`)
 		}
-		const password = passObj?.passcode.toString()
+
+		const password = passObj.passcode.toString()
+
 		if (!password) {
 			throw new Error(`decryptSystemData Password Empty Error!`)
 		}
 
-		const encryptedObj = await getHashData(ethers.id(ethers.id(ethers.id(password))))
-		const objText = await CoNETModule.aesGcmDecrypt (encryptedObj, password)
-		const obj = JSON.parse(objText)
+		const filenameIterate1 = ethers.id(password)
+		const filenameIterate2 = ethers.id(filenameIterate1)
+		const filenameIterate3 = ethers.id(ethers.id(ethers.id(filenameIterate2)))
+	
+
+		const filename =  filenameIterate3
+		const encryptedObj = await getHashData(filename)
+
+		
+		const encryptIterate3 = await CoNETModule.aesGcmDecrypt (encryptedObj, filenameIterate2)
+		
+		const encryptIterate2 = await CoNETModule.aesGcmDecrypt (encryptIterate3, filenameIterate1)
+		const encryptIterate1 = await CoNETModule.aesGcmDecrypt (encryptIterate2, password)
+		
+		const obj = JSON.parse(encryptIterate1)
 		CoNET_Data.mnemonicPhrase = obj.mnemonicPhrase
 }
 
