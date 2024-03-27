@@ -81,12 +81,7 @@ const CONET_ReferralsAbi = [
     }
 ]
 
-const conet_storageAbi=[
-    {
-        "inputs": [],
-        "stateMutability": "nonpayable",
-        "type": "constructor"
-    },
+const conet_storageAbi = [
     {
         "anonymous": false,
         "inputs": [
@@ -122,24 +117,6 @@ const conet_storageAbi=[
         "inputs": [
             {
                 "internalType": "address",
-                "name": "to",
-                "type": "address"
-            },
-            {
-                "internalType": "string",
-                "name": "data",
-                "type": "string"
-            }
-        ],
-        "name": "_storageFragments",
-        "outputs": [],
-        "stateMutability": "nonpayable",
-        "type": "function"
-    },
-    {
-        "inputs": [
-            {
-                "internalType": "address",
                 "name": "",
                 "type": "address"
             }
@@ -163,8 +140,14 @@ const conet_storageAbi=[
                 "type": "string"
             }
         ],
-        "name": "storageFragments",
-        "outputs": [],
+        "name": "versionUp",
+        "outputs": [
+            {
+                "internalType": "uint256",
+                "name": "ver",
+                "type": "uint256"
+            }
+        ],
         "stateMutability": "nonpayable",
         "type": "function"
     }
@@ -521,6 +504,7 @@ const blast_usdbAbi = [
 const conet_rpc = 'https://rpc.conet.network'
 const api_endpoint = `https://api.conet.network`
 const FragmentNameDeriveChildIndex = 65536
+
 const cloudStorageEndpointUrl = 'https://s3.us-east-1.wasabisys.com/conet-mvp/storage/'
 const blast_sepoliaRpc = 'https://sepolia.blast.io'
 const ethRpc = 'https://rpc.ankr.com/eth'
@@ -529,7 +513,7 @@ const bsc_mainchain = 'https://bsc-dataseed.binance.org/'
 
 const ReferralsAddress = '0x8f6be4704a3735024F4D2CBC5BAC3722c0C8a0BD'
 const ReferralsAddressV2 = '0x64Cab6D2217c665730e330a78be85a070e4706E7'
-const conet_storage_contract_address = `0x30D870224419226eFcEA57B920a2e67929893DbA`
+const conet_storage_contract_address = `0x7d9CF1dd164D6AF82C00514071990358805d8d80`
 const adminCNTP= '0x44d1FCCce6BAF388617ee972A6FB898b6b5629B1'
 const referrerCNTP= '0x63377154F972f6FC1319e382535EC9691754bd18'
 
@@ -825,6 +809,7 @@ const storeSystemData = async () => {
 	const encryptIterate3 = await CoNETModule.aesGcmEncrypt (encryptIterate2, filenameIterate2)
 	
 	const filename =  filenameIterate3
+
 	if (CoNET_Data.ver > 0) {
 		CoNET_Data.fragmentClass = new Fragment(CoNET_Data)
 	}
@@ -870,12 +855,10 @@ const createAccount = async (cmd: worker_command) => {
 
 	const mainProfile = CoNET_Data.profiles[0]
 	CoNET_Data.preferences = cmd.data[2] || null
-	const ff = await getFaucet (mainProfile.keyID)
-	if ( ff !== false && _referrer ) {
-		await registerReferrer (_referrer)
-	}
-	// storage Data
+
+	await getFaucet (mainProfile.keyID)
 	await storeSystemData ()
+
 	cmd.data[0] = CoNET_Data.mnemonicPhrase
 	returnUUIDChannel (cmd)
 	
@@ -891,8 +874,6 @@ const testPasscode = async (cmd: worker_command) => {
 
 	passObj.password = passcode
 	await decodePasscode ()
-	const provideCONET = new ethers.JsonRpcProvider(conet_rpc)
-	
 
 	try {
 		await decryptSystemData ()
@@ -912,7 +893,14 @@ const testPasscode = async (cmd: worker_command) => {
 	const mainProfile = CoNET_Data.profiles[0]
 	
 	if ( referrer ) {
-		await registerReferrer (referrer)
+		const kk = await registerReferrer (referrer)
+		if (kk) {
+			//await storeSystemData ()
+
+			await storeFragmentToIPFS(mainProfile)
+		
+		}
+		
 	}
 	
 	authorization_key = cmd.data[0] = uuid.v4()
@@ -1626,6 +1614,50 @@ const getFaucet = async (keyID: string) => {
 
 }
 
+const getCurrentVer = async (storageVer: any) => {
+	let rc
+	try {
+		rc = await storageVer.count()
+	} catch(ex) {
+		logger(`getCurrentVer error! try again`, ex)
+		return await getCurrentVer (storageVer)
+	}
+
+	return parseInt(rc)
+	
+}
+
+let updateChainVersionCount = 0
+const updateChainVersion = async (storageVer: any) => {
+	if (++updateChainVersionCount > 6) {
+		updateChainVersionCount = 0
+		return
+	}
+
+	let rc
+	try {
+		const tx = await storageVer.versionUp('0x0')
+		rc = await tx.wait ()
+	} catch(ex) {
+		logger(`updateChainVersion error! try again`, ex)
+		return await updateChainVersion (storageVer)
+	}
+	const logs = rc.logs[0]
+	let ver = -1
+	if (logs?.args) {
+		ver = parseInt(logs.args[2])
+	}
+	return ver
+}
+
+const storeFragmentToIPFS = async (profile: profile) => {
+	const provideNewCONET = new ethers.JsonRpcProvider(conet_rpc)
+	const wallet = new ethers.Wallet(profile.privateKeyArmor, provideNewCONET)
+	const storageVer = new ethers.Contract(conet_storage_contract_address, conet_storageAbi, wallet)
+	const currentVer = await getCurrentVer(storageVer)
+	const chainVer = await updateChainVersion(storageVer)
+
+}
 
 class Fragment {
 	private SRP: string
