@@ -923,8 +923,7 @@ const testPasscode = async (cmd: worker_command) => {
 		returnUUIDChannel(cmd)
 		return logger(`testPasscode CoNET_Data?.profiles Empty error!`)
 	}
-	
-	
+	await getAllProfileAssetsBalance()
 
 	const mainProfile = CoNET_Data.profiles[0]
 	const gasBalance = parseFloat(mainProfile.tokens.conet.balance)
@@ -941,7 +940,7 @@ const testPasscode = async (cmd: worker_command) => {
 	authorization_key = cmd.data[0] = uuid.v4()
 	returnUUIDChannel(cmd)
 	//	reflash all balance
-	await getAllProfileAssetsBalance()
+	
 }
 
 const createKeyHDWallets = () => {
@@ -1079,6 +1078,13 @@ const importWallet = async (cmd: worker_command) => {
 	try {
 		wallet = new ethers.Wallet(privateKey)
 	} catch (ex) {
+		cmd.err = 'FAILURE'
+		return returnUUIDChannel(cmd)
+	}
+	const profiles = CoNET_Data.profiles
+	const checkIndex = profiles.findIndex(n => n.keyID.toLowerCase() === wallet.address.toLowerCase())
+	if (checkIndex > -1) {
+		cmd.data[0] = CoNET_Data.profiles
 		cmd.err = 'FAILURE'
 		return returnUUIDChannel(cmd)
 	}
@@ -1385,16 +1391,35 @@ const checkCoNET_DataVersion = async (callback) => {
 	}
 }
 
+let checkcheckUpdateLock = false
+let lastCheckcheckUpdateTimeStamp = 0
+
 const checkUpdateAccount = () => {
 
 	return new Promise(resolve=> {
+		if (!CoNET_Data || !CoNET_Data.profiles?.length) {
+			resolve(false)
+			return logger(`checkUpdateAccount CoNET_Data or CoNET_Data.profiles hasn't ready Error!`)
+		}
+		const currentTimestamp = new Date().getTime()
+		if (currentTimestamp - lastCheckcheckUpdateTimeStamp < minCheckTimestamp) {
+			return resolve(false)
+		}
+		if (checkcheckUpdateLock) {
+			return resolve(false)
+		}
+		checkcheckUpdateLock = true
+		
 		return checkCoNET_DataVersion( async _ver => {
-			logger(`checkUpdateAccount checkCoNET_DataVersion ver [${_ver}]`)
-			if (!CoNET_Data || !CoNET_Data.profiles?.length) {
-				resolve(false)
-				return logger(`checkUpdateAccount CoNET_Data or CoNET_Data.profiles hasn't ready Error!`)
+			
+			if (!CoNET_Data) {
+				checkcheckUpdateLock = false
+				logger(`checkUpdateAccount CoNET_Data is empty Error!`)
+				return resolve(false)
 			}
-	
+			lastCheckcheckUpdateTimeStamp = currentTimestamp
+			logger(`checkUpdateAccount profile ver is [${_ver}] Local ver is [${CoNET_Data.ver}]`)
+
 			if (_ver > CoNET_Data.ver) {
 
 				logger (`checkUpdateAccount current ver [${CoNET_Data.ver}] is old! remote is [${_ver}] Update it`)
@@ -1406,15 +1431,19 @@ const checkUpdateAccount = () => {
 				const firstFragmentEncrypted = await getFragmentsFromPublic(firstFragmentName)
 				if (!firstFragmentEncrypted) {
 					logger(`checkUpdateAccount update error! cant get the first Fragment of ver number${_ver} `)
+					checkcheckUpdateLock = false
 					return resolve(false)
 				}
+
 				logger(`checkUpdateAccount fetch ${_ver} first Fragment [${firstFragmentName}] with passward [${partEncryptPassword}]`)
+
 				let firstFragmentObj
 				try{
 					const firstFragmentdecrypted = await CoNETModule.aesGcmDecrypt (firstFragmentEncrypted, partEncryptPassword)
 					firstFragmentObj = JSON.parse(firstFragmentdecrypted)
 				} catch (ex) {
 					logger(`checkUpdateAccount update create firstFragmentObj error!`, ex)
+					checkcheckUpdateLock = false
 					return resolve(false)
 				}
 				const totalFragment = firstFragmentObj.totalFragment
@@ -1443,21 +1472,25 @@ const checkUpdateAccount = () => {
 								CoNET_Data.profiles = profile
 								CoNET_Data.ver = _ver
 							}
+							checkcheckUpdateLock = false
 							return resolve(true)
 							
 						} catch(ex){
 							logger(`getLocalProfile JSON.parse(clearData) Error`, ex)
+							checkcheckUpdateLock = false
+							return resolve(false)
 						}
 					}).catch ( ex=> {
-						
+						checkcheckUpdateLock = false
 						logger(`async.series catch ex`, ex)
+						return resolve(false)
 					})
 			}
-
+			checkcheckUpdateLock = false
 			return resolve(false)
 		})
 	})
-
+	setImmediate
 }
 
 const getNextFragmentIPFS = async (ver: number, passObjPassword: string, i) => {
@@ -1788,7 +1821,6 @@ const getLocalProfile = async (ver: number) => {
 	})
 }
 
-
 const getNextFragmentLocal = async (ver: number, passObjPassword: string, i) => {
 	const nextEncryptPassword = encryptPasswordIssue(ver, passObjPassword, i)
 	const nextFragmentName = createFragmentFileName(ver, passObjPassword, i)
@@ -1804,7 +1836,6 @@ const getNextFragmentLocal = async (ver: number, passObjPassword: string, i) => 
 		return ''
 	}
 }
-
 
 const updateProfilesVersion = async () => {
 	if (!CoNET_Data?.profiles || !passObj) {

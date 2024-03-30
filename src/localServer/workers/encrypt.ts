@@ -377,6 +377,12 @@ const processCmd = async (cmd: worker_command) => {
 			}
 			return backGroundPoolWorker.push({id, domain, node})
 		}
+
+		case 'CONETFaucet': {
+			const keyID = cmd.data[0]
+			const result = getFaucet(keyID)
+			return returnUUIDChannel(cmd)
+		}
 	
 		case 'getDomain': {
 			const id = cmd.data[0]
