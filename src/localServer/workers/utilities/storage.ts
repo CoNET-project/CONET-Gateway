@@ -112,7 +112,19 @@ const storageHashData = async (hash: string, data: string) => {
         _id: hash,
 		title: data
     }
-	await database.post( putData )
+	try {
+		const doc = await database.get (hash, {latest: true})
+		putData['_rev'] = doc._rev
+		await database.post( putData )
+	} catch (ex: any) {
+		if (/^not_found/.test(ex.stack)) {
+			await database.post( putData )
+		} else {
+			logger(`storageHashData Error!`, ex)
+		}
+		
+	}
+	
 }
 
 const getHashData = async (hash: string) => {
