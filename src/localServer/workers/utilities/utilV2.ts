@@ -1218,9 +1218,10 @@ const recoverAccount = async (cmd: worker_command) => {
 	}
 	initSystemDataV1(acc)
 	await createNumberPasscode (passcode)
-
 	await storeSystemData ()
 	await checkUpdateAccount()
+	
+	
 	authorization_key = cmd.data[0] = uuid.v4()
 	returnUUIDChannel(cmd)
 }
@@ -1446,6 +1447,7 @@ const checkUpdateAccount = () => {
 					checkcheckUpdateLock = false
 					return resolve(false)
 				}
+
 				const totalFragment = firstFragmentObj.totalFragment
 				let clearData: string = firstFragmentObj.data
 				const series: any[] = []
@@ -1463,23 +1465,25 @@ const checkUpdateAccount = () => {
 					}
 					series.push(stage)
 				}
+
 				return async.series(series)
-					.then (() => {
-						
+					.then (async () => {
+						let profile
 						try{
-							const profile = JSON.parse(clearData)
-							if (CoNET_Data) {
-								CoNET_Data.profiles = profile
-								CoNET_Data.ver = _ver
-							}
-							checkcheckUpdateLock = false
-							return resolve(true)
-							
+							profile = JSON.parse(clearData)
 						} catch(ex){
 							logger(`getLocalProfile JSON.parse(clearData) Error`, ex)
 							checkcheckUpdateLock = false
 							return resolve(false)
 						}
+
+						if (CoNET_Data) {
+							CoNET_Data.profiles = profile
+							CoNET_Data.ver = _ver
+						}
+						await storagePieceToLocal()
+						checkcheckUpdateLock = false
+						return resolve(true)
 					}).catch ( ex=> {
 						checkcheckUpdateLock = false
 						logger(`async.series catch ex`, ex)
@@ -1490,8 +1494,9 @@ const checkUpdateAccount = () => {
 			return resolve(false)
 		})
 	})
-	setImmediate
+	
 }
+
 
 const getNextFragmentIPFS = async (ver: number, passObjPassword: string, i) => {
 	const nextEncryptPassword = encryptPasswordIssue(ver, passObjPassword, i)
@@ -1868,7 +1873,7 @@ const updateProfilesVersion = async () => {
 	const series: any[] = []
 	
 	chearTextFragments.forEach((n, index)=> {
-		const stage = next => storagePiece(passward, n, index, chearTextFragments.length, 
+		const stage = next => storagePieceToLocalAndIPFS(passward, n, index, chearTextFragments.length, 
 				fileLength, chainVer, privateKeyArmor, profile.keyID).then (() => {
 			logger(`piece ${index} finished! goto next!`)
 			return next(null,null)
@@ -1890,7 +1895,72 @@ const updateProfilesVersion = async () => {
 
 }
 
-const storagePiece = ( mnemonicPhrasePassword: string, fragment: string, index: number,
+const storagePieceToLocal = () => {
+	
+	return new Promise(resolve => {
+		if (!CoNET_Data||! CoNET_Data.profiles) {
+			logger(`storagePieceToLocal empty CoNET_Data Error!`)
+			return resolve (false)
+		}
+		const profile = CoNET_Data.profiles[0]
+		const fileLength = Math.round(1024 * (10 + Math.random() * 20))
+		const profilesClearText = JSON.stringify(CoNET_Data.profiles)
+		const chearTextFragments = splitTextLimitLength(profilesClearText, fileLength)
+		const passward = ethers.id(ethers.id(CoNET_Data.mnemonicPhrase))
+		const privateKeyArmor = profile.privateKeyArmor||''
+		const chainVer = CoNET_Data.ver
+	
+		const series: any[] = []
+	
+		chearTextFragments.forEach((n, index)=> {
+			const stage = next => _storagePieceToLocal(passward, n, index, chearTextFragments.length, 
+					fileLength, chainVer, privateKeyArmor, profile.keyID ).then (() => {
+				logger(`piece ${index} finished! goto next!`)
+				return next(null,null)
+			})
+			series.push(stage)
+		})
+	
+		return async.series(series).then (async () => {
+			
+			sendState('beforeunload', false)
+			logger(`async.series finished`)
+			resolve(true)
+		}).catch (ex=> {
+			sendState('beforeunload', false)
+			logger(`async.series catch ex`, ex)
+			resolve(false)
+		}) 
+	})
+
+
+}
+
+
+const _storagePieceToLocal = (mnemonicPhrasePassword: string, fragment: string, index: number,
+	totalFragment: number, targetFileLength: number, ver: number, privateArmor: string, keyID: string
+) => new Promise( async resolve=> {
+
+	const partEncryptPassword = encryptPasswordIssue(ver, mnemonicPhrasePassword, index)
+	const localData = {
+		data: fragment,
+		totalFragment: totalFragment,
+		index
+	}
+	const piece = {
+		localEncryptedText: await CoNETModule.aesGcmEncrypt (JSON.stringify(localData), partEncryptPassword),
+		fileName: createFragmentFileName(ver, mnemonicPhrasePassword, index),
+	}
+	logger(`storage version ${ver} fragment  No.[${index}] [${piece.fileName}] with password ${partEncryptPassword}`)
+	async.parallel([
+		next => storageHashData (piece.fileName, piece.localEncryptedText).then(()=> next(null)),
+	], err=> {
+		logger(`async.parallel finished err = [${err}]`)
+		resolve(false)
+	})
+})
+
+const storagePieceToLocalAndIPFS = ( mnemonicPhrasePassword: string, fragment: string, index: number,
 		totalFragment: number, targetFileLength: number, ver: number, privateArmor: string, keyID:string
 	) => {
 	return new Promise(async resolve=> {
