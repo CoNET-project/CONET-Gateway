@@ -117,7 +117,7 @@ const storageHashData = async (hash: string, data: string) => {
 		putData['_rev'] = doc._rev
 		await database.post( putData )
 	} catch (ex: any) {
-		if (/^not_found/.test(ex.stack)) {
+		if (/^not_found/.test(ex.name)) {
 			await database.post( putData )
 		} else {
 			logger(`storageHashData Error!`, ex)
