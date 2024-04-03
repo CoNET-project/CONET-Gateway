@@ -383,7 +383,10 @@ const processCmd = async (cmd: worker_command) => {
 
 		case 'CONETFaucet': {
 			const keyID = cmd.data[0]
-			const result = getFaucet(keyID)
+			const result = await getFaucet(keyID)
+			if (!result) {
+				cmd.err = 'NOT_READY'
+			}
 			return returnUUIDChannel(cmd)
 		}
 	
