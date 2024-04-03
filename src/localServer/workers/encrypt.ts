@@ -22,9 +22,9 @@ const GasToEth = 0.00000001
 const mintCoNETCashEndpoint = `${ CoNET_SI_Network_Domain }/api/mint_conetcash`
 const openSourceEndpoint = 'https://s3.us-east-1.wasabisys.com/conet-mvp/router/'
 
-const responseChannel = new BroadcastChannel('toServiceWroker')
+
 const databaseName = 'CoNET'
-const channel = new BroadcastChannel('toMainWroker')
+
 let activeNodes: nodes_info[]|null= null
 let Liveness: XMLHttpRequest|null = null
 
@@ -37,6 +37,9 @@ const workerReadyChannel = 'conet-platform'
 const workerProcessChannel = 'workerLoader'
 const channelWrokerListenName = 'toMainWroker'
 
+
+const responseChannel = new BroadcastChannel('toServiceWroker')
+const channel = new BroadcastChannel(channelWrokerListenName)
 /** */
 let platform: conetPlatform = {
 	passcode: 'NONE'
@@ -130,7 +133,7 @@ const initEncryptWorker = async () => {
 	channelLoading.postMessage(50)
     //self.importScripts ( baseUrl + 'openpgp.min.js' )
     self.importScripts ( baseUrl + 'utilities.js' )
-	//self.importScripts ( baseUrl + 'web3.js' )
+	self.importScripts ( baseUrl + 'web3Util.js' )
     self.importScripts ( baseUrl + 'generatePassword.js' )
     self.importScripts ( baseUrl + 'storage.js' )
 	channelLoading.postMessage(70)

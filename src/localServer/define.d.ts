@@ -573,7 +573,7 @@ interface blockscout_address {
 }
 
 
-type listenState = 'referrer'|'system'|'conet'|'cntp'|'cntp-balance'|'nodes'|'beforeunload'
+type listenState = 'referrer'|'system'|'conet'|'cntp'|'cntp-balance'|'nodes'|'beforeunload'|'toFrontEnd'
 
 
 interface CONETPlatfromSystemData {
@@ -584,4 +584,9 @@ interface conetPlatform {
 	passcode: 'LOCKED'|'UNLOCKED'|'NONE'
 }
 
+type command = 'profileVer'
+interface channelWroker {
+	cmd: command,
+	data: any[]
+}
 
