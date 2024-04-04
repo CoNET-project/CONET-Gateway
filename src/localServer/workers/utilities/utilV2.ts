@@ -891,7 +891,7 @@ const testPasscode = async (cmd: worker_command) => {
 			}
 		}
 	}
-	
+	listenProfileVer(mainProfile.keyID)
 	authorization_key = cmd.data[0] = uuid.v4()
 	returnUUIDChannel(cmd)
 	//	reflash all balance
@@ -977,8 +977,6 @@ const getAllProfiles = async (cmd: worker_command) => {
 	lastTimeGetAllProfilesCount = timeStamp
 	return returnUUIDChannel(cmd)
 }
-
-
 
 const importWallet = async (cmd: worker_command) => {
 	const _authorization_key: string = cmd.data[0]
@@ -1267,7 +1265,7 @@ const checkUpdateAccount = () => {
 		}
 		checkcheckUpdateLock = true
 		const profile = CoNET_Data.profiles[0]
-		return checkProfileVersion( profile.keyID, async _ver => {
+		return checkProfileVersion( profile.keyID, async (_ver, nonce) => {
 			
 			if (!CoNET_Data) {
 				checkcheckUpdateLock = false
@@ -1275,9 +1273,12 @@ const checkUpdateAccount = () => {
 				return resolve(false)
 			}
 
+
 			lastCheckcheckUpdateTimeStamp = currentTimestamp
 			logger(`checkUpdateAccount profile ver is [${_ver}] Local ver is [${CoNET_Data.ver}]`)
-
+			if (typeof nonce !== 'undefined' && nonce > 0) {
+				CoNET_Data.nonce = nonce
+			}
 			if (_ver > CoNET_Data.ver) {
 
 				logger (`checkUpdateAccount current ver [${CoNET_Data.ver}] is old! remote is [${_ver}] Update it`)
@@ -1340,7 +1341,7 @@ const checkUpdateAccount = () => {
 						}
 						await storagePieceToLocal()
 						checkcheckUpdateLock = false
-						const versionMargin = _ver- pushedCurrentProfileVersion
+						const versionMargin = _ver - pushedCurrentProfileVersion
 						if (versionMargin > 0) {
 							const cmd: channelWroker = {
 								cmd: 'profileVer',
@@ -1356,6 +1357,9 @@ const checkUpdateAccount = () => {
 						return resolve(false)
 					})
 			}
+
+			
+			
 			checkcheckUpdateLock = false
 			return resolve(false)
 		})

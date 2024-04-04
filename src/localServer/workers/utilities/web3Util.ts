@@ -1,45 +1,32 @@
 const listenProfileVer = (wallet: string) => {
 	const provideCONET = new ethers.JsonRpcProvider(conet_rpc)
-	provideCONET.on('block', async event => {
-		const block = await provideCONET.getBlock (event)
-		if (block?.transactions) {
-			return getCONETTransfer(block.transactions, provideCONET, wallet.toLowerCase())
+	provideCONET.on('block', async block => {
+		
+		const nonce = await provideCONET.getTransactionCount (wallet)
+		if (!CoNET_Data) {
+			return logger(`listenProfileVer Error! have none CoNET_Data`)
+		}
+
+		if (nonce > CoNET_Data.nonce) {
+			return checkUpdateAccount ()
 		}
 	})
 }
 
-const getCONETTransfer = async (transferArray: string[]|any, provideCONET, wallet: string) => {
-	if (transferArray.length) {
-		for (let u of transferArray) {
-			await detailCONETTransfer(u, provideCONET, wallet)
-		}
-	}
-}
-
-const detailCONETTransfer = async (transferHash: string, provideCONET, wallet: string) => {
-
-	const transObj = await provideCONET.getTransactionReceipt(transferHash)
-	
-	if (transObj?.to && transObj.to.toLowerCase() === conet_storage_contract_address ) {
-		if (transObj.from.toLowerCase() === wallet) {
-			return checkUpdateAccount ()
-		}
-	}
-	
-}
-
 let checkProfileVersionRoopCount = 0
-const checkProfileVersion = (wallet: string, callback: (ver: number) => void) => {
+const checkProfileVersion = (wallet: string, callback: (ver: number, nonce?: number) => void) => {
 	if (++checkProfileVersionRoopCount > 5) {
 		return callback(-1)
 	}
 
 	const provide = new ethers.JsonRpcProvider(conet_rpc)
+	
 	const conet_storage = new ethers.Contract(conet_storage_contract_address, conet_storageAbi, provide)
 	conet_storage.count(wallet)
-	.then (count => {
+	.then (async count => {
 		checkProfileVersionRoopCount = 0
-		return callback (parseInt(count.toString()))
+		const nonce = await provide.getTransactionCount (wallet)
+		return callback (parseInt(count.toString()), nonce)
 	}).catch (ex => {
 		logger(`checkCoNET_DataVersion error! Try again! roop = [${checkProfileVersionRoopCount}]`, ex)
 		return setTimeout(() => {
@@ -112,7 +99,6 @@ const storagePieceToLocalAndIPFS = ( mnemonicPhrasePassword: string, fragment: s
 
 }
 
-
 const initSystemDataV1 = async (acc) => {
 	
 	const key = await createGPGKey('', '', '')
@@ -138,7 +124,8 @@ const initSystemDataV1 = async (acc) => {
 		mnemonicPhrase: acc.mnemonic.phrase,
 		profiles:[profile],
 		ver: 0,
-		isReady: true
+		isReady: true,
+		nonce: 0
 	}
 	
 }

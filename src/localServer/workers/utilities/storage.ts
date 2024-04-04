@@ -28,7 +28,8 @@ const checkStorage = async (plarformChannel: BroadcastChannel) => {
 		isReady: false,
 		encryptedString: '',
 		mnemonicPhrase: '',
-		ver: 0
+		ver: 0,
+		nonce: 0
 	}
 
     try {

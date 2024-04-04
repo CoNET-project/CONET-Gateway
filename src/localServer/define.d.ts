@@ -292,6 +292,7 @@ type encrypt_keys_object = {
 	passcode?: Passcode
 	mnemonicPhrase: string
 	fragmentClass?: FragmentClass
+	nonce: number
 }
 
 type pgpKeyPair = {
