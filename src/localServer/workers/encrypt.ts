@@ -218,101 +218,6 @@ const filterNodes = (_nodes: nodes_info[], key: string) => {
 	return ret
 }
 
-// const sendCONET = async (node: nodes_info, amount: string, profile: profile) => {
-// 	const network = getRandomCoNETEndPoint()
-// 	const wallet = node.wallet_addr
-// 	const history = profile.tokens.conet.history
-
-// 	const {eth} = new CoNETModule.Web3Eth ( new CoNETModule.Web3Eth.providers.HttpProvider(network))
-// 	const sendObj = {
-// 		from     : '0x'+ profile.keyID?.substring(2),
-// 		to       : '0x'+ wallet.substring(2),
-// 		data     : ''
-// 	}
-
-// 	const balance = (await eth.getBalance(profile.keyID)).toString()
-
-
-// 	const gas = (await eth.estimateGas(sendObj)).toString()
-// 	const gasPrice = (await eth.getGasPrice()).toString()
-// 	const totalGas = gas * gasPrice
-// 	sendObj['gas'] = gas
-// 	sendObj['gasPrice'] = gasPrice
-
-// 	let _amount = parseFloat(amount)* wei - totalGas
-// 	if ( balance < _amount) {
-// 		_amount = balance - totalGas
-// 	}
-// 	sendObj['value'] = _amount.toString()
-// 	const createTransaction = await eth.accounts.signTransaction( sendObj,'0x'+profile.privateKeyArmor.substring(2))
-	
-// 	let receipt: CryptoAssetHistory
-// 	try {
-// 		receipt = await eth.sendSignedTransaction (createTransaction.rawTransaction )
-// 	} catch (ex) {
-// 		logger (`sendCONET eth.sendSignedTransaction Error`, ex)
-// 		return node
-// 	}
-// 	receipt.value = _amount/10**18
-// 	receipt.isSend = true
-// 	receipt.time = new Date().toISOString()
-// 	receipt = changeBigIntToString (receipt)
-// 	history.unshift (receipt)
-// 	if (!node.receipt) {
-// 		node.receipt = []
-// 	}
-// 	node.receipt.unshift(receipt)
-// 	return node
-// }
-
-// const getNodeCollect = async (cmd: worker_command) => {
-// 	const uu:regionType = cmd.data[0]
-// 	const profile = gettPrimaryProfile()
-
-// 	if (!activeNodes?.length || !CoNET_Data || !uu ||!profile ||!profile.keyID) {
-// 		cmd.err = 'NOT_READY'
-// 		return returnUUIDChannel(cmd)
-// 	}
-// 	const conetTokenBalance = profile.tokens.conet.balance
-// 	if (conetTokenBalance <= '0') {
-// 		cmd.err = 'FAILURE'
-// 		return returnUUIDChannel(cmd)
-// 	}
-	
-// 	const _nodes = activeNodes
-// 	const k: string[] = []
-// 	if (uu.sp) k.push('ES')
-// 	if (uu.us) k.push ('US')
-// 	if (uu.fr) k.push ('FR')
-// 	if (uu.uk) k.push ('GB')
-// 	if (uu.ge) k.push('DE')
-// 	let SaaSNodes: nodes_info[]
-// 	switch (k.length) {
-		
-// 		case 2: {
-// 			SaaSNodes = [...getRandomRegionNode(filterNodes(_nodes, k[0]), 1), ...getRandomRegionNode(filterNodes(_nodes, k[1]), 1)]
-// 			break
-// 		}
-// 		default :
-// 		case 1: {
-// 			SaaSNodes = getRandomRegionNode(filterNodes(_nodes, k[0]), 2)
-// 			break
-// 		}
-// 	}
-// 	const balance = parseFloat(profile.tokens.conet.balance)
-// 	const sendAmount = balance / SaaSNodes.length
-// 	for (let i = 0; i < SaaSNodes.length; i ++) {
-// 		SaaSNodes[i]  = await sendCONET(SaaSNodes[i], sendAmount.toString(), profile)
-// 	}
-
-// 	profile.network.recipients.unshift(...SaaSNodes)
-// 	cmd.data[0] = profile.network.recipients
-// 	const url = `http://localhost:3001/conet-profile`
-// 	postToEndpoint(url, true, { profile, activeNodes })
-// 	return storeProfile (cmd, () => {
-// 		return returnUUIDChannel (cmd)
-// 	})
-// }
 
 const getRegiestNodes = (cmd: worker_command) => {
 	const profile = gettPrimaryProfile()
@@ -383,10 +288,7 @@ const processCmd = async (cmd: worker_command) => {
 
 		case 'CONETFaucet': {
 			const keyID = cmd.data[0]
-			const result = await getFaucet(keyID)
-			if (!result) {
-				cmd.err = 'NOT_READY'
-			}
+			cmd.data = [await getFaucet(keyID)]
 			return returnUUIDChannel(cmd)
 		}
 	

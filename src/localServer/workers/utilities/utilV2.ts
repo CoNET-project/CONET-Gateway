@@ -826,8 +826,6 @@ const getProfileAssetsBalance = async (profile: profile) => {
 	return false
 }
 
-
-
 const createAccount = async (cmd: worker_command) => {
 	const passcode: string = cmd.data[0]
 	const _referrer = cmd.data[1]
@@ -1138,7 +1136,6 @@ const recoverAccount = async (cmd: worker_command) => {
 	authorization_key = cmd.data[0] = uuid.v4()
 	returnUUIDChannel(cmd)
 }
-
 
 const checkTokenStauct = (token: any) => {
 	if (!token?.cntp) {
