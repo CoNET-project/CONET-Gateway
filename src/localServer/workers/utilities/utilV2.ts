@@ -1667,3 +1667,33 @@ const recoverProfileFromSRP = () => {
 	})
 
 }
+
+const prePurchase = async (cmd: worker_command) => {
+	const [modes, amount, purchaseProfile, payAssetName] = cmd.data
+
+	if (!modes||!amount||!purchaseProfile|| !payAssetName) {
+		cmd.err = 'INVALID_DATA'
+		return returnUUIDChannel(cmd)
+	}
+	const profiles = CoNET_Data?.profiles
+	if (!profiles) {
+		cmd.err = 'FAILURE'
+		return returnUUIDChannel(cmd)
+	}
+	const profileIndex = profiles.findIndex(n => n.keyID.toLowerCase() === purchaseProfile.keyID.toLowerCase())
+	if (profileIndex < 0) {
+		cmd.err = 'INVALID_DATA'
+		return returnUUIDChannel(cmd)
+	}
+
+	const profile = profiles[profileIndex]
+	const asset: CryptoAsset = profile.tokens[payAssetName]
+	if (!profile.privateKeyArmor||!asset||!toWalletAddress(payAssetName)) {
+		cmd.err = 'INVALID_DATA'
+		return returnUUIDChannel(cmd)
+	}
+	const data:any = await getEstimateGas (profile.privateKeyArmor, payAssetName, amount, asset.contract)
+
+	cmd.data = [data.gasFee.gasPrice, data.fee, 0, 0]
+	return returnUUIDChannel(cmd)
+}

@@ -22,18 +22,19 @@ const checkProfileVersion = (wallet: string, callback: (ver: number, nonce?: num
 	const provide = new ethers.JsonRpcProvider(conet_rpc)
 	
 	const conet_storage = new ethers.Contract(conet_storage_contract_address, conet_storageAbi, provide)
+
 	conet_storage.count(wallet)
-	.then (async count => {
-		checkProfileVersionRoopCount = 0
-		const nonce = await provide.getTransactionCount (wallet)
-		return callback (parseInt(count.toString()), nonce)
-	}).catch (ex => {
-		logger(`checkCoNET_DataVersion error! Try again! roop = [${checkProfileVersionRoopCount}]`, ex)
-		return setTimeout(() => {
-			return checkProfileVersion( wallet, callback)
-		}, 1000)
-		
-	})
+		.then (async count => {
+			checkProfileVersionRoopCount = 0
+			const nonce = await provide.getTransactionCount (wallet)
+			return callback (parseInt(count.toString()), nonce)
+		}).catch (ex => {
+			logger(`checkCoNET_DataVersion error! Try again! roop = [${checkProfileVersionRoopCount}]`, ex)
+			return setTimeout(() => {
+				return checkProfileVersion( wallet, callback)
+			}, 1000)
+			
+		})
 }
 
 
@@ -570,4 +571,71 @@ const scanWUSDT = async (walletAddr: string, provideBNB: any) => {
 		}, 1000)
 	}
 }
+
+const getNetwork = (networkName: string) => {
+	switch (networkName) {
+		case 'usdb':
+		case 'blastETH': {
+			return blast_mainnet
+		}
+		case 'conet':
+		case 'cntpb': {
+			return conet_rpc
+		}
+		case 'usdt':
+		case 'eth': {
+			return ethRpc
+		}
+		case 'wusdt': 
+		case 'wbnb': {
+			return bsc_mainchain
+		}
+		case 'cntp':
+		default : {
+			return blast_sepoliaRpc
+		}
+	}
+}
+
+const toWalletAddress = (networkName: string) => {
+	switch (networkName) {
+		case 'usdb':
+		case 'blastETH': {
+			return `0x4A8E5dF9F1B2014F7068711D32BA72bEb3482686`
+		}
+		case 'usdt':
+		case 'eth': {
+			return '0x1C9f72188B461A1Bd6125D38A3E04CF238f6478f'
+		}
+		case 'wusdt': 
+		case 'wbnb': {
+			return '0xeabF22542500f650A9ADd2ea1DC53f158b1fFf73'
+		}
+		default: {
+			return ''
+		}
+	}
+}
+
+const getEstimateGas = (privateKey: string, network: string, transferNumber: string, smartContractAdd: string) => new Promise(async resolve=> {
+
+	const provide = new ethers.JsonRpcProvider(getNetwork(network))
+	const wallet = new ethers.Wallet(privateKey, provide)
+	const toAddr = toWalletAddress(network)
+	let estGas
+	if (smartContractAdd) {
+		estGas = new ethers.Contract(smartContractAdd, blast_CNTPAbi, wallet).approve.estimateGas(toAddr, transferNumber)
+	} else {
+		const tx = {
+			to:toAddr,
+			value: ethers.parseEther(transferNumber)
+		}
+		estGas = wallet.estimateGas(tx)
+	}
+	const [gasFee, fee] = await Promise.all[
+		await provide.getFeeData(),
+		await estGas()
+	]
+	return resolve ({gasFee, fee})
+})
 //

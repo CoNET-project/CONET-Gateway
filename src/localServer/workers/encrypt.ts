@@ -36,9 +36,9 @@ let Liveness: XMLHttpRequest|null = null
 const workerReadyChannel = 'conet-platform'
 const workerProcessChannel = 'workerLoader'
 const channelWrokerListenName = 'toMainWroker'
-
-
 const responseChannel = new BroadcastChannel('toServiceWroker')
+
+
 const channel = new BroadcastChannel(channelWrokerListenName)
 /** */
 let platform: conetPlatform = {
@@ -98,7 +98,6 @@ const CoNETModule: CoNET_Module = {
 		}
 	}
 }
-
 
 
 let ClientIDworker = ''
@@ -218,7 +217,6 @@ const filterNodes = (_nodes: nodes_info[], key: string) => {
 	return ret
 }
 
-
 const getRegiestNodes = (cmd: worker_command) => {
 	const profile = gettPrimaryProfile()
 	if (!profile) {
@@ -273,6 +271,10 @@ const processCmd = async (cmd: worker_command) => {
     switch (cmd.cmd) {
 		case 'urlProxy': {
 			return preProxyConnect (cmd)
+		}
+
+		case 'prePurchase': {
+			return prePurchase(cmd)
 		}
 
 		case 'saveDomain': {
@@ -568,14 +570,6 @@ const fetchProxyData = async (url: string, data: string, callBack: (err, data: a
     // logger (`fetchProxyData [${url}]`)
 }
 
-const rework = () => {
-	const hours = 0
-	const staking = 900
-	const returnRate = 0.5
-	const totalMins = 43200
-	const hoursRate = returnRate / (totalMins * 12)
-
-}
 
 const returnNullContainerUUIDChannel = async (cmd: worker_command) => {
     delete cmd.err
