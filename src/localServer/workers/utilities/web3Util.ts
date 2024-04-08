@@ -37,7 +37,6 @@ const checkProfileVersion = (wallet: string, callback: (ver: number, nonce?: num
 		})
 }
 
-
 const _storagePieceToLocal = (mnemonicPhrasePassword: string, fragment: string, index: number,
 	totalFragment: number, targetFileLength: number, ver: number, privateArmor: string, keyID: string
 ) => new Promise( async resolve=> {
@@ -52,7 +51,7 @@ const _storagePieceToLocal = (mnemonicPhrasePassword: string, fragment: string, 
 		localEncryptedText: await CoNETModule.aesGcmEncrypt (JSON.stringify(localData), partEncryptPassword),
 		fileName: createFragmentFileName(ver, mnemonicPhrasePassword, index),
 	}
-	logger(`storage version ${ver} fragment  No.[${index}] [${piece.fileName}] with password ${partEncryptPassword}`)
+	//logger(`storage version ${ver} fragment  No.[${index}] [${piece.fileName}] with password ${partEncryptPassword}`)
 	async.parallel([
 		next => storageHashData (piece.fileName, piece.localEncryptedText).then(()=> next(null)),
 	], err=> {
@@ -87,13 +86,27 @@ const storagePieceToLocalAndIPFS = ( mnemonicPhrasePassword: string, fragment: s
 			remoteEncryptedText: await CoNETModule.aesGcmEncrypt (JSON.stringify(IPFSData), partEncryptPassword),
 			fileName: createFragmentFileName(ver, mnemonicPhrasePassword, index),
 		}
-		logger(`storage version ${ver} fragment  No.[${index}] [${piece.fileName}] with password ${partEncryptPassword}`)
-		async.parallel([
+		
+		return async.parallel([
 			next => storageHashData (piece.fileName, piece.localEncryptedText).then(()=> next(null)),
-			next => updateFragmentsToIPFS(piece.remoteEncryptedText, piece.fileName, keyID, privateArmor).then(()=> next(null))
+			next => updateFragmentsToIPFS(piece.remoteEncryptedText, piece.fileName, keyID, privateArmor)
+				.then(() => getFragmentsFromPublic(piece.fileName)
+				.then( data=> {
+					if (!data) {
+						const err = `storagePieceToLocalAndIPFS review storage version ${ver} fragment No.[${index}] Error! try again`
+						logger(err)
+						return next(err)
+					}
+					return next(null)
+					}
+				)
+			)
 		], err=> {
-			logger(`async.parallel finished err = [${err}]`)
-			resolve(null)
+			if (err) {
+				return storagePieceToLocalAndIPFS (mnemonicPhrasePassword, fragment, index, totalFragment, targetFileLength, ver, privateArmor, keyID)
+			}
+			
+			return resolve(null)
 		})
 		
 	})
@@ -597,12 +610,28 @@ const getNetwork = (networkName: string) => {
 	}
 }
 
-const toWalletAddress = (networkName: string) => {
-	switch (networkName) {
-		case 'usdb':
-		case 'blastETH': {
-			return `0x4A8E5dF9F1B2014F7068711D32BA72bEb3482686`
+const getAssetERC20Address = (assetName: string) => {
+	switch (assetName) {
+		
+		case 'usdt':{
+			return eth_usdt_contract
 		}
+		case 'wusdt':{
+			return bnb_usdt_contract
+		}
+		case 'usdb': {
+			return blast_usdb_contract
+		}
+	
+		default: {
+			return ``
+		}
+	}
+}
+
+const CONET_guardian_Address = (networkName: string) => {
+	switch (networkName) {
+		
 		case 'usdt':
 		case 'eth': {
 			return '0x1C9f72188B461A1Bd6125D38A3E04CF238f6478f'
@@ -611,31 +640,86 @@ const toWalletAddress = (networkName: string) => {
 		case 'wbnb': {
 			return '0xeabF22542500f650A9ADd2ea1DC53f158b1fFf73'
 		}
+		//		CONET holesky
+		case 'dWETH':
+		case 'dWBNB':
+		case 'dUSDT':
+		case '':
+		//		blast mainnet
+		case 'usdb':
+		case 'blastETH':
 		default: {
-			return ''
+			return `0x4A8E5dF9F1B2014F7068711D32BA72bEb3482686`
 		}
 	}
 }
 
-const getEstimateGas = (privateKey: string, network: string, transferNumber: string, smartContractAdd: string) => new Promise(async resolve=> {
+const getEstimateGas = (privateKey: string, asset: string, transferNumber: string) => new Promise(async resolve=> {
 
-	const provide = new ethers.JsonRpcProvider(getNetwork(network))
+	const provide = new ethers.JsonRpcProvider(getNetwork(asset))
 	const wallet = new ethers.Wallet(privateKey, provide)
-	const toAddr = toWalletAddress(network)
-	let estGas
-	if (smartContractAdd) {
-		estGas = new ethers.Contract(smartContractAdd, blast_CNTPAbi, wallet).approve.estimateGas(toAddr, transferNumber)
+	const toAddr = CONET_guardian_Address(asset)
+	let _fee
+	const smartContractAddr = getAssetERC20Address(asset)
+	if (smartContractAddr) {
+		const estGas = new ethers.Contract(smartContractAddr, blast_CNTPAbi, wallet)
+		try {
+			_fee = await estGas.transfer.estimateGas(toAddr, transferNumber)
+		} catch (ex) {
+			return resolve (false)
+		}
+		
 	} else {
 		const tx = {
 			to:toAddr,
 			value: ethers.parseEther(transferNumber)
 		}
-		estGas = wallet.estimateGas(tx)
+		try {
+			_fee = await wallet.estimateGas(tx)
+		} catch (ex) {
+			return resolve (false)
+		}
+		
 	}
-	const [gasFee, fee] = await Promise.all[
-		await provide.getFeeData(),
-		await estGas()
-	]
-	return resolve ({gasFee, fee})
+	try {
+		const Fee = await provide.getFeeData()
+		const gasPrice = ethers.formatUnits(Fee.gasPrice,'gwei')
+		const fee = ethers.formatEther(_fee * Fee.gasPrice)
+		return resolve ({gasPrice, fee})
+	} catch (ex) {
+		return resolve (false)
+	}
+
+	
+	
 })
+
+const transferAssetToCONET_guardian = (privateKey: string, asset: string, transferNumber: string) => new Promise(async resolve=> {
+	const provide = new ethers.JsonRpcProvider(getNetwork(asset))
+	const wallet = new ethers.Wallet(privateKey, provide)
+	const toAddr = CONET_guardian_Address(asset)
+	let _fee
+	const smartContractAddr = getAssetERC20Address(asset)
+	if (smartContractAddr) {
+		const estGas = new ethers.Contract(smartContractAddr, blast_CNTPAbi, wallet)
+		try {
+			_fee = await estGas.approve(toAddr, transferNumber)
+		} catch (ex) {
+			return resolve (false)
+		}
+		
+	} else {
+		const tx = {
+			to:toAddr,
+			value: ethers.parseEther(transferNumber)
+		}
+		try {
+			_fee = await wallet.estimateGas(tx)
+		} catch (ex) {
+			return resolve (false)
+		}
+		
+	}
+})
+
 //
