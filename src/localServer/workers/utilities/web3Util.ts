@@ -368,7 +368,28 @@ const storagePieceToLocal = () => {
 }
 
 const initProfileTokens = () => {
-	return {
+	const ret: conet_tokens = {
+		dWETH: {
+			balance: '0',
+			history: [],
+			network: 'CONET Holesky',
+			decimal: 18,
+			contract: conet_dWETH
+		},
+		dUSDT: {
+			balance: '0',
+			history: [],
+			network: 'CONET Holesky',
+			decimal: 18,
+			contract: conet_dUSDT
+		},
+		dWBNB: {
+			balance: '0',
+			history: [],
+			network: 'CONET Holesky',
+			decimal: 18,
+			contract: conet_dWBNB
+		},
 		conet: {
 			balance: '0',
 			history: [],
@@ -433,6 +454,7 @@ const initProfileTokens = () => {
 			contract: bnb_usdt_contract
 		}
 	}
+	return ret
 }
 
 let getFaucetRoop = 0
@@ -460,127 +482,75 @@ const getFaucet = async (keyID: string) => {
 }
 
 //*		scan assets
+const scanCONET_dWBNB = async (walletAddr: string, privideCONET: any) => {
+	return await scan_erc20_balance (walletAddr, privideCONET, conet_dWBNB)
+}
+
+
+const scanCONET_dUSDT = async (walletAddr: string, privideCONET: any) => {
+	return await scan_erc20_balance (walletAddr, privideCONET, conet_dUSDT)
+}
+
+const scanCONET_dWETH = async (walletAddr: string, privideCONET: any) => {
+	return await scan_erc20_balance (walletAddr, privideCONET, conet_dWETH)
+}
+
 const scanCONETHolesky = async (walletAddr: string, privideCONET: any) => {
-	try{
-		const ret = privideCONET.getBalance(walletAddr)
-		return ret
-	} catch (ex) {
-		logger(`scanCONETHolesky [${walletAddr}] try Again!`, ex)
-		return setTimeout(async () => {
-			return await scanCONETHolesky(walletAddr, privideCONET)
-		}, 500)
-	}
-	
+	return await scan_natureBalance (privideCONET, walletAddr)
 }
 
 const scanCNTP = async (walletAddr: string, privideCONET: any) => {
-	
-	const CNTP = new ethers.Contract(blast_CNTP, blast_CNTPAbi, privideCONET)
-	try {
-		const ret = await CNTP.balanceOf(walletAddr)
-		return ret
-	} catch (ex) {
-		logger(`scanCNTP [${walletAddr}]`, ex)
-		return setTimeout(async () => {
-			return await scanCNTP(walletAddr, privideCONET)
-		}, 500)
-	}
-
+	return await scan_erc20_balance(walletAddr, privideCONET, blast_CNTP)
 }
 
 const scanCNTPB =  async (walletAddr: string, provideCONET: any) => {
-	
-	const CNTPB = new ethers.Contract(CNTPB_contract, blast_CNTPAbi, provideCONET)
-	try {
-		const ret = await CNTPB.balanceOf(walletAddr)
-		return ret
-
-	} catch (ex) {
-		logger(`scanCNTPB Error, try again!`)
-		return setTimeout(async () => {
-			return await scanCNTPB(walletAddr, provideCONET)
-		}, 1000)
-		
-	}
+	return await scan_erc20_balance(walletAddr, provideCONET, CNTPB_contract)
 }
 
 const scanUSDT = async (walletAddr: string, provideETH: any) => {
-	
-	const usdt = new ethers.Contract(eth_usdt_contract, blast_CNTPAbi, provideETH)
-	try {
-		return await usdt.balanceOf(walletAddr)
-
-	} catch (ex) {
-		logger(`scanUSDT [${walletAddr}]`, ex)
-		return setTimeout(async () => {
-			return await scanUSDT(walletAddr, provideETH)
-		}, 500)
-	}
+	return await scan_erc20_balance(walletAddr, provideETH, eth_usdt_contract)
 }
 
 const scanUSDB = async (walletAddr: string, provideBlast: any) => {
-
-	const usdb = new ethers.Contract(blast_usdb_contract, blast_CNTPAbi, provideBlast)
-	try {
-		return await usdb.balanceOf(walletAddr)
-
-	} catch (ex) {
-		logger(`scanUSDB [${walletAddr}]`, ex)
-		return setTimeout(async () => {
-			return await scanUSDB(walletAddr, provideBlast)
-		}, 500)
-		
-	}
+	return await scan_erc20_balance(walletAddr, provideBlast, blast_usdb_contract)
 }
 
 const scanETH = async (walletAddr: string, provideETH: any) => {
-	try {
-		return await provideETH.getBalance(walletAddr)
-
-	} catch (ex) {
-		logger(`scanETH Error! try again!`)
-		return setTimeout(async () => {
-			return await scanETH(walletAddr, provideETH)
-		}, 1000)
-		
-	}
+	return await scan_natureBalance(provideETH, walletAddr)
 }
 
 const scanBlastETH = async (walletAddr: string, provideBlast: any) => {
-	try {
-		return await provideBlast.getBalance(walletAddr)
-
-	} catch (ex) {
-		logger(`scanBlastETH Error!`, ex)
-		return setTimeout(async () => {
-			return await scanBlastETH(walletAddr, provideBlast)
-		}, 1000)
-		
-	}
+	return await scan_natureBalance(provideBlast, walletAddr)
 }
 
 const scanWBNB = async (walletAddr: string, provideBNB: any) => {
-	const wbnb = new ethers.Contract(bnb_wbnb_contract, blast_CNTPAbi, provideBNB)
-	try {
-		return await wbnb.balanceOf(walletAddr)
-
-	} catch (ex) {
-		logger(`scanWBNB Error! try again!`)
-		return setTimeout(async () => {
-			return await scanWBNB(walletAddr, provideBNB)
-		}, 1000)
-	}
+	return await scan_erc20_balance(walletAddr, provideBNB, bnb_wbnb_contract)
 }
 
 const scanWUSDT = async (walletAddr: string, provideBNB: any) => {
-	const wusdt = new ethers.Contract(bnb_usdt_contract, blast_CNTPAbi, provideBNB)
-	try {
-		return await wusdt.balanceOf(walletAddr)
+	return await scan_erc20_balance(walletAddr, provideBNB, bnb_usdt_contract)
+}
 
+const scan_natureBalance = async (provide: any, walletAddr: string) => {
+	try {
+		return await provide.getBalance(walletAddr)
 	} catch (ex) {
-		logger(`scanWUSDT Error!`)
+		logger(`scan_natureBalance Error!`, ex)
 		return setTimeout(async () => {
-			return await scanWUSDT(walletAddr, provideBNB)
+			return await scan_natureBalance(walletAddr, provide)
+		}, 1000)
+	}
+	
+}
+
+const scan_erc20_balance = async (walletAddr: string, rpcProdive: any, erc20Address: string) => {
+	const erc20 = new ethers.Contract(erc20Address, blast_CNTPAbi, rpcProdive)
+	try {
+		return await erc20.balanceOf(walletAddr)
+	} catch (ex) {
+		logger(`scan_erc20_balance Error!`)
+		return setTimeout(async () => {
+			return await scan_erc20_balance(walletAddr, rpcProdive, erc20Address)
 		}, 1000)
 	}
 }

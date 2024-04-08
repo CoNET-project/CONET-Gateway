@@ -212,6 +212,31 @@ type regionType = {
     fr: boolean
 }
 
+interface conet_tokens {
+	//	CONET Holesky
+	conet:CryptoAsset
+	cntpb: CryptoAsset
+
+	dWBNB: CryptoAsset
+	dWETH: CryptoAsset
+	dUSDT: CryptoAsset
+
+	//	blast mainchain
+	cntp:CryptoAsset
+	blastETH: CryptoAsset
+	usdb: CryptoAsset
+
+	//	ETH
+	eth: CryptoAsset
+	usdt:CryptoAsset
+
+	//	BSC
+	wbnb: CryptoAsset
+	wusdt: CryptoAsset
+
+	
+}
+
 interface profile extends keyPair {
 	isPrimary?: boolean
 	pgpKey?: pgpKeyPair
@@ -219,26 +244,7 @@ interface profile extends keyPair {
 	emailAddr?: string
 	hdPath: string
 	index: number
-	tokens: {
-		//	CONET Holesky
-		conet:CryptoAsset
-		cntpb: CryptoAsset
-
-		//	blast mainchain
-		cntp:CryptoAsset
-		blastETH: CryptoAsset
-		usdb: CryptoAsset
-
-		//	ETH
-		eth: CryptoAsset
-		usdt:CryptoAsset
-
-		//	BSC
-		wbnb: CryptoAsset
-		wusdt: CryptoAsset
-
-		
-	}
+	tokens: conet_tokens
 	network: {
 		recipients: nodes_info[]
 	}
