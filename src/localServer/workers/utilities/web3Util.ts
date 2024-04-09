@@ -1,3 +1,4 @@
+
 const listenProfileVer = (wallet: string) => {
 	const provideCONET = new ethers.JsonRpcProvider(conet_rpc)
 	provideCONET.on('block', async block => {
@@ -446,6 +447,13 @@ const initProfileTokens = () => {
 			decimal: 18,
 			contract: bnb_wbnb_contract
 		},
+		bnb: {
+			balance: '0',
+			history: [],
+			network: 'BSC',
+			decimal: 18,
+			contract: ''
+		},
 		wusdt: {
 			balance: '0',
 			history: [],
@@ -456,6 +464,42 @@ const initProfileTokens = () => {
 	}
 	return ret
 }
+
+const initCONET_HoleskyAssets = async (wallet: string) => {
+
+}
+
+const getBlastAssets = (wallet: string) => new Promise( resolve => {
+	if (!wallet) {
+		return resolve([])
+	}
+
+})
+
+
+const getCONET_HoleskyAssets = (wallet: string) => new Promise( resolve => {
+	if (!wallet) {
+		return resolve([])
+	}
+	const api_url = `https://scan.conet.network/api/v2/addresses/${wallet.toLowerCase()}/tokens?type=ERC-20%2CERC-721%2CERC-1155`
+	return fetch(api_url, {
+		method: 'GET',
+		headers: {
+			'Content-Type': 'application/json;charset=UTF-8',
+			'Connection': 'close',
+		},
+		cache: 'no-store',
+		referrerPolicy: 'no-referrer'
+	}).then ( async res => res.json())
+	.then(result => {
+		return resolve(result.items)
+	}).catch (ex => {
+		logger(`getCONET_HoleskyAssets Error!`, ex)
+		return resolve([])
+	})
+})
+
+
 
 let getFaucetRoop = 0
 const getFaucet = async (keyID: string) => {
@@ -529,6 +573,10 @@ const scanWBNB = async (walletAddr: string, provideBNB: any) => {
 
 const scanWUSDT = async (walletAddr: string, provideBNB: any) => {
 	return await scan_erc20_balance(walletAddr, provideBNB, bnb_usdt_contract)
+}
+
+const scanBNB = async (walletAddr: string, provideBNB: any) => {
+	return await scan_natureBalance(provideBNB, walletAddr)
 }
 
 const scan_natureBalance = async (provide: any, walletAddr: string) => {

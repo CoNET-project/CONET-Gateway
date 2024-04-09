@@ -748,15 +748,16 @@ const getProfileAssetsBalance = async (profile: profile) => {
 		const provideBlastMainChain = new ethers.JsonRpcProvider(blast_mainnet)
 		const provideBNB = new ethers.JsonRpcProvider(bsc_mainchain)
 		// const walletETH = new ethers.Wallet(profile.privateKeyArmor, provideETH)
-		const [balanceCNTP, balanceCNTPB, balanceUSDT, ETH, blastETH, usdb, wbnb, wusdt, conet_Holesky, dWBNB, dUSDT, dWETH] = await Promise.all([
+		const [balanceCNTP, balanceCNTPB, balanceUSDT, ETH, blastETH, usdb, bnb, wbnb, wusdt, conet_Holesky, dWBNB, dUSDT, dWETH] = await Promise.all([
 			scanCNTP (key, provideBlast),
 			scanCNTPB (key, provideCONET),
 			scanUSDT (key, provideETH),
 			scanETH (key, provideETH),
-			scanBlastETH (key, provideBlast),
+			scanBlastETH (key, provideBlastMainChain),
 			scanUSDB (key, provideBlastMainChain),
-			scanWUSDT (key,provideBNB),
+			scanBNB (key, provideBNB),
 			scanWBNB (key,provideBNB),
+			scanWUSDT (key,provideBNB),
 			scanCONETHolesky(key, provideCONET),
 			scanCONET_dWBNB(key, provideCONET),
 			scanCONET_dUSDT(key, provideCONET),
@@ -766,16 +767,22 @@ const getProfileAssetsBalance = async (profile: profile) => {
 
 		current.cntp.balance = balanceCNTP === BigInt(0) ? '0' : parseFloat(ethers.formatEther(balanceCNTP)).toFixed(4)
 		current.cntpb.balance = balanceCNTPB === BigInt(0) ? '0' : parseFloat(ethers.formatEther(balanceCNTPB)).toFixed(4)
-		current.usdt.balance = balanceUSDT === BigInt(0) ? '0' : parseFloat(ethers.formatEther(balanceUSDT)).toFixed(4)
+		current.usdt.balance = balanceUSDT === BigInt(0) ? '0' :
+		//	@ts-ignore
+		parseFloat(balanceUSDT/BigInt(10**6)).toFixed(4)
+		
 		current.eth.balance = ETH === BigInt(0) ? '0' : parseFloat(ethers.formatEther(ETH)).toFixed(4)
 		current.blastETH.balance = blastETH === BigInt(0) ? '0' : parseFloat(ethers.formatEther(blastETH)).toFixed(4)
 		current.usdb.balance = usdb === BigInt(0) ? '0' : parseFloat(ethers.formatEther(usdb)).toFixed(4)
 		current.wbnb.balance = wbnb === BigInt(0) ? '0' : parseFloat(ethers.formatEther(wbnb)).toFixed(4)
+		current.bnb.balance = bnb === BigInt(0) ? '0' : parseFloat(ethers.formatEther(bnb)).toFixed(4)
 		current.wusdt.balance = wusdt === BigInt(0) ? '0' : parseFloat(ethers.formatEther(wusdt)).toFixed(4)
 		current.conet.balance = conet_Holesky === BigInt(0) ? '0' : parseFloat(ethers.formatEther(conet_Holesky)).toFixed(4)
+
 		current.dWBNB.balance = dWBNB === BigInt(0) ? '0' :  parseFloat(ethers.formatEther(dWBNB)).toFixed(4)
 		current.dUSDT.balance = dUSDT === BigInt(0) ? '0' :  parseFloat(ethers.formatEther(dUSDT)).toFixed(4)
 		current.dWETH.balance = dWETH === BigInt(0) ? '0' :  parseFloat(ethers.formatEther(dWETH)).toFixed(4)
+
 
 		//current.usdb.balance = balanceUSDB === BigInt(0) ? '0' : parseFloat(ethers.formatEther(balanceUSDB)).toFixed(4)
 
@@ -901,7 +908,7 @@ const testPasscode = async (cmd: worker_command) => {
 			}
 		}
 	}
-	
+
 	listenProfileVer(mainProfile.keyID)
 	authorization_key = cmd.data[0] = uuid.v4()
 	returnUUIDChannel(cmd)
@@ -1221,6 +1228,15 @@ const checkTokenStauct = (token: any) => {
 			network: 'BSC',
 			decimal: 18,
 			contract: bnb_wbnb_contract
+		}
+	}
+	if (!token?.bnb) {
+		token.bnb = {
+			balance: '0',
+			history: [],
+			network: 'BSC',
+			decimal: 18,
+			contract: ''
 		}
 	}
 	if (!token?.wusdt) {

@@ -231,6 +231,7 @@ interface conet_tokens {
 	usdt:CryptoAsset
 
 	//	BSC
+	bnb: CryptoAsset
 	wbnb: CryptoAsset
 	wusdt: CryptoAsset
 
