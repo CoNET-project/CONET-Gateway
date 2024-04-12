@@ -6,6 +6,8 @@ const blast_sepoliaRpc = 'https://sepolia.blast.io'
 const ethRpc = 'https://rpc.ankr.com/eth'
 const blast_mainnet = 'https://rpc.blast.io'
 const bsc_mainchain = 'https://bsc-dataseed.binance.org/'
+const asset_rate_usdt_url = 'https://min-api.cryptocompare.com/data/pricemulti?fsyms=usdt,bnb,ETH&tsyms=USD'
+const asset_rate_binance_url = 'https://api.binance.com/api/v3/avgPrice?symbol='
 
 const ReferralsAddress = '0x8f6be4704a3735024F4D2CBC5BAC3722c0C8a0BD'
 const ReferralsAddressV2 = '0x64Cab6D2217c665730e330a78be85a070e4706E7'
@@ -121,7 +123,7 @@ const testPasscode = async (cmd: worker_command) => {
 			}
 		}
 	}
-	// await testFunction()
+	//await testFunction()
 	listenProfileVer(mainProfile.keyID)
 
 
@@ -355,9 +357,9 @@ const prePurchase = async (cmd: worker_command) => {
 		cmd.err = 'INVALID_DATA'
 		return returnUUIDChannel(cmd)
 	}
-	const data:any = await getEstimateGas (profile.privateKeyArmor, payAssetName, amount)
+	const data: any = await getEstimateGas (profile.privateKeyArmor, payAssetName, amount)
 
-	cmd.data = [data.gasFee.gasPrice, data.fee, true, 5000]
+	cmd.data = [data.gasPrice, data.fee, true, 5000]
 	return returnUUIDChannel(cmd)
 }
 
@@ -391,18 +393,18 @@ const getAllNodesInfo: () => Promise<node|null> = () => new Promise(resolve=> {
 const testFunction = async () => {
 	const wallet = getProfileByWallet('0x0060f53fEac407a04f3d48E3EA0335580369cDC4')
 	if (wallet?.privateKeyArmor) {
-		// const uu = await getEstimateGas(wallet.privateKeyArmor, 'dWETH', '10')
-		// logger(uu)
+		
+		const uu = await getEstimateGas(wallet.privateKeyArmor, 'dWETH', '10')
+		logger(uu)
 
-		const kk = await transferAssetToCONET_guardian(wallet.privateKeyArmor, wallet.tokens.dUSDT, '10')
-		logger(kk)
+		//const kk = await transferAssetToCONET_guardian(wallet.privateKeyArmor, wallet.tokens.dUSDT, '10')
+		//await CONET_guardian_purchase(wallet.tokens.dWBNB, 1, 1250, 'dWBNB')
 	}
-
+	// getAssetRateLoop()
 	// const referrer = '0x848b08302bF95DE9a1BF6be988c9D9Ef5616c4eF'
 	// const provideNewCONET = new ethers.JsonRpcProvider(conet_rpc)
 	// const CNTP_Referrals = new ethers.Contract(ReferralsAddressV2, CONET_ReferralsAbi, provideNewCONET)
 	// const kkk = await getAllReferees(referrer, CNTP_Referrals)
 	// logger(kkk)
-
 	
 }
