@@ -131,6 +131,7 @@ interface CryptoAsset {
 	network: string
 	decimal: number
 	contract: string
+	name: string
 }
 
 
@@ -598,3 +599,13 @@ interface channelWroker {
 	data: any[]
 }
 
+
+/**
+ * 
+ * 		
+ */
+interface fragmentsObj {
+	localEncryptedText: string
+	remoteEncryptedText: string
+	fileName: string
+}

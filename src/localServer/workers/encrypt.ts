@@ -166,34 +166,6 @@ const gettPrimaryProfile = () => {
 	return profiles
 }
 
-const getAllNodes = async (cmd?: worker_command) => {
-
-	const profile = gettPrimaryProfile()
-	
-	if (!profile||!profile.keyID) {
-		if (cmd) {
-			cmd.err = 'NOT_READY'
-			returnUUIDChannel (cmd)
-		}
-		return
-	}
-
-	const nodes = await getAllNodesInfo()
-	if (!nodes) {
-		if (cmd) {
-			cmd.err = 'TIMEOUT'
-			returnUUIDChannel (cmd)
-		}
-		return
-	}
-	
-	sendState('nodes', nodes)
-	if (cmd) {
-		cmd.data = [nodes]
-		return returnUUIDChannel (cmd)
-	}
-	
-}
 
 const returnUUIDChannel = (cmd: worker_command) => {
 	if (!cmd.uuid) {
@@ -360,9 +332,9 @@ const processCmd = async (cmd: worker_command) => {
 			return getRegiestNodes (cmd)
 		}
 
-		case 'getAllNodes': {
-			return getAllNodes(cmd)
-		}
+		// case 'getAllNodes': {
+		// 	return getAllNodes(cmd)
+		// }
 
 		case 'testPasscode': {
 			return testPasscode(cmd)
