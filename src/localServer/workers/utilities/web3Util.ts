@@ -396,12 +396,16 @@ const checkUpdateAccount = () => {
 }
 
 const getAssetsPrice = async (cmd: worker_command) => {
-	
-	cmd.data = [priceLoopResult]
+	const assetPrice = await getAPIPrice(`${api_endpoint}asset-prices`)
+	if (assetPrice === false) {
+		cmd.err = 'NOT_READY'
+	} else {
+		cmd.data = [assetPrice]
+	}
 	return returnUUIDChannel(cmd)
 }
 
-const getBNBAvgPrice: (url: string)=>Promise<boolean|bnbAvgPrice> = (url: string) => new Promise( resolve => 
+const getAPIPrice: (url: string)=>Promise<any[]|boolean> = (url: string) => new Promise( resolve => 
 	fetch(url, {
 		method: 'GET',
 		headers: {
@@ -412,7 +416,7 @@ const getBNBAvgPrice: (url: string)=>Promise<boolean|bnbAvgPrice> = (url: string
 		referrerPolicy: 'no-referrer'
 	}).then ( async res => {
 		if (res.status!== 200) {
-			const err = `getPrice [${asset_rate_usdt_url}] response not 200 Error! try again!`
+			const err = `getPrice [${url}] response not 200 Error! try again!`
 			logger(err)
 			return resolve (false)
 		}
@@ -612,7 +616,7 @@ const encryptPasswordIssue = (ver: number, passcode: string, part: number) => {
 const updateFragmentsToIPFS = async (encryptData: string, hash: string, keyID: string, privateKeyArmor: string) => {
 
 		
-	const url = `${ api_endpoint }/api/storageFragments`
+	const url = `${ api_endpoint }storageFragments`
 	
 	const message =JSON.stringify({ walletAddress: keyID, data: encryptData, hash})
 	const messageHash = ethers.id(message)
@@ -1235,7 +1239,7 @@ const getFaucet = async (keyID: string) => {
 			logger(`getFaucet Roop > 6 STOP process!`)
 			return resolve(null)
 		}
-		const url = `${api_endpoint}/api/conet-faucet`
+		const url = `${api_endpoint}conet-faucet`
 		let result
 		try {
 			result = await postToEndpoint(url, true, { walletAddr: keyID })
@@ -1548,62 +1552,7 @@ const CONET_guardian_purchase = async (token: CryptoAsset, nodes: number, _total
 	const total_usdt = nodes * 1250
 	
 }
-interface bnbAvgPrice {
-	mins: number
-	price: string
-	closeTime: number
-}
 
-const priceLoopResult = {
-	bnb: '',
-	eth: ''
-}
-const bnbTime = 5 * 60 * 1000
-const getAssetRateLoop = async () => {
-	let tryETHCount = 5
-	let tryBNBCount = 5
-	const ethRate_url = asset_rate_binance_url + 'ETHUSDT'
-	const bnbhRate_url = asset_rate_binance_url + 'BNBUSDT'
-	const doProcessEth = async () => {
-		if (--tryETHCount < 0) {
-			return logger(`getAssetRate tryCount < 0 giveup trying!`)
-		}
-		const ethPrice = await getBNBAvgPrice(ethRate_url)
-		if (typeof ethPrice === 'boolean') {
-			return await setTimeout (async () => {
-				return await doProcessEth ()
-			}, 10000)
-		}
-		tryETHCount = 0
-		priceLoopResult.eth = ethPrice.price
-		const nextUpdate = ethPrice.mins - new Date().getTime() + bnbTime
-		logger(`doProcessEth process next timeup = ${new Date( ethPrice.mins + bnbTime)}`)
-		return await setTimeout(async () => {
-			return await doProcessEth()
-		}, nextUpdate)
-	}
-	const doProcessBNB = async () => {
-		if (--tryBNBCount < 0) {
-			return logger(`doProcessBNB tryCount < 0 giveup trying!`)
-		}
-		const ethPrice = await getBNBAvgPrice(bnbhRate_url)
-		if (typeof ethPrice === 'boolean') {
-			return setTimeout (async () => {
-				return await doProcessEth ()
-			}, 10000)
-		}
-		tryBNBCount = 0
-		priceLoopResult.bnb = ethPrice.price
-		const nextUpdate = ethPrice.mins - new Date().getTime() + bnbTime
-		logger(`doProcessBNB process next timeup = ${new Date( ethPrice.mins + bnbTime)}`)
-		return await setTimeout(async () => {
-			return await doProcessBNB()
-		}, nextUpdate)
-	}
-	await doProcessEth()
-	await doProcessBNB()
-
-}
 
 const transferAssetToCONET_guardian = (privateKey: string, token: CryptoAsset, transferNumber: string) => new Promise(async resolve=> {
 	const provide = new ethers.JsonRpcProvider(getNetwork(token.name))
@@ -2146,18 +2095,3 @@ const blast_usdbAbi = [
 		{"inputs":[{"internalType":"address","name":"_implementation","type":"address"}],"name":"upgradeTo","outputs":[],"stateMutability":"nonpayable","type":"function"},
 		{"inputs":[{"internalType":"address","name":"_implementation","type":"address"},{"internalType":"bytes","name":"_data","type":"bytes"}],"name":"upgradeToAndCall","outputs":[{"internalType":"bytes","name":"","type":"bytes"}],"stateMutability":"payable","type":"function"},{"stateMutability":"payable","type":"receive"}
 ]
-
-// {			
-// 	address: '0x36696169c63e42cd08ce11f5deebbcebae652050',
-// 	name: 'bsc pancake_v3 WBNB<>USDT 0.05% 38M Pool',
-// 	network: web3Bsc,
-// 	v2: false,
-// 	quoteAddress: pancakeQuoterV2BSC,
-// 	token1_unit_price: USD_NUMBER(),
-// 	token0_unit_price: BNB_NUMBER(),
-// 	chainID: 56,
-// 	chainName: 'BSC',
-// 	isUniswap: false,
-// 	flashLoan: true,
-// 	toke0_address: bsc_WBNB_token.address,
-// },

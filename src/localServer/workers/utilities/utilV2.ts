@@ -1,13 +1,11 @@
 const conet_rpc = 'https://rpc.conet.network'
-const api_endpoint = `https://api.conet.network`
+const api_endpoint = `https://api.conet.network/api/`
 
 const cloudStorageEndpointUrl = 'https://s3.us-east-1.wasabisys.com/conet-mvp/storage/FragmentOcean/'
 const blast_sepoliaRpc = 'https://sepolia.blast.io'
 const ethRpc = 'https://rpc.ankr.com/eth'
 const blast_mainnet = 'https://rpc.blast.io'
 const bsc_mainchain = 'https://bsc-dataseed.binance.org/'
-const asset_rate_usdt_url = 'https://min-api.cryptocompare.com/data/pricemulti?fsyms=usdt,bnb,ETH&tsyms=USD'
-const asset_rate_binance_url = 'https://api.binance.com/api/v3/avgPrice?symbol='
 
 const ReferralsAddress = '0x8f6be4704a3735024F4D2CBC5BAC3722c0C8a0BD'
 const ReferralsAddressV2 = '0x64Cab6D2217c665730e330a78be85a070e4706E7'
@@ -31,8 +29,6 @@ const FragmentNameDeriveChildIndex = 65536
 
 let allNodes: node
 let authorization_key = ''
-
-
 
 const getAddress = (addr: string) => {
 	let ret = ''
@@ -393,9 +389,10 @@ const getAllNodesInfo: () => Promise<node|null> = () => new Promise(resolve=> {
 const testFunction = async () => {
 	const wallet = getProfileByWallet('0x0060f53fEac407a04f3d48E3EA0335580369cDC4')
 	if (wallet?.privateKeyArmor) {
-		
-		const uu = await getEstimateGas(wallet.privateKeyArmor, 'dWETH', '10')
-		logger(uu)
+		const assetPrice = await getAPIPrice(`${api_endpoint}asset-prices`)
+		logger(assetPrice)
+		// const uu = await getEstimateGas(wallet.privateKeyArmor, 'dWETH', '10')
+		// logger(uu)
 
 		//const kk = await transferAssetToCONET_guardian(wallet.privateKeyArmor, wallet.tokens.dUSDT, '10')
 		//await CONET_guardian_purchase(wallet.tokens.dWBNB, 1, 1250, 'dWBNB')
