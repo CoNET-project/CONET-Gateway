@@ -93,9 +93,9 @@ type CryptoAssetHistory = {
 	status: 'Pending'|'Confirmed'
 	Nonce?: number
 	to?: string
-	transactionFee?: number
-	gasLimit?: number
-	gasUsed?: number
+	transactionFee?: string
+	gasLimit?: string
+	gasUsed?: string
 	baseFee?: number
 	priorityFee?: number
 	totalGasFee?: number
@@ -608,4 +608,22 @@ interface fragmentsObj {
 	localEncryptedText: string
 	remoteEncryptedText: string
 	fileName: string
+}
+
+interface assetsStructure {
+	currency_name: string
+	timestamp: string
+	usd_price: string
+}
+
+interface transferTx {
+	from: string
+	gasLimit: number
+	hash: string
+	maxFeePerGas: number
+	maxPriorityFeePerGas: BigInt
+	value: BigInt
+	nonce: number
+	to: string
+	wait: ()=> Promise<any>
 }

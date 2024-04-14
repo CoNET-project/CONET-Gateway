@@ -395,17 +395,19 @@ const checkUpdateAccount = () => {
 	
 }
 
-const getAssetsPrice = async (cmd: worker_command) => {
-	const assetPrice = await getAPIPrice(`${api_endpoint}asset-prices`)
-	if (assetPrice === false) {
-		cmd.err = 'NOT_READY'
-	} else {
-		cmd.data = [assetPrice]
-	}
-	return returnUUIDChannel(cmd)
-}
 
-const getAPIPrice: (url: string)=>Promise<any[]|boolean> = (url: string) => new Promise( resolve => 
+
+let assetPrice: assetsStructure[] = []
+const OracolTime = 5 * 60 * 1000
+const getAPIPrice: () => Promise<assetsStructure[]|boolean> = () => new Promise ( resolve => {
+	if (assetPrice.length) {
+		const time = new Date ().getTime()
+		const dataTimestamp = parseInt(assetPrice[0].timestamp)
+		if (time - dataTimestamp < OracolTime) {
+			return resolve (assetPrice)
+		}
+	}
+	const url = `${api_endpoint}asset-prices`
 	fetch(url, {
 		method: 'GET',
 		headers: {
@@ -421,14 +423,15 @@ const getAPIPrice: (url: string)=>Promise<any[]|boolean> = (url: string) => new 
 			return resolve (false)
 		}
 		return res.json()
-	}).then((data) => resolve(data))
+	}).then((data: assetsStructure[]) => {
+		assetPrice = data
+		resolve(data)
+	})
 	.catch (ex=> {
 		logger(ex.message)
 		return resolve(false)
 	})
-
-)
-	
+})
 
 const CoNET_initData_save = async (database, systemInitialization_uuid: string) => {
 	if ( !CoNET_Data || !passObj ) {
@@ -1230,7 +1233,6 @@ const getAllReferees = async (_wallet: string, CNTP_Referrals) => {
 	return ret
 }
 
-
 let getFaucetRoop = 0
 const getFaucet = async (keyID: string) => {
 	return new Promise (async resolve => {
@@ -1254,7 +1256,6 @@ const getFaucet = async (keyID: string) => {
 	})
 
 }
-
 
 const createKeyHDWallets = () => {
 	let root
@@ -1350,7 +1351,6 @@ const updateProfilesVersion = async () => {
 	}) 
 
 }
-
 
 const scanCONET_dUSDT = async (walletAddr: string, privideCONET: any) => {
 	return await scan_erc20_balance (walletAddr, privideCONET, conet_dUSDT)
@@ -1548,22 +1548,109 @@ const getEstimateGas = (privateKey: string, asset: string, transferNumber: strin
 	
 })
 
-const CONET_guardian_purchase = async (token: CryptoAsset, nodes: number, _total: number, currencyNane: string ) => {
-	const total_usdt = nodes * 1250
+const CONET_guardian_purchase: (profile: profile, nodes: number, _total: number, tokenName: string) => Promise<boolean> = async (profile, nodes, _total, tokenName ) => {
+	const cryptoAsset: CryptoAsset = profile.tokens[tokenName]
+
+	const total = await getAmountOfNodes(nodes, tokenName)
+
+	if (_total - total > total * 0.01||!cryptoAsset||!CoNET_Data?.profiles) {
+		return false
+	}
+	if (parseFloat(cryptoAsset.balance) - _total < 0 || !profile.privateKeyArmor) {
+		return false
+	}
+
+	const tx = await transferAssetToCONET_guardian (profile.privateKeyArmor, cryptoAsset, _total.toString())
+	if (typeof tx === 'boolean') {
+		return false
+	}
+	await tx.wait()
+	const kk1: CryptoAssetHistory = {
+		status: 'Confirmed',
+		Nonce: tx.nonce,
+		to: tx.to,
+		transactionFee: stringFix(ethers.formatEther(tx.maxFeePerGas * tx.gasLimit)),
+		gasUsed: tx.maxFeePerGas.toString(),
+		isSend: true,
+		value: _total,
+		time: new Date().toISOString(),
+		transactionHash: tx.hash
+	}
+	cryptoAsset.history.push(kk1)
+	const profiles = CoNET_Data.profiles
+	const pIndex = profiles.map(n=> n.index)
+	const root = ethers.Wallet.fromPhrase(CoNET_Data.mnemonicPhrase)
+	const nextIndex = pIndex.sort((a,b) => b-a)[0]
+
+	const publikPool: string[] = []
+	for (let i=1; i <= nodes; i ++) {
+		const newAcc = root.deriveChild(nextIndex+i)
+		const key = await createGPGKey('', '', '')
+		publikPool.push (newAcc.address)
+		const _profile: profile = {
+			isPrimary: false,
+			keyID: newAcc.address,
+			privateKeyArmor: newAcc.signingKey.privateKey,
+			hdPath: newAcc.path,
+			index: newAcc.index,
+			pgpKey: {
+				privateKeyArmor: key.privateKey,
+				publicKeyArmor: key.publicKey
+			},
+			referrer: null,
+			network: {
+				recipients: []
+			},
+			tokens: initProfileTokens(),
+			data: {
+				alias: `CONET Guardian node${i}`,
+				isNode: true
+			}
+		}
+		profiles.push(_profile)
+	}
+
 	
+
+	const data = {
+		receiptTx: tx.hash,
+		publishKeys: publikPool,
+		nodes: nodes,
+		tokenName,
+		network: cryptoAsset.network,
+		amount: ethers.parseEther(_total.toString())
+	}
+
+	const message =JSON.stringify({ walletAddress: profile.keyID, data})
+	const messageHash = ethers.id(message)
+	const signMessage = CoNETModule.EthCrypto.sign(profile.privateKeyArmor, messageHash)
+	const sendData = {
+		message, signMessage
+	}
+	const url = `${ api_endpoint }purchase-guardian`
+	const result: any = await postToEndpoint(url, true, sendData)
+	await updateProfilesVersion()
+	return true
 }
 
+const stringFix = (num: string) => {
+	const index = num.indexOf('.')
+	if (index <0) {
+		return num 
+	}
+	return num.substring(0, index+12)
+}
 
-const transferAssetToCONET_guardian = (privateKey: string, token: CryptoAsset, transferNumber: string) => new Promise(async resolve=> {
+const transferAssetToCONET_guardian: (privateKey: string, token: CryptoAsset, transferNumber: string) => Promise<boolean|transferTx> = (privateKey: string, token: CryptoAsset, transferNumber: string) => new Promise(async resolve=> {
 	const provide = new ethers.JsonRpcProvider(getNetwork(token.name))
 	const wallet = new ethers.Wallet(privateKey, provide)
 	const toAddr = CONET_guardian_Address(token.name)
 	let _fee
 	const smartContractAddr = getAssetERC20Address(token.name)
 	if (smartContractAddr) {
-		const estGas = new ethers.Contract(smartContractAddr, blast_CNTPAbi, wallet)
+		const transferObj = new ethers.Contract(smartContractAddr, blast_CNTPAbi, wallet)
 		try {
-			return resolve(await estGas.transfer(toAddr, ethers.parseEther(transferNumber)))
+			return resolve(await transferObj.transfer(toAddr, ethers.parseEther(transferNumber)))
 		} catch (ex) {
 			return resolve (false)
 		}

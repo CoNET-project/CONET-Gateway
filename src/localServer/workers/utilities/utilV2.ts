@@ -119,7 +119,7 @@ const testPasscode = async (cmd: worker_command) => {
 			}
 		}
 	}
-	//await testFunction()
+	await testFunction()
 	listenProfileVer(mainProfile.keyID)
 
 
@@ -127,6 +127,16 @@ const testPasscode = async (cmd: worker_command) => {
 	returnUUIDChannel(cmd)
 	//	reflash all balance
 	
+}
+
+const getAssetsPrice = async (cmd: worker_command) => {
+	const assetPrice = await getAPIPrice()
+	if (assetPrice === false) {
+		cmd.err = 'NOT_READY'
+	} else {
+		cmd.data = [assetPrice]
+	}
+	return returnUUIDChannel(cmd)
 }
 
 const showSRP = (cmd: worker_command) => {
@@ -353,11 +363,28 @@ const prePurchase = async (cmd: worker_command) => {
 		cmd.err = 'INVALID_DATA'
 		return returnUUIDChannel(cmd)
 	}
+
 	const data: any = await getEstimateGas (profile.privateKeyArmor, payAssetName, amount)
 
 	cmd.data = [data.gasPrice, data.fee, true, 5000]
 	return returnUUIDChannel(cmd)
 }
+const nodePrice = 1250
+
+const getAmountOfNodes: (nodes: number, assetName: string) => Promise<number> = (nodes, assetName) => new Promise(async resolve => {
+	const assetPrice = await getAPIPrice ()
+	if (typeof assetPrice === 'boolean') {
+		return resolve(0)
+	}
+	const totalUsdt = nodes * nodePrice
+	const asssetSymbol = new RegExp (/usd/i.test(assetName) ? 'usd' : /bnb/i.test(assetName) ? 'bnb' : 'eth', 'i')
+	const index = assetPrice.findIndex(n => asssetSymbol.test(n.currency_name))
+	if (index < 0) {
+		return resolve(totalUsdt)
+	}
+	const rate = parseFloat(assetPrice[index].usd_price)
+	return resolve (totalUsdt/rate)
+})
 
 /**
  * 				OldVersion
@@ -389,13 +416,21 @@ const getAllNodesInfo: () => Promise<node|null> = () => new Promise(resolve=> {
 const testFunction = async () => {
 	const wallet = getProfileByWallet('0x0060f53fEac407a04f3d48E3EA0335580369cDC4')
 	if (wallet?.privateKeyArmor) {
-		const assetPrice = await getAPIPrice(`${api_endpoint}asset-prices`)
-		logger(assetPrice)
+		//const assetPrice = await getAPIPrice()
+		//logger(assetPrice)
 		// const uu = await getEstimateGas(wallet.privateKeyArmor, 'dWETH', '10')
 		// logger(uu)
 
 		//const kk = await transferAssetToCONET_guardian(wallet.privateKeyArmor, wallet.tokens.dUSDT, '10')
 		//await CONET_guardian_purchase(wallet.tokens.dWBNB, 1, 1250, 'dWBNB')
+		
+	// 	const oo = await getAmountOfNodes(5, 'dWETH')
+	// 	const kk = await getAmountOfNodes(5, 'dUSDT')
+	// 	const pp = await getAmountOfNodes(5, 'dWBNB')
+	// 	logger(oo)
+	// 	logger(pp)
+	// 	logger(kk)
+	// 	const uuu = await CONET_guardian_purchase (wallet, 5, 2.085934, 'dWETH')
 	}
 	// getAssetRateLoop()
 	// const referrer = '0x848b08302bF95DE9a1BF6be988c9D9Ef5616c4eF'
