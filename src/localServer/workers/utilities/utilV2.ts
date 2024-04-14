@@ -424,19 +424,21 @@ const testFunction = async () => {
 		//const kk = await transferAssetToCONET_guardian(wallet.privateKeyArmor, wallet.tokens.dUSDT, '10')
 		//await CONET_guardian_purchase(wallet.tokens.dWBNB, 1, 1250, 'dWBNB')
 		
-	// 	const oo = await getAmountOfNodes(5, 'dWETH')
-	// 	const kk = await getAmountOfNodes(5, 'dUSDT')
-	// 	const pp = await getAmountOfNodes(5, 'dWBNB')
-	// 	logger(oo)
-	// 	logger(pp)
-	// 	logger(kk)
-	// 	const uuu = await CONET_guardian_purchase (wallet, 5, 2.085934, 'dWETH')
+		const oo = await getAmountOfNodes(5, 'dWETH')
+		const kk = await getAmountOfNodes(5, 'dUSDT')
+		const pp = await getAmountOfNodes(5, 'dWBNB')
+		logger(oo)
+		logger(pp)
+		logger(kk)
+		const uuu = await CONET_guardian_purchase (wallet, 5, 11.206027, 'dWBNB')
 	}
-	// getAssetRateLoop()
+
 	// const referrer = '0x848b08302bF95DE9a1BF6be988c9D9Ef5616c4eF'
 	// const provideNewCONET = new ethers.JsonRpcProvider(conet_rpc)
 	// const CNTP_Referrals = new ethers.Contract(ReferralsAddressV2, CONET_ReferralsAbi, provideNewCONET)
 	// const kkk = await getAllReferees(referrer, CNTP_Referrals)
 	// logger(kkk)
+
+
 	
 }

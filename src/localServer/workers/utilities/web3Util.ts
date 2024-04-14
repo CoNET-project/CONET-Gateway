@@ -1618,7 +1618,7 @@ const CONET_guardian_purchase: (profile: profile, nodes: number, _total: number,
 		nodes: nodes,
 		tokenName,
 		network: cryptoAsset.network,
-		amount: ethers.parseEther(_total.toString())
+		amount: ethers.parseEther(_total.toString()).toString()
 	}
 
 	const message =JSON.stringify({ walletAddress: profile.keyID, data})
