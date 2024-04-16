@@ -264,12 +264,14 @@ const processCmd = async (cmd: worker_command) => {
 				cmd.err = 'INVALID_DATA'
 				return returnUUIDChannel(cmd)
 			}
+			sendState('beforeunload', true)
 			const kk = await CONET_guardian_purchase (profile, nodes, amount, payAssetName)
+			sendState('beforeunload', false)
 			if (kk !== true) {
 				cmd.err = 'INVALID_DATA'
 				return returnUUIDChannel(cmd)
 			}
-			
+
 			return returnUUIDChannel(cmd)
 		}
 
