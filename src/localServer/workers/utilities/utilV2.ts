@@ -120,7 +120,7 @@ const testPasscode = async (cmd: worker_command) => {
 		}
 	}
 	await testFunction()
-	listenProfileVer(mainProfile.keyID)
+	listenProfileVer()
 
 
 	authorization_key = cmd.data[0] = uuid.v4()
@@ -424,13 +424,13 @@ const testFunction = async () => {
 		//const kk = await transferAssetToCONET_guardian(wallet.privateKeyArmor, wallet.tokens.dUSDT, '10')
 		//await CONET_guardian_purchase(wallet.tokens.dWBNB, 1, 1250, 'dWBNB')
 		
-		const oo = await getAmountOfNodes(5, 'dWETH')
-		const kk = await getAmountOfNodes(5, 'dUSDT')
-		const pp = await getAmountOfNodes(5, 'dWBNB')
-		logger(oo)
-		logger(pp)
-		logger(kk)
-		const uuu = await CONET_guardian_purchase (wallet, 5, 11.206027, 'dWBNB')
+		// const oo = await getAmountOfNodes(5, 'dWETH')
+		// const kk = await getAmountOfNodes(5, 'dUSDT')
+		// const pp = await getAmountOfNodes(5, 'dWBNB')
+		// logger(oo)
+		// logger(pp)
+		// logger(kk)
+		// const uuu = await CONET_guardian_purchase (wallet, 5, 6250, 'dUSDT')
 	}
 
 	// const referrer = '0x848b08302bF95DE9a1BF6be988c9D9Ef5616c4eF'

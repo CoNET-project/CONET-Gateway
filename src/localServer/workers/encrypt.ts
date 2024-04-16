@@ -245,6 +245,34 @@ const processCmd = async (cmd: worker_command) => {
 			return preProxyConnect (cmd)
 		}
 
+		case 'guardianPurchase': {
+			const [nodes, amount, profile, payAssetName] = cmd.data
+
+			if (!nodes||!amount||!profile|| !payAssetName) {
+				cmd.err = 'INVALID_DATA'
+				return returnUUIDChannel(cmd)
+			}
+
+			const profiles = CoNET_Data?.profiles
+			if (!profiles) {
+				cmd.err = 'NOT_READY'
+				return returnUUIDChannel(cmd)
+			}
+
+			const profileIndex = profiles.findIndex(n => n.keyID.toLowerCase() === profile.keyID.toLowerCase())
+			if (profileIndex < 0) {
+				cmd.err = 'INVALID_DATA'
+				return returnUUIDChannel(cmd)
+			}
+			const kk = await CONET_guardian_purchase (profile, nodes, amount, payAssetName)
+			if (kk !== true) {
+				cmd.err = 'INVALID_DATA'
+				return returnUUIDChannel(cmd)
+			}
+			
+			return returnUUIDChannel(cmd)
+		}
+
 		case 'prePurchase': {
 			return prePurchase(cmd)
 		}
@@ -299,21 +327,6 @@ const processCmd = async (cmd: worker_command) => {
 			logger (`Worker encryptWorkerDoCommand got getWorkerClientID ClientIDworker = [${ClientIDworker}]`)
 			return responseChannel.postMessage(JSON.stringify(cmd))
 		}
-		//****************************************************************************************** */
-
-		// case 'getFaucet' : {
-		// 	cmd.data[0] = gettPrimaryProfile ()
-		// 	getFaucetCount++
-		// 	if (!cmd.data[0] || !cmd.data[0].keyID) {
-		// 		cmd.err = 'NO_UUID'
-		// 		return returnUUIDChannel (cmd)
-		// 	}
-		// 	cmd.data[0] = cmd.data[0].keyID
-		// 	return getFaucet (cmd, () => {
-		// 		logger (`getFaucetCount = [${getFaucetCount}]`)
-		// 		returnUUIDChannel (cmd)
-		// 	})
-		// }
 
 		case 'createAccount': {
 			return createAccount(cmd)

@@ -92,18 +92,16 @@ const sendState = (state: listenState, value: any) => {
 	sendChannel.close()
 }
 
-const listenProfileVer = (wallet: string) => {
+const listenProfileVer = () => {
 	const provideCONET = new ethers.JsonRpcProvider(conet_rpc)
 	provideCONET.on('block', async block => {
-		
-		const nonce = await provideCONET.getTransactionCount (wallet)
-		if (!CoNET_Data) {
-			return logger(`listenProfileVer Error! have none CoNET_Data`)
-		}
+		await checkUpdateAccount ()
 
-		if (nonce > CoNET_Data.nonce) {
-			return checkUpdateAccount ()
+		const cmd: channelWroker = {
+			cmd: 'assets',
+			data: []
 		}
+		sendState('toFrontEnd', cmd)
 	})
 }
 
@@ -1004,6 +1002,7 @@ const getCONET_HoleskyAssets = (wallet: string) => new Promise( resolve => {
 
 let checkcheckUpdateLock = false
 let lastCheckcheckUpdateTimeStamp = 0
+
 const getVersonFragments = async (currentTimestamp, _ver, nonce, resolve) => {
 	if (!CoNET_Data) {
 		checkcheckUpdateLock = false
@@ -1442,7 +1441,7 @@ const getNetwork = (networkName: string) => {
 			return ethRpc
 		}
 		case 'wusdt': 
-		case 'wbnb': {
+		case 'bnb': {
 			return bsc_mainchain
 		}
 		case 'cntp':
@@ -1554,17 +1553,46 @@ const CONET_guardian_purchase: (profile: profile, nodes: number, _total: number,
 	const total = await getAmountOfNodes(nodes, tokenName)
 
 	if (_total - total > total * 0.01||!cryptoAsset||!CoNET_Data?.profiles) {
+		const cmd1: channelWroker = {
+			cmd: 'purchaseStatus',
+			data: [-1]
+		}
+		sendState('toFrontEnd', cmd1)
 		return false
 	}
 	if (parseFloat(cryptoAsset.balance) - _total < 0 || !profile.privateKeyArmor) {
+		const cmd1: channelWroker = {
+			cmd: 'purchaseStatus',
+			data: [-1]
+		}
+		sendState('toFrontEnd', cmd1)
 		return false
 	}
+	const cmd1: channelWroker = {
+		cmd: 'purchaseStatus',
+		data: [1]
+	}
+
+	sendState('toFrontEnd', cmd1)
 
 	const tx = await transferAssetToCONET_guardian (profile.privateKeyArmor, cryptoAsset, _total.toString())
 	if (typeof tx === 'boolean') {
+		const cmd1: channelWroker = {
+			cmd: 'purchaseStatus',
+			data: [-1]
+		}
+		sendState('toFrontEnd', cmd1)
 		return false
 	}
+	
+	const cmd2: channelWroker = {
+		cmd: 'purchaseStatus',
+		data: [2]
+	}
+	sendState('toFrontEnd', cmd2)
+
 	await tx.wait()
+
 	const kk1: CryptoAssetHistory = {
 		status: 'Confirmed',
 		Nonce: tx.nonce,
@@ -1610,8 +1638,6 @@ const CONET_guardian_purchase: (profile: profile, nodes: number, _total: number,
 		profiles.push(_profile)
 	}
 
-	
-
 	const data = {
 		receiptTx: tx.hash,
 		publishKeys: publikPool,
@@ -1627,8 +1653,23 @@ const CONET_guardian_purchase: (profile: profile, nodes: number, _total: number,
 	const sendData = {
 		message, signMessage
 	}
-	const url = `${ api_endpoint }purchase-guardian`
+	
+	const cmd3: channelWroker = {
+		cmd: 'purchaseStatus',
+		data: [3]
+	}
+	sendState('toFrontEnd', cmd3)
+	const url = `${ api_endpoint }Purchase-Guardian`
 	const result: any = await postToEndpoint(url, true, sendData)
+	if (!result) {
+		const cmd3: channelWroker = {
+			cmd: 'purchaseStatus',
+			data: [-2, kk1]
+		}
+		sendState('toFrontEnd', cmd3)
+		return false
+	}
+	
 	await updateProfilesVersion()
 	return true
 }
@@ -1661,7 +1702,8 @@ const transferAssetToCONET_guardian: (privateKey: string, token: CryptoAsset, tr
 			value: ethers.parseEther(transferNumber)
 		}
 		try {
-			return resolve(await wallet.estimateGas(tx))
+
+			return resolve(await wallet.sendTransaction(tx))
 		} catch (ex) {
 			return resolve (false)
 		}
