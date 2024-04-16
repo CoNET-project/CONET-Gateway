@@ -418,7 +418,7 @@ const testFunction = async () => {
 	if (wallet?.privateKeyArmor) {
 		//const assetPrice = await getAPIPrice()
 		//logger(assetPrice)
-		// const uu = await getEstimateGas(wallet.privateKeyArmor, 'dWETH', '10')
+		//const uu = await getEstimateGas(wallet.privateKeyArmor, 'eth', '5')
 		// logger(uu)
 
 		//const kk = await transferAssetToCONET_guardian(wallet.privateKeyArmor, wallet.tokens.dUSDT, '10')

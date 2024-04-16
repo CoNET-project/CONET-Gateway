@@ -1507,12 +1507,13 @@ const CONET_guardian_Address = (networkName: string) => {
 	}
 }
 
-const getEstimateGas = (privateKey: string, asset: string, transferNumber: string) => new Promise(async resolve=> {
+const getEstimateGas = (privateKey: string, asset: string, _transferNumber: string) => new Promise(async resolve=> {
 
 	const provide = new ethers.JsonRpcProvider(getNetwork(asset))
 	const wallet = new ethers.Wallet(privateKey, provide)
 	const toAddr = CONET_guardian_Address(asset)
 	let _fee
+	const transferNumber = ethers.parseEther(_transferNumber)
 	const smartContractAddr = getAssetERC20Address(asset)
 	if (smartContractAddr) {
 		const estGas = new ethers.Contract(smartContractAddr, blast_CNTPAbi, wallet)
@@ -1525,7 +1526,7 @@ const getEstimateGas = (privateKey: string, asset: string, transferNumber: strin
 	} else {
 		const tx = {
 			to:toAddr,
-			value: ethers.parseEther(transferNumber)
+			value: transferNumber
 		}
 		try {
 			_fee = await wallet.estimateGas(tx)
