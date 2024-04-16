@@ -119,7 +119,7 @@ const testPasscode = async (cmd: worker_command) => {
 			}
 		}
 	}
-	await testFunction()
+	await testFunction(cmd)
 	listenProfileVer()
 
 
@@ -388,6 +388,30 @@ const getAmountOfNodes: (nodes: number, assetName: string) => Promise<number> = 
 	return resolve (totalUsdt/rate)
 })
 
+const fx168PrePurchase =  async (cmd: worker_command) => {
+	const [nodes] = cmd.data
+	if (!nodes||!CoNET_Data||!CoNET_Data.profiles) {
+		cmd.err = 'INVALID_DATA'
+		return returnUUIDChannel(cmd)
+	}
+	const profile = CoNET_Data.profiles[0]
+	if (!CoNET_Data.fx168Order) {
+		CoNET_Data.fx168Order = []
+	}
+	const fx: fx168_Order = {
+		timestamp: new Date().getTime(),
+		status: 'pending',
+		nodes
+	}
+	const message = JSON.stringify(fx)
+	const messageHash = ethers.id(message)
+	const signMessage = CoNETModule.EthCrypto.sign(profile.privateKeyArmor, messageHash)
+	fx.publishTx = signMessage
+	cmd.data[signMessage]
+	await storeSystemData ()
+	return returnUUIDChannel(cmd)
+}
+
 /**
  * 				OldVersion
  */
@@ -415,9 +439,11 @@ const getAllNodesInfo: () => Promise<node|null> = () => new Promise(resolve=> {
 
 })
 
-const testFunction = async () => {
+const testFunction = async (cmd: worker_command) => {
 	const wallet = getProfileByWallet('0x0060f53fEac407a04f3d48E3EA0335580369cDC4')
 	if (wallet?.privateKeyArmor) {
+		// cmd.data[5]
+		// fx168PrePurchase(cmd)
 		//const assetPrice = await getAPIPrice()
 		//logger(assetPrice)
 		//const uu = await getEstimateGas(wallet.privateKeyArmor, 'eth', '5')

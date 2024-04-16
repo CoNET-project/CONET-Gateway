@@ -215,6 +215,7 @@ const initSystemDataV1 = async (acc) => {
 		keyID: acc.address,
 		isPrimary: true,
 		referrer: null,
+		isNode: false,
 		pgpKey: {
 			privateKeyArmor: key.privateKey,
 			publicKeyArmor: key.publicKey
@@ -254,6 +255,7 @@ const storeSystemData = async () => {
 	const password = passObj.passcode.toString()
 	const data = {
 		mnemonicPhrase: CoNET_Data.mnemonicPhrase,
+		fx168Order: CoNET_Data.fx168Order||[],
 		dammy: buffer.Buffer.allocUnsafeSlow( 1024 * ( 20 + ( Math.random()*20)))
 	}
 
@@ -1295,6 +1297,7 @@ const decryptSystemData = async () => {
 		
 		const obj = JSON.parse(encryptIterate1)
 		CoNET_Data.mnemonicPhrase = obj.mnemonicPhrase
+		CoNET_Data.fx168Order = obj.fx168Order
 }
 
 //*		scan assets

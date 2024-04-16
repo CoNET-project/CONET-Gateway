@@ -169,7 +169,7 @@ declare type WorkerCommand = 'READY'|'getRegiestNodes'|'beforeunload'|'createAcc
     'SaaSRegister'|'getContainer'|'ipaddress'|'startLiveness'|'stopLiveness'|'isLivenessRunning'|'importWallet'|
 	//		from service worker
 	'urlProxy'|'saveDomain'|'getDomain'|'getWorkerClientID'|'getRefereesList'|'getAllNodes'|'getAllProfiles'|'updateProfile'|'addProfile'|'resetPasscode'|
-	'getAssetsPrice'|'recoverAccount'|'CONETFaucet'|'prePurchase'|'guardianPurchase'
+	'getAssetsPrice'|'recoverAccount'|'CONETFaucet'|'prePurchase'|'guardianPurchase'|'fx168PrePurchase'
 
 type SINodesSortby = 'CUSTOMER_REVIEW'|'TOTAL_ONLINE_TIME'|
 	'STORAGE_PRICE_LOW'|'STORAGE_PRICE_HIGH'|'OUTBOUND_PRICE_HIGH'|'OUTBOUND_PRICE_LOW'
@@ -292,6 +292,13 @@ interface FragmentClass {
 	mainFragmentName: string
 }
 
+interface fx168_Order {
+	publishTx?: string
+	timestamp: number
+	status: 'pending'|'active'|'problem'
+	nodes: number
+}
+
 type encrypt_keys_object = {
     profiles?: profile[]
 	isReady: boolean
@@ -302,6 +309,7 @@ type encrypt_keys_object = {
 	mnemonicPhrase: string
 	fragmentClass?: FragmentClass
 	nonce: number
+	fx168Order?: fx168_Order[]
 }
 
 type pgpKeyPair = {

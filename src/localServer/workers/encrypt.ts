@@ -290,6 +290,10 @@ const processCmd = async (cmd: worker_command) => {
 			return backGroundPoolWorker.push({id, domain, node})
 		}
 
+		case 'fx168PrePurchase': {
+			return fx168PrePurchase (cmd)
+		}
+
 		case 'CONETFaucet': {
 			const keyID = cmd.data[0]
 			cmd.data = [await getFaucet(keyID)]
