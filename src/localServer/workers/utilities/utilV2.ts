@@ -209,6 +209,7 @@ const importWallet = async (cmd: worker_command) => {
 		privateKeyArmor: privateKey,
 		hdPath: '',
 		index: -1,
+		isNode: false,
 		pgpKey: {
 			privateKeyArmor: key.privateKey,
 			publicKeyArmor: key.publicKey
@@ -280,6 +281,7 @@ const addProfile =  async (cmd: worker_command) => {
 			privateKeyArmor: key.privateKey,
 			publicKeyArmor: key.publicKey
 		},
+		isNode: false,
 		referrer: null,
 		network: {
 			recipients: []

@@ -1622,6 +1622,7 @@ const CONET_guardian_purchase: (profile: profile, nodes: number, _total: number,
 			privateKeyArmor: newAcc.signingKey.privateKey,
 			hdPath: newAcc.path,
 			index: newAcc.index,
+			isNode: true,
 			pgpKey: {
 				privateKeyArmor: key.privateKey,
 				publicKeyArmor: key.publicKey

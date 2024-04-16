@@ -247,6 +247,7 @@ interface profile extends keyPair {
 	hdPath: string
 	index: number
 	tokens: conet_tokens
+	isNode: boolean
 	network: {
 		recipients: nodes_info[]
 	}
