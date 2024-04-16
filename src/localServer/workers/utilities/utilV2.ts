@@ -444,7 +444,10 @@ const testFunction = async (cmd: worker_command) => {
 	if (wallet?.privateKeyArmor) {
 		// cmd.data[5]
 		// fx168PrePurchase(cmd)
-		//const assetPrice = await getAPIPrice()
+		setTimeout(async () => {
+			const assetPrice = await getAPIPrice()
+		}, 15000)
+		const assetPrice = await getAPIPrice()
 		//logger(assetPrice)
 		//const uu = await getEstimateGas(wallet.privateKeyArmor, 'eth', '5')
 		// logger(uu)

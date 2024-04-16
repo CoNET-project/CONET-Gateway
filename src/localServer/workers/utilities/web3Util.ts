@@ -399,6 +399,7 @@ const checkUpdateAccount = () => {
 
 let assetPrice: assetsStructure[] = []
 const OracolTime = 5 * 60 * 1000
+
 const getAPIPrice: () => Promise<assetsStructure[]|boolean> = () => new Promise ( resolve => {
 	if (assetPrice.length) {
 		const time = new Date ().getTime()

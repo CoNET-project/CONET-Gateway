@@ -271,7 +271,11 @@ const processCmd = async (cmd: worker_command) => {
 				cmd.err = 'INVALID_DATA'
 				return returnUUIDChannel(cmd)
 			}
-
+			const cmd1: channelWroker = {
+				cmd: 'purchaseStatus',
+				data: [4]
+			}
+			sendState('toFrontEnd', cmd1)
 			return returnUUIDChannel(cmd)
 		}
 
