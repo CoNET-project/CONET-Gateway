@@ -222,6 +222,14 @@ interface conet_tokens {
 	dWETH: CryptoAsset
 	dUSDT: CryptoAsset
 
+	//	CONET Holesky Claimable
+	cUSDB: CryptoAsset
+	cBNBUSDT: CryptoAsset
+	cBlastETH: CryptoAsset
+	cBNB: CryptoAsset
+	cETH: CryptoAsset
+	cUSDT: CryptoAsset
+
 	//	blast mainchain
 	cntp:CryptoAsset
 	blastETH: CryptoAsset
@@ -236,6 +244,7 @@ interface conet_tokens {
 	wbnb: CryptoAsset
 	wusdt: CryptoAsset
 
+	
 	
 }
 

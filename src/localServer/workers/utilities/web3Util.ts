@@ -31,6 +31,8 @@ const registerReferrer = async (referrer: string) => {
 	return true
 }
 
+
+
 const getProfileAssetsBalance = async (profile: profile) => {
 
 	const key = profile.keyID
@@ -45,7 +47,9 @@ const getProfileAssetsBalance = async (profile: profile) => {
 		const provideBlastMainChain = new ethers.JsonRpcProvider(blast_mainnet)
 		const provideBNB = new ethers.JsonRpcProvider(bsc_mainchain)
 		// const walletETH = new ethers.Wallet(profile.privateKeyArmor, provideETH)
-		const [balanceCNTP, balanceCNTPB, balanceUSDT, ETH, blastETH, usdb, bnb, wbnb, wusdt, conet_Holesky, dWBNB, dUSDT, dWETH] = await Promise.all([
+		const [balanceCNTP, balanceCNTPB, balanceUSDT, ETH, blastETH, usdb, bnb, wbnb, wusdt, conet_Holesky, dWBNB, dUSDT, dWETH,
+			BNBUSDT, BlastUSDB, BlastETH, cBNB, cETH, ETHUSDT
+		] = await Promise.all([
 			scanCNTP (key, provideBlast),
 			scanCNTPB (key, provideCONET),
 			scanUSDT (key, provideETH),
@@ -58,29 +62,41 @@ const getProfileAssetsBalance = async (profile: profile) => {
 			scanCONETHolesky(key, provideCONET),
 			scanCONET_dWBNB(key, provideCONET),
 			scanCONET_dUSDT(key, provideCONET),
-			scanCONET_dWETH(key, provideCONET)
+			scanCONET_dWETH(key, provideCONET),
+
+			scanCONET_Claimable_BNBUSDT(key, provideCONET),
+			scanCONET_Claimable_BlastUSDB(key, provideCONET),
+			scanCONET_Claimable_BlastETH(key, provideCONET),
+			scanCONET_Claimable_BNB(key, provideCONET),
+			scanCONET_Claimable_ETH(key, provideCONET),
+			scanCONET_Claimable_ETHUSDT(key, provideCONET),
 		])
 		
 
-		current.cntp.balance = balanceCNTP === BigInt(0) ? '0' : parseFloat(ethers.formatEther(balanceCNTP)).toFixed(4)
-		current.cntpb.balance = balanceCNTPB === BigInt(0) ? '0' : parseFloat(ethers.formatEther(balanceCNTPB)).toFixed(4)
+		current.cntp.balance = balanceCNTP === BigInt(0) ? '0' : parseFloat(ethers.formatEther(balanceCNTP)).toFixed(6)
+		current.cntpb.balance = balanceCNTPB === BigInt(0) ? '0' : parseFloat(ethers.formatEther(balanceCNTPB)).toFixed(6)
 		current.usdt.balance = balanceUSDT === BigInt(0) ? '0' :
-		//	@ts-ignore
-		parseFloat(balanceUSDT/BigInt(10**6)).toFixed(4)
+															//	@ts-ignore
+															parseFloat(balanceUSDT/BigInt(10**6)).toFixed(4)
 
-		current.eth.balance = ETH === BigInt(0) ? '0' : parseFloat(ethers.formatEther(ETH)).toFixed(4)
-		current.blastETH.balance = blastETH === BigInt(0) ? '0' : parseFloat(ethers.formatEther(blastETH)).toFixed(4)
-		current.usdb.balance = usdb === BigInt(0) ? '0' : parseFloat(ethers.formatEther(usdb)).toFixed(4)
-		current.wbnb.balance = wbnb === BigInt(0) ? '0' : parseFloat(ethers.formatEther(wbnb)).toFixed(4)
-		current.bnb.balance = bnb === BigInt(0) ? '0' : parseFloat(ethers.formatEther(bnb)).toFixed(4)
-		current.wusdt.balance = wusdt === BigInt(0) ? '0' : parseFloat(ethers.formatEther(wusdt)).toFixed(4)
-		current.conet.balance = conet_Holesky === BigInt(0) ? '0' : parseFloat(ethers.formatEther(conet_Holesky)).toFixed(4)
+		current.eth.balance = ETH === BigInt(0) ? '0' : parseFloat(ethers.formatEther(ETH)).toFixed(6)
+		current.blastETH.balance = blastETH === BigInt(0) ? '0' : parseFloat(ethers.formatEther(blastETH)).toFixed(6)
+		current.usdb.balance = usdb === BigInt(0) ? '0' : parseFloat(ethers.formatEther(usdb)).toFixed(6)
+		current.wbnb.balance = wbnb === BigInt(0) ? '0' : parseFloat(ethers.formatEther(wbnb)).toFixed(6)
+		current.bnb.balance = bnb === BigInt(0) ? '0' : parseFloat(ethers.formatEther(bnb)).toFixed(6)
+		current.wusdt.balance = wusdt === BigInt(0) ? '0' : parseFloat(ethers.formatEther(wusdt)).toFixed(6)
+		current.conet.balance = conet_Holesky === BigInt(0) ? '0' : parseFloat(ethers.formatEther(conet_Holesky)).toFixed(6)
 
-		current.dWBNB.balance = dWBNB === BigInt(0) ? '0' :  parseFloat(ethers.formatEther(dWBNB)).toFixed(4)
-		current.dUSDT.balance = dUSDT === BigInt(0) ? '0' :  parseFloat(ethers.formatEther(dUSDT)).toFixed(4)
-		current.dWETH.balance = dWETH === BigInt(0) ? '0' :  parseFloat(ethers.formatEther(dWETH)).toFixed(4)
+		current.dWBNB.balance = dWBNB === BigInt(0) ? '0' :  parseFloat(ethers.formatEther(dWBNB)).toFixed(6)
+		current.dUSDT.balance = dUSDT === BigInt(0) ? '0' :  parseFloat(ethers.formatEther(dUSDT)).toFixed(6)
+		current.dWETH.balance = dWETH === BigInt(0) ? '0' :  parseFloat(ethers.formatEther(dWETH)).toFixed(6)
 
-
+		current.cBNBUSDT.balance = BNBUSDT === BigInt(0) ? '0' :  parseFloat(ethers.formatEther(BNBUSDT)).toFixed(6)
+		current.cUSDB.balance = BlastUSDB === BigInt(0) ? '0' :  parseFloat(ethers.formatEther(BlastUSDB)).toFixed(6)
+		current.cBlastETH.balance = BlastETH === BigInt(0) ? '0' :  parseFloat(ethers.formatEther(BlastETH)).toFixed(6)
+		current.cBNB.balance = cBNB === BigInt(0) ? '0' :  parseFloat(ethers.formatEther(cBNB)).toFixed(6)
+		current.cETH.balance = cETH === BigInt(0) ? '0' :  parseFloat(ethers.formatEther(cETH)).toFixed(6)
+		current.cUSDT.balance = ETHUSDT === BigInt(0) ? '0' :  parseFloat(ethers.formatEther(ETHUSDT)).toFixed(6)
 	}
 
 	return false
@@ -672,6 +688,54 @@ const updateChainVersion = async (storageVer: any) => {
 
 const initProfileTokens = () => {
 	const ret: conet_tokens = {
+		cBNBUSDT:{
+			balance: '0',
+			history: [],
+			network: 'CONET Holesky',
+			decimal: 18,
+			contract: Claimable_BNBUSDT,
+			name: 'cBNBUSDT'
+		},
+		cUSDB:{
+			balance: '0',
+			history: [],
+			network: 'CONET Holesky',
+			decimal: 18,
+			contract: Claimable_BlastUSDB,
+			name: 'cUSDB'
+		},
+		cBlastETH: {
+			balance: '0',
+			history: [],
+			network: 'CONET Holesky',
+			decimal: 18,
+			contract: Claimable_BlastETH,
+			name: 'cBlastETH'
+		},
+		cBNB : {
+			balance: '0',
+			history: [],
+			network: 'CONET Holesky',
+			decimal: 18,
+			contract: Claimable_BNB,
+			name: 'cBNB'
+		},
+		cUSDT :{
+			balance: '0',
+			history: [],
+			network: 'CONET Holesky',
+			decimal: 18,
+			contract: Claimable_ETHUSDT,
+			name: 'cUSDT'
+		},
+		cETH:{
+			balance: '0',
+			history: [],
+			network: 'CONET Holesky',
+			decimal: 18,
+			contract: Claimable_ETH,
+			name: 'cETH'
+		},
 		dWETH: {
 			balance: '0',
 			history: [],
@@ -908,7 +972,7 @@ const checkTokenStructure = (token: any) => {
 	} else {
 		token.wusdt.name = 'wusdt'
 	}
-		
+
 	
 	if (!token?.dWETH) {
 		token.dWETH = {
@@ -945,6 +1009,84 @@ const checkTokenStructure = (token: any) => {
 		}
 	} else {
 		token.dWBNB.name = 'dWBNB'
+	}
+
+	if (!token?.cUSDT) {
+		token.cUSDT = {
+			balance: '0',
+			history: [],
+			network: 'CONET Holesky',
+			decimal: 18,
+			contract: Claimable_ETHUSDT,
+			name: 'cUSDT'
+		}
+	} else {
+		token.cUSDT.name = 'cUSDT'
+	}
+
+	if (!token?.cETH) {
+		token.cETH = {
+			balance: '0',
+			history: [],
+			network: 'CONET Holesky',
+			decimal: 18,
+			contract: Claimable_ETH,
+			name: 'cETH'
+		}
+	} else {
+		token.cETH.name = 'cETH'
+	}
+
+	if (!token?.cBNB) {
+		token.cBNB = {
+			balance: '0',
+			history: [],
+			network: 'CONET Holesky',
+			decimal: 18,
+			contract: Claimable_BNB,
+			name: 'cBNB'
+		}
+	} else {
+		token.cBNB.name = 'cBNB'
+	}
+
+	if (!token?.cBlastETH) {
+		token.cBlastETH = {
+			balance: '0',
+			history: [],
+			network: 'CONET Holesky',
+			decimal: 18,
+			contract: Claimable_BlastETH,
+			name: 'cBlastETH'
+		}
+	} else {
+		token.cBlastETH.name = 'BlastETH'
+	}
+
+	if (!token?.cUSDB) {
+		token.cUSDB = {
+			balance: '0',
+			history: [],
+			network: 'CONET Holesky',
+			decimal: 18,
+			contract: Claimable_BlastUSDB,
+			name: 'cUSDB'
+		}
+	} else {
+		token.cUSDB.name = 'cUSDB'
+	}
+
+	if (!token?.cBNBUSDT) {
+		token.cBNBUSDT = {
+			balance: '0',
+			history: [],
+			network: 'CONET Holesky',
+			decimal: 18,
+			contract: Claimable_BNBUSDT,
+			name: 'cBNBUSDT'
+		}
+	} else {
+		token.cBNBUSDT.name = 'cBNBUSDT'
 	}
 }
 
@@ -1413,6 +1555,30 @@ const scan_natureBalance = async (provide: any, walletAddr: string) => {
 		}, 1000)
 	}
 	
+}
+
+const scanCONET_Claimable_BNBUSDT = async (walletAddr: string, privideCONET: any) => {
+	return await scan_erc20_balance(walletAddr, privideCONET, Claimable_BNBUSDT)
+}
+
+const scanCONET_Claimable_BlastUSDB = async (walletAddr: string, privideCONET: any) => {
+	return await scan_erc20_balance(walletAddr, privideCONET, Claimable_BlastUSDB)
+}
+
+const scanCONET_Claimable_BlastETH = async (walletAddr: string, privideCONET: any) => {
+	return await scan_erc20_balance(walletAddr, privideCONET, Claimable_BlastETH)
+}
+
+const scanCONET_Claimable_BNB = async (walletAddr: string, privideCONET: any) => {
+	return await scan_erc20_balance(walletAddr, privideCONET, Claimable_BNB)
+}
+
+const scanCONET_Claimable_ETH = async (walletAddr: string, privideCONET: any) => {
+	return await scan_erc20_balance(walletAddr, privideCONET, Claimable_ETH)
+}
+
+const scanCONET_Claimable_ETHUSDT = async (walletAddr: string, privideCONET: any) => {
+	return await scan_erc20_balance(walletAddr, privideCONET, Claimable_ETHUSDT)
 }
 
 const scan_erc20_balance = async (walletAddr: string, rpcProdive: any, erc20Address: string) => {

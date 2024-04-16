@@ -25,6 +25,13 @@ const conet_dWETH = '0x84b6d6A6675F830c8385f022Aefc9e3846A89D3B'
 const conet_dUSDT = '0x0eD55798a8b9647f7908c72a0Ce844ad47274422'
 const conet_dWBNB = '0xd8b094E91c552c623bc054085871F6c1CA3E5cAd'
 
+const Claimable_BNBUSDT = '0xC06D98B3185D3de0dF02b8a7AfD1fF9cB3c9399a'.toLowerCase()
+const Claimable_BlastUSDB = '0x53Aee1f4c9b0ff76781eFAC6e20eAe4561e29E8A'.toLowerCase()
+const Claimable_BlastETH = '0x47A10d4BBF904BCd550200CcBB6266fB88EB9804'.toLowerCase()
+const Claimable_BNB = '0x8E7B1D5f6DF4B0d7576B7430ECB1bEEE0b612382'.toLowerCase()
+const Claimable_ETH = '0x6Eb683B666310cC4E08f32896ad620E5F204c8f8'.toLowerCase()
+const Claimable_ETHUSDT = '0x7A44b74658E814115CD98e537B5402EEebd10eb3'.toLowerCase()
+
 const FragmentNameDeriveChildIndex = 65536
 
 let allNodes: node
@@ -444,10 +451,10 @@ const testFunction = async (cmd: worker_command) => {
 	if (wallet?.privateKeyArmor) {
 		// cmd.data[5]
 		// fx168PrePurchase(cmd)
-		setTimeout(async () => {
-			const assetPrice = await getAPIPrice()
-		}, 15000)
-		const assetPrice = await getAPIPrice()
+		// setTimeout(async () => {
+		// 	const assetPrice = await getAPIPrice()
+		// }, 15000)
+		// const assetPrice = await getAPIPrice()
 		//logger(assetPrice)
 		//const uu = await getEstimateGas(wallet.privateKeyArmor, 'eth', '5')
 		// logger(uu)
