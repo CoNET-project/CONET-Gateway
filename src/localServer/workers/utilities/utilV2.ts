@@ -27,10 +27,10 @@ const conet_dWBNB = '0xd8b094E91c552c623bc054085871F6c1CA3E5cAd'
 
 const Claimable_BNBUSDT = '0xC06D98B3185D3de0dF02b8a7AfD1fF9cB3c9399a'.toLowerCase()
 const Claimable_BlastUSDB = '0x53Aee1f4c9b0ff76781eFAC6e20eAe4561e29E8A'.toLowerCase()
-const Claimable_BlastETH = '0x47A10d4BBF904BCd550200CcBB6266fB88EB9804'.toLowerCase()
-const Claimable_BNB = '0x8E7B1D5f6DF4B0d7576B7430ECB1bEEE0b612382'.toLowerCase()
-const Claimable_ETH = '0x6Eb683B666310cC4E08f32896ad620E5F204c8f8'.toLowerCase()
-const Claimable_ETHUSDT = '0x7A44b74658E814115CD98e537B5402EEebd10eb3'.toLowerCase()
+//const Claimable_BlastETH = '0x47A10d4BBF904BCd550200CcBB6266fB88EB9804'.toLowerCase()
+// const Claimable_BNB = '0x8E7B1D5f6DF4B0d7576B7430ECB1bEEE0b612382'.toLowerCase()
+// const Claimable_ETH = '0x6Eb683B666310cC4E08f32896ad620E5F204c8f8'.toLowerCase()
+const Claimable_ETHUSDT = '0x95A9d14fC824e037B29F1Fdae8EE3D9369B13915'.toLowerCase()
 
 const FragmentNameDeriveChildIndex = 65536
 
@@ -113,7 +113,7 @@ const testPasscode = async (cmd: worker_command) => {
 	}
 
 	await getAllProfileAssetsBalance()
-
+	await getAllReferrer()
 	const mainProfile = CoNET_Data.profiles[0]
 
 	const gasBalance = parseFloat(mainProfile.tokens.conet.balance)
@@ -373,7 +373,7 @@ const prePurchase = async (cmd: worker_command) => {
 		return returnUUIDChannel(cmd)
 	}
 
-	const data: any = await getEstimateGas (profile.privateKeyArmor, payAssetName, amount)
+	const data: any = await getEstimateGas (profile.privateKeyArmor, payAssetName, amount, profile.keyID)
 
 	cmd.data = [data.gasPrice, data.fee, true, 5000]
 	return returnUUIDChannel(cmd)
@@ -456,7 +456,7 @@ const testFunction = async (cmd: worker_command) => {
 		// }, 15000)
 		// const assetPrice = await getAPIPrice()
 		//logger(assetPrice)
-		//const uu = await getEstimateGas(wallet.privateKeyArmor, 'eth', '5')
+		// const uu = await getEstimateGas(wallet.privateKeyArmor, 'usdt', '8', wallet.keyID)
 		// logger(uu)
 
 		//const kk = await transferAssetToCONET_guardian(wallet.privateKeyArmor, wallet.tokens.dUSDT, '10')

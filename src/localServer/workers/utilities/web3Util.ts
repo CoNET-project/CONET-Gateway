@@ -48,7 +48,7 @@ const getProfileAssetsBalance = async (profile: profile) => {
 		const provideBNB = new ethers.JsonRpcProvider(bsc_mainchain)
 		// const walletETH = new ethers.Wallet(profile.privateKeyArmor, provideETH)
 		const [balanceCNTP, balanceCNTPB, balanceUSDT, ETH, blastETH, usdb, bnb, wbnb, wusdt, conet_Holesky, dWBNB, dUSDT, dWETH,
-			BNBUSDT, BlastUSDB, BlastETH, cBNB, cETH, ETHUSDT
+			BNBUSDT, BlastUSDB, ETHUSDT
 		] = await Promise.all([
 			scanCNTP (key, provideBlast),
 			scanCNTPB (key, provideCONET),
@@ -66,9 +66,9 @@ const getProfileAssetsBalance = async (profile: profile) => {
 
 			scanCONET_Claimable_BNBUSDT(key, provideCONET),
 			scanCONET_Claimable_BlastUSDB(key, provideCONET),
-			scanCONET_Claimable_BlastETH(key, provideCONET),
-			scanCONET_Claimable_BNB(key, provideCONET),
-			scanCONET_Claimable_ETH(key, provideCONET),
+			// scanCONET_Claimable_BlastETH(key, provideCONET),
+			// scanCONET_Claimable_BNB(key, provideCONET),
+			// scanCONET_Claimable_ETH(key, provideCONET),
 			scanCONET_Claimable_ETHUSDT(key, provideCONET),
 		])
 		
@@ -93,9 +93,9 @@ const getProfileAssetsBalance = async (profile: profile) => {
 
 		current.cBNBUSDT.balance = BNBUSDT === BigInt(0) ? '0' :  parseFloat(ethers.formatEther(BNBUSDT)).toFixed(6)
 		current.cUSDB.balance = BlastUSDB === BigInt(0) ? '0' :  parseFloat(ethers.formatEther(BlastUSDB)).toFixed(6)
-		current.cBlastETH.balance = BlastETH === BigInt(0) ? '0' :  parseFloat(ethers.formatEther(BlastETH)).toFixed(6)
-		current.cBNB.balance = cBNB === BigInt(0) ? '0' :  parseFloat(ethers.formatEther(cBNB)).toFixed(6)
-		current.cETH.balance = cETH === BigInt(0) ? '0' :  parseFloat(ethers.formatEther(cETH)).toFixed(6)
+		// current.cBlastETH.balance = BlastETH === BigInt(0) ? '0' :  parseFloat(ethers.formatEther(BlastETH)).toFixed(6)
+		// current.cBNB.balance = cBNB === BigInt(0) ? '0' :  parseFloat(ethers.formatEther(cBNB)).toFixed(6)
+		// current.cETH.balance = cETH === BigInt(0) ? '0' :  parseFloat(ethers.formatEther(cETH)).toFixed(6)
 		current.cUSDT.balance = ETHUSDT === BigInt(0) ? '0' :  parseFloat(ethers.formatEther(ETHUSDT)).toFixed(6)
 	}
 
@@ -115,7 +115,7 @@ const listenProfileVer = () => {
 
 		const cmd: channelWroker = {
 			cmd: 'assets',
-			data: []
+			data: [block]
 		}
 		sendState('toFrontEnd', cmd)
 	})
@@ -211,6 +211,7 @@ const storagePieceToLocalAndIPFS = ( mnemonicPhrasePassword: string, fragment: s
 			)
 		], err=> {
 			if (err) {
+
 				return storagePieceToLocalAndIPFS (mnemonicPhrasePassword, fragment, index, totalFragment, targetFileLength, ver, privateArmor, keyID)
 			}
 			
@@ -635,7 +636,7 @@ const encryptPasswordIssue = (ver: number, passcode: string, part: number) => {
 
 const updateFragmentsToIPFS = async (encryptData: string, hash: string, keyID: string, privateKeyArmor: string) => {
 
-		
+
 	const url = `${ api_endpoint }storageFragments`
 	
 	const message =JSON.stringify({ walletAddress: keyID, data: encryptData, hash})
@@ -704,22 +705,22 @@ const initProfileTokens = () => {
 			contract: Claimable_BlastUSDB,
 			name: 'cUSDB'
 		},
-		cBlastETH: {
-			balance: '0',
-			history: [],
-			network: 'CONET Holesky',
-			decimal: 18,
-			contract: Claimable_BlastETH,
-			name: 'cBlastETH'
-		},
-		cBNB : {
-			balance: '0',
-			history: [],
-			network: 'CONET Holesky',
-			decimal: 18,
-			contract: Claimable_BNB,
-			name: 'cBNB'
-		},
+		// cBlastETH: {
+		// 	balance: '0',
+		// 	history: [],
+		// 	network: 'CONET Holesky',
+		// 	decimal: 18,
+		// 	contract: Claimable_BlastETH,
+		// 	name: 'cBlastETH'
+		// },
+		// cBNB : {
+		// 	balance: '0',
+		// 	history: [],
+		// 	network: 'CONET Holesky',
+		// 	decimal: 18,
+		// 	contract: Claimable_BNB,
+		// 	name: 'cBNB'
+		// },
 		cUSDT :{
 			balance: '0',
 			history: [],
@@ -728,14 +729,14 @@ const initProfileTokens = () => {
 			contract: Claimable_ETHUSDT,
 			name: 'cUSDT'
 		},
-		cETH:{
-			balance: '0',
-			history: [],
-			network: 'CONET Holesky',
-			decimal: 18,
-			contract: Claimable_ETH,
-			name: 'cETH'
-		},
+		// cETH:{
+		// 	balance: '0',
+		// 	history: [],
+		// 	network: 'CONET Holesky',
+		// 	decimal: 18,
+		// 	contract: Claimable_ETH,
+		// 	name: 'cETH'
+		// },
 		dWETH: {
 			balance: '0',
 			history: [],
@@ -1024,44 +1025,44 @@ const checkTokenStructure = (token: any) => {
 		token.cUSDT.name = 'cUSDT'
 	}
 
-	if (!token?.cETH) {
-		token.cETH = {
-			balance: '0',
-			history: [],
-			network: 'CONET Holesky',
-			decimal: 18,
-			contract: Claimable_ETH,
-			name: 'cETH'
-		}
-	} else {
-		token.cETH.name = 'cETH'
-	}
+	// if (!token?.cETH) {
+	// 	token.cETH = {
+	// 		balance: '0',
+	// 		history: [],
+	// 		network: 'CONET Holesky',
+	// 		decimal: 18,
+	// 		contract: Claimable_ETH,
+	// 		name: 'cETH'
+	// 	}
+	// } else {
+	// 	token.cETH.name = 'cETH'
+	// }
 
-	if (!token?.cBNB) {
-		token.cBNB = {
-			balance: '0',
-			history: [],
-			network: 'CONET Holesky',
-			decimal: 18,
-			contract: Claimable_BNB,
-			name: 'cBNB'
-		}
-	} else {
-		token.cBNB.name = 'cBNB'
-	}
+	// if (!token?.cBNB) {
+	// 	token.cBNB = {
+	// 		balance: '0',
+	// 		history: [],
+	// 		network: 'CONET Holesky',
+	// 		decimal: 18,
+	// 		contract: Claimable_BNB,
+	// 		name: 'cBNB'
+	// 	}
+	// } else {
+	// 	token.cBNB.name = 'cBNB'
+	// }
 
-	if (!token?.cBlastETH) {
-		token.cBlastETH = {
-			balance: '0',
-			history: [],
-			network: 'CONET Holesky',
-			decimal: 18,
-			contract: Claimable_BlastETH,
-			name: 'cBlastETH'
-		}
-	} else {
-		token.cBlastETH.name = 'BlastETH'
-	}
+	// if (!token?.cBlastETH) {
+	// 	token.cBlastETH = {
+	// 		balance: '0',
+	// 		history: [],
+	// 		network: 'CONET Holesky',
+	// 		decimal: 18,
+	// 		contract: Claimable_BlastETH,
+	// 		name: 'cBlastETH'
+	// 	}
+	// } else {
+	// 	token.cBlastETH.name = 'BlastETH'
+	// }
 
 	if (!token?.cUSDB) {
 		token.cUSDB = {
@@ -1346,6 +1347,20 @@ const getReferees = async (wallet: string, CNTP_Referrals) => {
 	return result
 }
 
+const getReferee = async (wallet: string, CNTP_Referrals) => {
+	
+
+	let result: string[] = []
+	try {
+		result = await CNTP_Referrals.getReferrer(wallet)
+	} catch (ex) {
+		logger(`getReferees [${wallet}] Error! try again!`)
+		return await getReferees (wallet, CNTP_Referrals)
+	}
+	return result
+}
+
+
 const getAllReferees = async (_wallet: string, CNTP_Referrals) => {
 
 	const firstArray: string[] = await getReferees(_wallet, CNTP_Referrals)
@@ -1449,6 +1464,7 @@ const scanCONET_dWBNB = async (walletAddr: string, privideCONET: any) => {
 }
 
 const updateProfilesVersion = async () => {
+	sendState('beforeunload', true)
 	if (!CoNET_Data?.profiles || !passObj) {
 		return logger(`updateProfilesVersion !CoNET_Data[${!CoNET_Data}] || !passObj[${!passObj}] === true Error! Stop process.`)
 	}
@@ -1565,17 +1581,17 @@ const scanCONET_Claimable_BlastUSDB = async (walletAddr: string, privideCONET: a
 	return await scan_erc20_balance(walletAddr, privideCONET, Claimable_BlastUSDB)
 }
 
-const scanCONET_Claimable_BlastETH = async (walletAddr: string, privideCONET: any) => {
-	return await scan_erc20_balance(walletAddr, privideCONET, Claimable_BlastETH)
-}
+// const scanCONET_Claimable_BlastETH = async (walletAddr: string, privideCONET: any) => {
+// 	return await scan_erc20_balance(walletAddr, privideCONET, Claimable_BlastETH)
+// }
 
-const scanCONET_Claimable_BNB = async (walletAddr: string, privideCONET: any) => {
-	return await scan_erc20_balance(walletAddr, privideCONET, Claimable_BNB)
-}
+// const scanCONET_Claimable_BNB = async (walletAddr: string, privideCONET: any) => {
+// 	return await scan_erc20_balance(walletAddr, privideCONET, Claimable_BNB)
+// }
 
-const scanCONET_Claimable_ETH = async (walletAddr: string, privideCONET: any) => {
-	return await scan_erc20_balance(walletAddr, privideCONET, Claimable_ETH)
-}
+// const scanCONET_Claimable_ETH = async (walletAddr: string, privideCONET: any) => {
+// 	return await scan_erc20_balance(walletAddr, privideCONET, Claimable_ETH)
+// }
 
 const scanCONET_Claimable_ETHUSDT = async (walletAddr: string, privideCONET: any) => {
 	return await scan_erc20_balance(walletAddr, privideCONET, Claimable_ETHUSDT)
@@ -1677,18 +1693,30 @@ const CONET_guardian_Address = (networkName: string) => {
 	}
 }
 
-const getEstimateGas = (privateKey: string, asset: string, _transferNumber: string) => new Promise(async resolve=> {
+const parseEther = (ether: string, tokenName: string ) => {
+	switch (tokenName) {
+		case 'usdt': {
+			return ethers.parseUnits(ether, 6)
+		}
+		default: {
+			return ethers.parseEther(ether)
+		}
+	}
+}
+
+const getEstimateGas = (privateKey: string, asset: string, _transferNumber: string, keyAddr: string) => new Promise(async resolve=> {
 
 	const provide = new ethers.JsonRpcProvider(getNetwork(asset))
 	const wallet = new ethers.Wallet(privateKey, provide)
 	const toAddr = CONET_guardian_Address(asset)
-	let _fee
-	const transferNumber = ethers.parseEther(_transferNumber)
+	let _fee, _fee1
+	const transferNumber = parseEther(_transferNumber, asset)
 	const smartContractAddr = getAssetERC20Address(asset)
 	if (smartContractAddr) {
 		const estGas = new ethers.Contract(smartContractAddr, blast_CNTPAbi, wallet)
 		try {
-			_fee = await estGas.transfer.estimateGas(toAddr, transferNumber)
+			_fee = await estGas.approve.estimateGas(toAddr, transferNumber)
+			//_fee = await estGas.safetransferFrom(keyAddr, toAddr, transferNumber)
 		} catch (ex) {
 			return resolve (false)
 		}
@@ -1718,12 +1746,13 @@ const getEstimateGas = (privateKey: string, asset: string, _transferNumber: stri
 	
 })
 
+
 const CONET_guardian_purchase: (profile: profile, nodes: number, _total: number, tokenName: string) => Promise<boolean> = async (profile, nodes, _total, tokenName ) => {
 	const cryptoAsset: CryptoAsset = profile.tokens[tokenName]
 
 	const total = await getAmountOfNodes(nodes, tokenName)
 
-	if (_total - total > total * 0.01||!cryptoAsset||!CoNET_Data?.profiles) {
+	if (_total - total > total * 0.01 || !cryptoAsset|| !CoNET_Data?.profiles ) {
 		const cmd1: channelWroker = {
 			cmd: 'purchaseStatus',
 			data: [-1]
@@ -1731,6 +1760,7 @@ const CONET_guardian_purchase: (profile: profile, nodes: number, _total: number,
 		sendState('toFrontEnd', cmd1)
 		return false
 	}
+	setInterval
 	if (parseFloat(cryptoAsset.balance) - _total < 0 || !profile.privateKeyArmor) {
 		const cmd1: channelWroker = {
 			cmd: 'purchaseStatus',
@@ -1746,7 +1776,7 @@ const CONET_guardian_purchase: (profile: profile, nodes: number, _total: number,
 
 	sendState('toFrontEnd', cmd1)
 
-	const tx = await transferAssetToCONET_guardian (profile.privateKeyArmor, cryptoAsset, _total.toString())
+	const tx = await transferAssetToCONET_guardian (profile.privateKeyArmor, cryptoAsset, _total.toString(), profile.keyID)
 	if (typeof tx === 'boolean') {
 		const cmd1: channelWroker = {
 			cmd: 'purchaseStatus',
@@ -1771,7 +1801,7 @@ const CONET_guardian_purchase: (profile: profile, nodes: number, _total: number,
 		transactionFee: stringFix(ethers.formatEther(tx.maxFeePerGas * tx.gasLimit)),
 		gasUsed: tx.maxFeePerGas.toString(),
 		isSend: true,
-		value: _total,
+		value: parseEther(_total.toString(), cryptoAsset.name).toString(),
 		time: new Date().toISOString(),
 		transactionHash: tx.hash
 	}
@@ -1816,7 +1846,7 @@ const CONET_guardian_purchase: (profile: profile, nodes: number, _total: number,
 		nodes: nodes,
 		tokenName,
 		network: cryptoAsset.network,
-		amount: ethers.parseEther(_total.toString()).toString()
+		amount: parseEther(_total.toString(),cryptoAsset.name ).toString()
 	}
 
 	const message =JSON.stringify({ walletAddress: profile.keyID, data})
@@ -1854,7 +1884,7 @@ const stringFix = (num: string) => {
 	return num.substring(0, index+12)
 }
 
-const transferAssetToCONET_guardian: (privateKey: string, token: CryptoAsset, transferNumber: string) => Promise<boolean|transferTx> = (privateKey: string, token: CryptoAsset, transferNumber: string) => new Promise(async resolve=> {
+const transferAssetToCONET_guardian: (privateKey: string, token: CryptoAsset, transferNumber: string, keyID: string) => Promise<boolean|transferTx> = (privateKey, token, transferNumber, keyID) => new Promise(async resolve=> {
 	const provide = new ethers.JsonRpcProvider(getNetwork(token.name))
 	const wallet = new ethers.Wallet(privateKey, provide)
 	const toAddr = CONET_guardian_Address(token.name)
@@ -1862,8 +1892,11 @@ const transferAssetToCONET_guardian: (privateKey: string, token: CryptoAsset, tr
 	const smartContractAddr = getAssetERC20Address(token.name)
 	if (smartContractAddr) {
 		const transferObj = new ethers.Contract(smartContractAddr, blast_CNTPAbi, wallet)
+		const amount = parseEther(transferNumber, token.name)
 		try {
-			return resolve(await transferObj.transfer(toAddr, ethers.parseEther(transferNumber)))
+			// const k1 = await transferObj.approve(toAddr, amount)
+			const k2 = (await transferObj.transfer(toAddr, amount))
+			resolve(k2)
 		} catch (ex) {
 			return resolve (false)
 		}
@@ -1899,6 +1932,32 @@ const getProfileByWallet = (wallet: string) => {
 declare const ethers
 declare const uuid
 declare const Jimp
+
+const getAllReferrer = async () => {
+	if (!CoNET_Data?.profiles) {
+		return false
+	}
+
+	const provideNewCONET = new ethers.JsonRpcProvider(conet_rpc)
+	const CNTP_Referrals = new ethers.Contract(ReferralsAddressV2, CONET_ReferralsAbi, provideNewCONET)
+	for (let i of CoNET_Data?.profiles) {
+		const kk = await getReferrer(i.keyID, CNTP_Referrals)
+		if (!kk) {
+			continue
+		}
+		i.referrer = kk
+	}
+}
+const getReferrer = async (wallet: string, CNTP_Referrals) => {
+	let result: string 
+	try {
+		result = await CNTP_Referrals.getReferrer(wallet)
+	} catch (ex) {
+		logger(`getReferees [${wallet}] Error! try again!`)
+		return null
+	}
+	return result
+}
 
 const CONET_ReferralsAbi = [
     {
@@ -2050,339 +2109,7 @@ const conet_storageAbi = [
     }
 ]
 
-const blast_CNTPAbi = [
-    {
-        "inputs": [],
-        "stateMutability": "nonpayable",
-        "type": "constructor"
-    },
-    {
-        "inputs": [
-            {
-                "internalType": "address",
-                "name": "spender",
-                "type": "address"
-            },
-            {
-                "internalType": "uint256",
-                "name": "allowance",
-                "type": "uint256"
-            },
-            {
-                "internalType": "uint256",
-                "name": "needed",
-                "type": "uint256"
-            }
-        ],
-        "name": "ERC20InsufficientAllowance",
-        "type": "error"
-    },
-    {
-        "inputs": [
-            {
-                "internalType": "address",
-                "name": "sender",
-                "type": "address"
-            },
-            {
-                "internalType": "uint256",
-                "name": "balance",
-                "type": "uint256"
-            },
-            {
-                "internalType": "uint256",
-                "name": "needed",
-                "type": "uint256"
-            }
-        ],
-        "name": "ERC20InsufficientBalance",
-        "type": "error"
-    },
-    {
-        "inputs": [
-            {
-                "internalType": "address",
-                "name": "approver",
-                "type": "address"
-            }
-        ],
-        "name": "ERC20InvalidApprover",
-        "type": "error"
-    },
-    {
-        "inputs": [
-            {
-                "internalType": "address",
-                "name": "receiver",
-                "type": "address"
-            }
-        ],
-        "name": "ERC20InvalidReceiver",
-        "type": "error"
-    },
-    {
-        "inputs": [
-            {
-                "internalType": "address",
-                "name": "sender",
-                "type": "address"
-            }
-        ],
-        "name": "ERC20InvalidSender",
-        "type": "error"
-    },
-    {
-        "inputs": [
-            {
-                "internalType": "address",
-                "name": "spender",
-                "type": "address"
-            }
-        ],
-        "name": "ERC20InvalidSpender",
-        "type": "error"
-    },
-    {
-        "anonymous": false,
-        "inputs": [
-            {
-                "indexed": true,
-                "internalType": "address",
-                "name": "owner",
-                "type": "address"
-            },
-            {
-                "indexed": true,
-                "internalType": "address",
-                "name": "spender",
-                "type": "address"
-            },
-            {
-                "indexed": false,
-                "internalType": "uint256",
-                "name": "value",
-                "type": "uint256"
-            }
-        ],
-        "name": "Approval",
-        "type": "event"
-    },
-    {
-        "anonymous": false,
-        "inputs": [
-            {
-                "indexed": true,
-                "internalType": "address",
-                "name": "from",
-                "type": "address"
-            },
-            {
-                "indexed": true,
-                "internalType": "address",
-                "name": "to",
-                "type": "address"
-            },
-            {
-                "indexed": false,
-                "internalType": "uint256",
-                "name": "value",
-                "type": "uint256"
-            }
-        ],
-        "name": "Transfer",
-        "type": "event"
-    },
-    {
-        "inputs": [
-            {
-                "internalType": "address",
-                "name": "owner",
-                "type": "address"
-            },
-            {
-                "internalType": "address",
-                "name": "spender",
-                "type": "address"
-            }
-        ],
-        "name": "allowance",
-        "outputs": [
-            {
-                "internalType": "uint256",
-                "name": "",
-                "type": "uint256"
-            }
-        ],
-        "stateMutability": "view",
-        "type": "function"
-    },
-    {
-        "inputs": [
-            {
-                "internalType": "address",
-                "name": "spender",
-                "type": "address"
-            },
-            {
-                "internalType": "uint256",
-                "name": "value",
-                "type": "uint256"
-            }
-        ],
-        "name": "approve",
-        "outputs": [
-            {
-                "internalType": "bool",
-                "name": "",
-                "type": "bool"
-            }
-        ],
-        "stateMutability": "nonpayable",
-        "type": "function"
-    },
-    {
-        "inputs": [
-            {
-                "internalType": "address",
-                "name": "account",
-                "type": "address"
-            }
-        ],
-        "name": "balanceOf",
-        "outputs": [
-            {
-                "internalType": "uint256",
-                "name": "",
-                "type": "uint256"
-            }
-        ],
-        "stateMutability": "view",
-        "type": "function"
-    },
-    {
-        "inputs": [],
-        "name": "decimals",
-        "outputs": [
-            {
-                "internalType": "uint8",
-                "name": "",
-                "type": "uint8"
-            }
-        ],
-        "stateMutability": "view",
-        "type": "function"
-    },
-    {
-        "inputs": [
-            {
-                "internalType": "address[]",
-                "name": "_addresses",
-                "type": "address[]"
-            },
-            {
-                "internalType": "uint256[]",
-                "name": "_amounts",
-                "type": "uint256[]"
-            }
-        ],
-        "name": "multiTransferToken",
-        "outputs": [],
-        "stateMutability": "nonpayable",
-        "type": "function"
-    },
-    {
-        "inputs": [],
-        "name": "name",
-        "outputs": [
-            {
-                "internalType": "string",
-                "name": "",
-                "type": "string"
-            }
-        ],
-        "stateMutability": "view",
-        "type": "function"
-    },
-    {
-        "inputs": [],
-        "name": "symbol",
-        "outputs": [
-            {
-                "internalType": "string",
-                "name": "",
-                "type": "string"
-            }
-        ],
-        "stateMutability": "view",
-        "type": "function"
-    },
-    {
-        "inputs": [],
-        "name": "totalSupply",
-        "outputs": [
-            {
-                "internalType": "uint256",
-                "name": "",
-                "type": "uint256"
-            }
-        ],
-        "stateMutability": "view",
-        "type": "function"
-    },
-    {
-        "inputs": [
-            {
-                "internalType": "address",
-                "name": "to",
-                "type": "address"
-            },
-            {
-                "internalType": "uint256",
-                "name": "value",
-                "type": "uint256"
-            }
-        ],
-        "name": "transfer",
-        "outputs": [
-            {
-                "internalType": "bool",
-                "name": "",
-                "type": "bool"
-            }
-        ],
-        "stateMutability": "nonpayable",
-        "type": "function"
-    },
-    {
-        "inputs": [
-            {
-                "internalType": "address",
-                "name": "from",
-                "type": "address"
-            },
-            {
-                "internalType": "address",
-                "name": "to",
-                "type": "address"
-            },
-            {
-                "internalType": "uint256",
-                "name": "value",
-                "type": "uint256"
-            }
-        ],
-        "name": "transferFrom",
-        "outputs": [
-            {
-                "internalType": "bool",
-                "name": "",
-                "type": "bool"
-            }
-        ],
-        "stateMutability": "nonpayable",
-        "type": "function"
-    }
-]
+const blast_CNTPAbi = [{"inputs":[],"payable":false,"stateMutability":"nonpayable","type":"constructor"},{"anonymous":false,"inputs":[{"indexed":true,"internalType":"address","name":"owner","type":"address"},{"indexed":true,"internalType":"address","name":"spender","type":"address"},{"indexed":false,"internalType":"uint256","name":"value","type":"uint256"}],"name":"Approval","type":"event"},{"anonymous":false,"inputs":[{"indexed":true,"internalType":"address","name":"previousOwner","type":"address"},{"indexed":true,"internalType":"address","name":"newOwner","type":"address"}],"name":"OwnershipTransferred","type":"event"},{"anonymous":false,"inputs":[{"indexed":true,"internalType":"address","name":"from","type":"address"},{"indexed":true,"internalType":"address","name":"to","type":"address"},{"indexed":false,"internalType":"uint256","name":"value","type":"uint256"}],"name":"Transfer","type":"event"},{"constant":true,"inputs":[],"name":"_decimals","outputs":[{"internalType":"uint8","name":"","type":"uint8"}],"payable":false,"stateMutability":"view","type":"function"},{"constant":true,"inputs":[],"name":"_name","outputs":[{"internalType":"string","name":"","type":"string"}],"payable":false,"stateMutability":"view","type":"function"},{"constant":true,"inputs":[],"name":"_symbol","outputs":[{"internalType":"string","name":"","type":"string"}],"payable":false,"stateMutability":"view","type":"function"},{"constant":true,"inputs":[{"internalType":"address","name":"owner","type":"address"},{"internalType":"address","name":"spender","type":"address"}],"name":"allowance","outputs":[{"internalType":"uint256","name":"","type":"uint256"}],"payable":false,"stateMutability":"view","type":"function"},{"constant":false,"inputs":[{"internalType":"address","name":"spender","type":"address"},{"internalType":"uint256","name":"amount","type":"uint256"}],"name":"approve","outputs":[{"internalType":"bool","name":"","type":"bool"}],"payable":false,"stateMutability":"nonpayable","type":"function"},{"constant":true,"inputs":[{"internalType":"address","name":"account","type":"address"}],"name":"balanceOf","outputs":[{"internalType":"uint256","name":"","type":"uint256"}],"payable":false,"stateMutability":"view","type":"function"},{"constant":false,"inputs":[{"internalType":"uint256","name":"amount","type":"uint256"}],"name":"burn","outputs":[{"internalType":"bool","name":"","type":"bool"}],"payable":false,"stateMutability":"nonpayable","type":"function"},{"constant":true,"inputs":[],"name":"decimals","outputs":[{"internalType":"uint8","name":"","type":"uint8"}],"payable":false,"stateMutability":"view","type":"function"},{"constant":false,"inputs":[{"internalType":"address","name":"spender","type":"address"},{"internalType":"uint256","name":"subtractedValue","type":"uint256"}],"name":"decreaseAllowance","outputs":[{"internalType":"bool","name":"","type":"bool"}],"payable":false,"stateMutability":"nonpayable","type":"function"},{"constant":true,"inputs":[],"name":"getOwner","outputs":[{"internalType":"address","name":"","type":"address"}],"payable":false,"stateMutability":"view","type":"function"},{"constant":false,"inputs":[{"internalType":"address","name":"spender","type":"address"},{"internalType":"uint256","name":"addedValue","type":"uint256"}],"name":"increaseAllowance","outputs":[{"internalType":"bool","name":"","type":"bool"}],"payable":false,"stateMutability":"nonpayable","type":"function"},{"constant":false,"inputs":[{"internalType":"uint256","name":"amount","type":"uint256"}],"name":"mint","outputs":[{"internalType":"bool","name":"","type":"bool"}],"payable":false,"stateMutability":"nonpayable","type":"function"},{"constant":true,"inputs":[],"name":"name","outputs":[{"internalType":"string","name":"","type":"string"}],"payable":false,"stateMutability":"view","type":"function"},{"constant":true,"inputs":[],"name":"owner","outputs":[{"internalType":"address","name":"","type":"address"}],"payable":false,"stateMutability":"view","type":"function"},{"constant":false,"inputs":[],"name":"renounceOwnership","outputs":[],"payable":false,"stateMutability":"nonpayable","type":"function"},{"constant":true,"inputs":[],"name":"symbol","outputs":[{"internalType":"string","name":"","type":"string"}],"payable":false,"stateMutability":"view","type":"function"},{"constant":true,"inputs":[],"name":"totalSupply","outputs":[{"internalType":"uint256","name":"","type":"uint256"}],"payable":false,"stateMutability":"view","type":"function"},{"constant":false,"inputs":[{"internalType":"address","name":"recipient","type":"address"},{"internalType":"uint256","name":"amount","type":"uint256"}],"name":"transfer","outputs":[{"internalType":"bool","name":"","type":"bool"}],"payable":false,"stateMutability":"nonpayable","type":"function"},{"constant":false,"inputs":[{"internalType":"address","name":"sender","type":"address"},{"internalType":"address","name":"recipient","type":"address"},{"internalType":"uint256","name":"amount","type":"uint256"}],"name":"transferFrom","outputs":[{"internalType":"bool","name":"","type":"bool"}],"payable":false,"stateMutability":"nonpayable","type":"function"},{"constant":false,"inputs":[{"internalType":"address","name":"newOwner","type":"address"}],"name":"transferOwnership","outputs":[],"payable":false,"stateMutability":"nonpayable","type":"function"}]
 
 const blast_usdbAbi = [
 	{

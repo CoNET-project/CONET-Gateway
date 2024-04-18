@@ -225,9 +225,9 @@ interface conet_tokens {
 	//	CONET Holesky Claimable
 	cUSDB: CryptoAsset
 	cBNBUSDT: CryptoAsset
-	cBlastETH: CryptoAsset
-	cBNB: CryptoAsset
-	cETH: CryptoAsset
+	// cBlastETH: CryptoAsset
+	// cBNB: CryptoAsset
+	// cETH: CryptoAsset
 	cUSDT: CryptoAsset
 
 	//	blast mainchain
