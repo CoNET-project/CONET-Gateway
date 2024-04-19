@@ -1942,7 +1942,7 @@ const getAllReferrer = async () => {
 	const CNTP_Referrals = new ethers.Contract(ReferralsAddressV2, CONET_ReferralsAbi, provideNewCONET)
 	for (let i of CoNET_Data?.profiles) {
 		const kk = await getReferrer(i.keyID, CNTP_Referrals)
-		if (!kk) {
+		if (!kk||kk === '0x0000000000000000000000000000000000000000') {
 			continue
 		}
 		i.referrer = kk
