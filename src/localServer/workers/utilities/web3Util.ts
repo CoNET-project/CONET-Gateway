@@ -1943,6 +1943,7 @@ const getAllReferrer = async () => {
 	for (let i of CoNET_Data?.profiles) {
 		const kk = await getReferrer(i.keyID, CNTP_Referrals)
 		if (!kk||kk === '0x0000000000000000000000000000000000000000') {
+			delete i.referrer
 			continue
 		}
 		i.referrer = kk
