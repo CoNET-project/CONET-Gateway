@@ -848,7 +848,7 @@ const generateAesKey = async (length = 256) => {
 }
 
 
-const postToEndpointSSE = ( url: string, post: boolean, jsonData, CallBack:(err: string, data: string) => void) => {
+const postToEndpointSSE = ( url: string, post: boolean, jsonData, CallBack:(err: WorkerCommandError|null, data: string) => void) => {
 
 		const xhr = new XMLHttpRequest()
 		
@@ -858,10 +858,10 @@ const postToEndpointSSE = ( url: string, post: boolean, jsonData, CallBack:(err:
 			logger (`postToEndpointSSE xhr.onprogress!  ${xhr.readyState} xhr.status [${xhr.status}]`)
 		
 			if (xhr.status ===401) {
-				return CallBack('SAMEIP','')
+				return CallBack('Err_Multiple_IP','')
 			}
 			if (xhr.status ===402) {
-				return CallBack('sameInstance','')
+				return CallBack('Err_Existed','')
 			}
 			if (xhr.status !==200) {
 				return CallBack('FAILURE','')
@@ -870,7 +870,7 @@ const postToEndpointSSE = ( url: string, post: boolean, jsonData, CallBack:(err:
 			const currentData = data.substring(chunk)
 			const responseText = data.split('\r\n\r\n')
 			chunk = data.length
-			CallBack ('', currentData)
+			CallBack (null, currentData)
 		}
 
 		xhr.upload.onabort = () => {
@@ -879,7 +879,7 @@ const postToEndpointSSE = ( url: string, post: boolean, jsonData, CallBack:(err:
 		
 		xhr.upload.onerror=(err)=> {
 			clearTimeout (timeCount)
-			CallBack('NOINTERNET', '')
+			CallBack('NOT_INTERNET', '')
 			logger(`xhr.upload.onerror`, err)
 		}
 

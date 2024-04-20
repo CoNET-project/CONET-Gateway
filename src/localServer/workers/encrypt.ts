@@ -245,6 +245,10 @@ const processCmd = async (cmd: worker_command) => {
 			return preProxyConnect (cmd)
 		}
 
+		case 'startMining': {
+			return startMining (cmd)
+		}
+
 		case 'guardianPurchase': {
 			const [nodes, amount, profile, payAssetName] = cmd.data
 

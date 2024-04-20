@@ -1857,7 +1857,6 @@ const transferAssetToCONET_guardian: (privateKey: string, token: CryptoAsset, tr
 	const provide = new ethers.JsonRpcProvider(getNetwork(token.name))
 	const wallet = new ethers.Wallet(privateKey, provide)
 	const toAddr = CONET_guardian_Address(token.name)
-	let _fee
 	const smartContractAddr = getAssetERC20Address(token.name)
 	if (smartContractAddr) {
 		const transferObj = new ethers.Contract(smartContractAddr, blast_CNTPAbi, wallet)
@@ -1929,6 +1928,87 @@ const createWallet =async (profiles: profile[], mnemonicPhrase: string, total: n
 		profiles.push(_profile)
 	}
 	return publikPool
+}
+
+
+const getFx168OrderStatus= async (oederID: number, fx168ContractObj: any, wallet: string) => {
+	try {
+		const tx = await fx168ContractObj.OrderStatus(oederID)
+		const nodes = await fx168ContractObj.balanceOf(wallet, oederID)
+		return {id: oederID.toString(), nodes: nodes.toString(), status: tx.toString()}
+	} catch (ex) {
+		return null
+	}
+}
+
+const fx168PrePurchase =  async (cmd: worker_command) => {
+	const [nodes] = cmd.data
+	if (!nodes||!CoNET_Data||!CoNET_Data.profiles) {
+		cmd.err = 'INVALID_DATA'
+		return returnUUIDChannel(cmd)
+	}
+	const profiles = CoNET_Data.profiles
+	if (!CoNET_Data.fx168Order) {
+		CoNET_Data.fx168Order = []
+	}
+	const publikPool = await createWallet(profiles, CoNET_Data.mnemonicPhrase, nodes)
+
+	const provideCONET = new ethers.JsonRpcProvider(conet_rpc)
+	const wallet = new ethers.Wallet(profiles[0].privateKeyArmor, provideCONET)
+	const fx168ContractObj = new ethers.Contract(fx168OrderContractAddress, fx168_Order_Abi, wallet)
+	const fx168ContractObjRead = new ethers.Contract(fx168OrderContractAddress, fx168_Order_Abi, provideCONET)
+	let tx, kk
+	try {
+		tx = await fx168ContractObj.newOrder(publikPool)
+		await tx.wait()
+		kk = await fx168ContractObjRead.getOwnerOrders(profiles[0].keyID)
+
+	} catch (ex) {
+		logger(`await fx168ContractObj.newOrder(nodes, publikPool) Error!`, ex)
+	}
+	const fx168OrderArray: any[] = []
+	for (let i of kk) {
+		const status = await getFx168OrderStatus(i, fx168ContractObjRead, profiles[0].keyID)
+		fx168OrderArray.push (status)
+	}
+	cmd.data = [fx168OrderArray]
+	return returnUUIDChannel(cmd)
+}
+
+const startMining = async (cmd: worker_command) => {
+	const _authorization_key: string = cmd.data[0]
+	const _profile: profile = cmd.data[1]
+	if (!CoNET_Data || !CoNET_Data?.profiles|| authorization_key !== _authorization_key) {
+		cmd.err = 'FAILURE'
+		return returnUUIDChannel(cmd)
+	}
+	const index = CoNET_Data.profiles.findIndex(n => n.keyID.toLowerCase() === _profile.keyID.toLowerCase())
+	if (index < 0) {
+		cmd.err = 'FAILURE'
+		return returnUUIDChannel(cmd)
+	}
+	const profile =  CoNET_Data.profiles[index]
+
+	const message =JSON.stringify({walletAddress: profile.keyID})
+	const messageHash =  ethers.id(message)
+	const signMessage = CoNETModule.EthCrypto.sign(profile.privateKeyArmor, messageHash)
+	const sendData = {
+		message, signMessage
+	}
+
+	const url = `${ api_endpoint }startMining`
+
+
+	postToEndpointSSE(url, true, JSON.stringify(sendData), async (err, _data) => {
+		if (err) {
+			cmd.err = err
+			return returnUUIDChannel(cmd)
+		}
+		
+		cmd.data = ['success']
+		return returnUUIDChannel(cmd)
+	})
+
 }
 
 //
