@@ -32,6 +32,8 @@ const Claimable_BlastUSDB = '0x53Aee1f4c9b0ff76781eFAC6e20eAe4561e29E8A'.toLower
 // const Claimable_ETH = '0x6Eb683B666310cC4E08f32896ad620E5F204c8f8'.toLowerCase()
 const Claimable_ETHUSDT = '0x95A9d14fC824e037B29F1Fdae8EE3D9369B13915'.toLowerCase()
 
+const fx168OrderContractAddress = '0x9aE6D3Bd3029C8B2A73817b9aFa1C029237E3e30'
+
 const FragmentNameDeriveChildIndex = 65536
 
 let allNodes: node
@@ -152,7 +154,7 @@ const showSRP = (cmd: worker_command) => {
 		cmd.err = 'FAILURE'
 		return returnUUIDChannel(cmd)
 	}
-
+	
 	cmd.data = [CoNET_Data.mnemonicPhrase]
 	return returnUUIDChannel(cmd)
 }
@@ -395,27 +397,47 @@ const getAmountOfNodes: (nodes: number, assetName: string) => Promise<number> = 
 	return resolve (totalUsdt/rate)
 })
 
+const getFx168OrderStatus= async (oederID: number, fx168ContractObj: any, wallet: string) => {
+	try {
+		const tx = await fx168ContractObj.OrderStatus(oederID)
+		const nodes = await fx168ContractObj.balanceOf(wallet, oederID)
+		return {id: oederID.toString(), nodes: nodes.toString(), status: tx.toString()}
+	} catch (ex) {
+		return null
+	}
+}
+
 const fx168PrePurchase =  async (cmd: worker_command) => {
 	const [nodes] = cmd.data
 	if (!nodes||!CoNET_Data||!CoNET_Data.profiles) {
 		cmd.err = 'INVALID_DATA'
 		return returnUUIDChannel(cmd)
 	}
-	const profile = CoNET_Data.profiles[0]
+	const profiles = CoNET_Data.profiles
 	if (!CoNET_Data.fx168Order) {
 		CoNET_Data.fx168Order = []
 	}
-	const fx: fx168_Order = {
-		timestamp: new Date().getTime(),
-		status: 'pending',
-		nodes
+	const publikPool = await createWallet(profiles, CoNET_Data.mnemonicPhrase, nodes)
+
+	const provideCONET = new ethers.JsonRpcProvider(conet_rpc)
+	const wallet = new ethers.Wallet(profiles[0].privateKeyArmor, provideCONET)
+	const fx168ContractObj = new ethers.Contract(fx168OrderContractAddress, fx168_Order_Abi, wallet)
+	const fx168ContractObjRead = new ethers.Contract(fx168OrderContractAddress, fx168_Order_Abi, provideCONET)
+	let tx, kk
+	try {
+		tx = await fx168ContractObj.newOrder(publikPool)
+		await tx.wait()
+		kk = await fx168ContractObjRead.getOwnerOrders(profiles[0].keyID)
+
+	} catch (ex) {
+		logger(`await fx168ContractObj.newOrder(nodes, publikPool) Error!`, ex)
 	}
-	const message = JSON.stringify(fx)
-	const messageHash = ethers.id(message)
-	const signMessage = CoNETModule.EthCrypto.sign(profile.privateKeyArmor, messageHash)
-	fx.publishTx = signMessage
-	cmd.data[signMessage]
-	await storeSystemData ()
+	const fx168OrderArray: any[] = []
+	for (let i of kk) {
+		const status = await getFx168OrderStatus(i, fx168ContractObjRead, profiles[0].keyID)
+		fx168OrderArray.push (status)
+	}
+	cmd.data = [fx168OrderArray]
 	return returnUUIDChannel(cmd)
 }
 
@@ -449,8 +471,8 @@ const getAllNodesInfo: () => Promise<node|null> = () => new Promise(resolve=> {
 const testFunction = async (cmd: worker_command) => {
 	const wallet = getProfileByWallet('0x0060f53fEac407a04f3d48E3EA0335580369cDC4')
 	if (wallet?.privateKeyArmor) {
-		// cmd.data[5]
-		// fx168PrePurchase(cmd)
+		cmd.data = [5]
+		fx168PrePurchase(cmd)
 		// setTimeout(async () => {
 		// 	const assetPrice = await getAPIPrice()
 		// }, 15000)

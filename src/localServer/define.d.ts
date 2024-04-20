@@ -305,6 +305,7 @@ interface fx168_Order {
 	publishTx?: string
 	timestamp: number
 	status: 'pending'|'active'|'problem'
+	uuid: string
 	nodes: number
 }
 
@@ -641,6 +642,7 @@ interface transferTx {
 	maxFeePerGas: number
 	maxPriorityFeePerGas: BigInt
 	value: BigInt
+	gasPrice: number
 	nonce: number
 	to: string
 	wait: ()=> Promise<any>
