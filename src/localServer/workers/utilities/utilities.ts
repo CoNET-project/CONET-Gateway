@@ -871,6 +871,7 @@ const postToEndpointSSE = ( url: string, post: boolean, jsonData, CallBack:(err:
 			const responseText = data.split('\r\n\r\n')
 			chunk = data.length
 			CallBack (null, currentData)
+
 		}
 
 		xhr.upload.onabort = () => {

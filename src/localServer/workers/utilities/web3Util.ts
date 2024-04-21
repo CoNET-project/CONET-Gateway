@@ -1997,6 +1997,8 @@ const fx168PrePurchase =  async (cmd: worker_command) => {
 	return returnUUIDChannel(cmd)
 }
 
+let miningConn
+let testTimeOut
 const _startMining = async (cmd: worker_command, profile: profile) => {
 	
 
@@ -2009,15 +2011,25 @@ const _startMining = async (cmd: worker_command, profile: profile) => {
 
 	const url = `${ api_endpoint }startMining`
 
-
-	postToEndpointSSE(url, true, JSON.stringify(sendData), async (err, _data) => {
+	logger(url)
+	let first = true
+	miningConn = postToEndpointSSE(url, true, JSON.stringify(sendData), async (err, _data) => {
 		if (err) {
+			logger(err)
 			cmd.err = err
 			return returnUUIDChannel(cmd)
 		}
-		
-		cmd.data = ['success']
-		return returnUUIDChannel(cmd)
+		logger('success', _data)
+		if (first) {
+			first = false
+			cmd.data = ['success', _data]
+			return returnUUIDChannel(cmd)
+		}
+		const cmdd: channelWroker = {
+			cmd: 'miningStatus',
+			data: [_data]
+		}
+		sendState('toFrontEnd', cmdd)
 	})
 }
 

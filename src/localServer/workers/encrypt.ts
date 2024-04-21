@@ -249,6 +249,14 @@ const processCmd = async (cmd: worker_command) => {
 			return startMining (cmd)
 		}
 
+		case 'stopMining': {
+			if (miningConn) {
+				miningConn.abort()
+				miningConn = null
+			}
+			return returnUUIDChannel(cmd)
+		}
+
 		case 'guardianPurchase': {
 			const [nodes, amount, profile, payAssetName] = cmd.data
 
