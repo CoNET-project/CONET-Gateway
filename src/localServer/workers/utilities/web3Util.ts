@@ -47,11 +47,13 @@ const getProfileAssetsBalance = async (profile: profile) => {
 		const provideBlastMainChain = new ethers.JsonRpcProvider(blast_mainnet)
 		const provideBNB = new ethers.JsonRpcProvider(bsc_mainchain)
 		// const walletETH = new ethers.Wallet(profile.privateKeyArmor, provideETH)
-		const [balanceCNTP, balanceCNTPB, balanceUSDT, ETH, blastETH, usdb, bnb, wbnb, wusdt, conet_Holesky, dWBNB, dUSDT, dWETH,
+		const [balanceCNTP, balanceCNTPV1,balanceCCNTP , balanceUSDT, ETH, blastETH, usdb, bnb, wbnb, wusdt, conet_Holesky, dWBNB, dUSDT, dWETH,
 			BNBUSDT, BlastUSDB, ETHUSDT
 		] = await Promise.all([
-			scanCNTP (key, provideBlast),
-			scanCNTPB (key, provideCONET),
+			scanCNTP (key, provideBlastMainChain),
+			scanCNTPV1 (key, provideBlast),
+			scanCCNTP (key, provideCONET),
+
 			scanUSDT (key, provideETH),
 			scanETH (key, provideETH),
 			scanBlastETH (key, provideBlastMainChain),
@@ -73,8 +75,9 @@ const getProfileAssetsBalance = async (profile: profile) => {
 		])
 		
 
-		current.cntp.balance = balanceCNTP === BigInt(0) ? '0' : parseFloat(ethers.formatEther(balanceCNTP)).toFixed(6)
-		current.cntpb.balance = balanceCNTPB === BigInt(0) ? '0' : parseFloat(ethers.formatEther(balanceCNTPB)).toFixed(6)
+		current.CNTP.balance = balanceCNTP === BigInt(0) ? '0' : parseFloat(ethers.formatEther(balanceCNTP)).toFixed(6)
+		current.CNTPV1.balance = balanceCNTPV1 === BigInt(0) ? '0' : parseFloat(ethers.formatEther(balanceCNTPV1)).toFixed(6)
+		current.cCNTP.balance = balanceCCNTP === BigInt(0) ? '0' : parseFloat(ethers.formatEther(balanceCCNTP)).toFixed(6)
 		current.usdt.balance = balanceUSDT === BigInt(0) ? '0' :
 															//	@ts-ignore
 															parseFloat(balanceUSDT/BigInt(10**6)).toFixed(4)
@@ -689,6 +692,14 @@ const updateChainVersion = async (storageVer: any) => {
 
 const initProfileTokens = () => {
 	const ret: conet_tokens = {
+		cCNTP: {
+			balance: '0',
+			history: [],
+			network: 'CONET Holesky',
+			decimal: 18,
+			contract: Claimable_CNTP_holesky,
+			name: 'cCNTP'
+		},
 		cBNBUSDT:{
 			balance: '0',
 			history: [],
@@ -705,14 +716,14 @@ const initProfileTokens = () => {
 			contract: Claimable_BlastUSDB,
 			name: 'cUSDB'
 		},
-		// cBlastETH: {
-		// 	balance: '0',
-		// 	history: [],
-		// 	network: 'CONET Holesky',
-		// 	decimal: 18,
-		// 	contract: Claimable_BlastETH,
-		// 	name: 'cBlastETH'
-		// },
+		CNTP: {
+			balance: '0',
+			history: [],
+			network: 'Blast Mainnet',
+			decimal: 18,
+			contract: blast_mainnet_CNTP,
+			name: 'CNTP'
+		},
 		// cBNB : {
 		// 	balance: '0',
 		// 	history: [],
@@ -769,21 +780,13 @@ const initProfileTokens = () => {
 			contract: '',
 			name: 'conet'
 		},
-		cntp: {
+		CNTPV1: {
 			balance: '0',
 			history: [],
-			network: 'Blast Mainnet',
+			network: 'Blast Testnet',
 			decimal: 18,
-			contract: blast_CNTP,
-			name: 'cntp'
-		},
-		cntpb: {
-			balance: '0',
-			history: [],
-			network: 'CONET Holesky',
-			decimal: 18,
-			contract: CNTPB_contract,
-			name: 'cntpb'
+			contract: blast_testnet_CNTPV1,
+			name: 'CNTPV1'
 		},
 		usdt: {
 			balance: '0',
@@ -853,29 +856,43 @@ const getBlastAssets = (wallet: string) => new Promise( resolve => {
 })
 
 const checkTokenStructure = (token: any) => {
-	if (!token?.cntp) {
-		token.cntp = {
+	if (!token?.CNTPV1) {
+		token.CNTPV1 = {
 			balance: '0',
 			history: [],
-			network: 'Blast Mainnet',
+			network: 'Blast Testnet',
 			decimal: 18,
-			contract: blast_CNTP,
-			name: 'cntp'
+			contract: blast_testnet_CNTPV1,
+			name: 'CNTPV1'
 		}
 	} else {
-		token.cntp.name = 'cntp'
+		token.CNTPV1.name = 'CNTPV1'
 	}
-	if (!token?.cntpb) {
-		token.cntpb = {
+
+	if (!token?.cCNTP) {
+		token.cCNTP = {
 			balance: '0',
 			history: [],
 			network: 'CONET Holesky',
 			decimal: 18,
-			contract: CNTPB_contract,
-			name: 'cntpb'
+			contract: Claimable_CNTP_holesky,
+			name: 'cCNTP'
 		}
 	} else {
-		token.cntpb.name = 'cntpb'
+		token.cCNTP.name = 'cCNTP'
+	}
+
+	if (!token?.CNTP) {
+		token.CNTP = {
+			balance: '0',
+			history: [],
+			network: 'Blast Mainnet',
+			decimal: 18,
+			contract: blast_mainnet_CNTP,
+			name: 'CNTP'
+		}
+	} else {
+		token.CNTP.name = 'CNTP'
 	}
 	if (!token?.usdt) {
 		token.usdt = {
@@ -887,7 +904,7 @@ const checkTokenStructure = (token: any) => {
 			name: 'usdt'
 		}
 	} else {
-		token.cntpb.name = 'usdt'
+		token.usdt.name = 'usdt'
 	}
 	if (!token?.usdb) {
 		token.usdb = {
@@ -1525,12 +1542,17 @@ const scanCONETHolesky = async (walletAddr: string, privideCONET: any) => {
 	return await scan_natureBalance (privideCONET, walletAddr)
 }
 
-const scanCNTP = async (walletAddr: string, privideCONET: any) => {
-	return await scan_erc20_balance(walletAddr, privideCONET, blast_CNTP)
+const scanCNTPV1 = async (walletAddr: string, privide: any) => {
+	return await scan_erc20_balance(walletAddr, privide, blast_testnet_CNTPV1)
 }
 
-const scanCNTPB =  async (walletAddr: string, provideCONET: any) => {
-	return await scan_erc20_balance(walletAddr, provideCONET, CNTPB_contract)
+
+const scanCCNTP = async (walletAddr: string, privide: any ) => {
+	return await scan_erc20_balance(walletAddr, privide, Claimable_CNTP_holesky)
+}
+
+const scanCNTP =  async (walletAddr: string, privide: any) => {
+	return await scan_erc20_balance(walletAddr, privide, blast_mainnet_CNTP)
 }
 
 const scanUSDT = async (walletAddr: string, provideETH: any) => {
