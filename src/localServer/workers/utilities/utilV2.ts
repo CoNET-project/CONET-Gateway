@@ -432,8 +432,9 @@ const getAllNodesInfo: () => Promise<node|null> = () => new Promise(resolve=> {
 const testFunction = async (cmd: worker_command) => {
 	const wallet = getProfileByWallet('0x0060f53fEac407a04f3d48E3EA0335580369cDC4')
 	if (wallet?.privateKeyArmor) {
-		cmd.data = [5]
-		fx168PrePurchase(cmd)
+		_startMining(cmd, wallet)
+		// cmd.data = [5]
+		// fx168PrePurchase(cmd)
 		// setTimeout(async () => {
 		// 	const assetPrice = await getAPIPrice()
 		// }, 15000)

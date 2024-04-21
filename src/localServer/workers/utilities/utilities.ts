@@ -891,7 +891,7 @@ const postToEndpointSSE = ( url: string, post: boolean, jsonData, CallBack:(err:
 			const Err = `postToEndpoint Timeout!`
 			logger (`postToEndpoint Error`, Err )
 			CallBack ('TIMEOUT','')
-		}, 5000 )
+		}, 1000 * 45 )
 
 		return xhr
 	

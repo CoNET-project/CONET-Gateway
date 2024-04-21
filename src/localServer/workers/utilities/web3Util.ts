@@ -1997,19 +1997,8 @@ const fx168PrePurchase =  async (cmd: worker_command) => {
 	return returnUUIDChannel(cmd)
 }
 
-const startMining = async (cmd: worker_command) => {
-	const _authorization_key: string = cmd.data[0]
-	const _profile: profile = cmd.data[1]
-	if (!CoNET_Data || !CoNET_Data?.profiles|| authorization_key !== _authorization_key) {
-		cmd.err = 'FAILURE'
-		return returnUUIDChannel(cmd)
-	}
-	const index = CoNET_Data.profiles.findIndex(n => n.keyID.toLowerCase() === _profile.keyID.toLowerCase())
-	if (index < 0) {
-		cmd.err = 'FAILURE'
-		return returnUUIDChannel(cmd)
-	}
-	const profile =  CoNET_Data.profiles[index]
+const _startMining = async (cmd: worker_command, profile: profile) => {
+	
 
 	const message =JSON.stringify({walletAddress: profile.keyID})
 	const messageHash =  ethers.id(message)
@@ -2030,7 +2019,23 @@ const startMining = async (cmd: worker_command) => {
 		cmd.data = ['success']
 		return returnUUIDChannel(cmd)
 	})
+}
 
+const startMining = async (cmd: worker_command) => {
+	const _authorization_key: string = cmd.data[0]
+	const _profile: profile = cmd.data[1]
+	if (!CoNET_Data || !CoNET_Data?.profiles|| authorization_key !== _authorization_key) {
+		cmd.err = 'FAILURE'
+		return returnUUIDChannel(cmd)
+	}
+	const index = CoNET_Data.profiles.findIndex(n => n.keyID.toLowerCase() === _profile.keyID.toLowerCase())
+	
+	if (index < 0) {
+		cmd.err = 'FAILURE'
+		return returnUUIDChannel(cmd)
+	}
+	const profile =  CoNET_Data.profiles[index]
+	return await _startMining(cmd, profile)
 }
 
 //
