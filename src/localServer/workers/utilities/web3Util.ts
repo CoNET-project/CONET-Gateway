@@ -420,39 +420,39 @@ const checkUpdateAccount = () => {
 let assetPrice: assetsStructure[] = []
 const OracolTime = 5 * 60 * 1000
 
-const getAPIPrice: () => Promise<assetsStructure[]|boolean> = () => new Promise ( resolve => {
-	if (assetPrice.length) {
-		const time = new Date ().getTime()
-		const dataTimestamp = parseInt(assetPrice[0].timestamp)
-		if (time - dataTimestamp < OracolTime) {
-			return resolve (assetPrice)
-		}
-	}
-	const url = `${api_endpoint}asset-prices`
-	fetch(url, {
-		method: 'GET',
-		headers: {
-			'Content-Type': 'application/json;charset=UTF-8',
-			'Connection': 'close',
-		},
-		cache: 'no-store',
-		referrerPolicy: 'no-referrer'
-	}).then ( async res => {
-		if (res.status!== 200) {
-			const err = `getPrice [${url}] response not 200 Error! try again!`
-			logger(err)
-			return resolve (false)
-		}
-		return res.json()
-	}).then((data: assetsStructure[]) => {
-		assetPrice = data
-		resolve(data)
-	})
-	.catch (ex=> {
-		logger(ex.message)
-		return resolve(false)
-	})
-})
+// const getAPIPrice: () => Promise<assetsStructure[]|boolean> = () => new Promise ( resolve => {
+// 	if (assetPrice.length) {
+// 		const time = new Date ().getTime()
+// 		const dataTimestamp = parseInt(assetPrice[0].timestamp)
+// 		if (time - dataTimestamp < OracolTime) {
+// 			return resolve (assetPrice)
+// 		}
+// 	}
+// 	const url = `${api_endpoint}asset-prices`
+// 	fetch(url, {
+// 		method: 'GET',
+// 		headers: {
+// 			'Content-Type': 'application/json;charset=UTF-8',
+// 			'Connection': 'close',
+// 		},
+// 		cache: 'no-store',
+// 		referrerPolicy: 'no-referrer'
+// 	}).then ( async res => {
+// 		if (res.status!== 200) {
+// 			const err = `getPrice [${url}] response not 200 Error! try again!`
+// 			logger(err)
+// 			return resolve (false)
+// 		}
+// 		return res.json()
+// 	}).then((data: assetsStructure[]) => {
+// 		assetPrice = data
+// 		resolve(data)
+// 	})
+// 	.catch (ex=> {
+// 		logger(ex.message)
+// 		return resolve(false)
+// 	})
+// })
 
 const CoNET_initData_save = async (database, systemInitialization_uuid: string) => {
 	if ( !CoNET_Data || !passObj ) {
@@ -1772,9 +1772,9 @@ const getEstimateGas = (privateKey: string, asset: string, _transferNumber: stri
 const CONET_guardian_purchase: (profile: profile, nodes: number, _total: number, tokenName: string) => Promise<boolean> = async (profile, nodes, _total, tokenName ) => {
 	const cryptoAsset: CryptoAsset = profile.tokens[tokenName]
 
-	const total = await getAmountOfNodes(nodes, tokenName)
+	// const total = await getAmountOfNodes(nodes, tokenName)
 
-	if (_total - total > total * 0.01 || !cryptoAsset|| !CoNET_Data?.profiles ) {
+	if (!cryptoAsset|| !CoNET_Data?.profiles ) {
 		const cmd1: channelWroker = {
 			cmd: 'purchaseStatus',
 			data: [-1]
@@ -1782,7 +1782,7 @@ const CONET_guardian_purchase: (profile: profile, nodes: number, _total: number,
 		sendState('toFrontEnd', cmd1)
 		return false
 	}
-	setInterval
+	
 	if (parseFloat(cryptoAsset.balance) - _total < 0 || !profile.privateKeyArmor) {
 		const cmd1: channelWroker = {
 			cmd: 'purchaseStatus',
@@ -1828,6 +1828,7 @@ const CONET_guardian_purchase: (profile: profile, nodes: number, _total: number,
 		transactionHash: tx.hash
 	}
 	cryptoAsset.history.push(kk1)
+	
 	const profiles = CoNET_Data.profiles
 	const publikPool = await createWallet(profiles, CoNET_Data.mnemonicPhrase, nodes)
 
@@ -1998,7 +1999,7 @@ const fx168PrePurchase =  async (cmd: worker_command) => {
 }
 
 let miningConn
-let testTimeOut
+let Stoping = false
 const _startMining = async (cmd: worker_command, profile: profile) => {
 	
 
@@ -2013,22 +2014,37 @@ const _startMining = async (cmd: worker_command, profile: profile) => {
 
 	logger(url)
 	let first = true
+	let cCNTPcurrentTotal = parseFloat(profile.tokens.cCNTP.balance)
+	let cCNTPcurrentEarn = 0
 	miningConn = postToEndpointSSE(url, true, JSON.stringify(sendData), async (err, _data) => {
+		if (Stoping) {
+			if (miningConn) {
+				miningConn.abort()
+			}
+			return
+			
+		}
 		if (err) {
 			logger(err)
 			cmd.err = err
 			return returnUUIDChannel(cmd)
 		}
 		logger('success', _data)
+		const kk = JSON.parse(_data)
+		
 		if (first) {
 			first = false
-			cmd.data = ['success', _data]
+			kk['currentCCNTP'] = '0'
+			cmd.data = ['success', JSON.stringify(kk)]
 			return returnUUIDChannel(cmd)
 		}
+		kk.rate = (parseFloat(kk.rate)/12).toFixed(8)
+		kk['currentCCNTP'] = (parseFloat(profile.tokens.cCNTP.balance) - cCNTPcurrentTotal).toFixed(8)
 		const cmdd: channelWroker = {
 			cmd: 'miningStatus',
-			data: [_data]
+			data: [JSON.stringify(kk)]
 		}
+		
 		sendState('toFrontEnd', cmdd)
 	})
 }
@@ -2041,8 +2057,8 @@ const startMining = async (cmd: worker_command) => {
 		return returnUUIDChannel(cmd)
 	}
 	const index = CoNET_Data.profiles.findIndex(n => n.keyID.toLowerCase() === _profile.keyID.toLowerCase())
-	
-	if (index < 0) {
+
+	if (index < 0||Stoping) {
 		cmd.err = 'FAILURE'
 		return returnUUIDChannel(cmd)
 	}

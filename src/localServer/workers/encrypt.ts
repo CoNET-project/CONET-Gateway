@@ -250,11 +250,17 @@ const processCmd = async (cmd: worker_command) => {
 		}
 
 		case 'stopMining': {
+			Stoping = true
 			if (miningConn) {
 				miningConn.abort()
-				miningConn = null
+				
+				setTimeout(() => {
+					Stoping = false
+					return returnUUIDChannel(cmd)
+				}, 12000)
+				return
 			}
-			return returnUUIDChannel(cmd)
+			
 		}
 
 		case 'guardianPurchase': {
@@ -440,10 +446,6 @@ const processCmd = async (cmd: worker_command) => {
 			return
 		}
 
-		case 'stopLiveness': {
-			return stopLiveness(cmd)
-		}
-
 		case 'registerReferrer': {
 			const referrer = cmd.data[0]
 			if (!referrer) {
@@ -470,19 +472,6 @@ const processCmd = async (cmd: worker_command) => {
 
 		case 'recoverAccount': {
 			return recoverAccount(cmd)
-		}
-
-		case 'getAssetsPrice': {
-			return getAssetsPrice(cmd)
-		}
-
-		case 'isLivenessRunning': {
-			cmd.data = []
-			if (Liveness) {
-				cmd.data = LivenessCurrentData
-				LivenessListen.push(cmd)
-			}
-			return returnUUIDChannel(cmd)
 		}
 
 		case 'getAllProfiles': {

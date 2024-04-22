@@ -140,15 +140,15 @@ const testPasscode = async (cmd: worker_command) => {
 	
 }
 
-const getAssetsPrice = async (cmd: worker_command) => {
-	const assetPrice = await getAPIPrice()
-	if (assetPrice === false) {
-		cmd.err = 'NOT_READY'
-	} else {
-		cmd.data = [assetPrice]
-	}
-	return returnUUIDChannel(cmd)
-}
+// const getAssetsPrice = async (cmd: worker_command) => {
+// 	const assetPrice = await getAPIPrice()
+// 	if (assetPrice === false) {
+// 		cmd.err = 'NOT_READY'
+// 	} else {
+// 		cmd.data = [assetPrice]
+// 	}
+// 	return returnUUIDChannel(cmd)
+// }
 
 const showSRP = (cmd: worker_command) => {
 	const _authorization_key: string = cmd.data[0]
@@ -386,20 +386,20 @@ const prePurchase = async (cmd: worker_command) => {
 
 const nodePrice = 1250
 
-const getAmountOfNodes: (nodes: number, assetName: string) => Promise<number> = (nodes, assetName) => new Promise(async resolve => {
-	const assetPrice = await getAPIPrice ()
-	if (typeof assetPrice === 'boolean') {
-		return resolve(0)
-	}
-	const totalUsdt = nodes * nodePrice
-	const asssetSymbol = new RegExp (/usd/i.test(assetName) ? 'usd' : /bnb/i.test(assetName) ? 'bnb' : 'eth', 'i')
-	const index = assetPrice.findIndex(n => asssetSymbol.test(n.currency_name))
-	if (index < 0) {
-		return resolve(totalUsdt)
-	}
-	const rate = parseFloat(assetPrice[index].usd_price)
-	return resolve (totalUsdt/rate)
-})
+// const getAmountOfNodes: (nodes: number, assetName: string) => Promise<number> = (nodes, assetName) => new Promise(async resolve => {
+// 	const assetPrice = await getAPIPrice ()
+// 	if (typeof assetPrice === 'boolean') {
+// 		return resolve(0)
+// 	}
+// 	const totalUsdt = nodes * nodePrice
+// 	const asssetSymbol = new RegExp (/usd/i.test(assetName) ? 'usd' : /bnb/i.test(assetName) ? 'bnb' : 'eth', 'i')
+// 	const index = assetPrice.findIndex(n => asssetSymbol.test(n.currency_name))
+// 	if (index < 0) {
+// 		return resolve(totalUsdt)
+// 	}
+// 	const rate = parseFloat(assetPrice[index].usd_price)
+// 	return resolve (totalUsdt/rate)
+// })
 
 
 /**
