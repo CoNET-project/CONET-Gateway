@@ -44,7 +44,7 @@ const getProfileAssetsBalance = async (profile: profile) => {
 		const provideETH = new ethers.JsonRpcProvider(ethRpc)
 		const provideBlast = new ethers.JsonRpcProvider(blast_sepoliaRpc)
 		const provideCONET = new ethers.JsonRpcProvider(conet_rpc)
-		const provideBlastMainChain = new ethers.JsonRpcProvider(blast_mainnet)
+		const provideBlastMainChain = new ethers.JsonRpcProvider(blast_mainnet1)
 		const provideBNB = new ethers.JsonRpcProvider(bsc_mainchain)
 		// const walletETH = new ethers.Wallet(profile.privateKeyArmor, provideETH)
 		const [balanceCNTP, balanceCNTPV1,balanceCCNTP , balanceUSDT, ETH, blastETH, usdb, bnb, wbnb, wusdt, conet_Holesky, dWBNB, dUSDT, dWETH,

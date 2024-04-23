@@ -5,6 +5,7 @@ const cloudStorageEndpointUrl = 'https://s3.us-east-1.wasabisys.com/conet-mvp/st
 const blast_sepoliaRpc = 'https://sepolia.blast.io'
 const ethRpc = 'https://rpc.ankr.com/eth'
 const blast_mainnet = 'https://rpc.blast.io'
+const blast_mainnet1 = 'https://rpc.ankr.com/blast'
 const bsc_mainchain = 'https://bsc-dataseed.binance.org/'
 
 const ReferralsAddress = '0x8f6be4704a3735024F4D2CBC5BAC3722c0C8a0BD'
