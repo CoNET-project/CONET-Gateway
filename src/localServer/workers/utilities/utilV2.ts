@@ -430,12 +430,27 @@ const getAllNodesInfo: () => Promise<node|null> = () => new Promise(resolve=> {
 
 })
 
+const claimToken = (profile: profile, CoNET_Data: encrypt_keys_object, assetName: string, cmd: worker_command) => {
+	const asset: CryptoAsset = profile.tokens[assetName]
+	if (!asset||  parseFloat(asset.balance) < 0.0001) {
+		cmd.err = 'INVALID_DATA'
+		return returnUUIDChannel(cmd)
+	}
+	cmd.data = ['false']
+	return returnUUIDChannel(cmd)
+}
+
 const testFunction = async (cmd: worker_command) => {
 	
 	
 	const wallet = getProfileByWallet('0x0060f53fEac407a04f3d48E3EA0335580369cDC4')
 	if (wallet?.privateKeyArmor) {
-		_startMining(cmd, wallet)
+		if (CoNET_Data) {
+			claimToken(wallet, CoNET_Data, 'cCNTP', cmd)
+		}
+		
+
+		// _startMining(cmd, wallet)
 		// cmd.data = [5]
 		// fx168PrePurchase(cmd)
 		// setTimeout(async () => {
@@ -463,7 +478,4 @@ const testFunction = async (cmd: worker_command) => {
 	// const CNTP_Referrals = new ethers.Contract(ReferralsAddressV2, CONET_ReferralsAbi, provideNewCONET)
 	// const kkk = await getAllReferees(referrer, CNTP_Referrals)
 	// logger(kkk)
-
-
-	
 }

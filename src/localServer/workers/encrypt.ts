@@ -241,6 +241,22 @@ let getFaucetCount = 0
 
 const processCmd = async (cmd: worker_command) => {
     switch (cmd.cmd) {
+
+		case 'claimToken': {
+			const _profile: profile = cmd.data[0]
+			const assetName = cmd.data[1]
+			if (!_profile ||!assetName||!CoNET_Data?.profiles) {
+				cmd.err = 'INVALID_DATA'
+				return returnUUIDChannel(cmd)
+			}
+			const index = CoNET_Data.profiles.findIndex(n => n.keyID.toLowerCase() ===  _profile.keyID.toLowerCase())
+			if (index < 0) {
+				cmd.err = 'INVALID_DATA'
+				return returnUUIDChannel(cmd)
+			}
+			return claimToken(CoNET_Data.profiles[index], CoNET_Data, assetName, cmd)
+		}
+		
 		case 'urlProxy': {
 			return preProxyConnect (cmd)
 		}
@@ -378,6 +394,7 @@ const processCmd = async (cmd: worker_command) => {
 		// }
 
 		case 'testPasscode': {
+			
 			return testPasscode(cmd)
 		}
 
