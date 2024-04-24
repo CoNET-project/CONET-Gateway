@@ -436,7 +436,7 @@ const claimToken = (profile: profile, CoNET_Data: encrypt_keys_object, assetName
 		cmd.err = 'INVALID_DATA'
 		return returnUUIDChannel(cmd)
 	}
-	cmd.data = ['false']
+	cmd.data = [false]
 	return returnUUIDChannel(cmd)
 }
 
