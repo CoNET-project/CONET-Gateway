@@ -2,7 +2,7 @@ const conet_rpc = 'https://rpc.conet.network'
 const api_endpoint = `https://api.conet.network/api/`
 
 const cloudStorageEndpointUrl = 'https://s3.us-east-1.wasabisys.com/conet-mvp/storage/FragmentOcean/'
-const blast_sepoliaRpc = 'https://sepolia.blast.io'
+const blast_sepoliaRpc = 'https://rpc.ankr.com/blast_testnet_sepolia'
 const ethRpc = 'https://rpc.ankr.com/eth'
 const blast_mainnet = 'https://rpc.blast.io'
 const blast_mainnet1 = 'https://rpc.ankr.com/blast'
@@ -430,13 +430,74 @@ const getAllNodesInfo: () => Promise<node|null> = () => new Promise(resolve=> {
 
 })
 
-const claimToken = (profile: profile, CoNET_Data: encrypt_keys_object, assetName: string, cmd: worker_command) => {
+const claimAdmin = '0x418833b70F882C833EF0F0Fcee3FB9d89C79d47C'
+
+const getClaimableAddress = (CONET_claimableName: string) => {
+	switch(CONET_claimableName) {
+		case 'cUSDB': {
+			return '0x53Aee1f4c9b0ff76781eFAC6e20eAe4561e29E8A'
+		}
+		case 'cBNBUSDT': {
+			return '0xC06D98B3185D3de0dF02b8a7AfD1fF9cB3c9399a'
+		}
+		case 'cUSDT': {
+			return '0x95A9d14fC824e037B29F1Fdae8EE3D9369B13915'
+		}
+		default : {
+			return ''
+		}
+	}
+}
+const claimToken = async (profile: profile, CoNET_Data: encrypt_keys_object, assetName: string, cmd: worker_command) => {
 	const asset: CryptoAsset = profile.tokens[assetName]
-	if (!asset||  parseFloat(asset.balance) < 0.0001) {
+	let balance
+	if (!asset|| parseFloat(balance = asset.balance) < 0.0001) {
 		cmd.err = 'INVALID_DATA'
 		return returnUUIDChannel(cmd)
 	}
-	cmd.data = [false]
+	const rpc = getNetwork(assetName)
+	const contractAddr = getClaimableAddress(assetName)
+	if (!rpc|| !contractAddr) {
+		cmd.err = 'INVALID_DATA'
+		return returnUUIDChannel(cmd)
+	}
+
+	const conetProvider = new ethers.JsonRpcProvider(conet_rpc)
+	const wallet = new ethers.Wallet(profile.privateKeyArmor, conetProvider)
+
+	const contractObj = new ethers.Contract(contractAddr, claimableContract, wallet)
+
+	try {
+		const _balance = await contractObj.balanceOf(profile.keyID)
+		const tx = await contractObj.approve(claimAdmin, _balance)
+		logger(tx)
+	} catch (ex) {
+		cmd.err = 'Err_Existed'
+		return returnUUIDChannel(cmd)
+	}
+
+	const data = {
+		tokenName: assetName,
+		network: asset.network,
+		amount: balance
+	}
+
+	const message =JSON.stringify({ walletAddress: profile.keyID, data})
+	const messageHash = ethers.id(message)
+	const signMessage = CoNETModule.EthCrypto.sign(profile.privateKeyArmor, messageHash)
+
+
+	const sendData = {
+		message, signMessage
+	}
+	logger(sendData)
+	const url = `${ api_endpoint }claimToken`
+	const result: any = await postToEndpoint(url, true, sendData)
+	if (!result) {
+		cmd.err = 'INVALID_DATA'
+		return returnUUIDChannel(cmd)
+	}
+	cmd.data = [true]
 	return returnUUIDChannel(cmd)
 }
 
@@ -446,7 +507,7 @@ const testFunction = async (cmd: worker_command) => {
 	const wallet = getProfileByWallet('0x0060f53fEac407a04f3d48E3EA0335580369cDC4')
 	if (wallet?.privateKeyArmor) {
 		if (CoNET_Data) {
-			claimToken(wallet, CoNET_Data, 'cCNTP', cmd)
+			// claimToken(wallet, CoNET_Data, 'cUSDB', cmd)
 		}
 		
 
