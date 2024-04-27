@@ -498,7 +498,7 @@ const claimToken = async (profile: profile, CoNET_Data: encrypt_keys_object, ass
 	const url = `${ api_endpoint }claimToken`
 	const result: any = await postToEndpoint(url, true, sendData)
 	if (!result) {
-		cmd.err = 'INVALID_DATA'
+		cmd.err = 'COUNTDOWN'
 		return returnUUIDChannel(cmd)
 	}
 	cmd.data = [true]
