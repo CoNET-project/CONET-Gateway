@@ -1115,28 +1115,38 @@ const minCheckTimestamp = 1000 * 12 		//			must big than 12s
 
 const getAllProfileAssetsBalance = async () => {
 	return new Promise(async resolve => {
+
 		if (!CoNET_Data?.profiles) {
 			logger(`getAllProfileAssetsBalance Error! CoNET_Data.profiles empty!`)
 			return resolve (false)
 		}
-
 		const timeStamp = new Date().getTime()
 
 		if (timeStamp - lastAllProfileAssetsBalanceTimeStamp < minCheckTimestamp) {
 			return resolve (true)
 		}
+		
 
 		if (runningGetAllProfileAssetsBalance) {
+			logger(`getAllProfileAssetsBalance already running return false`)
 			return resolve(true)
 		}
-
+		
+		
+		
+		logger(`getAllProfileAssetsBalance running!`)
 		runningGetAllProfileAssetsBalance = true
-
+		lastAllProfileAssetsBalanceTimeStamp = timeStamp
+		
+		const runningList: any = []
 		for (let profile of CoNET_Data.profiles) {
-			await getProfileAssetsBalance(profile)
+			runningList.push(getProfileAssetsBalance(profile))
 		}
-		resolve (true)
+		await Promise.all (runningList)
+		
 		runningGetAllProfileAssetsBalance = false
+		resolve (true)
+		logger(`getAllProfileAssetsBalance stop!`)
 	})
 	
 }

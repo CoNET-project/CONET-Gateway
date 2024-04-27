@@ -470,6 +470,7 @@ const claimToken = async (profile: profile, CoNET_Data: encrypt_keys_object, ass
 	try {
 		const _balance = await contractObj.balanceOf(profile.keyID)
 		const tx = await contractObj.approve(claimAdmin, _balance)
+		await tx.wait()
 		logger(tx)
 	} catch (ex) {
 		cmd.err = 'Err_Existed'
@@ -485,7 +486,6 @@ const claimToken = async (profile: profile, CoNET_Data: encrypt_keys_object, ass
 	const message =JSON.stringify({ walletAddress: profile.keyID, data})
 	const messageHash = ethers.id(message)
 	const signMessage = CoNETModule.EthCrypto.sign(profile.privateKeyArmor, messageHash)
-
 
 	const sendData = {
 		message, signMessage
@@ -540,3 +540,4 @@ const testFunction = async (cmd: worker_command) => {
 	// const kkk = await getAllReferees(referrer, CNTP_Referrals)
 	// logger(kkk)
 }
+
