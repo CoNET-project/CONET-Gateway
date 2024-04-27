@@ -48,7 +48,7 @@ const getProfileAssetsBalance = async (profile: profile) => {
 		const provideBNB = new ethers.JsonRpcProvider(bsc_mainchain)
 		// const walletETH = new ethers.Wallet(profile.privateKeyArmor, provideETH)
 		const [balanceCNTP, balanceCNTPV1,balanceCCNTP , balanceUSDT, ETH, blastETH, usdb, bnb, wbnb, wusdt, conet_Holesky, dWBNB, dUSDT, dWETH,
-			BNBUSDT, BlastUSDB, ETHUSDT
+			BNBUSDT, BlastUSDB, ETHUSDT, CGPNs
 		] = await Promise.all([
 			scanCNTP (key, provideBlastMainChain),
 			scanCNTPV1 (key, provideBlast),
@@ -72,37 +72,40 @@ const getProfileAssetsBalance = async (profile: profile) => {
 			// scanCONET_Claimable_BNB(key, provideCONET),
 			// scanCONET_Claimable_ETH(key, provideCONET),
 			scanCONET_Claimable_ETHUSDT(key, provideCONET),
+			scan_Guardian_Nodes(key, provideCONET)
 		])
 		
 
-		current.CNTP.balance = balanceCNTP === BigInt(0) ? '0' : parseFloat(ethers.formatEther(balanceCNTP)).toFixed(6)
-		current.CNTPV1.balance = balanceCNTPV1 === BigInt(0) ? '0' : parseFloat(ethers.formatEther(balanceCNTPV1)).toFixed(6)
-		current.cCNTP.balance = balanceCCNTP === BigInt(0) ? '0' : parseFloat(ethers.formatEther(balanceCCNTP)).toFixed(6)
-		current.usdt.balance = balanceUSDT === BigInt(0) ? '0' :
+		current.CNTP.balance = balanceCNTP === BigInt(0) ? '0' : typeof balanceCNTP !== 'boolean' ? parseFloat(ethers.formatEther(balanceCNTP)).toFixed(6) : ''
+		current.CNTPV1.balance = balanceCNTPV1 === BigInt(0) ? '0' : typeof balanceCNTPV1!== 'boolean' ? parseFloat(ethers.formatEther(balanceCNTPV1)).toFixed(6) : ''
+		current.cCNTP.balance = balanceCCNTP === BigInt(0) ? '0' : typeof balanceCCNTP!== 'boolean' ? parseFloat(ethers.formatEther(balanceCCNTP)).toFixed(6): ''
+		current.usdt.balance = balanceUSDT === BigInt(0) ? '0' : typeof balanceUSDT!== 'boolean' ?
 															//	@ts-ignore
-															parseFloat(balanceUSDT/BigInt(10**6)).toFixed(4)
+															parseFloat(balanceUSDT/BigInt(10**6)).toFixed(4): ''
 
-		current.eth.balance = ETH === BigInt(0) ? '0' : parseFloat(ethers.formatEther(ETH)).toFixed(6)
-		current.blastETH.balance = blastETH === BigInt(0) ? '0' : parseFloat(ethers.formatEther(blastETH)).toFixed(6)
-		current.usdb.balance = usdb === BigInt(0) ? '0' : parseFloat(ethers.formatEther(usdb)).toFixed(6)
-		current.wbnb.balance = wbnb === BigInt(0) ? '0' : parseFloat(ethers.formatEther(wbnb)).toFixed(6)
-		current.bnb.balance = bnb === BigInt(0) ? '0' : parseFloat(ethers.formatEther(bnb)).toFixed(6)
-		current.wusdt.balance = wusdt === BigInt(0) ? '0' : parseFloat(ethers.formatEther(wusdt)).toFixed(6)
-		current.conet.balance = conet_Holesky === BigInt(0) ? '0' : parseFloat(ethers.formatEther(conet_Holesky)).toFixed(6)
+		current.eth.balance = ETH === BigInt(0) ? '0' : typeof ETH!== 'boolean' ? parseFloat(ethers.formatEther(ETH)).toFixed(6) : ''
+		current.blastETH.balance = blastETH === BigInt(0) ? '0' : typeof blastETH!== 'boolean' ? parseFloat(ethers.formatEther(blastETH)).toFixed(6) : ''
+		current.usdb.balance = usdb === BigInt(0) ? '0' : typeof usdb!== 'boolean' ? parseFloat(ethers.formatEther(usdb)).toFixed(6): ''
+		current.wbnb.balance = wbnb === BigInt(0) ? '0' : typeof wbnb!== 'boolean' ? parseFloat(ethers.formatEther(wbnb)).toFixed(6): ''
+		current.bnb.balance = bnb === BigInt(0) ? '0' :  typeof bnb!== 'boolean' ? parseFloat(ethers.formatEther(bnb)).toFixed(6): ''
+		current.wusdt.balance = wusdt === BigInt(0) ? '0' : typeof wusdt!== 'boolean' ?  parseFloat(ethers.formatEther(wusdt)).toFixed(6): ''
+		current.conet.balance = conet_Holesky === BigInt(0) ? '0' : typeof conet_Holesky!== 'boolean' ?  parseFloat(ethers.formatEther(conet_Holesky)).toFixed(6): ''
 
-		current.dWBNB.balance = dWBNB === BigInt(0) ? '0' :  parseFloat(ethers.formatEther(dWBNB)).toFixed(6)
-		current.dUSDT.balance = dUSDT === BigInt(0) ? '0' :  parseFloat(ethers.formatEther(dUSDT)).toFixed(6)
-		current.dWETH.balance = dWETH === BigInt(0) ? '0' :  parseFloat(ethers.formatEther(dWETH)).toFixed(6)
+		current.dWBNB.balance = dWBNB === BigInt(0) ? '0' :  typeof dWBNB!== 'boolean' ? parseFloat(ethers.formatEther(dWBNB)).toFixed(6): ''
+		current.dUSDT.balance = dUSDT === BigInt(0) ? '0' :   typeof dUSDT!== 'boolean' ? parseFloat(ethers.formatEther(dUSDT)).toFixed(6): ''
+		current.dWETH.balance = dWETH === BigInt(0) ? '0' :  typeof dWETH!== 'boolean' ? parseFloat(ethers.formatEther(dWETH)).toFixed(6): ''
 
-		current.cBNBUSDT.balance = BNBUSDT === BigInt(0) ? '0' :  parseFloat(ethers.formatEther(BNBUSDT)).toFixed(6)
-		current.cUSDB.balance = BlastUSDB === BigInt(0) ? '0' :  parseFloat(ethers.formatEther(BlastUSDB)).toFixed(6)
+		current.cBNBUSDT.balance = BNBUSDT === BigInt(0) ? '0' : typeof BNBUSDT!== 'boolean' ? parseFloat(ethers.formatEther(BNBUSDT)).toFixed(6): ''
+		current.cUSDB.balance = BlastUSDB === BigInt(0) ? '0' :  typeof BlastUSDB!== 'boolean' ? parseFloat(ethers.formatEther(BlastUSDB)).toFixed(6): ''
 		// current.cBlastETH.balance = BlastETH === BigInt(0) ? '0' :  parseFloat(ethers.formatEther(BlastETH)).toFixed(6)
 		// current.cBNB.balance = cBNB === BigInt(0) ? '0' :  parseFloat(ethers.formatEther(cBNB)).toFixed(6)
 		// current.cETH.balance = cETH === BigInt(0) ? '0' :  parseFloat(ethers.formatEther(cETH)).toFixed(6)
-		current.cUSDT.balance = ETHUSDT === BigInt(0) ? '0' :  parseFloat(ethers.formatEther(ETHUSDT)).toFixed(6)
+		current.cUSDT.balance = ETHUSDT === BigInt(0) ? '0' :   typeof ETHUSDT!== 'boolean' ? parseFloat(ethers.formatEther(ETHUSDT)).toFixed(6): ''
+
+		current.CGPNs.balance = CGPNs === BigInt(0) ? '0' : typeof CGPNs!== 'boolean' ? parseFloat(ethers.formatEther(CGPNs)).toFixed(6): ''
 	}
 
-	return false
+	return true
 }
 
 const sendState = (state: listenState, value: any) => {
@@ -692,6 +695,14 @@ const updateChainVersion = async (storageVer: any) => {
 
 const initProfileTokens = () => {
 	const ret: conet_tokens = {
+		CGPNs: {
+			balance: '0',
+			history: [],
+			network: 'CONET Guardian Nodes (CGPNs)',
+			decimal: 18,
+			contract: CONET_Guardian_Nodes,
+			name: 'CGPNs'
+		},
 		cCNTP: {
 			balance: '0',
 			history: [],
@@ -856,6 +867,19 @@ const getBlastAssets = (wallet: string) => new Promise( resolve => {
 })
 
 const checkTokenStructure = (token: any) => {
+	if (!token?.CGPNs) {
+		token.CGPNs = {
+			balance: '0',
+			history: [],
+			network: 'CONET Holesky',
+			decimal: 18,
+			contract: CONET_Guardian_Nodes,
+			name: 'CGPNs'
+		}
+	} else {
+		token.CGPNs.name = 'CGPNs'
+	}
+
 	if (!token?.CNTPV1) {
 		token.CNTPV1 = {
 			balance: '0',
@@ -1593,17 +1617,19 @@ const scanBNB = async (walletAddr: string, provideBNB: any) => {
 	return await scan_natureBalance(provideBNB, walletAddr)
 }
 
-const scan_natureBalance = async (provide: any, walletAddr: string) => {
+const scan_natureBalance = (provide: any, walletAddr: string) => new Promise( async resolve => {
 	try {
-		return await provide.getBalance(walletAddr)
+		const result = await provide.getBalance(walletAddr)
+		return resolve (result)
 	} catch (ex) {
 		logger(`scan_natureBalance Error!`, ex)
-		return setTimeout(async () => {
-			return await scan_natureBalance(walletAddr, provide)
-		}, 1000)
+		return resolve (false)
+		// return setTimeout(async () => {
+		// 	return resolve(await scan_natureBalance(walletAddr, provide))
+		// }, 1000)
 	}
 	
-}
+})
 
 const scanCONET_Claimable_BNBUSDT = async (walletAddr: string, privideCONET: any) => {
 	return await scan_erc20_balance(walletAddr, privideCONET, Claimable_BNBUSDT)
@@ -1629,17 +1655,40 @@ const scanCONET_Claimable_ETHUSDT = async (walletAddr: string, privideCONET: any
 	return await scan_erc20_balance(walletAddr, privideCONET, Claimable_ETHUSDT)
 }
 
-const scan_erc20_balance = async (walletAddr: string, rpcProdive: any, erc20Address: string) => {
+const scan_erc20_balance = (walletAddr: string, rpcProdive: any, erc20Address: string) => new Promise (async resolve => {
 	const erc20 = new ethers.Contract(erc20Address, blast_CNTPAbi, rpcProdive)
+
 	try {
-		return await erc20.balanceOf(walletAddr)
+		const result = await erc20.balanceOf(walletAddr)
+		return resolve(result)
 	} catch (ex) {
 		logger(`scan_erc20_balance Error!`)
-		return setTimeout(async () => {
-			return await scan_erc20_balance(walletAddr, rpcProdive, erc20Address)
-		}, 1000)
+		return resolve (false)
+		// return setTimeout(async () => {
+		// 	return resolve(await scan_erc20_balance(walletAddr, rpcProdive, erc20Address))
+		// }, 1000)
 	}
+})
+
+
+const scan_Guardian_Nodes = async (walletAddr: string, rpcProdive: any) => {
+	return await scan_src1155_balance(walletAddr, rpcProdive, CONET_Guardian_Nodes, 1)
 }
+
+
+const scan_src1155_balance = (walletAddr: string, rpcProdive: any, erc1155Address: string, id: number) => new Promise(async resolve => {
+	const erc1155 = new ethers.Contract(erc1155Address, guardian_erc1155, rpcProdive)
+	try {
+		const result = await erc1155.balanceOf(walletAddr, id)
+		return resolve(result)
+	} catch (ex) {
+		logger(`scan_src1155_balance Error!`)
+		return resolve (false)
+		// return setTimeout(async () => {
+		// 	return resolve(await scan_src1155_balance(walletAddr, rpcProdive, erc1155Address, id))
+		// }, 1000)
+	}
+})
 
 const getNetwork = (networkName: string) => {
 	switch (networkName) {
@@ -3294,6 +3343,814 @@ const claimableContract = [
             }
         ],
         "stateMutability": "nonpayable",
+        "type": "function"
+    }
+]
+
+const guardian_erc1155 = [
+    {
+        "inputs": [],
+        "stateMutability": "nonpayable",
+        "type": "constructor"
+    },
+    {
+        "inputs": [
+            {
+                "internalType": "address",
+                "name": "sender",
+                "type": "address"
+            },
+            {
+                "internalType": "uint256",
+                "name": "balance",
+                "type": "uint256"
+            },
+            {
+                "internalType": "uint256",
+                "name": "needed",
+                "type": "uint256"
+            },
+            {
+                "internalType": "uint256",
+                "name": "tokenId",
+                "type": "uint256"
+            }
+        ],
+        "name": "ERC1155InsufficientBalance",
+        "type": "error"
+    },
+    {
+        "inputs": [
+            {
+                "internalType": "address",
+                "name": "approver",
+                "type": "address"
+            }
+        ],
+        "name": "ERC1155InvalidApprover",
+        "type": "error"
+    },
+    {
+        "inputs": [
+            {
+                "internalType": "uint256",
+                "name": "idsLength",
+                "type": "uint256"
+            },
+            {
+                "internalType": "uint256",
+                "name": "valuesLength",
+                "type": "uint256"
+            }
+        ],
+        "name": "ERC1155InvalidArrayLength",
+        "type": "error"
+    },
+    {
+        "inputs": [
+            {
+                "internalType": "address",
+                "name": "operator",
+                "type": "address"
+            }
+        ],
+        "name": "ERC1155InvalidOperator",
+        "type": "error"
+    },
+    {
+        "inputs": [
+            {
+                "internalType": "address",
+                "name": "receiver",
+                "type": "address"
+            }
+        ],
+        "name": "ERC1155InvalidReceiver",
+        "type": "error"
+    },
+    {
+        "inputs": [
+            {
+                "internalType": "address",
+                "name": "sender",
+                "type": "address"
+            }
+        ],
+        "name": "ERC1155InvalidSender",
+        "type": "error"
+    },
+    {
+        "inputs": [
+            {
+                "internalType": "address",
+                "name": "operator",
+                "type": "address"
+            },
+            {
+                "internalType": "address",
+                "name": "owner",
+                "type": "address"
+            }
+        ],
+        "name": "ERC1155MissingApprovalForAll",
+        "type": "error"
+    },
+    {
+        "anonymous": false,
+        "inputs": [
+            {
+                "indexed": true,
+                "internalType": "address",
+                "name": "account",
+                "type": "address"
+            },
+            {
+                "indexed": true,
+                "internalType": "address",
+                "name": "operator",
+                "type": "address"
+            },
+            {
+                "indexed": false,
+                "internalType": "bool",
+                "name": "approved",
+                "type": "bool"
+            }
+        ],
+        "name": "ApprovalForAll",
+        "type": "event"
+    },
+    {
+        "anonymous": false,
+        "inputs": [
+            {
+                "indexed": true,
+                "internalType": "address",
+                "name": "operator",
+                "type": "address"
+            },
+            {
+                "indexed": true,
+                "internalType": "address",
+                "name": "from",
+                "type": "address"
+            },
+            {
+                "indexed": true,
+                "internalType": "address",
+                "name": "to",
+                "type": "address"
+            },
+            {
+                "indexed": false,
+                "internalType": "uint256[]",
+                "name": "ids",
+                "type": "uint256[]"
+            },
+            {
+                "indexed": false,
+                "internalType": "uint256[]",
+                "name": "values",
+                "type": "uint256[]"
+            }
+        ],
+        "name": "TransferBatch",
+        "type": "event"
+    },
+    {
+        "anonymous": false,
+        "inputs": [
+            {
+                "indexed": true,
+                "internalType": "address",
+                "name": "operator",
+                "type": "address"
+            },
+            {
+                "indexed": true,
+                "internalType": "address",
+                "name": "from",
+                "type": "address"
+            },
+            {
+                "indexed": true,
+                "internalType": "address",
+                "name": "to",
+                "type": "address"
+            },
+            {
+                "indexed": false,
+                "internalType": "uint256",
+                "name": "id",
+                "type": "uint256"
+            },
+            {
+                "indexed": false,
+                "internalType": "uint256",
+                "name": "value",
+                "type": "uint256"
+            }
+        ],
+        "name": "TransferSingle",
+        "type": "event"
+    },
+    {
+        "anonymous": false,
+        "inputs": [
+            {
+                "indexed": false,
+                "internalType": "string",
+                "name": "value",
+                "type": "string"
+            },
+            {
+                "indexed": true,
+                "internalType": "uint256",
+                "name": "id",
+                "type": "uint256"
+            }
+        ],
+        "name": "URI",
+        "type": "event"
+    },
+    {
+        "inputs": [],
+        "name": "BUYER",
+        "outputs": [
+            {
+                "internalType": "uint256",
+                "name": "",
+                "type": "uint256"
+            }
+        ],
+        "stateMutability": "view",
+        "type": "function"
+    },
+    {
+        "inputs": [],
+        "name": "REFERRER",
+        "outputs": [
+            {
+                "internalType": "uint256",
+                "name": "",
+                "type": "uint256"
+            }
+        ],
+        "stateMutability": "view",
+        "type": "function"
+    },
+    {
+        "inputs": [
+            {
+                "internalType": "string",
+                "name": "",
+                "type": "string"
+            }
+        ],
+        "name": "TxStatus",
+        "outputs": [
+            {
+                "internalType": "uint256",
+                "name": "",
+                "type": "uint256"
+            }
+        ],
+        "stateMutability": "view",
+        "type": "function"
+    },
+    {
+        "inputs": [
+            {
+                "internalType": "uint256",
+                "name": "nodeId",
+                "type": "uint256"
+            },
+            {
+                "internalType": "string",
+                "name": "_metadata",
+                "type": "string"
+            }
+        ],
+        "name": "_changeNodeMetadata",
+        "outputs": [],
+        "stateMutability": "nonpayable",
+        "type": "function"
+    },
+    {
+        "inputs": [
+            {
+                "internalType": "address",
+                "name": "account",
+                "type": "address"
+            },
+            {
+                "internalType": "uint256",
+                "name": "id",
+                "type": "uint256"
+            }
+        ],
+        "name": "balanceOf",
+        "outputs": [
+            {
+                "internalType": "uint256",
+                "name": "",
+                "type": "uint256"
+            }
+        ],
+        "stateMutability": "view",
+        "type": "function"
+    },
+    {
+        "inputs": [
+            {
+                "internalType": "address[]",
+                "name": "accounts",
+                "type": "address[]"
+            },
+            {
+                "internalType": "uint256[]",
+                "name": "ids",
+                "type": "uint256[]"
+            }
+        ],
+        "name": "balanceOfBatch",
+        "outputs": [
+            {
+                "internalType": "uint256[]",
+                "name": "",
+                "type": "uint256[]"
+            }
+        ],
+        "stateMutability": "view",
+        "type": "function"
+    },
+    {
+        "inputs": [],
+        "name": "canTransferRule",
+        "outputs": [
+            {
+                "internalType": "bool",
+                "name": "",
+                "type": "bool"
+            }
+        ],
+        "stateMutability": "view",
+        "type": "function"
+    },
+    {
+        "inputs": [],
+        "name": "currentNodeID",
+        "outputs": [
+            {
+                "internalType": "uint256",
+                "name": "",
+                "type": "uint256"
+            }
+        ],
+        "stateMutability": "view",
+        "type": "function"
+    },
+    {
+        "inputs": [
+            {
+                "internalType": "uint256",
+                "name": "id",
+                "type": "uint256"
+            }
+        ],
+        "name": "exists",
+        "outputs": [
+            {
+                "internalType": "bool",
+                "name": "",
+                "type": "bool"
+            }
+        ],
+        "stateMutability": "view",
+        "type": "function"
+    },
+    {
+        "inputs": [],
+        "name": "fx168",
+        "outputs": [
+            {
+                "internalType": "uint256",
+                "name": "",
+                "type": "uint256"
+            }
+        ],
+        "stateMutability": "view",
+        "type": "function"
+    },
+    {
+        "inputs": [
+            {
+                "internalType": "string",
+                "name": "uuid",
+                "type": "string"
+            },
+            {
+                "internalType": "uint256",
+                "name": "status",
+                "type": "uint256"
+            }
+        ],
+        "name": "fx168TxStatus",
+        "outputs": [],
+        "stateMutability": "nonpayable",
+        "type": "function"
+    },
+    {
+        "inputs": [
+            {
+                "internalType": "string",
+                "name": "_tx",
+                "type": "string"
+            },
+            {
+                "internalType": "string",
+                "name": "uuid",
+                "type": "string"
+            }
+        ],
+        "name": "fx168TxtoUuid",
+        "outputs": [],
+        "stateMutability": "nonpayable",
+        "type": "function"
+    },
+    {
+        "inputs": [
+            {
+                "internalType": "uint256",
+                "name": "nodeId",
+                "type": "uint256"
+            }
+        ],
+        "name": "getNodeMetadata",
+        "outputs": [
+            {
+                "internalType": "string",
+                "name": "nodeMetadata",
+                "type": "string"
+            }
+        ],
+        "stateMutability": "view",
+        "type": "function"
+    },
+    {
+        "inputs": [
+            {
+                "internalType": "uint256",
+                "name": "nodeId",
+                "type": "uint256"
+            }
+        ],
+        "name": "getOwnership",
+        "outputs": [
+            {
+                "internalType": "address",
+                "name": "ownerWallet",
+                "type": "address"
+            }
+        ],
+        "stateMutability": "view",
+        "type": "function"
+    },
+    {
+        "inputs": [
+            {
+                "internalType": "address",
+                "name": "account",
+                "type": "address"
+            },
+            {
+                "internalType": "address",
+                "name": "operator",
+                "type": "address"
+            }
+        ],
+        "name": "isApprovedForAll",
+        "outputs": [
+            {
+                "internalType": "bool",
+                "name": "",
+                "type": "bool"
+            }
+        ],
+        "stateMutability": "view",
+        "type": "function"
+    },
+    {
+        "inputs": [
+            {
+                "internalType": "uint256",
+                "name": "",
+                "type": "uint256"
+            }
+        ],
+        "name": "metadata",
+        "outputs": [
+            {
+                "internalType": "string",
+                "name": "",
+                "type": "string"
+            }
+        ],
+        "stateMutability": "view",
+        "type": "function"
+    },
+    {
+        "inputs": [
+            {
+                "internalType": "address[]",
+                "name": "to",
+                "type": "address[]"
+            },
+            {
+                "internalType": "address",
+                "name": "paymentWallet",
+                "type": "address"
+            }
+        ],
+        "name": "mint",
+        "outputs": [],
+        "stateMutability": "nonpayable",
+        "type": "function"
+    },
+    {
+        "inputs": [],
+        "name": "name",
+        "outputs": [
+            {
+                "internalType": "string",
+                "name": "",
+                "type": "string"
+            }
+        ],
+        "stateMutability": "view",
+        "type": "function"
+    },
+    {
+        "inputs": [
+            {
+                "internalType": "uint256",
+                "name": "",
+                "type": "uint256"
+            }
+        ],
+        "name": "nodeOwnership",
+        "outputs": [
+            {
+                "internalType": "address",
+                "name": "",
+                "type": "address"
+            }
+        ],
+        "stateMutability": "view",
+        "type": "function"
+    },
+    {
+        "inputs": [
+            {
+                "internalType": "address",
+                "name": "",
+                "type": "address"
+            }
+        ],
+        "name": "ownershipForNodeID",
+        "outputs": [
+            {
+                "internalType": "uint256",
+                "name": "",
+                "type": "uint256"
+            }
+        ],
+        "stateMutability": "view",
+        "type": "function"
+    },
+    {
+        "inputs": [
+            {
+                "internalType": "address",
+                "name": "from",
+                "type": "address"
+            },
+            {
+                "internalType": "address",
+                "name": "to",
+                "type": "address"
+            },
+            {
+                "internalType": "uint256[]",
+                "name": "ids",
+                "type": "uint256[]"
+            },
+            {
+                "internalType": "uint256[]",
+                "name": "values",
+                "type": "uint256[]"
+            },
+            {
+                "internalType": "bytes",
+                "name": "data",
+                "type": "bytes"
+            }
+        ],
+        "name": "safeBatchTransferFrom",
+        "outputs": [],
+        "stateMutability": "nonpayable",
+        "type": "function"
+    },
+    {
+        "inputs": [
+            {
+                "internalType": "address",
+                "name": "from",
+                "type": "address"
+            },
+            {
+                "internalType": "address",
+                "name": "to",
+                "type": "address"
+            },
+            {
+                "internalType": "uint256",
+                "name": "id",
+                "type": "uint256"
+            },
+            {
+                "internalType": "uint256",
+                "name": "value",
+                "type": "uint256"
+            },
+            {
+                "internalType": "bytes",
+                "name": "data",
+                "type": "bytes"
+            }
+        ],
+        "name": "safeTransferFrom",
+        "outputs": [],
+        "stateMutability": "nonpayable",
+        "type": "function"
+    },
+    {
+        "inputs": [
+            {
+                "internalType": "address",
+                "name": "operator",
+                "type": "address"
+            },
+            {
+                "internalType": "bool",
+                "name": "approved",
+                "type": "bool"
+            }
+        ],
+        "name": "setApprovalForAll",
+        "outputs": [],
+        "stateMutability": "nonpayable",
+        "type": "function"
+    },
+    {
+        "inputs": [
+            {
+                "internalType": "bool",
+                "name": "status",
+                "type": "bool"
+            }
+        ],
+        "name": "setCanTransferRule",
+        "outputs": [],
+        "stateMutability": "nonpayable",
+        "type": "function"
+    },
+    {
+        "inputs": [
+            {
+                "internalType": "string",
+                "name": "url",
+                "type": "string"
+            }
+        ],
+        "name": "setNFTUrl",
+        "outputs": [],
+        "stateMutability": "nonpayable",
+        "type": "function"
+    },
+    {
+        "inputs": [
+            {
+                "internalType": "bytes4",
+                "name": "interfaceId",
+                "type": "bytes4"
+            }
+        ],
+        "name": "supportsInterface",
+        "outputs": [
+            {
+                "internalType": "bool",
+                "name": "",
+                "type": "bool"
+            }
+        ],
+        "stateMutability": "view",
+        "type": "function"
+    },
+    {
+        "inputs": [],
+        "name": "symbol",
+        "outputs": [
+            {
+                "internalType": "string",
+                "name": "",
+                "type": "string"
+            }
+        ],
+        "stateMutability": "view",
+        "type": "function"
+    },
+    {
+        "inputs": [],
+        "name": "totalNodes",
+        "outputs": [
+            {
+                "internalType": "uint256",
+                "name": "",
+                "type": "uint256"
+            }
+        ],
+        "stateMutability": "view",
+        "type": "function"
+    },
+    {
+        "inputs": [],
+        "name": "totalSupply",
+        "outputs": [
+            {
+                "internalType": "uint256",
+                "name": "",
+                "type": "uint256"
+            }
+        ],
+        "stateMutability": "view",
+        "type": "function"
+    },
+    {
+        "inputs": [
+            {
+                "internalType": "uint256",
+                "name": "id",
+                "type": "uint256"
+            }
+        ],
+        "name": "totalSupply",
+        "outputs": [
+            {
+                "internalType": "uint256",
+                "name": "",
+                "type": "uint256"
+            }
+        ],
+        "stateMutability": "view",
+        "type": "function"
+    },
+    {
+        "inputs": [
+            {
+                "internalType": "uint256",
+                "name": "",
+                "type": "uint256"
+            }
+        ],
+        "name": "uri",
+        "outputs": [
+            {
+                "internalType": "string",
+                "name": "",
+                "type": "string"
+            }
+        ],
+        "stateMutability": "view",
+        "type": "function"
+    },
+    {
+        "inputs": [
+            {
+                "internalType": "string",
+                "name": "",
+                "type": "string"
+            }
+        ],
+        "name": "uuidTx",
+        "outputs": [
+            {
+                "internalType": "string",
+                "name": "",
+                "type": "string"
+            }
+        ],
+        "stateMutability": "view",
         "type": "function"
     }
 ]

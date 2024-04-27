@@ -35,6 +35,8 @@ const Claimable_BlastUSDB = '0x53Aee1f4c9b0ff76781eFAC6e20eAe4561e29E8A'.toLower
 // const Claimable_ETH = '0x6Eb683B666310cC4E08f32896ad620E5F204c8f8'.toLowerCase()
 const Claimable_ETHUSDT = '0x95A9d14fC824e037B29F1Fdae8EE3D9369B13915'.toLowerCase()
 
+const CONET_Guardian_Nodes = '0x0Ba531f8F4F121033Bed82F2fAeB7186B6148aDe'
+
 const fx168OrderContractAddress = '0x9aE6D3Bd3029C8B2A73817b9aFa1C029237E3e30'
 
 const FragmentNameDeriveChildIndex = 65536
@@ -448,6 +450,8 @@ const getClaimableAddress = (CONET_claimableName: string) => {
 		}
 	}
 }
+
+
 const claimToken = async (profile: profile, CoNET_Data: encrypt_keys_object, assetName: string, cmd: worker_command) => {
 	const asset: CryptoAsset = profile.tokens[assetName]
 	let balance

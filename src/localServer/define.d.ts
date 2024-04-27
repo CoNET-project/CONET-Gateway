@@ -233,7 +233,7 @@ interface conet_tokens {
 	// cBNB: CryptoAsset
 	// cETH: CryptoAsset
 	cUSDT: CryptoAsset
-
+	CGPNs: CryptoAsset
 	//	blast mainchain
 
 	blastETH: CryptoAsset
