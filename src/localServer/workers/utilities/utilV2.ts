@@ -35,7 +35,7 @@ const Claimable_BlastUSDB = '0x53Aee1f4c9b0ff76781eFAC6e20eAe4561e29E8A'.toLower
 // const Claimable_ETH = '0x6Eb683B666310cC4E08f32896ad620E5F204c8f8'.toLowerCase()
 const Claimable_ETHUSDT = '0x95A9d14fC824e037B29F1Fdae8EE3D9369B13915'.toLowerCase()
 
-const CONET_Guardian_Nodes = '0x0Ba531f8F4F121033Bed82F2fAeB7186B6148aDe'
+const CONET_Guardian_Nodes = '0x5e4aE81285b86f35e3370B3EF72df1363DD05286'
 
 const fx168OrderContractAddress = '0x9aE6D3Bd3029C8B2A73817b9aFa1C029237E3e30'
 
@@ -186,9 +186,11 @@ const getAllProfiles = async (cmd: worker_command) => {
 
 	await checkUpdateAccount()
 	await getAllProfileAssetsBalance()
+	await checkGuardianNodes()
 	cmd.data = [CoNET_Data.profiles]
 	--getAllProfilesCount
 	lastTimeGetAllProfilesCount = timeStamp
+
 	return returnUUIDChannel(cmd)
 }
 
@@ -507,7 +509,7 @@ const claimToken = async (profile: profile, CoNET_Data: encrypt_keys_object, ass
 
 const testFunction = async (cmd: worker_command) => {
 	
-	
+	//await checkGuardianNodes()
 	const wallet = getProfileByWallet('0x0060f53fEac407a04f3d48E3EA0335580369cDC4')
 	if (wallet?.privateKeyArmor) {
 		if (CoNET_Data) {

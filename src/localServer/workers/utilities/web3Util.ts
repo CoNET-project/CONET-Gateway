@@ -100,12 +100,117 @@ const getProfileAssetsBalance = async (profile: profile) => {
 		// current.cBlastETH.balance = BlastETH === BigInt(0) ? '0' :  parseFloat(ethers.formatEther(BlastETH)).toFixed(6)
 		// current.cBNB.balance = cBNB === BigInt(0) ? '0' :  parseFloat(ethers.formatEther(cBNB)).toFixed(6)
 		// current.cETH.balance = cETH === BigInt(0) ? '0' :  parseFloat(ethers.formatEther(cETH)).toFixed(6)
-		current.cUSDT.balance = ETHUSDT === BigInt(0) ? '0' :   typeof ETHUSDT!== 'boolean' ? parseFloat(ethers.formatEther(ETHUSDT)).toFixed(6): ''
+		current.cUSDT.balance = ETHUSDT === BigInt(0) ? '0' :  typeof ETHUSDT!== 'boolean' ? parseFloat(ethers.formatEther(ETHUSDT)).toFixed(6): ''
 
-		current.CGPNs.balance = CGPNs === BigInt(0) ? '0' : typeof CGPNs!== 'boolean' ? parseFloat(ethers.formatEther(CGPNs)).toFixed(6): ''
+		current.CGPNs.balance = CGPNs !== 'boolean' ? 
+			//	@ts-ignore
+			CGPNs.toString() : ''
 	}
 
 	return true
+}
+
+const maxfindNodeAddressNumber = 1000
+const findNodeAddress: (nodeAddress: string, mnemonicPhrase: string) => number = (nodeAddress, mnemonicPhrase) => {
+	const root = ethers.Wallet.fromPhrase(mnemonicPhrase)
+	if (!root?.deriveChild) {
+		logger(`findNodeAddress got null root?.deriveChild ERROR!`)
+		return -1
+	}
+	let index = 1
+	const _nodeAddress = nodeAddress.toLowerCase()
+	const findIndex = () => {
+		
+		const addr = root.deriveChild(index).address.toLowerCase()
+		if (_nodeAddress === addr) {
+			return index
+		}
+
+		if (++index > maxfindNodeAddressNumber) {
+			logger(`findNodeAddress reached maxfindNodeAddressNumber ERROR!`)
+			return -1
+		}
+		return findIndex()
+	}
+	return findIndex ()
+}
+
+
+const checkGuardianNodes = async () => {
+	if (!CoNET_Data||!CoNET_Data?.profiles) {
+		return logger(`checkGuardianNodes !CoNET_Data||!CoNET_Data?.profiles Error! STOP process.`)
+	}
+	const mnemonicPhrase = CoNET_Data.mnemonicPhrase
+	const mainIndex = CoNET_Data.profiles.findIndex(n => n.index === 0)
+	if (mainIndex < 0) {
+		return logger(`checkGuardianNodes cannot find main profile STOP process.`)
+	}
+	const profile = CoNET_Data.profiles[mainIndex]
+	const provideCONET = new ethers.JsonRpcProvider(conet_rpc)
+	const erc1155 = new ethers.Contract(CONET_Guardian_Nodes, guardian_erc1155, provideCONET)
+	let nodeAddress: string[] = [], Ids, numbers
+	try {
+		const ownerIds = await erc1155.getOwnerNodesAddress(profile.keyID)
+		if (!ownerIds) {
+			return (`checkGuardianNodes getOwnerNodesAddress null!`)
+		}
+		Ids = ownerIds.map(n => n.toString())
+		const IdAddressProcess = Ids.map(n => erc1155.getOwnership(n))
+		const _nodeAddress = await Promise.all(IdAddressProcess)
+		const batchAddress: string[] = []
+		const batchIds: string[] = []
+		_nodeAddress.forEach(n => {
+			Ids.forEach(nn => {
+				nodeAddress.push (n)
+				batchIds.push (nn)
+			})
+		})
+		numbers = await erc1155.balanceOfBatch(nodeAddress, batchIds)
+		
+	} catch (ex) {
+		return logger(`call erc1155 smart contract `)
+	}
+	const assetNodesAddr: string[] = []
+	numbers.forEach((n, index) => {
+		if (n>0){
+			assetNodesAddr.push(nodeAddress[index])
+		}
+	})
+	const IdsIndex: number[] = assetNodesAddr.map (n => findNodeAddress(n, mnemonicPhrase))
+	const profiles = CoNET_Data.profiles
+	profiles.forEach(n => {
+		n.isNode = false
+	})
+	const root = ethers.Wallet.fromPhrase(mnemonicPhrase)
+	IdsIndex.forEach( async idIndex=> {
+		const index = profiles.findIndex(n => n.index === idIndex)
+		if (index <0) {
+			const newAcc = root.deriveChild(idIndex)
+			const key = await createGPGKey('', '', '')
+			const profile: profile = {
+				isPrimary: false,
+				keyID: newAcc.address,
+				privateKeyArmor: newAcc.signingKey.privateKey,
+				hdPath: newAcc.path,
+				index: newAcc.index,
+				isNode: true,
+				pgpKey: {
+					privateKeyArmor: key.privateKey,
+					publicKeyArmor: key.publicKey
+				},
+				referrer: null,
+				network: {
+					recipients: []
+				},
+				tokens: initProfileTokens(),
+				data: null
+			}
+			profiles.push(profile)
+		} else {
+			profiles[index].isNode = true
+		}
+	})
+	
 }
 
 const sendState = (state: listenState, value: any) => {
@@ -114,16 +219,22 @@ const sendState = (state: listenState, value: any) => {
 	sendChannel.close()
 }
 
-const listenProfileVer = () => {
+const listenProfileVer = async () => {
+
 	const provideCONET = new ethers.JsonRpcProvider(conet_rpc)
+	let EPOCH = await provideCONET.getBlockNumber()
 	provideCONET.on('block', async block => {
-		await checkUpdateAccount ()
+		if (block <= EPOCH) {
+			return logger(`listenProfileVer got event block = [${block}] less than current epoch [${EPOCH}] ignore!`)
+		}
 
 		const cmd: channelWroker = {
 			cmd: 'assets',
 			data: [block]
 		}
 		sendState('toFrontEnd', cmd)
+		EPOCH = block
+		logger(`new Epoch [${EPOCH}] event!`)
 	})
 }
 
@@ -3602,25 +3713,6 @@ const guardian_erc1155 = [
     {
         "inputs": [
             {
-                "internalType": "string",
-                "name": "",
-                "type": "string"
-            }
-        ],
-        "name": "TxStatus",
-        "outputs": [
-            {
-                "internalType": "uint256",
-                "name": "",
-                "type": "uint256"
-            }
-        ],
-        "stateMutability": "view",
-        "type": "function"
-    },
-    {
-        "inputs": [
-            {
                 "internalType": "uint256",
                 "name": "nodeId",
                 "type": "uint256"
@@ -3685,6 +3777,52 @@ const guardian_erc1155 = [
         "type": "function"
     },
     {
+        "inputs": [
+            {
+                "internalType": "address",
+                "name": "account",
+                "type": "address"
+            },
+            {
+                "internalType": "uint256",
+                "name": "id",
+                "type": "uint256"
+            },
+            {
+                "internalType": "uint256",
+                "name": "value",
+                "type": "uint256"
+            }
+        ],
+        "name": "burn",
+        "outputs": [],
+        "stateMutability": "nonpayable",
+        "type": "function"
+    },
+    {
+        "inputs": [
+            {
+                "internalType": "address",
+                "name": "account",
+                "type": "address"
+            },
+            {
+                "internalType": "uint256[]",
+                "name": "ids",
+                "type": "uint256[]"
+            },
+            {
+                "internalType": "uint256[]",
+                "name": "values",
+                "type": "uint256[]"
+            }
+        ],
+        "name": "burnBatch",
+        "outputs": [],
+        "stateMutability": "nonpayable",
+        "type": "function"
+    },
+    {
         "inputs": [],
         "name": "canTransferRule",
         "outputs": [
@@ -3731,51 +3869,30 @@ const guardian_erc1155 = [
     },
     {
         "inputs": [],
-        "name": "fx168",
+        "name": "getAllIdOwnershipAndBooster",
         "outputs": [
             {
-                "internalType": "uint256",
-                "name": "",
-                "type": "uint256"
+                "internalType": "address[]",
+                "name": "nodeAddress",
+                "type": "address[]"
+            },
+            {
+                "internalType": "uint256[]",
+                "name": "boosters",
+                "type": "uint256[]"
+            },
+            {
+                "internalType": "address[]",
+                "name": "referrerAddress",
+                "type": "address[]"
+            },
+            {
+                "internalType": "uint256[]",
+                "name": "referrerNodes",
+                "type": "uint256[]"
             }
         ],
         "stateMutability": "view",
-        "type": "function"
-    },
-    {
-        "inputs": [
-            {
-                "internalType": "string",
-                "name": "uuid",
-                "type": "string"
-            },
-            {
-                "internalType": "uint256",
-                "name": "status",
-                "type": "uint256"
-            }
-        ],
-        "name": "fx168TxStatus",
-        "outputs": [],
-        "stateMutability": "nonpayable",
-        "type": "function"
-    },
-    {
-        "inputs": [
-            {
-                "internalType": "string",
-                "name": "_tx",
-                "type": "string"
-            },
-            {
-                "internalType": "string",
-                "name": "uuid",
-                "type": "string"
-            }
-        ],
-        "name": "fx168TxtoUuid",
-        "outputs": [],
-        "stateMutability": "nonpayable",
         "type": "function"
     },
     {
@@ -3792,6 +3909,25 @@ const guardian_erc1155 = [
                 "internalType": "string",
                 "name": "nodeMetadata",
                 "type": "string"
+            }
+        ],
+        "stateMutability": "view",
+        "type": "function"
+    },
+    {
+        "inputs": [
+            {
+                "internalType": "address",
+                "name": "_owner",
+                "type": "address"
+            }
+        ],
+        "name": "getOwnerNodesAddress",
+        "outputs": [
+            {
+                "internalType": "uint256[]",
+                "name": "nodesAddress",
+                "type": "uint256[]"
             }
         ],
         "stateMutability": "view",
@@ -3898,12 +4034,74 @@ const guardian_erc1155 = [
                 "type": "uint256"
             }
         ],
-        "name": "nodeOwnership",
+        "name": "nodeIdBooster",
+        "outputs": [
+            {
+                "internalType": "uint256",
+                "name": "",
+                "type": "uint256"
+            }
+        ],
+        "stateMutability": "view",
+        "type": "function"
+    },
+    {
+        "inputs": [
+            {
+                "internalType": "uint256",
+                "name": "",
+                "type": "uint256"
+            }
+        ],
+        "name": "nodeOwnershipAddress",
         "outputs": [
             {
                 "internalType": "address",
                 "name": "",
                 "type": "address"
+            }
+        ],
+        "stateMutability": "view",
+        "type": "function"
+    },
+    {
+        "inputs": [
+            {
+                "internalType": "uint256",
+                "name": "",
+                "type": "uint256"
+            }
+        ],
+        "name": "nodeReferrerAddress",
+        "outputs": [
+            {
+                "internalType": "address",
+                "name": "",
+                "type": "address"
+            }
+        ],
+        "stateMutability": "view",
+        "type": "function"
+    },
+    {
+        "inputs": [
+            {
+                "internalType": "address",
+                "name": "",
+                "type": "address"
+            },
+            {
+                "internalType": "uint256",
+                "name": "",
+                "type": "uint256"
+            }
+        ],
+        "name": "ownershipForIDs",
+        "outputs": [
+            {
+                "internalType": "uint256",
+                "name": "",
+                "type": "uint256"
             }
         ],
         "stateMutability": "view",
@@ -4072,19 +4270,6 @@ const guardian_erc1155 = [
     },
     {
         "inputs": [],
-        "name": "totalNodes",
-        "outputs": [
-            {
-                "internalType": "uint256",
-                "name": "",
-                "type": "uint256"
-            }
-        ],
-        "stateMutability": "view",
-        "type": "function"
-    },
-    {
-        "inputs": [],
         "name": "totalSupply",
         "outputs": [
             {
@@ -4124,25 +4309,6 @@ const guardian_erc1155 = [
             }
         ],
         "name": "uri",
-        "outputs": [
-            {
-                "internalType": "string",
-                "name": "",
-                "type": "string"
-            }
-        ],
-        "stateMutability": "view",
-        "type": "function"
-    },
-    {
-        "inputs": [
-            {
-                "internalType": "string",
-                "name": "",
-                "type": "string"
-            }
-        ],
-        "name": "uuidTx",
         "outputs": [
             {
                 "internalType": "string",
