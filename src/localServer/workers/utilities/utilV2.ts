@@ -2,10 +2,10 @@ const conet_rpc = 'https://rpc.conet.network'
 const api_endpoint = `https://api.conet.network/api/`
 
 const cloudStorageEndpointUrl = 'https://s3.us-east-1.wasabisys.com/conet-mvp/storage/FragmentOcean/'
-const blast_sepoliaRpc = 'https://rpc.ankr.com/blast_testnet_sepolia'
+const blast_sepoliaRpc = 'https://sepolia.blast.io'
 const ethRpc = 'https://rpc.ankr.com/eth'
-const blast_mainnet = 'https://rpc.blast.io'
-const blast_mainnet1 = 'https://rpc.ankr.com/blast'
+
+const blast_mainnet1 = ['https://blast.din.dev/rpc']
 const bsc_mainchain = 'https://bsc-dataseed.binance.org/'
 
 const ReferralsAddress = '0x8f6be4704a3735024F4D2CBC5BAC3722c0C8a0BD'
@@ -40,6 +40,9 @@ const CONET_Guardian_Nodes = '0x5e4aE81285b86f35e3370B3EF72df1363DD05286'
 const fx168OrderContractAddress = '0x9aE6D3Bd3029C8B2A73817b9aFa1C029237E3e30'
 
 const FragmentNameDeriveChildIndex = 65536
+
+const blast_mainnet = () => blast_mainnet1[Math.round(Math.random()*(blast_mainnet1.length-1))]
+
 
 let allNodes: node
 let authorization_key = ''
@@ -412,27 +415,27 @@ const nodePrice = 1250
  */
 
 
-const getAllNodesInfo: () => Promise<node|null> = () => new Promise(resolve=> {
+// const getAllNodesInfo: () => Promise<node|null> = () => new Promise(resolve=> {
 
-	return fetch('https://openpgp.online:4001/api/conet-nodes', {
-		method: 'GET',
-		headers: {
-			'Content-Type': 'application/json;charset=UTF-8',
-			'Connection': 'close',
-		},
-		cache: 'no-store',
-		referrerPolicy: 'no-referrer'
-	})
-	.then ( async res => {
-		return res.json()
-	}).then((data: node) => {
-		allNodes = data
-		resolve(data)
-	}).catch(ex=> {
-		resolve(null)
-	})
+// 	return fetch('https://openpgp.online:4001/api/conet-nodes', {
+// 		method: 'GET',
+// 		headers: {
+// 			'Content-Type': 'application/json;charset=UTF-8',
+// 			'Connection': 'close',
+// 		},
+// 		cache: 'no-store',
+// 		referrerPolicy: 'no-referrer'
+// 	})
+// 	.then ( async res => {
+// 		return res.json()
+// 	}).then((data: node) => {
+// 		allNodes = data
+// 		resolve(data)
+// 	}).catch(ex=> {
+// 		resolve(null)
+// 	})
 
-})
+// })
 
 const claimAdmin = '0x418833b70F882C833EF0F0Fcee3FB9d89C79d47C'
 
