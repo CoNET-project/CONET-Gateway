@@ -48,10 +48,10 @@ const getProfileAssetsBalance = async (profile: profile) => {
 		const provideBNB = new ethers.JsonRpcProvider(bsc_mainchain)
 		// const walletETH = new ethers.Wallet(profile.privateKeyArmor, provideETH)
 		const [balanceCNTP, balanceCNTPV1,balanceCCNTP , balanceUSDT, ETH, blastETH, usdb, bnb, wbnb, wusdt, conet_Holesky, dWBNB, dUSDT, dWETH,
-			BNBUSDT, BlastUSDB, ETHUSDT, CGPNs
+			BNBUSDT, BlastUSDB, ETHUSDT, CGPNs, CGPN2s
 		] = await Promise.all([
 			scanCNTP (key, provideBlastMainChain),
-			scanCNTPV1 (key, provideBlast),
+			scanCNTPV1 (key, provideCONET),
 			scanCCNTP (key, provideCONET),
 
 			scanUSDT (key, provideETH),
@@ -72,7 +72,8 @@ const getProfileAssetsBalance = async (profile: profile) => {
 			// scanCONET_Claimable_BNB(key, provideCONET),
 			// scanCONET_Claimable_ETH(key, provideCONET),
 			scanCONET_Claimable_ETHUSDT(key, provideCONET),
-			scan_Guardian_Nodes(key, provideCONET)
+			scan_Guardian_Nodes(key, provideCONET),
+			scan_Guardian_ReferralNodes(key, provideCONET)
 		])
 		
 
@@ -105,6 +106,10 @@ const getProfileAssetsBalance = async (profile: profile) => {
 		current.CGPNs.balance = CGPNs !== 'boolean' ? 
 			//	@ts-ignore
 			CGPNs.toString() : ''
+		
+		current.CGPN2s.balance = CGPN2s !== 'boolean' ? 
+			//	@ts-ignore
+			CGPN2s.toString() : ''
 	}
 
 	return true
@@ -810,9 +815,17 @@ const initProfileTokens = () => {
 			balance: '0',
 			history: [],
 			network: 'CONET Guardian Nodes (CGPNs)',
-			decimal: 18,
+			decimal: 1,
 			contract: CONET_Guardian_Nodes,
 			name: 'CGPNs'
+		},
+		CGPN2s: {
+			balance: '0',
+			history: [],
+			network: 'CONET Guardian Nodes (CGPN2s)',
+			decimal: 1,
+			contract: CONET_Guardian_Nodes,
+			name: 'CGPN2s'
 		},
 		cCNTP: {
 			balance: '0',
@@ -905,9 +918,9 @@ const initProfileTokens = () => {
 		CNTPV1: {
 			balance: '0',
 			history: [],
-			network: 'Blast Testnet',
+			network: 'CONET Holesky',
 			decimal: 18,
-			contract: blast_testnet_CNTPV1,
+			contract: CNTPV1,
 			name: 'CNTPV1'
 		},
 		usdt: {
@@ -983,21 +996,33 @@ const checkTokenStructure = (token: any) => {
 			balance: '0',
 			history: [],
 			network: 'CONET Holesky',
-			decimal: 18,
+			decimal: 1,
 			contract: CONET_Guardian_Nodes,
 			name: 'CGPNs'
 		}
 	} else {
 		token.CGPNs.name = 'CGPNs'
 	}
+	if (!token?.CGPN2s) {
+		token.CGPN2s = {
+			balance: '0',
+			history: [],
+			network: 'CONET Holesky',
+			decimal: 1,
+			contract: CONET_Guardian_Nodes,
+			name: 'CGPN2s'
+		}
+	} else {
+		token.CGPN2s.name = 'CGPN2s'
+	}
 
 	if (!token?.CNTPV1) {
 		token.CNTPV1 = {
 			balance: '0',
 			history: [],
-			network: 'Blast Testnet',
+			network: 'CONET Holesky',
 			decimal: 18,
-			contract: blast_testnet_CNTPV1,
+			contract: CNTPV1,
 			name: 'CNTPV1'
 		}
 	} else {
@@ -1688,7 +1713,7 @@ const scanCONETHolesky = async (walletAddr: string, privideCONET: any) => {
 }
 
 const scanCNTPV1 = async (walletAddr: string, privide: any) => {
-	return await scan_erc20_balance(walletAddr, privide, blast_testnet_CNTPV1)
+	return await scan_erc20_balance(walletAddr, privide, CNTPV1)
 }
 
 
@@ -1728,7 +1753,7 @@ const scanBNB = async (walletAddr: string, provideBNB: any) => {
 	return await scan_natureBalance(provideBNB, walletAddr)
 }
 
-const scan_natureBalance = (provide: any, walletAddr: string) => new Promise( async resolve => {
+const scan_natureBalance = (provide: any, walletAddr: string, provideUrl = '') => new Promise( async resolve => {
 	try {
 		const result = await provide.getBalance(walletAddr)
 		return resolve (result)
@@ -1749,6 +1774,7 @@ const scanCONET_Claimable_BNBUSDT = async (walletAddr: string, privideCONET: any
 const scanCONET_Claimable_BlastUSDB = async (walletAddr: string, privideCONET: any) => {
 	return await scan_erc20_balance(walletAddr, privideCONET, Claimable_BlastUSDB)
 }
+
 
 // const scanCONET_Claimable_BlastETH = async (walletAddr: string, privideCONET: any) => {
 // 	return await scan_erc20_balance(walletAddr, privideCONET, Claimable_BlastETH)
@@ -1786,6 +1812,9 @@ const scan_Guardian_Nodes = async (walletAddr: string, rpcProdive: any) => {
 	return await scan_src1155_balance(walletAddr, rpcProdive, CONET_Guardian_Nodes, 1)
 }
 
+const scan_Guardian_ReferralNodes = async (walletAddr: string, rpcProdive: any) => {
+	return await scan_src1155_balance(walletAddr, rpcProdive, CONET_Guardian_Nodes, 2)
+}
 
 const scan_src1155_balance = (walletAddr: string, rpcProdive: any, erc1155Address: string, id: number) => new Promise(async resolve => {
 	const erc1155 = new ethers.Contract(erc1155Address, guardian_erc1155, rpcProdive)

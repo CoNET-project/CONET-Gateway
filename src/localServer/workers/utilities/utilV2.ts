@@ -5,7 +5,7 @@ const cloudStorageEndpointUrl = 'https://s3.us-east-1.wasabisys.com/conet-mvp/st
 const blast_sepoliaRpc = 'https://sepolia.blast.io'
 const ethRpc = 'https://rpc.ankr.com/eth'
 
-const blast_mainnet1 = ['https://blast.din.dev/rpc']
+const blast_mainnet1 = ['https://blast.din.dev/rpc', 'https://rpc.ankr.com/blast', 'https://blastl2-mainnet.public.blastapi.io', 'https://blast.blockpi.network/v1/rpc/public']
 const bsc_mainchain = 'https://bsc-dataseed.binance.org/'
 
 const ReferralsAddress = '0x8f6be4704a3735024F4D2CBC5BAC3722c0C8a0BD'
@@ -14,7 +14,9 @@ const conet_storage_contract_address = `0x7d9CF1dd164D6AF82C00514071990358805d8d
 const adminCNTP= '0x44d1FCCce6BAF388617ee972A6FB898b6b5629B1'
 const referrerCNTP= '0x63377154F972f6FC1319e382535EC9691754bd18'
 
-const blast_testnet_CNTPV1 = '0x53634b1285c256aE64BAd795301322E0e911153D'
+const CNTPV1 = '0x113E91FC4296567f95B84D0FacDa6fC29c5E7238'
+
+
 const Claimable_CNTP_holesky = '0x27A961F17E7244d8aA75eE19061f6360DeeDF76F'
 const blast_mainnet_CNTP = '0x0f43685B2cB08b9FB8Ca1D981fF078C22Fec84c5'
 //const CNTPB_contract = '0x6056473ADD8bC89a95325845F6a431CCD7A849bb'

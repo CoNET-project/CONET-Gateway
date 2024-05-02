@@ -266,17 +266,17 @@ const processCmd = async (cmd: worker_command) => {
 		}
 
 		case 'stopMining': {
-			Stoping = true
+			
 			if (miningConn) {
 				miningConn.abort()
-				
+				Stoping = true
 				setTimeout(() => {
 					Stoping = false
 					return returnUUIDChannel(cmd)
 				}, 12000)
 				return
 			}
-			
+			return returnUUIDChannel(cmd)
 		}
 
 		case 'guardianPurchase': {
