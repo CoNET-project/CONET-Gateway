@@ -159,9 +159,21 @@ const testPasscode = async (cmd: worker_command) => {
 // 	return returnUUIDChannel(cmd)
 // }
 
-const showSRP = (cmd: worker_command) => {
-	const _authorization_key: string = cmd.data[0]
-	if (!CoNET_Data || authorization_key!== _authorization_key) {
+const showSRP = async (cmd: worker_command) => {
+	const passcode: string = cmd.data[0]
+	if (!CoNET_Data || !passObj) {
+		cmd.err = 'FAILURE'
+		return returnUUIDChannel(cmd)
+	}
+
+	passObj.password = passcode
+	await decodePasscode ()
+
+	try {
+		await decryptSystemData ()
+		await recoverProfileFromSRP()
+	} catch (ex) {
+		logger (`encrypt_TestPasscode get password error!`)
 		cmd.err = 'FAILURE'
 		return returnUUIDChannel(cmd)
 	}

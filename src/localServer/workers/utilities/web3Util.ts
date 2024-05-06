@@ -1605,6 +1605,7 @@ const getFaucet = async (keyID: string) => {
 		}
 		const provideCONET = new ethers.JsonRpcProvider(conet_rpc)
 		const balance = await scanCONETHolesky(keyID, provideCONET)
+		
 		return resolve(parseFloat(ethers.formatEther(balance)).toFixed(6))
 	})
 
