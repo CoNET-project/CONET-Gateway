@@ -1,9 +1,10 @@
 const conet_rpc = 'https://rpc.conet.network'
 const api_endpoint = `https://api.conet.network/api/`
-
+const apiv2_endpoint = `https://apiv2.conet.network/api/`
 const cloudStorageEndpointUrl = 'https://s3.us-east-1.wasabisys.com/conet-mvp/storage/FragmentOcean/'
 const blast_sepoliaRpc = 'https://sepolia.blast.io'
-const ethRpc = 'https://rpc.ankr.com/eth'
+const _ethRpc: string[] = ['https://rpc.ankr.com/eth','https://eth.llamarpc.com','https://ethereum-rpc.publicnode.com']
+
 
 const blast_mainnet1 = ['https://blast.din.dev/rpc', 'https://rpc.ankr.com/blast', 'https://blastl2-mainnet.public.blastapi.io', 'https://blast.blockpi.network/v1/rpc/public']
 const bsc_mainchain = 'https://bsc-dataseed.binance.org/'
@@ -45,7 +46,7 @@ const FragmentNameDeriveChildIndex = 65536
 
 const blast_mainnet = () => blast_mainnet1[Math.round(Math.random()*(blast_mainnet1.length-1))]
 
-
+const ethRpc = () => _ethRpc[Math.round(Math.random()*(_ethRpc.length-1))]
 let allNodes: node
 let authorization_key = ''
 
@@ -458,6 +459,12 @@ const getClaimableAddress = (CONET_claimableName: string) => {
 	}
 }
 
+const getCONET_api_health = async () => {
+	const url = `${apiv2_endpoint}health`
+	const result: any = await postToEndpoint(url, false, null)
+	return result?.health
+}
+
 
 const claimToken = async (profile: profile, CoNET_Data: encrypt_keys_object, assetName: string, cmd: worker_command) => {
 	const asset: CryptoAsset = profile.tokens[assetName]
@@ -466,8 +473,16 @@ const claimToken = async (profile: profile, CoNET_Data: encrypt_keys_object, ass
 		cmd.err = 'INVALID_DATA'
 		return returnUUIDChannel(cmd)
 	}
+
+	const health = await getCONET_api_health()
+	if (!health) {
+		cmd.err = 'Err_Server_Unreachable'
+		return returnUUIDChannel(cmd)
+	}
+
 	const rpc = getNetwork(assetName)
 	const contractAddr = getClaimableAddress(assetName)
+
 	if (!rpc|| !contractAddr) {
 		cmd.err = 'INVALID_DATA'
 		return returnUUIDChannel(cmd)
@@ -502,7 +517,7 @@ const claimToken = async (profile: profile, CoNET_Data: encrypt_keys_object, ass
 		message, signMessage
 	}
 	logger(sendData)
-	const url = `${ api_endpoint }claimToken`
+	const url = `${ apiv2_endpoint }claimToken`
 	const result: any = await postToEndpoint(url, true, sendData)
 	if (!result) {
 		cmd.data = [false]
@@ -514,7 +529,11 @@ const claimToken = async (profile: profile, CoNET_Data: encrypt_keys_object, ass
 
 const testFunction = async (cmd: worker_command) => {
 	
-	//await checkGuardianNodes()
+	// const health = await getCONET_api_health()
+	// if (!health) {
+	// 	cmd.err = 'CONET_API_SERVER_unreachable'
+		
+	// }
 	const wallet = getProfileByWallet('0x0060f53fEac407a04f3d48E3EA0335580369cDC4')
 	if (wallet?.privateKeyArmor) {
 		if (CoNET_Data) {

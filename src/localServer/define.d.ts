@@ -148,15 +148,18 @@ interface passInit {
 }
 
 declare type WorkerCommandError = 'NOT_READY'|'INVALID_DATA'|'NO_UUID'|'INVALID_COMMAND'|'OPENPGP_RUNNING_ERROR'| 'TIMEOUT'|
-'PouchDB_ERROR'|'GENERATE_PASSCODE_ERROR'|'FAILURE'|'COUNTDOWN'| netWorkError | verification |seguroError|conetMiner
+'PouchDB_ERROR'|'GENERATE_PASSCODE_ERROR'|'FAILURE'|'COUNTDOWN'| netWorkError | verification |seguroError|conetMiner|conetError
 
 declare type netWorkError = 'NOT_INTERNET'|'NOT_STRIPE'|'ALL_EMAIL_SERVER_CAN_NOT_CONNECTING'|'LOCAL_SERVER_ERROR'|'WAITING_SEGURO_RESPONSE_TIMEOUT'|
 'EMAIL_ACCOUNT_AUTH_ERROR'|'UNKNOW_ERROR'|'LOCAL_RESPONE_NO_JSON_DATA'
+
 declare type seguroError = 'TIMEOUT_EMAIL_SERVER' | 'TIMEOUT_SEGURO_NETWORK' |
 'NO_INTERNET' | 'CONNECTING_ACCESS_POINT' |
 'CONNECTING_SEGURO_NETWORK'|'INIT'|'NOT_STRIPE'|
 'LOCAL_SERVER_ERROR'|'INVITATION_CODE_ERROR'|'SEGURO_DATA_FORMAT_ERROR'|
 'SEGURO_ERROR'
+
+declare type conetError = 'CONET_API_SERVER_unreachable'
 
 declare type verification = 'INCORRECT_CODE'|'Err_Server_Unreachable'|'Err_Multiple_IP'|'Err_Existed'
 

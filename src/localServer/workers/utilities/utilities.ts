@@ -854,9 +854,15 @@ const postToEndpointSSE = ( url: string, post: boolean, jsonData, CallBack:(err:
 		
 		let chunk = 0
 		xhr.onprogress = async (e) => {
+			
+			
+			const data = await xhr.responseText
 			clearTimeout (timeCount)
+			if (e.eventPhase<2) {
+				return logger(`xhr.status = ${xhr.status} e.eventPhase [${e.eventPhase}]`, data)
+			}
 			logger (`postToEndpointSSE xhr.onprogress!  ${xhr.readyState} xhr.status [${xhr.status}]`)
-		
+			
 			if (xhr.status ===401) {
 				return CallBack('Err_Multiple_IP','')
 			}
@@ -866,7 +872,7 @@ const postToEndpointSSE = ( url: string, post: boolean, jsonData, CallBack:(err:
 			if (xhr.status !==200) {
 				return CallBack('FAILURE','')
 			}
-			const data = await xhr.responseText
+			
 			const currentData = data.substring(chunk)
 			const responseText = data.split('\r\n\r\n')
 			chunk = data.length
@@ -880,7 +886,7 @@ const postToEndpointSSE = ( url: string, post: boolean, jsonData, CallBack:(err:
 		
 		xhr.upload.onerror=(err)=> {
 			clearTimeout (timeCount)
-			CallBack('NOT_INTERNET', '')
+			// CallBack('NOT_INTERNET', '')
 			logger(`xhr.upload.onerror`, err)
 		}
 
@@ -888,6 +894,11 @@ const postToEndpointSSE = ( url: string, post: boolean, jsonData, CallBack:(err:
 		xhr.setRequestHeader('Content-Type', 'application/json;charset=UTF-8')
 		xhr.send(typeof jsonData !=='string' ? JSON.stringify(jsonData): jsonData)
 
+		xhr.onerror = (err) => {
+			logger(`xhr.onerror`, err)
+			clearTimeout (timeCount)
+			CallBack('NOT_INTERNET', '')
+		}
 		const timeCount = setTimeout (() => {
 			const Err = `postToEndpoint Timeout!`
 			logger (`postToEndpoint Error`, Err )

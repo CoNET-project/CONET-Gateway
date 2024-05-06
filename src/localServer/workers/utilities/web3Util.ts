@@ -41,7 +41,7 @@ const getProfileAssetsBalance = async (profile: profile) => {
 		const current = profile.tokens
 		checkTokenStructure(current)
 
-		const provideETH = new ethers.JsonRpcProvider(ethRpc)
+		const provideETH = new ethers.JsonRpcProvider(ethRpc())
 		const provideBlast = new ethers.JsonRpcProvider(blast_sepoliaRpc)
 		const provideCONET = new ethers.JsonRpcProvider(conet_rpc)
 		const provideBlastMainChain = new ethers.JsonRpcProvider(blast_mainnet())
@@ -758,7 +758,6 @@ const encryptPasswordIssue = (ver: number, passcode: string, part: number) => {
 
 const updateFragmentsToIPFS = async (encryptData: string, hash: string, keyID: string, privateKeyArmor: string) => {
 
-
 	const url = `${ api_endpoint }storageFragments`
 	
 	const message =JSON.stringify({ walletAddress: keyID, data: encryptData, hash})
@@ -1292,8 +1291,6 @@ const getAllProfileAssetsBalance = async () => {
 			return resolve(true)
 		}
 		
-		
-		
 		logger(`getAllProfileAssetsBalance running!`)
 		runningGetAllProfileAssetsBalance = true
 		lastAllProfileAssetsBalanceTimeStamp = timeStamp
@@ -1580,6 +1577,7 @@ const getAllReferees = async (_wallet: string, CNTP_Referrals) => {
 }
 
 let getFaucetRoop = 0
+
 const getFaucet = async (keyID: string) => {
 	return new Promise (async resolve => {
 		if (++getFaucetRoop > 6) {
@@ -1587,7 +1585,9 @@ const getFaucet = async (keyID: string) => {
 			logger(`getFaucet Roop > 6 STOP process!`)
 			return resolve(null)
 		}
-		const url = `${api_endpoint}conet-faucet`
+		
+
+		const url = `${apiv2_endpoint}conet-faucet`
 		let result
 		try {
 			result = await postToEndpoint(url, true, { walletAddr: keyID })
@@ -1595,10 +1595,17 @@ const getFaucet = async (keyID: string) => {
 			logger (`getFaucet postToEndpoint [${url}] error! `, ex)
 			return setTimeout(() => {
 				return getFaucet (keyID)
-			}, 500)
+			}, 1000)
 		}
 		getFaucetRoop = 0
-		return resolve(result)
+		const txHash = result?.tx?.hash
+
+		if (!txHash) {
+			return resolve(null)
+		}
+		const provideCONET = new ethers.JsonRpcProvider(conet_rpc)
+		const balance = await scanCONETHolesky(keyID, provideCONET)
+		return resolve(parseFloat(ethers.formatEther(balance)).toFixed(6))
 	})
 
 }
@@ -1851,7 +1858,7 @@ const getNetwork = (networkName: string) => {
 		case 'usdt':
 		case 'eth': 
 			{
-				return ethRpc
+				return ethRpc()
 			}
 		case 'wusdt': 
 		case 'bnb': 
@@ -1946,7 +1953,7 @@ const getEstimateGas = (privateKey: string, asset: string, _transferNumber: stri
 	if (smartContractAddr) {
 		const estGas = new ethers.Contract(smartContractAddr, blast_CNTPAbi, wallet)
 		try {
-			_fee = await estGas.approve.estimateGas(toAddr, transferNumber)
+			_fee = await estGas.transfer.estimateGas(toAddr, transferNumber)
 			//_fee = await estGas.safetransferFrom(keyAddr, toAddr, transferNumber)
 		} catch (ex) {
 			return resolve (false)
@@ -2036,6 +2043,7 @@ const CONET_guardian_purchase: (profile: profile, nodes: number, _total: number,
 		time: new Date().toISOString(),
 		transactionHash: tx.hash
 	}
+
 	cryptoAsset.history.push(kk1)
 	
 	const profiles = CoNET_Data.profiles
@@ -2062,7 +2070,7 @@ const CONET_guardian_purchase: (profile: profile, nodes: number, _total: number,
 		data: [3]
 	}
 	sendState('toFrontEnd', cmd3)
-	const url = `${ api_endpoint }Purchase-Guardian`
+	const url = `${ apiv2_endpoint }Purchase-Guardian`
 	const result: any = await postToEndpoint(url, true, sendData)
 	if (!result) {
 		const cmd3: channelWroker = {
@@ -2203,12 +2211,19 @@ const fx168PrePurchase =  async (cmd: worker_command) => {
 		const status = await getFx168OrderStatus(i, fx168ContractObjRead, profiles[0].keyID)
 		fx168OrderArray.push (status)
 	}
-	cmd.data = [fx168OrderArray]
+	if (!fx168OrderArray.length ) {
+		cmd.err = 'NOT_READY'
+		return returnUUIDChannel(cmd)
+	}
+	const last = fx168OrderArray[fx168OrderArray.length - 1]
+	cmd.data = [[last]]
 	return returnUUIDChannel(cmd)
 }
 
 let miningConn
 let Stoping = false
+
+
 const _startMining = async (cmd: worker_command, profile: profile) => {
 	
 

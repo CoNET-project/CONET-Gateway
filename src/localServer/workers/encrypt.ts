@@ -139,7 +139,7 @@ const initEncryptWorker = async () => {
     // self.importScripts ( baseUrl + 'seguroSetup.js' )
 	self.importScripts ( baseUrl + 'utilV2.js' )
 	self.importScripts ( baseUrl + 'CoNETModule.js' )
-	self.importScripts ( 'https://cdnjs.cloudflare.com/ajax/libs/ethers/6.12.0/ethers.umd.min.js' )
+	self.importScripts ( 'https://cdnjs.cloudflare.com/ajax/libs/ethers/6.12.1/ethers.umd.min.js' )
     workerReady = true
 	channelLoading.postMessage(90)
 	self.addEventListener ('message', encryptWorkerDoCommand)
@@ -298,6 +298,13 @@ const processCmd = async (cmd: worker_command) => {
 				cmd.err = 'INVALID_DATA'
 				return returnUUIDChannel(cmd)
 			}
+
+			const health = await getCONET_api_health()
+			if (!health) {
+				cmd.err = 'Err_Server_Unreachable'
+				return returnUUIDChannel(cmd)
+			}
+
 			sendState('beforeunload', true)
 			const kk = await CONET_guardian_purchase (profile, nodes, amount, payAssetName)
 			sendState('beforeunload', false)
@@ -333,6 +340,12 @@ const processCmd = async (cmd: worker_command) => {
 		}
 
 		case 'CONETFaucet': {
+			
+			const health = await getCONET_api_health()
+			if (!health) {
+				cmd.err = 'Err_Server_Unreachable'
+				return returnUUIDChannel(cmd)
+			}
 			const keyID = cmd.data[0]
 			cmd.data = [await getFaucet(keyID)]
 			return returnUUIDChannel(cmd)
