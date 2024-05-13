@@ -42,7 +42,6 @@ const getProfileAssetsBalance = async (profile: profile) => {
 		checkTokenStructure(current)
 
 		const provideETH = new ethers.JsonRpcProvider(ethRpc())
-		const provideBlast = new ethers.JsonRpcProvider(blast_sepoliaRpc)
 		const provideCONET = new ethers.JsonRpcProvider(conet_rpc)
 		const provideBlastMainChain = new ethers.JsonRpcProvider(blast_mainnet())
 		const provideBNB = new ethers.JsonRpcProvider(bsc_mainchain)
@@ -228,7 +227,7 @@ const listenProfileVer = async () => {
 
 	const provideCONET = new ethers.JsonRpcProvider(conet_rpc)
 	let EPOCH = await provideCONET.getBlockNumber()
-	provideCONET.on('block', async block => {
+	provideCONET.on ('block', async block => {
 		if (block <= EPOCH) {
 			return logger(`listenProfileVer got event block = [${block}] less than current epoch [${EPOCH}] ignore!`)
 		}

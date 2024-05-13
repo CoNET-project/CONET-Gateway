@@ -189,7 +189,7 @@ let pushedCurrentProfileVersion = 0
 
 const getAllProfiles = async (cmd: worker_command) => {
 	const _authorization_key: string = cmd.data[0]
-	if (!CoNET_Data || authorization_key!== _authorization_key) {
+	if (!CoNET_Data || !CoNET_Data?.profiles|| authorization_key!== _authorization_key) {
 		cmd.err = 'FAILURE'
 		return returnUUIDChannel(cmd)
 	}
@@ -204,8 +204,10 @@ const getAllProfiles = async (cmd: worker_command) => {
 
 	await checkUpdateAccount()
 	await getAllProfileAssetsBalance()
+
 	await checkGuardianNodes()
-	cmd.data = [CoNET_Data.profiles]
+	const referralsRate = await getReferralsRate(CoNET_Data.profiles[0].keyID)
+	cmd.data = [CoNET_Data.profiles, referralsRate]
 	--getAllProfilesCount
 	lastTimeGetAllProfilesCount = timeStamp
 
@@ -539,14 +541,18 @@ const claimToken = async (profile: profile, CoNET_Data: encrypt_keys_object, ass
 	return returnUUIDChannel(cmd)
 }
 
+const getReferralsRate = async (wallet: string) => {
+	const url = `${apiv2_endpoint}leaderboardData`
+	const result: any = await postToEndpoint(url, true, {wallet})
+	return result
+	
+}
+
 const testFunction = async (cmd: worker_command) => {
 	
-	// const health = await getCONET_api_health()
-	// if (!health) {
-	// 	cmd.err = 'CONET_API_SERVER_unreachable'
-		
-	// }
+	// const wallet1 = '0xD8b12054612119e9E45d5Deef40EDca38d54D3b5'
 	const wallet = getProfileByWallet('0x0060f53fEac407a04f3d48E3EA0335580369cDC4')
+	// await getReferralsRate(wallet1)
 	if (wallet?.privateKeyArmor) {
 		if (CoNET_Data) {
 			// claimToken(wallet, CoNET_Data, 'cUSDB', cmd)
