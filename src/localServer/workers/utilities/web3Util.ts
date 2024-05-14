@@ -1290,7 +1290,6 @@ const getAllProfileAssetsBalance = async () => {
 			return resolve(true)
 		}
 		
-		logger(`getAllProfileAssetsBalance running!`)
 		runningGetAllProfileAssetsBalance = true
 		lastAllProfileAssetsBalanceTimeStamp = timeStamp
 		
