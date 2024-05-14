@@ -187,20 +187,30 @@ let lastTimeGetAllProfilesCount = 0
 const minTimeStamp = 1000 * 15
 let pushedCurrentProfileVersion = 0
 let referralsRate
+let getAllProfilesRunning = false
 const getAllProfiles = async (cmd: worker_command) => {
 	const _authorization_key: string = cmd.data[0]
 	if (!CoNET_Data || !CoNET_Data?.profiles|| authorization_key!== _authorization_key) {
 		cmd.err = 'FAILURE'
 		return returnUUIDChannel(cmd)
 	}
+
 	logger(`getAllProfiles connecting count [${++getAllProfilesCount}]!`)
+
 	pushedCurrentProfileVersion = CoNET_Data.ver
 	const timeStamp = new Date().getTime()
 	if (timeStamp - lastTimeGetAllProfilesCount < minTimeStamp) {
+
 		--getAllProfilesCount
 		cmd.data = [CoNET_Data.profiles, referralsRate]
 		return returnUUIDChannel(cmd)
 	}
+	if (getAllProfilesRunning) {
+		logger(`getAllProfiles running!`)
+		cmd.data = [CoNET_Data.profiles, referralsRate]
+		return returnUUIDChannel(cmd)
+	}
+	getAllProfilesRunning = true
 
 	await checkUpdateAccount()
 	await getAllProfileAssetsBalance()
@@ -210,7 +220,7 @@ const getAllProfiles = async (cmd: worker_command) => {
 	cmd.data = [CoNET_Data.profiles, referralsRate]
 	--getAllProfilesCount
 	lastTimeGetAllProfilesCount = timeStamp
-
+	getAllProfilesRunning = false
 	return returnUUIDChannel(cmd)
 }
 
