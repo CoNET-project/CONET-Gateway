@@ -186,7 +186,7 @@ let getAllProfilesCount = 0
 let lastTimeGetAllProfilesCount = 0
 const minTimeStamp = 1000 * 15
 let pushedCurrentProfileVersion = 0
-
+let referralsRate
 const getAllProfiles = async (cmd: worker_command) => {
 	const _authorization_key: string = cmd.data[0]
 	if (!CoNET_Data || !CoNET_Data?.profiles|| authorization_key!== _authorization_key) {
@@ -198,7 +198,7 @@ const getAllProfiles = async (cmd: worker_command) => {
 	const timeStamp = new Date().getTime()
 	if (timeStamp - lastTimeGetAllProfilesCount < minTimeStamp) {
 		--getAllProfilesCount
-		cmd.data = [CoNET_Data.profiles]
+		cmd.data = [CoNET_Data.profiles, referralsRate]
 		return returnUUIDChannel(cmd)
 	}
 
@@ -206,7 +206,7 @@ const getAllProfiles = async (cmd: worker_command) => {
 	await getAllProfileAssetsBalance()
 
 	await checkGuardianNodes()
-	const referralsRate = await getReferralsRate(CoNET_Data.profiles[0].keyID)
+	referralsRate = await getReferralsRate(CoNET_Data.profiles[0].keyID)
 	cmd.data = [CoNET_Data.profiles, referralsRate]
 	--getAllProfilesCount
 	lastTimeGetAllProfilesCount = timeStamp
