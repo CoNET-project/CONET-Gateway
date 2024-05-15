@@ -125,7 +125,7 @@ const testPasscode = async (cmd: worker_command) => {
 		return logger(`testPasscode CoNET_Data?.profiles Empty error!`)
 	}
 
-	await getAllProfileAssetsBalance()
+	// await getAllProfileAssetsBalance()
 	await getAllReferrer()
 	const mainProfile = CoNET_Data.profiles[0]
 
@@ -216,7 +216,7 @@ const getAllProfiles = async (cmd: worker_command) => {
 	await getAllProfileAssetsBalance()
 
 	await checkGuardianNodes()
-	referralsRate = await getReferralsRate(CoNET_Data.profiles[0].keyID)
+	referralsRate = await getReferralsRate(CoNET_Data.profiles[0].keyID)||referralsRate
 	cmd.data = [CoNET_Data.profiles, referralsRate]
 	--getAllProfilesCount
 	lastTimeGetAllProfilesCount = timeStamp
@@ -552,9 +552,17 @@ const claimToken = async (profile: profile, CoNET_Data: encrypt_keys_object, ass
 }
 
 const getReferralsRate = async (wallet: string) => {
+	if (!wallet) {
+		return null
+	}
 	const url = `${apiv2_endpoint}leaderboardData`
-	const result: any = await postToEndpoint(url, true, {wallet})
-	return result
+	try {
+		const result: any = await postToEndpoint(url, true, {wallet})
+		return result
+	} catch (ex) {
+		return null
+	}
+	
 	
 }
 
