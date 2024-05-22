@@ -46,10 +46,10 @@ const getProfileAssetsBalance = async (profile: profile) => {
 		const provideBlastMainChain = new ethers.JsonRpcProvider(blast_mainnet())
 		const provideBNB = new ethers.JsonRpcProvider(bsc_mainchain)
 		// const walletETH = new ethers.Wallet(profile.privateKeyArmor, provideETH)
-		const [balanceCNTP, balanceCNTPV1,balanceCCNTP , balanceUSDT, ETH, blastETH, usdb, bnb, wbnb, wusdt, conet_Holesky, dWBNB, dUSDT, dWETH,
+		const [balanceCNTPV1,balanceCCNTP , balanceUSDT, ETH, blastETH, usdb, bnb, wbnb, wusdt, conet_Holesky, dWBNB, dUSDT, dWETH,
 			BNBUSDT, BlastUSDB, ETHUSDT, CGPNs, CGPN2s
 		] = await Promise.all([
-			scanCNTP (key, provideBlastMainChain),
+			//scanCNTP (key, provideBlastMainChain),
 			scanCNTPV1 (key, provideCONET),
 			scanCCNTP (key, provideCONET),
 
@@ -76,7 +76,7 @@ const getProfileAssetsBalance = async (profile: profile) => {
 		])
 		
 
-		current.CNTP.balance = balanceCNTP === BigInt(0) ? '0' : typeof balanceCNTP !== 'boolean' ? parseFloat(ethers.formatEther(balanceCNTP)).toFixed(6) : ''
+		//current.CNTP.balance = balanceCNTP === BigInt(0) ? '0' : typeof balanceCNTP !== 'boolean' ? parseFloat(ethers.formatEther(balanceCNTP)).toFixed(6) : ''
 		current.CNTPV1.balance = balanceCNTPV1 === BigInt(0) ? '0' : typeof balanceCNTPV1!== 'boolean' ? parseFloat(ethers.formatEther(balanceCNTPV1)).toFixed(6) : ''
 		current.cCNTP.balance = balanceCCNTP === BigInt(0) ? '0' : typeof balanceCCNTP!== 'boolean' ? parseFloat(ethers.formatEther(balanceCCNTP)).toFixed(6): ''
 		current.usdt.balance = balanceUSDT === BigInt(0) ? '0' : typeof balanceUSDT!== 'boolean' ?

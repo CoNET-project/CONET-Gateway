@@ -304,7 +304,7 @@ const processCmd = async (cmd: worker_command) => {
 				cmd.err = 'FAILURE'
 				return returnUUIDChannel(cmd)
 			}
-			profile.tokens.CNTP.unlocked = true
+			profile.tokens.cCNTP.unlocked = true
 			returnUUIDChannel(cmd)
 			await updateProfilesVersion()
 		}
