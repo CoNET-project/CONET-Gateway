@@ -132,6 +132,7 @@ interface CryptoAsset {
 	decimal: number
 	contract: string
 	name: string
+	unlocked?: boolean
 }
 
 
@@ -165,7 +166,7 @@ declare type verification = 'INCORRECT_CODE'|'Err_Server_Unreachable'|'Err_Multi
 
 declare type conetMiner = 'Err_Server_Unreachable'|'Err_Multiple_IP'
 
-declare type WorkerCommand = 'READY'|'getRegiestNodes'|'beforeunload'|'createAccount'|'testPasscode'|'showSRP'|
+declare type WorkerCommand = 'READY'|'getRegiestNodes'|'beforeunload'|'createAccount'|'testPasscode'|'showSRP'|'unlock_cCNTP'|
 	'encrypt_TestPasscode'|'encrypt_createPasscode'|'encrypt_lock'|'invitation'|'encrypt_deletePasscode'|
 	'storePreferences'|'newProfile'|'storeProfile'|'urlProxy'|'saveDomain'|'getDomain'|'setRegion'|
 	'getFaucet'|'isAddress'|'syncAssetV1'|'sendAsset'|'getUSDCPrice'|'buyUSDC'|'getWorkerClientID'|

@@ -278,6 +278,37 @@ const processCmd = async (cmd: worker_command) => {
 			return returnUUIDChannel(cmd)
 		}
 
+		case 'unlock_cCNTP': {
+			const [_profile] = cmd.data
+			if (!_profile) {
+				cmd.err = 'INVALID_DATA'
+				return returnUUIDChannel(cmd)
+			}
+			const profiles = CoNET_Data?.profiles
+			if (!profiles) {
+				cmd.err = 'NOT_READY'
+				return returnUUIDChannel(cmd)
+			}
+			const profileIndex = profiles.findIndex(n => n.keyID.toLowerCase() === _profile.keyID.toLowerCase())
+			if (profileIndex < 0) {
+				cmd.err = 'INVALID_DATA'
+				return returnUUIDChannel(cmd)
+			}
+			const profile = profiles[profileIndex]
+			if (parseFloat(profile.tokens.CNTP.balance) < 0.001|| profile.tokens.CNTP.unlocked) {
+				cmd.err = 'INVALID_DATA'
+				return returnUUIDChannel(cmd)
+			}
+			const result = await unlock_cCNTP(profile)
+			if (!result) {
+				cmd.err = 'FAILURE'
+				return returnUUIDChannel(cmd)
+			}
+			profile.tokens.CNTP.unlocked = true
+			returnUUIDChannel(cmd)
+			await updateProfilesVersion()
+		}
+
 		case 'guardianPurchase': {
 			const [nodes, amount, profile, payAssetName] = cmd.data
 

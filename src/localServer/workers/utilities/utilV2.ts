@@ -551,6 +551,18 @@ const claimToken = async (profile: profile, CoNET_Data: encrypt_keys_object, ass
 	return returnUUIDChannel(cmd)
 }
 
+const unlock_cCNTP = async (profile: profile) => {
+	const message =JSON.stringify({ walletAddress: profile.keyID})
+	const messageHash = ethers.id(message)
+	const signMessage = CoNETModule.EthCrypto.sign(profile.privateKeyArmor, messageHash)
+	const sendData = {
+		message, signMessage
+	}
+	const url = `${ apiv2_endpoint }unlockCONET`
+	const result: any = await postToEndpoint(url, true, sendData)
+	return result
+}
+
 const getReferralsRate = async (wallet: string) => {
 	if (!wallet) {
 		return null
@@ -563,14 +575,19 @@ const getReferralsRate = async (wallet: string) => {
 		return null
 	}
 	
-	
 }
 
 const testFunction = async (cmd: worker_command) => {
 	
-	// const wallet1 = '0xD8b12054612119e9E45d5Deef40EDca38d54D3b5'
-	const wallet = getProfileByWallet('0x0060f53fEac407a04f3d48E3EA0335580369cDC4')
-	// await getReferralsRate(wallet1)
+	
+	// const profiles = CoNET_Data?.profiles
+	// if (!profiles) {
+	// 	return
+	// }
+	// const profile = profiles[0]
+	// const wallet = await unlock_cCNTP(profile)
+	const wallet1 = '0xD8b12054612119e9E45d5Deef40EDca38d54D3b5'
+	const wallet = await getReferralsRate(wallet1)
 	if (wallet?.privateKeyArmor) {
 		if (CoNET_Data) {
 			// claimToken(wallet, CoNET_Data, 'cUSDB', cmd)
