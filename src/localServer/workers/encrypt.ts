@@ -295,7 +295,7 @@ const processCmd = async (cmd: worker_command) => {
 				return returnUUIDChannel(cmd)
 			}
 			const profile = profiles[profileIndex]
-			if (parseFloat(profile.tokens.CNTP.balance) < 0.001|| profile.tokens.CNTP.unlocked) {
+			if (parseFloat(profile.tokens.cCNTP.balance) < 0.001|| profile.tokens.cCNTP?.unlocked) {
 				cmd.err = 'INVALID_DATA'
 				return returnUUIDChannel(cmd)
 			}
