@@ -580,13 +580,15 @@ const getReferralsRate = async (wallet: string) => {
 const testFunction = async (cmd: worker_command) => {
 	
 	
-	// const profiles = CoNET_Data?.profiles
-	// if (!profiles) {
-	// 	return
-	// }
-	// const profile = profiles[0]
+	const profiles = CoNET_Data?.profiles
+	if (!profiles) {
+		return
+	}
+	const profile = profiles[0]
 	// const wallet = await unlock_cCNTP(profile)
 	const wallet1 = '0xD8b12054612119e9E45d5Deef40EDca38d54D3b5'
+	// const result = await preBurnCCNTP (profile, '0.1')
+	// const result = await burnCCNTP (profile, '0.1')
 	const wallet = await getReferralsRate(wallet1)
 	if (wallet?.privateKeyArmor) {
 		if (CoNET_Data) {

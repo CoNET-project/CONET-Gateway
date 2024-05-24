@@ -350,6 +350,68 @@ const processCmd = async (cmd: worker_command) => {
 			return returnUUIDChannel(cmd)
 		}
 
+		case 'burnCCNTP': {
+			const [_profile, total] = cmd.data
+			if (!_profile) {
+				cmd.err = 'INVALID_DATA'
+				return returnUUIDChannel(cmd)
+			}
+			const profiles = CoNET_Data?.profiles
+			if (!profiles) {
+				cmd.err = 'NOT_READY'
+				return returnUUIDChannel(cmd)
+			}
+			const profileIndex = profiles.findIndex(n => n.keyID.toLowerCase() === _profile.keyID.toLowerCase())
+			if (profileIndex < 0) {
+				cmd.err = 'INVALID_DATA'
+				return returnUUIDChannel(cmd)
+			}
+
+			const profile = profiles[profileIndex]
+			if ( !profile.tokens.cCNTP?.unlocked || parseFloat(profile.tokens.cCNTP.balance)< parseFloat(total)) {
+				cmd.err = 'INVALID_DATA'
+				return returnUUIDChannel(cmd)
+			}
+			const tx = burnCCNTP (profile, total)
+			if (!tx) {
+				cmd.err = 'INVALID_DATA'
+				return returnUUIDChannel(cmd)
+			}
+			cmd.data = [tx]
+			return returnUUIDChannel(cmd)
+		}
+
+		case 'preBurnCCNTP': {
+			const [_profile, total] = cmd.data
+			if (!_profile) {
+				cmd.err = 'INVALID_DATA'
+				return returnUUIDChannel(cmd)
+			}
+			const profiles = CoNET_Data?.profiles
+			if (!profiles) {
+				cmd.err = 'NOT_READY'
+				return returnUUIDChannel(cmd)
+			}
+			const profileIndex = profiles.findIndex(n => n.keyID.toLowerCase() === _profile.keyID.toLowerCase())
+			if (profileIndex < 0) {
+				cmd.err = 'INVALID_DATA'
+				return returnUUIDChannel(cmd)
+			}
+
+			const profile = profiles[profileIndex]
+			if ( !profile.tokens.cCNTP?.unlocked || parseFloat(profile.tokens.cCNTP.balance)< parseFloat(total)) {
+				cmd.err = 'INVALID_DATA'
+				return returnUUIDChannel(cmd)
+			}
+			const gasFee = preBurnCCNTP (profile, total)
+			if (!gasFee) {
+				cmd.err = 'INVALID_DATA'
+				return returnUUIDChannel(cmd)
+			}
+			cmd.data = [gasFee]
+			return returnUUIDChannel(cmd)
+		}
+
 		case 'prePurchase': {
 			return prePurchase(cmd)
 		}
