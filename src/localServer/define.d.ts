@@ -114,7 +114,7 @@ type CryptoAssetHistory = {
 	type?: string
 	value: number
 	isSend: boolean
-	CONET_s
+	cCNTPBurn?: boolean
 }
 
 interface TokenPreferences {
@@ -252,9 +252,6 @@ interface conet_tokens {
 	bnb: CryptoAsset
 	wbnb: CryptoAsset
 	wusdt: CryptoAsset
-
-	
-	
 }
 
 interface profile extends keyPair {

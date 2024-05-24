@@ -68,9 +68,9 @@ const burnCCNTP = async (profile: profile, totalBurn: string) => {
 		isSend: true,
 		value: value,
 		time: new Date().toISOString(),
-		transactionHash: tx.hash
+		transactionHash: tx.hash,
+		cCNTPBurn: true
 	}
-	profile.tokens.
 	profile.tokens.cCNTP.history.push(kk1)
 	return tx
 }
@@ -2079,7 +2079,8 @@ const CONET_guardian_purchase: (profile: profile, nodes: number, _total: number,
 		isSend: true,
 		value: parseEther(_total.toString(), cryptoAsset.name).toString(),
 		time: new Date().toISOString(),
-		transactionHash: tx.hash
+		transactionHash: tx.hash,
+
 	}
 
 	cryptoAsset.history.push(kk1)
