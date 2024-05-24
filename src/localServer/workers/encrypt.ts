@@ -378,7 +378,8 @@ const processCmd = async (cmd: worker_command) => {
 				return returnUUIDChannel(cmd)
 			}
 			cmd.data = [tx]
-			return returnUUIDChannel(cmd)
+			returnUUIDChannel(cmd)
+			await updateProfilesVersion()
 		}
 
 		case 'preBurnCCNTP': {
