@@ -1999,16 +1999,13 @@ const getEstimateGas = (privateKey: string, asset: string, _transferNumber: stri
 	const provide = new ethers.JsonRpcProvider(getNetwork(asset))
 	const wallet = new ethers.Wallet(privateKey, provide)
 	const toAddr = CONET_guardian_Address(asset)
+	let _fee, _fee1
 	const transferNumber = parseEther(_transferNumber, asset)
 	const smartContractAddr = getAssetERC20Address(asset)
-	let total = 0
 	if (smartContractAddr) {
 		const estGas = new ethers.Contract(smartContractAddr, blast_CNTPAbi, wallet)
 		try {
-			const _fee = await estGas.transfer.estimateGas(toAddr, transferNumber)
-			const gasPrice = await provide.getFeeData()
-			total = gasPrice * _fee
-
+			_fee = await estGas.transfer.estimateGas(toAddr, transferNumber)
 			//_fee = await estGas.safetransferFrom(keyAddr, toAddr, transferNumber)
 		} catch (ex) {
 			return resolve (false)
@@ -2020,16 +2017,21 @@ const getEstimateGas = (privateKey: string, asset: string, _transferNumber: stri
 			value: transferNumber
 		}
 		try {
-			const gasPrice = await provide.getFeeData()
-			const _fee = await wallet.estimateGas(tx)
-			total = gasPrice * _fee
+			_fee = await wallet.estimateGas(tx)
 		} catch (ex) {
 			return resolve (false)
 		}
 		
 	}
-	
-	return ethers.formatEther(total)
+	try {
+		const Fee = await provide.getFeeData()
+		const gasPrice = ethers.formatUnits(Fee.gasPrice,'gwei')
+		const fee = parseFloat(ethers.formatEther(_fee * Fee.gasPrice)).toFixed(8)
+		return resolve ({gasPrice, fee})
+	} catch (ex) {
+		return resolve (false)
+	}
+
 	
 })
 
