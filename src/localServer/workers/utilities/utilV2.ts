@@ -39,7 +39,7 @@ const Claimable_BlastUSDB = '0x53Aee1f4c9b0ff76781eFAC6e20eAe4561e29E8A'.toLower
 const Claimable_ETHUSDT = '0x95A9d14fC824e037B29F1Fdae8EE3D9369B13915'.toLowerCase()
 
 const CONET_Guardian_Nodes = '0x5e4aE81285b86f35e3370B3EF72df1363DD05286'
-
+const CONET_Guardian_NodeInfo = '0xD6C30e7a1527cBDaF0e83930e643E32e7B30c1b4'
 const fx168OrderContractAddress = '0x9aE6D3Bd3029C8B2A73817b9aFa1C029237E3e30'
 
 const FragmentNameDeriveChildIndex = 65536
@@ -99,9 +99,10 @@ const createAccount = async (cmd: worker_command) => {
 	
 }
 
+let referrer = ''
 const testPasscode = async (cmd: worker_command) => {
 	const passcode: string = cmd.data[0]
-	const referrer = cmd.data[1]
+	referrer = cmd.data[1]
 	if ( !passcode || !passObj ) {
 		cmd.err = 'INVALID_DATA'
 		return returnUUIDChannel(cmd)
@@ -127,18 +128,17 @@ const testPasscode = async (cmd: worker_command) => {
 
 	// await getAllProfileAssetsBalance()
 	await getAllReferrer()
-	const mainProfile = CoNET_Data.profiles[0]
 
-	const gasBalance = parseFloat(mainProfile.tokens.conet.balance)
-	if (gasBalance > 0.0001) {
-		if ( referrer ) {
-			const kk = await registerReferrer (referrer)
-			if (kk) {
-				//await storeSystemData ()
-				await updateProfilesVersion()
-			}
-		}
-	}
+	// const gasBalance = parseFloat(mainProfile.tokens.conet.balance)
+	// if (gasBalance > 0.0001) {
+	// 	if ( referrer ) {
+	// 		const kk = await registerReferrer (referrer)
+	// 		if (kk) {
+	// 			//await storeSystemData ()
+	// 			await updateProfilesVersion()
+	// 		}
+	// 	}
+	// }
 	await testFunction(cmd)
 	listenProfileVer()
 
@@ -216,12 +216,25 @@ const getAllProfiles = async (cmd: worker_command) => {
 	await getAllProfileAssetsBalance()
 
 	await checkGuardianNodes()
+
 	referralsRate = await getReferralsRate(CoNET_Data.profiles[0].keyID)||referralsRate
+
 	cmd.data = [CoNET_Data.profiles, referralsRate]
 	--getAllProfilesCount
 	lastTimeGetAllProfilesCount = timeStamp
 	getAllProfilesRunning = false
-	return returnUUIDChannel(cmd)
+	returnUUIDChannel(cmd)
+	const profile =  CoNET_Data.profiles[0]
+	if (referrer && !profile.referrer) {
+		const balance = CoNET_Data.profiles[0].tokens.conet.balance
+		if (parseFloat(balance) > 0.001) {
+			const kk = await registerReferrer (referrer)
+			if (kk) {
+				//await storeSystemData ()
+				await updateProfilesVersion()
+			}
+		}
+	}
 }
 
 const importWallet = async (cmd: worker_command) => {
@@ -589,6 +602,7 @@ const testFunction = async (cmd: worker_command) => {
 	const wallet1 = '0xD8b12054612119e9E45d5Deef40EDca38d54D3b5'
 	// const result = await preBurnCCNTP (profile, '0.1')
 	// const result = await burnCCNTP (profile, '0.1')
+	const result = await getRegion ()
 	const wallet = await getReferralsRate(wallet1)
 	if (wallet?.privateKeyArmor) {
 		if (CoNET_Data) {

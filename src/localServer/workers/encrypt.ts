@@ -99,7 +99,6 @@ const CoNETModule: CoNET_Module = {
 	}
 }
 
-
 let ClientIDworker = ''
 const backGroundPoolWorker: clientPoolWroker[] = []
 
@@ -299,12 +298,16 @@ const processCmd = async (cmd: worker_command) => {
 				cmd.err = 'INVALID_DATA'
 				return returnUUIDChannel(cmd)
 			}
+
+
 			const result = await unlock_cCNTP(profile)
 			if (!result) {
 				cmd.err = 'FAILURE'
 				return returnUUIDChannel(cmd)
 			}
+
 			profile.tokens.cCNTP.unlocked = true
+
 			returnUUIDChannel(cmd)
 			await updateProfilesVersion()
 		}
@@ -410,6 +413,12 @@ const processCmd = async (cmd: worker_command) => {
 				return returnUUIDChannel(cmd)
 			}
 			cmd.data = [gasFee]
+			return returnUUIDChannel(cmd)
+		}
+
+		case 'getGuardianRegion' : {
+			const result = await getRegion ()
+			cmd.data = [result]
 			return returnUUIDChannel(cmd)
 		}
 

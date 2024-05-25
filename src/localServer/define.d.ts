@@ -168,7 +168,7 @@ declare type conetMiner = 'Err_Server_Unreachable'|'Err_Multiple_IP'
 
 declare type WorkerCommand = 'READY'|'getRegiestNodes'|'beforeunload'|'createAccount'|'testPasscode'|'showSRP'|'unlock_cCNTP'|
 	'encrypt_TestPasscode'|'encrypt_createPasscode'|'encrypt_lock'|'invitation'|'encrypt_deletePasscode'|'preBurnCCNTP'|
-	'storePreferences'|'newProfile'|'storeProfile'|'urlProxy'|'saveDomain'|'getDomain'|'setRegion'|
+	'storePreferences'|'newProfile'|'storeProfile'|'urlProxy'|'saveDomain'|'getDomain'|'setRegion'|'getGuardianRegion'|
 	'getFaucet'|'isAddress'|'syncAssetV1'|'sendAsset'|'getUSDCPrice'|'buyUSDC'|'getWorkerClientID'|
 	'mintCoNETCash'|'getSINodes'|'getRecipientCoNETCashAddress'|'getUserProfile'|'burnCCNTP'|
 	'sendMessage'|'incomeData'|'WORKER_MESSAGE'|'getCONETBalance'|'startProxy'|'registerReferrer'|
