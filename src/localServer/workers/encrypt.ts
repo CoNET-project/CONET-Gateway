@@ -375,7 +375,7 @@ const processCmd = async (cmd: worker_command) => {
 				cmd.err = 'INVALID_DATA'
 				return returnUUIDChannel(cmd)
 			}
-			const tx = burnCCNTP (profile, total)
+			const tx = await burnCCNTP (profile, total)
 			if (!tx) {
 				cmd.err = 'INVALID_DATA'
 				return returnUUIDChannel(cmd)
@@ -407,7 +407,7 @@ const processCmd = async (cmd: worker_command) => {
 				cmd.err = 'INVALID_DATA'
 				return returnUUIDChannel(cmd)
 			}
-			const gasFee = preBurnCCNTP (profile, total)
+			const gasFee = await preBurnCCNTP (profile, total)
 			if (!gasFee) {
 				cmd.err = 'INVALID_DATA'
 				return returnUUIDChannel(cmd)
