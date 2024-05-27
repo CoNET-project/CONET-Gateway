@@ -1591,7 +1591,7 @@ const getReferee = async (wallet: string, CNTP_Referrals) => {
 		result = await CNTP_Referrals.getReferrer(wallet)
 	} catch (ex) {
 		logger(`getReferees [${wallet}] Error! try again!`)
-		return await getReferees (wallet, CNTP_Referrals)
+		return null
 	}
 	return result
 }
