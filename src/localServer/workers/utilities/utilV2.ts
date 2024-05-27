@@ -145,6 +145,7 @@ const testPasscode = async (cmd: worker_command) => {
 
 	authorization_key = cmd.data[0] = uuid.v4()
 	returnUUIDChannel(cmd)
+	
 	//	reflash all balance
 	
 }
@@ -600,9 +601,9 @@ const testFunction = async (cmd: worker_command) => {
 	const profile = profiles[0]
 	// const wallet = await unlock_cCNTP(profile)
 	const wallet1 = '0xD8b12054612119e9E45d5Deef40EDca38d54D3b5'
-	// const result = await preBurnCCNTP (profile, '0.1')
-	// const result = await burnCCNTP (profile, '0.1')
-	const result = await getRegion ()
+	const result = await preBurnCCNTP (profile, '1')
+	const result1 = await burnCCNTP (profile, '1')
+	// const result = await getRegion ()
 	const wallet = await getReferralsRate(wallet1)
 	if (wallet?.privateKeyArmor) {
 		if (CoNET_Data) {

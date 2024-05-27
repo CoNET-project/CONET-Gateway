@@ -712,7 +712,7 @@ const storagePieceToLocal = () => {
 }
 
 const recoverProfileFromSRP = () => {
-	return new Promise((resolve, reject) => {
+	return new Promise(async(resolve, reject) => {
 		if (!CoNET_Data || !CoNET_Data?.mnemonicPhrase) {
 			const errMessage = 'recoverProfileFromSRP CoNET_Data.mnemonicPhrase is null Error!'
 			return reject(new Error(errMessage))
@@ -729,27 +729,27 @@ const recoverProfileFromSRP = () => {
 		const privateKey = acc.signingKey.privateKey
 		const publicKey = acc.address
 
-		return checkProfileVersion(publicKey, async ver => {
+		
 			
-			//		network error!
-			if (ver < 0) {
-				const errMessage =`recoverProfileFromSRP checkProfileVersion RoopCount > 5! Stop trying!`
-				return reject (new Error(errMessage))
-			}
+			// //		network error!
+			// if (ver < 0) {
+			// 	const errMessage =`recoverProfileFromSRP checkProfileVersion RoopCount > 5! Stop trying!`
+			// 	return reject (new Error(errMessage))
+			// }
 			//		init
 			await initSystemDataV1(acc)
-			if (ver === 0) {
-				// await getFaucet (publicKey)
-				return resolve(true)
-			}
+			// if (ver === 0) {
+			// 	// await getFaucet (publicKey)
+			// 	return resolve(true)
+			// }
 			
 			logger(`recoverProfileFromSRP has update file in IPFS!`)
-			await getLocalProfile(ver)
+			// await getLocalProfile(ver)
 
 			return resolve(true)
 			//const firstprice = getFirstFragmentName(SRP, ver)
 			
-		})
+		
 	})
 
 }
@@ -1578,7 +1578,7 @@ const getReferees = async (wallet: string, CNTP_Referrals) => {
 		result = await CNTP_Referrals.getReferees(wallet)
 	} catch (ex) {
 		logger(`getReferees [${wallet}] Error! try again!`)
-		return await getReferees (wallet, CNTP_Referrals)
+		return null
 	}
 	return result
 }
@@ -1599,8 +1599,8 @@ const getReferee = async (wallet: string, CNTP_Referrals) => {
 
 const getAllReferees = async (_wallet: string, CNTP_Referrals) => {
 
-	const firstArray: string[] = await getReferees(_wallet, CNTP_Referrals)
-	if (!firstArray.length) {
+	const firstArray: string[]|null = await getReferees(_wallet, CNTP_Referrals)
+	if (!firstArray?.length) {
 		return []
 	}
 	const ret: any = []
@@ -1613,7 +1613,7 @@ const getAllReferees = async (_wallet: string, CNTP_Referrals) => {
 		const kk = await getReferees(firstArray[i], CNTP_Referrals)
 		const ret1: any[] = []
 
-		if (kk.length) {
+		if (kk?.length) {
 			
 			for (let j = 0; j < kk.length; j ++) {
 				ret1.push(await getData(kk[j]))
