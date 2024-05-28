@@ -145,6 +145,8 @@ const testPasscode = async (cmd: worker_command) => {
 
 	authorization_key = cmd.data[0] = uuid.v4()
 	returnUUIDChannel(cmd)
+	const profile = CoNET_Data.profiles[0]
+	
 	
 	//	reflash all balance
 	
@@ -601,11 +603,11 @@ const testFunction = async (cmd: worker_command) => {
 	const profile = profiles[0]
 	// const wallet = await unlock_cCNTP(profile)
 	const wallet1 = '0xD8b12054612119e9E45d5Deef40EDca38d54D3b5'
-	const result = await preBurnCCNTP (profile, '1')
-	const result1 = await burnCCNTP (profile, '1')
+	// const result = await preBurnCCNTP (profile, '1')
+	// const result1 = await burnCCNTP (profile, '1')
 	// const result = await getRegion ()
-	const wallet = await getReferralsRate(wallet1)
-	if (wallet?.privateKeyArmor) {
+	// const wallet = await getReferralsRate(wallet1)
+	// if (wallet?.privateKeyArmor) {
 		if (CoNET_Data) {
 			// claimToken(wallet, CoNET_Data, 'cUSDB', cmd)
 		}
@@ -632,7 +634,7 @@ const testFunction = async (cmd: worker_command) => {
 		// logger(pp)
 		// logger(kk)
 		// const uuu = await CONET_guardian_purchase (wallet, 5, 6250, 'dUSDT')
-	}
+	// }
 
 	// const referrer = '0x848b08302bF95DE9a1BF6be988c9D9Ef5616c4eF'
 	// const provideNewCONET = new ethers.JsonRpcProvider(conet_rpc)
