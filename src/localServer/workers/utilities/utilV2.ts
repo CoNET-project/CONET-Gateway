@@ -1,4 +1,4 @@
-const conet_rpc = 'https://rpceth.conet.network'
+const conet_rpc = 'https://rpc.conet.network'
 const api_endpoint = `https://api.conet.network/api/`
 const apiv2_endpoint = `https://apiv2.conet.network/api/`
 const cloudStorageEndpointUrl = 'https://s3.us-east-1.wasabisys.com/conet-mvp/storage/FragmentOcean/'
@@ -234,6 +234,7 @@ const getAllProfiles = async (cmd: worker_command) => {
 			const kk = await registerReferrer (referrer)
 			if (kk) {
 				//await storeSystemData ()
+				profile.referrer = referrer
 				await updateProfilesVersion()
 			}
 		}

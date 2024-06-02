@@ -566,14 +566,10 @@ const processCmd = async (cmd: worker_command) => {
 			
 		}
 
-		case 'startLiveness': {
-			return //startLiveness(cmd)
-		}
-
 		case 'syncAssetV1': {
 			const profile = gettPrimaryProfile()
 			if (profile) {
-				return getProfileAssetsBalance(profile)
+				return getProfileAssets_CONET_Balance(profile)
 			}
 			return
 		}
@@ -610,6 +606,12 @@ const processCmd = async (cmd: worker_command) => {
 			return getAllProfiles(cmd)
 		}
 
+		case 'getAllOtherAssets': {
+
+			await getAllOtherAssets()
+			return returnUUIDChannel(cmd)
+		}
+
 		case 'updateProfile': {
 			return updateProfile(cmd)
 		}
@@ -625,7 +627,8 @@ const processCmd = async (cmd: worker_command) => {
 		default: {
 			cmd.err = 'INVALID_COMMAND'
 			responseChannel.postMessage(JSON.stringify(cmd))
-			return console.log (`channelWorkerDoCommand unknow command!`, cmd)
+			console.log (`channelWorkerDoCommand unknow command!`, cmd)
+			return returnUUIDChannel(cmd)
 		}
 	}
 }

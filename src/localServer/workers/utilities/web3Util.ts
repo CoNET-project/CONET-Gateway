@@ -87,7 +87,7 @@ const burnCCNTP = async (profile: profile, totalBurn: string) => {
 	return tx
 }
 
-const getProfileAssetsBalance = async (profile: profile) => {
+const getProfileAssets_allOthers_Balance = async (profile: profile) => {
 
 	const key = profile.keyID
 	
@@ -100,7 +100,47 @@ const getProfileAssetsBalance = async (profile: profile) => {
 		const provideBlastMainChain = new ethers.JsonRpcProvider(blast_mainnet())
 		const provideBNB = new ethers.JsonRpcProvider(bsc_mainchain)
 		// const walletETH = new ethers.Wallet(profile.privateKeyArmor, provideETH)
-		const [balanceCNTPV1,balanceCCNTP , balanceUSDT, ETH, blastETH, usdb, bnb, wbnb, wusdt, conet_Holesky, dWBNB, dUSDT, dWETH,
+		const [ balanceUSDT, ETH, blastETH, usdb, bnb, wusdt] = 
+		await Promise.all([
+
+			scanUSDT (key, provideETH),
+			scanETH (key, provideETH),
+			scanBlastETH (key, provideBlastMainChain),
+			scanUSDB (key, provideBlastMainChain),
+			scanBNB (key, provideBNB),
+			scanWUSDT (key,provideBNB),
+		])
+		
+		current.usdt.balance = balanceUSDT === BigInt(0) ? '0' : typeof balanceUSDT!== 'boolean' ?
+															//	@ts-ignore
+															parseFloat(balanceUSDT/BigInt(10**6)).toFixed(4): ''
+
+		current.eth.balance = ETH === BigInt(0) ? '0' : typeof ETH!== 'boolean' ? parseFloat(ethers.formatEther(ETH)).toFixed(6) : ''
+		current.blastETH.balance = blastETH === BigInt(0) ? '0' : typeof blastETH!== 'boolean' ? parseFloat(ethers.formatEther(blastETH)).toFixed(6) : ''
+		current.usdb.balance = usdb === BigInt(0) ? '0' : typeof usdb!== 'boolean' ? parseFloat(ethers.formatEther(usdb)).toFixed(6): ''
+		
+		current.bnb.balance = bnb === BigInt(0) ? '0' :  typeof bnb!== 'boolean' ? parseFloat(ethers.formatEther(bnb)).toFixed(6): ''
+		current.wusdt.balance = wusdt === BigInt(0) ? '0' : typeof wusdt!== 'boolean' ?  parseFloat(ethers.formatEther(wusdt)).toFixed(6): ''
+		
+	}
+
+	return true
+}
+
+const getProfileAssets_CONET_Balance = async (profile: profile) => {
+
+	const key = profile.keyID
+	
+	if (key) {
+		const current = profile.tokens
+		checkTokenStructure(current)
+
+		const provideETH = new ethers.JsonRpcProvider(ethRpc())
+		const provideCONET = new ethers.JsonRpcProvider(conet_rpc)
+		const provideBlastMainChain = new ethers.JsonRpcProvider(blast_mainnet())
+		const provideBNB = new ethers.JsonRpcProvider(bsc_mainchain)
+		// const walletETH = new ethers.Wallet(profile.privateKeyArmor, provideETH)
+		const [balanceCNTPV1,balanceCCNTP , balanceUSDT, conet_Holesky,
 			BNBUSDT, BlastUSDB, ETHUSDT, CGPNs, CGPN2s
 		] = await Promise.all([
 			//scanCNTP (key, provideBlastMainChain),
@@ -108,16 +148,7 @@ const getProfileAssetsBalance = async (profile: profile) => {
 			scanCCNTP (key, provideCONET),
 
 			scanUSDT (key, provideETH),
-			scanETH (key, provideETH),
-			scanBlastETH (key, provideBlastMainChain),
-			scanUSDB (key, provideBlastMainChain),
-			scanBNB (key, provideBNB),
-			scanWBNB (key,provideBNB),
-			scanWUSDT (key,provideBNB),
 			scanCONETHolesky(key, provideCONET),
-			scanCONET_dWBNB(key, provideCONET),
-			scanCONET_dUSDT(key, provideCONET),
-			scanCONET_dWETH(key, provideCONET),
 
 			scanCONET_Claimable_BNBUSDT(key, provideCONET),
 			scanCONET_Claimable_BlastUSDB(key, provideCONET),
@@ -137,17 +168,7 @@ const getProfileAssetsBalance = async (profile: profile) => {
 															//	@ts-ignore
 															parseFloat(balanceUSDT/BigInt(10**6)).toFixed(4): ''
 
-		current.eth.balance = ETH === BigInt(0) ? '0' : typeof ETH!== 'boolean' ? parseFloat(ethers.formatEther(ETH)).toFixed(6) : ''
-		current.blastETH.balance = blastETH === BigInt(0) ? '0' : typeof blastETH!== 'boolean' ? parseFloat(ethers.formatEther(blastETH)).toFixed(6) : ''
-		current.usdb.balance = usdb === BigInt(0) ? '0' : typeof usdb!== 'boolean' ? parseFloat(ethers.formatEther(usdb)).toFixed(6): ''
-		current.wbnb.balance = wbnb === BigInt(0) ? '0' : typeof wbnb!== 'boolean' ? parseFloat(ethers.formatEther(wbnb)).toFixed(6): ''
-		current.bnb.balance = bnb === BigInt(0) ? '0' :  typeof bnb!== 'boolean' ? parseFloat(ethers.formatEther(bnb)).toFixed(6): ''
-		current.wusdt.balance = wusdt === BigInt(0) ? '0' : typeof wusdt!== 'boolean' ?  parseFloat(ethers.formatEther(wusdt)).toFixed(6): ''
 		current.conet.balance = conet_Holesky === BigInt(0) ? '0' : typeof conet_Holesky!== 'boolean' ?  parseFloat(ethers.formatEther(conet_Holesky)).toFixed(6): ''
-
-		current.dWBNB.balance = dWBNB === BigInt(0) ? '0' :  typeof dWBNB!== 'boolean' ? parseFloat(ethers.formatEther(dWBNB)).toFixed(6): ''
-		current.dUSDT.balance = dUSDT === BigInt(0) ? '0' :   typeof dUSDT!== 'boolean' ? parseFloat(ethers.formatEther(dUSDT)).toFixed(6): ''
-		current.dWETH.balance = dWETH === BigInt(0) ? '0' :  typeof dWETH!== 'boolean' ? parseFloat(ethers.formatEther(dWETH)).toFixed(6): ''
 
 		current.cBNBUSDT.balance = BNBUSDT === BigInt(0) ? '0' : typeof BNBUSDT!== 'boolean' ? parseFloat(ethers.formatEther(BNBUSDT)).toFixed(6): ''
 		current.cUSDB.balance = BlastUSDB === BigInt(0) ? '0' :  typeof BlastUSDB!== 'boolean' ? parseFloat(ethers.formatEther(BlastUSDB)).toFixed(6): ''
@@ -192,7 +213,6 @@ const findNodeAddress: (nodeAddress: string, mnemonicPhrase: string) => number =
 	}
 	return findIndex ()
 }
-
 
 const checkGuardianNodes = async () => {
 	if (!CoNET_Data||!CoNET_Data?.profiles) {
@@ -1035,12 +1055,6 @@ const initProfileTokens = () => {
 	return ret
 }
 
-const getBlastAssets = (wallet: string) => new Promise( resolve => {
-	if (!wallet) {
-		return resolve([])
-	}
-
-})
 
 const checkTokenStructure = (token: any) => {
 	if (!token?.CGPNs) {
@@ -1321,9 +1335,48 @@ const checkTokenStructure = (token: any) => {
 }
 
 let runningGetAllProfileAssetsBalance = false
+let runninggetAllOtherAssets = false
 
 let lastAllProfileAssetsBalanceTimeStamp = 0
+let lastgetAllOtherAssetsBalanceTimeStamp = 0
 const minCheckTimestamp = 1000 * 12 		//			must big than 12s
+
+const getAllOtherAssets = async () => {
+	return new Promise(async resolve => {
+
+		if (!CoNET_Data?.profiles) {
+			logger(`getAllOtherAssets Error! CoNET_Data.profiles empty!`)
+			return resolve (false)
+		}
+
+		const timeStamp = new Date().getTime()
+
+		if (timeStamp - lastgetAllOtherAssetsBalanceTimeStamp < minCheckTimestamp) {
+			return resolve (true)
+		}
+
+		if (runninggetAllOtherAssets) {
+			logger(`getAllOtherAssets already running! return false`)
+			return resolve(true)
+		}
+		
+		runninggetAllOtherAssets = true
+		lastgetAllOtherAssetsBalanceTimeStamp = timeStamp
+		
+		const runningList: any = []
+		for (let profile of CoNET_Data.profiles) {
+			runningList.push(getProfileAssets_allOthers_Balance(profile))
+		}
+		
+		await Promise.all (runningList)
+		
+		runninggetAllOtherAssets = false
+		resolve (true)
+		logger(`getAllOtherAssets stoped!`)
+	})
+	
+}
+
 
 const getAllProfileAssetsBalance = async () => {
 	return new Promise(async resolve => {
@@ -1337,7 +1390,6 @@ const getAllProfileAssetsBalance = async () => {
 		if (timeStamp - lastAllProfileAssetsBalanceTimeStamp < minCheckTimestamp) {
 			return resolve (true)
 		}
-		
 
 		if (runningGetAllProfileAssetsBalance) {
 			logger(`getAllProfileAssetsBalance already running return false`)
@@ -1349,8 +1401,10 @@ const getAllProfileAssetsBalance = async () => {
 		
 		const runningList: any = []
 		for (let profile of CoNET_Data.profiles) {
-			runningList.push(getProfileAssetsBalance(profile))
+			runningList.push(getProfileAssets_CONET_Balance(profile))
+			runningList.push(getProfileAssets_allOthers_Balance(profile))
 		}
+
 		await Promise.all (runningList)
 		
 		runningGetAllProfileAssetsBalance = false
