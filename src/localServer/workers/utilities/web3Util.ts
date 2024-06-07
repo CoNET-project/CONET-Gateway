@@ -306,41 +306,47 @@ const checkAssets = async (block: number, provider: any, profiles: profile[]) =>
 	if (!blockInfo?.transactions) {
 		return logger(`block [${block}] hasn't transactions`)
 	}
+
 	let hasChange = false
 	for (let tx of blockInfo.transactions) {
 		const event = await provider.getTransactionReceipt(tx)
 		const to = event?.to?.toLowerCase()
+		const cCNTP_Contract = new ethers.Contract(cCNTP_new_Addr, cCNTP_ABI, provider)
+
 		logger(`block [${block}] transactions ${to}`)
 		if (to) {
-			const index = profiles.findIndex(n => n === to)
+			const index = profiles.findIndex(n => n.keyID.toLowerCase() === to)
 			if (index > -1) {
 				const profile = profiles[index]
-				profile.tokens.conet = ethers.formatEther(provider.getBalance(profile.keyID))
+				profile.tokens.conet = ethers.formatEther((await provider.getBalance(profile.keyID)).toString())
 				hasChange = true
+				logger(`profile [${profile.keyID}] got new Balance [${profile.tokens.conet }]`)
+				continue
 			}
-			continue
-		}
-		//		cCNTP
-		if (to === cCNTP_new_Addr) {
-			for (let transferLog of event.logs) {
-				let uuu
-				try{
-					uuu = ifaceFor_cCNTP_ABI.parseLog(transferLog)
-				} catch(ex) {
-					console.log (`ifaceFor_cCNTP_ABI.parseLog transferLog!`)
-					continue
-				}
-				if (uuu?.name === 'Transfer') {
-					const toAddr = uuu.args[1].toLowerCase()
-					const index = profiles.findIndex(n => n === toAddr)
-					if (index > -1) {
-						const profile = profiles[index]
-						profile.tokens.cCNTP = ethers.formatEther(provider.getBalance(profile.keyID))
-						hasChange = true
+			//		cCNTP
+			if (to === cCNTP_new_Addr) {
+				for (let transferLog of event.logs) {
+					let uuu
+					try{
+						uuu = ifaceFor_cCNTP_ABI.parseLog(transferLog)
+					} catch(ex) {
+						console.log (`ifaceFor_cCNTP_ABI.parseLog transferLog!`)
+						continue
+					}
+					if (uuu?.name === 'Transfer') {
+						const toAddr = uuu.args[1].toLowerCase()
+						const index = profiles.findIndex(n => n.keyID.toLowerCase() === toAddr)
+						if (index > -1) {
+							const profile = profiles[index]
+							profile.tokens.cCNTP = ethers.formatEther((await cCNTP_Contract.balanceOf(profile.keyID)).toString())
+							hasChange = true
+						}
 					}
 				}
 			}
+			
 		}
+		
 	}
 	if (hasChange) {
 		const cmd: channelWroker = {
