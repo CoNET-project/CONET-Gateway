@@ -417,11 +417,9 @@ const postToEndpoint = ( url: string, post: boolean, jsonData ) => {
 				if ( !xhr.responseText.length ) {
 					return resolve ('')
 				}
-				const splitTextArray = xhr.responseText.split (/\r\n\r\n/)
-				const jsonText = splitTextArray[splitTextArray.length-1]
 				let ret
 				try {
-					ret = JSON.parse(jsonText)
+					ret = JSON.parse(xhr.responseText)
 				} catch (ex) {
 					if ( post ) {
 						return resolve ('')

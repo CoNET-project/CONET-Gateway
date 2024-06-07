@@ -138,7 +138,7 @@ const initEncryptWorker = async () => {
     // self.importScripts ( baseUrl + 'seguroSetup.js' )
 	self.importScripts ( baseUrl + 'utilV2.js' )
 	self.importScripts ( baseUrl + 'CoNETModule.js' )
-	self.importScripts ( 'https://cdnjs.cloudflare.com/ajax/libs/ethers/6.12.1/ethers.umd.min.js' )
+	self.importScripts ( 'https://cdnjs.cloudflare.com/ajax/libs/ethers/6.13.0/ethers.umd.min.js' )
     workerReady = true
 	channelLoading.postMessage(90)
 	self.addEventListener ('message', encryptWorkerDoCommand)
@@ -151,7 +151,7 @@ const initEncryptWorker = async () => {
 	}
 
 	responseChannel.postMessage(JSON.stringify(cmd))
-	
+	provideCONET = new ethers.JsonRpcProvider(conet_rpc)
     await checkStorage (channelPlatform)
 	
 }

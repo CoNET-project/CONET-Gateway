@@ -28,7 +28,7 @@ const registerReferrer = async (referrer: string) => {
 
 	const provideNewCONET = new ethers.JsonRpcProvider(conet_rpc)
 	const wallet = new ethers.Wallet(profile.privateKeyArmor, provideNewCONET)
-	const CNTP_Referrals = new ethers.Contract(ReferralsAddressV2, CONET_ReferralsAbi, wallet)
+	const CNTP_Referrals = new ethers.Contract(ReferralsAddressV3, CONET_ReferralsAbi, wallet)
 
 	try {
 		await CNTP_Referrals.addReferrer(referrer)
@@ -291,53 +291,89 @@ const checkGuardianNodes = async () => {
 	
 }
 
+let sendStateBeforeunload = false
+
 const sendState = (state: listenState, value: any) => {
 	const sendChannel = new BroadcastChannel(state)
 	sendChannel.postMessage (JSON.stringify(value))
 	sendChannel.close()
 }
 
-const listenProfileVer = async () => {
-
-	const provideCONET = new ethers.JsonRpcProvider(conet_rpc)
-	let EPOCH = await provideCONET.getBlockNumber()
-	provideCONET.on ('block', async block => {
-		if (block <= EPOCH) {
-			return logger(`listenProfileVer got event block = [${block}] less than current epoch [${EPOCH}] ignore!`)
+const checkAssets = async (block: number, provider: any, profiles: profile[]) => {
+	const blockInfo = await provider.getBlock(block)
+	const ifaceFor_cCNTP_ABI = new ethers.Interface(cCNTP_ABI)
+	
+	if (!blockInfo?.transactions) {
+		return logger(`block [${block}] hasn't transactions`)
+	}
+	let hasChange = false
+	for (let tx of blockInfo.transactions) {
+		const event = await provider.getTransactionReceipt(tx)
+		const to = event?.to?.toLowerCase()
+		logger(`block [${block}] transactions ${to}`)
+		if (to) {
+			const index = profiles.findIndex(n => n === to)
+			if (index > -1) {
+				const profile = profiles[index]
+				profile.tokens.conet = ethers.formatEther(provider.getBalance(profile.keyID))
+				hasChange = true
+			}
+			continue
 		}
-
+		//		cCNTP
+		if (to === cCNTP_new_Addr) {
+			for (let transferLog of event.logs) {
+				let uuu
+				try{
+					uuu = ifaceFor_cCNTP_ABI.parseLog(transferLog)
+				} catch(ex) {
+					console.log (`ifaceFor_cCNTP_ABI.parseLog transferLog!`)
+					continue
+				}
+				if (uuu?.name === 'Transfer') {
+					const toAddr = uuu.args[1].toLowerCase()
+					const index = profiles.findIndex(n => n === toAddr)
+					if (index > -1) {
+						const profile = profiles[index]
+						profile.tokens.cCNTP = ethers.formatEther(provider.getBalance(profile.keyID))
+						hasChange = true
+					}
+				}
+			}
+		}
+	}
+	if (hasChange) {
 		const cmd: channelWroker = {
 			cmd: 'assets',
-			data: [block]
+			data: [profiles]
 		}
 		sendState('toFrontEnd', cmd)
-		EPOCH = block
-		logger(`new Epoch [${EPOCH}] event!`)
+	}
+}
+let provideCONET
+let lesteningBlock = false
+const listenProfileVer = async (profiles: profile[]) => {
+	if (lesteningBlock) {
+		return
+	}
+	lesteningBlock = true
+	provideCONET.on ('block', async block => {
+		
+		return checkAssets(block, provideCONET, profiles)
 	})
 }
 
-let checkProfileVersionRoopCount = 0
-const checkProfileVersion = (wallet: string, callback: (ver: number, nonce?: number) => void) => {
-	if (++checkProfileVersionRoopCount > 5) {
-		return callback(-1)
-	}
 
-	const provide = new ethers.JsonRpcProvider(conet_rpc)
+const checkProfileVersion = async (wallet: string, callback: (ver: number, nonce?: number) => void) => {
 	
-	const conet_storage = new ethers.Contract(conet_storage_contract_address, conet_storageAbi, provide)
-
-	conet_storage.count(wallet)
-		.then (async count => {
-			checkProfileVersionRoopCount = 0
-			const nonce = await provide.getTransactionCount (wallet)
-			return callback (parseInt(count.toString()), nonce)
-		}).catch (ex => {
-			logger(`checkCoNET_DataVersion error! Try again! roop = [${checkProfileVersionRoopCount}]`, ex)
-			return setTimeout(() => {
-				return checkProfileVersion( wallet, callback)
-			}, 1000)
-			
-		})
+	const conet_storage = new ethers.Contract(profile_ver_addr, conet_storageAbi, provideCONET)
+	const [count, nonce] = await
+		Promise.all([
+			conet_storage.count(wallet),
+			provideCONET.getTransactionCount (wallet)
+		])
+	
+	return callback (parseInt(count.toString()), nonce)
 }
 
 const _storagePieceToLocal = (mnemonicPhrasePassword: string, fragment: string, index: number,
@@ -495,7 +531,7 @@ const storeSystemData = async () => {
 		preferences: CoNET_Data.preferences
 	}
 
-
+	sendStateBeforeunload = true
 	sendState('beforeunload', true)
 
 	try {
@@ -504,7 +540,7 @@ const storeSystemData = async () => {
 	} catch (ex) {
 		logger(`storeSystemData storageHashData Error!`, ex)
 	}
-
+	sendStateBeforeunload = false
 	sendState('beforeunload', false)
 }
 
@@ -560,52 +596,35 @@ const resizeImage = ( mediaData: string, imageMaxWidth: number, imageMaxHeight: 
 	
 }
 
-const checkUpdateAccount = () => {
+const checkUpdateAccount = (profile: profile) => new Promise(resolve=> checkProfileVersion( profile.keyID, async (_ver, nonce) => {
+		if (!CoNET_Data || !nonce || !_ver) {
+			checkcheckUpdateLock = false
+			return resolve(false)
+		}
 
-	return new Promise(resolve=> {
-		if (!CoNET_Data || !CoNET_Data.profiles?.length) {
-			resolve(false)
-			return logger(`checkUpdateAccount CoNET_Data or CoNET_Data.profiles hasn't ready Error!`)
+		CoNET_Data.nonce = nonce
+		if (_ver <= CoNET_Data.ver) {
+			checkcheckUpdateLock = false
+			return resolve(true)
 		}
-		const currentTimestamp = new Date().getTime()
-		if (currentTimestamp - lastCheckcheckUpdateTimeStamp < minCheckTimestamp) {
-			return resolve(false)
-		}
-		if (checkcheckUpdateLock) {
-			return resolve(false)
-		}
-		checkcheckUpdateLock = true
-		const profile = CoNET_Data.profiles[0]
-		return checkProfileVersion( profile.keyID, async (_ver, nonce) => {
-			if (!CoNET_Data || !nonce ||!_ver) {
+		
+		const result = _result => {
+			if ( !_result ) {
+				
+				if (--_ver > 0 ) {
+					logger(`checkUpdateAccount version [${_ver}] getVersonFragments got false ERROR!, try get previous version [${_ver}]`)
+					return getVersonFragments ( _ver, nonce, result)
+				}
 				checkcheckUpdateLock = false
 				return resolve(false)
 			}
-			CoNET_Data.nonce = nonce
-			if (_ver <= CoNET_Data.ver) {
-				checkcheckUpdateLock = false
-				return resolve(true)
-			}
-			
-			const result = _result => {
-				if ( !_result ) {
-					
-					if (--_ver > 0 ) {
-						logger(`checkUpdateAccount version [${_ver}] getVersonFragments got false ERROR!, try get previous version [${_ver}]`)
-						return getVersonFragments (currentTimestamp, _ver, nonce, result)
-					}
-					checkcheckUpdateLock = false
-					return resolve(false)
-				}
-				checkcheckUpdateLock = false
-				resolve(true)
-			}
-
-			return getVersonFragments (currentTimestamp, _ver, nonce, result)
-		})
-	})
+			checkcheckUpdateLock = false
+			resolve(true)
+		}
+		return getVersonFragments ( _ver, nonce, result)
+	}))
 	
-}
+
 
 
 
@@ -1439,17 +1458,18 @@ const getCONET_HoleskyAssets = (wallet: string) => new Promise( resolve => {
 let checkcheckUpdateLock = false
 let lastCheckcheckUpdateTimeStamp = 0
 
-const getVersonFragments = async (currentTimestamp, _ver, nonce, resolve) => {
+const getVersonFragments = async (_ver, nonce, resolve) => {
 	if (!CoNET_Data) {
 		checkcheckUpdateLock = false
 		logger(`checkUpdateAccount CoNET_Data is empty Error!`)
 		return resolve(false)
 	}
-	lastCheckcheckUpdateTimeStamp = currentTimestamp
-	logger(`checkUpdateAccount profile ver is [${_ver}] Local ver is [${CoNET_Data.ver}]`)
+
+
 	if (typeof nonce !== 'undefined' && nonce > 0) {
 		CoNET_Data.nonce = nonce
 	}
+
 	if (_ver > CoNET_Data.ver) {
 
 		logger (`checkUpdateAccount current ver [${CoNET_Data.ver}] is old! remote is [${_ver}] Update it`)
@@ -1684,8 +1704,7 @@ const getAllReferees = async (_wallet: string, CNTP_Referrals) => {
 
 let getFaucetRoop = 0
 
-const getFaucet = async (keyID: string) => {
-	return new Promise (async resolve => {
+const getFaucet = async (keyID: string) => new Promise (async resolve => {
 		if (++getFaucetRoop > 6) {
 			getFaucetRoop = 0
 			logger(`getFaucet Roop > 6 STOP process!`)
@@ -1699,23 +1718,18 @@ const getFaucet = async (keyID: string) => {
 			result = await postToEndpoint(url, true, { walletAddr: keyID })
 		} catch (ex) {
 			logger (`getFaucet postToEndpoint [${url}] error! `, ex)
-			return setTimeout(() => {
-				return getFaucet (keyID)
-			}, 1000)
-		}
-		getFaucetRoop = 0
-		const txHash = result?.tx?.hash
-
-		if (!txHash) {
 			return resolve(null)
 		}
-		const provideCONET = new ethers.JsonRpcProvider(conet_rpc)
-		const balance = await scanCONETHolesky(keyID, provideCONET)
-		
-		return resolve(parseFloat(ethers.formatEther(balance)).toFixed(6))
+
+		getFaucetRoop = 0
+		const txHash = result?.tx
+
+		if (txHash) {
+			return resolve (true)
+		}
+		return resolve (null)
 	})
 
-}
 
 const createKeyHDWallets = () => {
 	let root
@@ -1730,21 +1744,21 @@ const createKeyHDWallets = () => {
 const decryptSystemData = async () => {
 	//	old version data
 
-		if (!CoNET_Data||!passObj) {
-			return new Error(`decryptSystemData Have no CoNET_Data Error!`)
-		}
+	if (!CoNET_Data||!passObj) {
+		return new Error(`decryptSystemData Have no CoNET_Data Error!`)
+	}
 
-		const password = passObj.passcode.toString()
+	const password = passObj.passcode.toString()
 
-		if (!password) {
-			throw new Error(`decryptSystemData Password Empty Error!`)
-		}
+	if (!password) {
+		throw new Error(`decryptSystemData Password Empty Error!`)
+	}
 
-		const filenameIterate1 = ethers.id(password)
-		const filenameIterate2 = ethers.id(filenameIterate1)
-		const filenameIterate3 = ethers.id(ethers.id(ethers.id(filenameIterate2)))
-	
+	const filenameIterate1 = ethers.id(password)
+	const filenameIterate2 = ethers.id(filenameIterate1)
+	const filenameIterate3 = ethers.id(ethers.id(ethers.id(filenameIterate2)))
 
+	const process = async (CoNET_Data) => {
 		const filename =  filenameIterate3
 		const encryptedObj = await getHashData(filename)
 
@@ -1757,6 +1771,19 @@ const decryptSystemData = async () => {
 		const obj = JSON.parse(encryptIterate1)
 		CoNET_Data.mnemonicPhrase = obj.mnemonicPhrase
 		CoNET_Data.fx168Order = obj.fx168Order
+	}
+
+	if (sendStateBeforeunload) {
+		const sendChannel = new BroadcastChannel('beforeunload')
+		
+		return sendChannel.onmessage = (ev) => {
+			process (CoNET_Data)
+		}
+		
+	}
+
+	return process (CoNET_Data)
+
 }
 
 //*		scan assets
@@ -1771,11 +1798,9 @@ const updateProfilesVersion = async () => {
 	}
 	const profile = CoNET_Data.profiles[0]
 	const privateKeyArmor = profile.privateKeyArmor || ''
-	const localCurrentVer = CoNET_Data.ver
 	
-	const provideNewCONET = new ethers.JsonRpcProvider(conet_rpc)
-	
-	const checkVer = new ethers.Contract(conet_storage_contract_address, conet_storageAbi, provideNewCONET)
+
+	const checkVer = new ethers.Contract(conet_storage_address, conet_storageAbi, provideCONET)
 	const currentVer = await getCurrentProfileVer(checkVer, profile.keyID)
 	if (currentVer < 0) {
 		return logger(`storeFragmentToIPFS CONET RPC Error! STOP process`)
@@ -1801,8 +1826,8 @@ const updateProfilesVersion = async () => {
 	})
 	async.series(series).then (async () => {
 		
-		const wallet = new ethers.Wallet(profile.privateKeyArmor, provideNewCONET)
-		const storageVer = new ethers.Contract(conet_storage_contract_address, conet_storageAbi, wallet)
+		const wallet = new ethers.Wallet(profile.privateKeyArmor, provideCONET)
+		const storageVer = new ethers.Contract(conet_storage_address, conet_storageAbi, wallet)
 		await updateChainVersion(storageVer)
 		
 		sendState('beforeunload', false)
@@ -2409,8 +2434,9 @@ const getAllReferrer = async () => {
 	}
 
 	const provideNewCONET = new ethers.JsonRpcProvider(conet_rpc)
-	const CNTP_Referrals = new ethers.Contract(ReferralsAddressV2, CONET_ReferralsAbi, provideNewCONET)
+	const CNTP_Referrals = new ethers.Contract(ReferralsAddressV3, CONET_ReferralsAbi, provideNewCONET)
 	for (let i of CoNET_Data?.profiles) {
+
 		const kk = await getReferrer(i.keyID, CNTP_Referrals)
 		if (!kk||kk === '0x0000000000000000000000000000000000000000') {
 			delete i.referrer
@@ -2419,6 +2445,7 @@ const getAllReferrer = async () => {
 		i.referrer = kk
 	}
 }
+
 
 const getReferrer = async (wallet: string, CNTP_Referrals) => {
 	let result: string 
@@ -5283,3 +5310,432 @@ const CONET_Guardian_NodeInfo_ABI = [
         "type": "function"
     }
 ]
+
+const cCNTP_ABI = [
+    {
+        "inputs": [],
+        "stateMutability": "nonpayable",
+        "type": "constructor"
+    },
+    {
+        "inputs": [
+            {
+                "internalType": "address",
+                "name": "spender",
+                "type": "address"
+            },
+            {
+                "internalType": "uint256",
+                "name": "allowance",
+                "type": "uint256"
+            },
+            {
+                "internalType": "uint256",
+                "name": "needed",
+                "type": "uint256"
+            }
+        ],
+        "name": "ERC20InsufficientAllowance",
+        "type": "error"
+    },
+    {
+        "inputs": [
+            {
+                "internalType": "address",
+                "name": "sender",
+                "type": "address"
+            },
+            {
+                "internalType": "uint256",
+                "name": "balance",
+                "type": "uint256"
+            },
+            {
+                "internalType": "uint256",
+                "name": "needed",
+                "type": "uint256"
+            }
+        ],
+        "name": "ERC20InsufficientBalance",
+        "type": "error"
+    },
+    {
+        "inputs": [
+            {
+                "internalType": "address",
+                "name": "approver",
+                "type": "address"
+            }
+        ],
+        "name": "ERC20InvalidApprover",
+        "type": "error"
+    },
+    {
+        "inputs": [
+            {
+                "internalType": "address",
+                "name": "receiver",
+                "type": "address"
+            }
+        ],
+        "name": "ERC20InvalidReceiver",
+        "type": "error"
+    },
+    {
+        "inputs": [
+            {
+                "internalType": "address",
+                "name": "sender",
+                "type": "address"
+            }
+        ],
+        "name": "ERC20InvalidSender",
+        "type": "error"
+    },
+    {
+        "inputs": [
+            {
+                "internalType": "address",
+                "name": "spender",
+                "type": "address"
+            }
+        ],
+        "name": "ERC20InvalidSpender",
+        "type": "error"
+    },
+    {
+        "anonymous": false,
+        "inputs": [
+            {
+                "indexed": true,
+                "internalType": "address",
+                "name": "owner",
+                "type": "address"
+            },
+            {
+                "indexed": true,
+                "internalType": "address",
+                "name": "spender",
+                "type": "address"
+            },
+            {
+                "indexed": false,
+                "internalType": "uint256",
+                "name": "value",
+                "type": "uint256"
+            }
+        ],
+        "name": "Approval",
+        "type": "event"
+    },
+    {
+        "anonymous": false,
+        "inputs": [
+            {
+                "indexed": true,
+                "internalType": "address",
+                "name": "from",
+                "type": "address"
+            },
+            {
+                "indexed": true,
+                "internalType": "address",
+                "name": "to",
+                "type": "address"
+            },
+            {
+                "indexed": false,
+                "internalType": "uint256",
+                "name": "value",
+                "type": "uint256"
+            }
+        ],
+        "name": "Transfer",
+        "type": "event"
+    },
+    {
+        "inputs": [
+            {
+                "internalType": "address",
+                "name": "owner",
+                "type": "address"
+            },
+            {
+                "internalType": "address",
+                "name": "spender",
+                "type": "address"
+            }
+        ],
+        "name": "allowance",
+        "outputs": [
+            {
+                "internalType": "uint256",
+                "name": "",
+                "type": "uint256"
+            }
+        ],
+        "stateMutability": "view",
+        "type": "function"
+    },
+    {
+        "inputs": [
+            {
+                "internalType": "address",
+                "name": "spender",
+                "type": "address"
+            },
+            {
+                "internalType": "uint256",
+                "name": "value",
+                "type": "uint256"
+            }
+        ],
+        "name": "approve",
+        "outputs": [
+            {
+                "internalType": "bool",
+                "name": "",
+                "type": "bool"
+            }
+        ],
+        "stateMutability": "nonpayable",
+        "type": "function"
+    },
+    {
+        "inputs": [
+            {
+                "internalType": "address",
+                "name": "account",
+                "type": "address"
+            }
+        ],
+        "name": "balanceOf",
+        "outputs": [
+            {
+                "internalType": "uint256",
+                "name": "",
+                "type": "uint256"
+            }
+        ],
+        "stateMutability": "view",
+        "type": "function"
+    },
+    {
+        "inputs": [
+            {
+                "internalType": "uint256",
+                "name": "value",
+                "type": "uint256"
+            }
+        ],
+        "name": "burn",
+        "outputs": [],
+        "stateMutability": "nonpayable",
+        "type": "function"
+    },
+    {
+        "inputs": [
+            {
+                "internalType": "address",
+                "name": "account",
+                "type": "address"
+            },
+            {
+                "internalType": "uint256",
+                "name": "value",
+                "type": "uint256"
+            }
+        ],
+        "name": "burnFrom",
+        "outputs": [],
+        "stateMutability": "nonpayable",
+        "type": "function"
+    },
+    {
+        "inputs": [
+            {
+                "internalType": "address",
+                "name": "addr",
+                "type": "address"
+            },
+            {
+                "internalType": "bool",
+                "name": "status",
+                "type": "bool"
+            }
+        ],
+        "name": "changeAddressInWhitelist",
+        "outputs": [],
+        "stateMutability": "nonpayable",
+        "type": "function"
+    },
+    {
+        "inputs": [
+            {
+                "internalType": "bool",
+                "name": "_rule",
+                "type": "bool"
+            }
+        ],
+        "name": "changeWhitelistRule",
+        "outputs": [],
+        "stateMutability": "nonpayable",
+        "type": "function"
+    },
+    {
+        "inputs": [],
+        "name": "decimals",
+        "outputs": [
+            {
+                "internalType": "uint8",
+                "name": "",
+                "type": "uint8"
+            }
+        ],
+        "stateMutability": "view",
+        "type": "function"
+    },
+    {
+        "inputs": [
+            {
+                "internalType": "address[]",
+                "name": "_addresses",
+                "type": "address[]"
+            },
+            {
+                "internalType": "uint256[]",
+                "name": "_amounts",
+                "type": "uint256[]"
+            }
+        ],
+        "name": "multiTransferToken",
+        "outputs": [],
+        "stateMutability": "nonpayable",
+        "type": "function"
+    },
+    {
+        "inputs": [],
+        "name": "name",
+        "outputs": [
+            {
+                "internalType": "string",
+                "name": "",
+                "type": "string"
+            }
+        ],
+        "stateMutability": "view",
+        "type": "function"
+    },
+    {
+        "inputs": [],
+        "name": "symbol",
+        "outputs": [
+            {
+                "internalType": "string",
+                "name": "",
+                "type": "string"
+            }
+        ],
+        "stateMutability": "view",
+        "type": "function"
+    },
+    {
+        "inputs": [],
+        "name": "totalSupply",
+        "outputs": [
+            {
+                "internalType": "uint256",
+                "name": "",
+                "type": "uint256"
+            }
+        ],
+        "stateMutability": "view",
+        "type": "function"
+    },
+    {
+        "inputs": [
+            {
+                "internalType": "address",
+                "name": "_to",
+                "type": "address"
+            },
+            {
+                "internalType": "uint256",
+                "name": "_value",
+                "type": "uint256"
+            }
+        ],
+        "name": "transfer",
+        "outputs": [
+            {
+                "internalType": "bool",
+                "name": "success",
+                "type": "bool"
+            }
+        ],
+        "stateMutability": "nonpayable",
+        "type": "function"
+    },
+    {
+        "inputs": [
+            {
+                "internalType": "address",
+                "name": "from",
+                "type": "address"
+            },
+            {
+                "internalType": "address",
+                "name": "to",
+                "type": "address"
+            },
+            {
+                "internalType": "uint256",
+                "name": "value",
+                "type": "uint256"
+            }
+        ],
+        "name": "transferFrom",
+        "outputs": [
+            {
+                "internalType": "bool",
+                "name": "",
+                "type": "bool"
+            }
+        ],
+        "stateMutability": "nonpayable",
+        "type": "function"
+    },
+    {
+        "inputs": [
+            {
+                "internalType": "address",
+                "name": "",
+                "type": "address"
+            }
+        ],
+        "name": "whiteList",
+        "outputs": [
+            {
+                "internalType": "bool",
+                "name": "",
+                "type": "bool"
+            }
+        ],
+        "stateMutability": "view",
+        "type": "function"
+    },
+    {
+        "inputs": [],
+        "name": "whitelistRule",
+        "outputs": [
+            {
+                "internalType": "bool",
+                "name": "",
+                "type": "bool"
+            }
+        ],
+        "stateMutability": "view",
+        "type": "function"
+    }
+]
+

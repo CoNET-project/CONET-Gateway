@@ -1,5 +1,5 @@
 const conet_rpc = 'https://rpc.conet.network'
-const api_endpoint = `https://api.conet.network/api/`
+const api_endpoint = `https://apibeta.conet.network/api/`
 const apiv2_endpoint = `https://apiv2.conet.network/api/`
 const cloudStorageEndpointUrl = 'https://s3.us-east-1.wasabisys.com/conet-mvp/storage/FragmentOcean/'
 const blast_sepoliaRpc = 'https://sepolia.blast.io'
@@ -10,8 +10,11 @@ const blast_mainnet1 = ['https://blast.din.dev/rpc', 'https://rpc.ankr.com/blast
 const bsc_mainchain = 'https://bsc-dataseed.binance.org/'
 
 const ReferralsAddress = '0x8f6be4704a3735024F4D2CBC5BAC3722c0C8a0BD'
-const ReferralsAddressV2 = '0x64Cab6D2217c665730e330a78be85a070e4706E7'
-const conet_storage_contract_address = `0x7d9CF1dd164D6AF82C00514071990358805d8d80`.toLowerCase()
+const ReferralsAddressV3 = '0x8f6be4704a3735024F4D2CBC5BAC3722c0C8a0BD'
+const conet_storage_old_address = `0x7d9CF1dd164D6AF82C00514071990358805d8d80`.toLowerCase()
+
+const conet_storage_address = '0xa67fc26f21BA1552f14E42Db657207dA1620B9ef'.toLowerCase()
+
 const adminCNTP= '0x44d1FCCce6BAF388617ee972A6FB898b6b5629B1'
 const referrerCNTP= '0x63377154F972f6FC1319e382535EC9691754bd18'
 
@@ -19,6 +22,8 @@ const CNTPV1 = '0x113E91FC4296567f95B84D0FacDa6fC29c5E7238'
 
 
 const Claimable_CNTP_holesky = '0x27A961F17E7244d8aA75eE19061f6360DeeDF76F'
+
+
 const blast_mainnet_CNTP = '0x0f43685B2cB08b9FB8Ca1D981fF078C22Fec84c5'
 //const CNTPB_contract = '0x6056473ADD8bC89a95325845F6a431CCD7A849bb'
 const eth_usdt_contract = '0xdac17f958d2ee523a2206206994597c13d831ec7'
@@ -50,6 +55,13 @@ const ethRpc = () => _ethRpc[Math.round(Math.random()*(_ethRpc.length-1))]
 let allNodes: node
 let authorization_key = ''
 
+
+
+//	******************************************************************
+const cCNTP_new_Addr = '0x530cf1B598D716eC79aa916DD2F05ae8A0cE8ee2'.toLocaleLowerCase()
+const profile_ver_addr = '0xa67fc26f21BA1552f14E42Db657207dA1620B9ef'.toLowerCase()
+//	******************************************************************
+
 const getAddress = (addr: string) => {
 	let ret = ''
 	try {
@@ -69,7 +81,7 @@ const getReferrerList = async (cmd: worker_command) => {
 	}
 
 	const provideNewCONET = new ethers.JsonRpcProvider(conet_rpc)
-	const CNTP_Referrals = new ethers.Contract(ReferralsAddressV2, CONET_ReferralsAbi, provideNewCONET)
+	const CNTP_Referrals = new ethers.Contract(ReferralsAddressV3, CONET_ReferralsAbi, provideNewCONET)
 	cmd.data = [await getAllReferees(referrer, CNTP_Referrals)]
 	returnUUIDChannel(cmd)
 }
@@ -91,11 +103,12 @@ const createAccount = async (cmd: worker_command) => {
 	const mainProfile = CoNET_Data.profiles[0]
 	CoNET_Data.preferences = cmd.data[2] || null
 
-	const faucetResult = await getFaucet (mainProfile.keyID)
-	await storeSystemData ()
-
 	cmd.data[0] = CoNET_Data.mnemonicPhrase
 	returnUUIDChannel (cmd)
+
+	listenProfileVer(CoNET_Data.profiles)
+	getFaucet (mainProfile.keyID)
+	storeSystemData ()
 	
 }
 
@@ -139,9 +152,13 @@ const testPasscode = async (cmd: worker_command) => {
 	// 		}
 	// 	}
 	// }
-	await testFunction(cmd)
-	listenProfileVer()
 
+	CoNET_Data.profiles.forEach(n => {
+		n.keyID = n.keyID.toLocaleLowerCase()
+	})
+
+	await testFunction(cmd)
+	listenProfileVer(CoNET_Data.profiles)
 
 	authorization_key = cmd.data[0] = uuid.v4()
 	returnUUIDChannel(cmd)
@@ -191,6 +208,9 @@ const minTimeStamp = 1000 * 15
 let pushedCurrentProfileVersion = 0
 let referralsRate
 let getAllProfilesRunning = false
+let didGetBalance = false
+
+
 const getAllProfiles = async (cmd: worker_command) => {
 	const _authorization_key: string = cmd.data[0]
 	if (!CoNET_Data || !CoNET_Data?.profiles|| authorization_key!== _authorization_key) {
@@ -198,47 +218,49 @@ const getAllProfiles = async (cmd: worker_command) => {
 		return returnUUIDChannel(cmd)
 	}
 
-	logger(`getAllProfiles connecting count [${++getAllProfilesCount}]!`)
-
-	pushedCurrentProfileVersion = CoNET_Data.ver
-	const timeStamp = new Date().getTime()
-	if (timeStamp - lastTimeGetAllProfilesCount < minTimeStamp) {
-
-		--getAllProfilesCount
-		cmd.data = [CoNET_Data.profiles, referralsRate]
-		return returnUUIDChannel(cmd)
-	}
-	if (getAllProfilesRunning) {
-		logger(`getAllProfiles running!`)
-		cmd.data = [CoNET_Data.profiles, referralsRate]
-		return returnUUIDChannel(cmd)
-	}
-	getAllProfilesRunning = true
-
-	await checkUpdateAccount()
-	await getAllProfileAssetsBalance()
-
-	await checkGuardianNodes()
-
-	referralsRate = await getReferralsRate(CoNET_Data.profiles[0].keyID)||referralsRate
-
 	cmd.data = [CoNET_Data.profiles, referralsRate]
-	--getAllProfilesCount
-	lastTimeGetAllProfilesCount = timeStamp
-	getAllProfilesRunning = false
-	returnUUIDChannel(cmd)
-	const profile =  CoNET_Data.profiles[0]
-	if (referrer && !profile.referrer) {
-		const balance = CoNET_Data.profiles[0].tokens.conet.balance
-		if (parseFloat(balance) > 0.001) {
-			const kk = await registerReferrer (referrer)
-			if (kk) {
-				//await storeSystemData ()
-				profile.referrer = referrer
-				await updateProfilesVersion()
-			}
-		}
-	}
+	return returnUUIDChannel(cmd)
+	// if (didGetBalance) {
+	// 	cmd.data = [CoNET_Data.profiles, referralsRate]
+	// 	returnUUIDChannel(cmd)
+	// }
+
+	// didGetBalance = true
+
+	// if (getAllProfilesRunning) {
+	// 	logger(`getAllProfiles running!`)
+	// 	cmd.data = [CoNET_Data.profiles, referralsRate]
+	// 	return returnUUIDChannel(cmd)
+	// }
+
+	// getAllProfilesRunning = true
+	// pushedCurrentProfileVersion = CoNET_Data.ver
+
+
+	// await checkUpdateAccount(CoNET_Data.profiles[0])
+	// await getAllProfileAssetsBalance()
+
+	// await checkGuardianNodes()
+
+	// referralsRate = await getReferralsRate(CoNET_Data.profiles[0].keyID)||referralsRate
+
+	// cmd.data = [CoNET_Data.profiles, referralsRate]
+	// --getAllProfilesCount
+
+	// getAllProfilesRunning = false
+	// returnUUIDChannel(cmd)
+	// const profile =  CoNET_Data.profiles[0]
+	// if (referrer && !profile.referrer) {
+	// 	const balance = CoNET_Data.profiles[0].tokens.conet.balance
+	// 	if (parseFloat(balance) > 0.001) {
+	// 		const kk = await registerReferrer (referrer)
+	// 		if (kk) {
+	// 			//await storeSystemData ()
+	// 			profile.referrer = referrer
+	// 			await updateProfilesVersion()
+	// 		}
+	// 	}
+	// }
 }
 
 const importWallet = async (cmd: worker_command) => {
@@ -397,8 +419,10 @@ const recoverAccount = async (cmd: worker_command) => {
 	initSystemDataV1(acc)
 	await createNumberPasscode (passcode)
 	await storeSystemData ()
-	await checkUpdateAccount()
-	
+	if (!CoNET_Data || !CoNET_Data?.profiles) {
+		return
+	}
+	await checkUpdateAccount(CoNET_Data.profiles[0])
 	
 	authorization_key = cmd.data[0] = uuid.v4()
 	returnUUIDChannel(cmd)
