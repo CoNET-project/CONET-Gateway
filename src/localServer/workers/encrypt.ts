@@ -608,7 +608,14 @@ const processCmd = async (cmd: worker_command) => {
 
 		case 'getAllOtherAssets': {
 
+			
+			const profiles = CoNET_Data?.profiles
+			if (!profiles) {
+				cmd.err = 'NOT_READY'
+				return returnUUIDChannel(cmd)
+			}
 			await getAllOtherAssets()
+			cmd.data = [profiles]
 			return returnUUIDChannel(cmd)
 		}
 
