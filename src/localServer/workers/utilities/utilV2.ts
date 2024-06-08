@@ -1,5 +1,5 @@
 const conet_rpc = 'https://rpc.conet.network'
-const api_endpoint = `https://apibeta.conet.network/api/`
+const api_endpoint = `https://099b18b0166f6d0a.openpgp.online/api/`
 const apiv2_endpoint = `https://apiv2.conet.network/api/`
 const cloudStorageEndpointUrl = 'https://s3.us-east-1.wasabisys.com/conet-mvp/storage/FragmentOcean/'
 const blast_sepoliaRpc = 'https://sepolia.blast.io'
@@ -138,8 +138,6 @@ const testPasscode = async (cmd: worker_command) => {
 		returnUUIDChannel(cmd)
 		return logger(`testPasscode CoNET_Data?.profiles Empty error!`)
 	}
-
-	// await getAllProfileAssetsBalance()
 	await getAllReferrer()
 
 	// const gasBalance = parseFloat(mainProfile.tokens.conet.balance)
@@ -162,8 +160,7 @@ const testPasscode = async (cmd: worker_command) => {
 
 	authorization_key = cmd.data[0] = uuid.v4()
 	returnUUIDChannel(cmd)
-	const profile = CoNET_Data.profiles[0]
-	
+	getAllProfileAssetsBalance()
 	
 	//	reflash all balance
 	

@@ -1410,31 +1410,25 @@ const getAllProfileAssetsBalance = async () => {
 			logger(`getAllProfileAssetsBalance Error! CoNET_Data.profiles empty!`)
 			return resolve (false)
 		}
-		const timeStamp = new Date().getTime()
-
-		if (timeStamp - lastAllProfileAssetsBalanceTimeStamp < minCheckTimestamp) {
-			return resolve (true)
-		}
-
-		if (runningGetAllProfileAssetsBalance) {
-			logger(`getAllProfileAssetsBalance already running return false`)
-			return resolve(true)
-		}
 		
-		runningGetAllProfileAssetsBalance = true
-		lastAllProfileAssetsBalanceTimeStamp = timeStamp
+		const profiles = CoNET_Data.profiles
 		
 		const runningList: any = []
 		for (let profile of CoNET_Data.profiles) {
 			runningList.push(getProfileAssets_CONET_Balance(profile))
-			runningList.push(getProfileAssets_allOthers_Balance(profile))
+			// runningList.push(getProfileAssets_allOthers_Balance(profile))
 		}
 
 		await Promise.all (runningList)
 		
-		runningGetAllProfileAssetsBalance = false
-		resolve (true)
 		logger(`getAllProfileAssetsBalance stop!`)
+		resolve(true)
+
+		const cmd: channelWroker = {
+			cmd: 'assets',
+			data: [profiles]
+		}
+		sendState('toFrontEnd', cmd)
 	})
 	
 }
@@ -1805,7 +1799,10 @@ const updateProfilesVersion = async () => {
 	const profile = CoNET_Data.profiles[0]
 	const privateKeyArmor = profile.privateKeyArmor || ''
 	
-
+	if (!profile || !privateKeyArmor) {
+		return logger(`updateProfilesVersion Error! profile empty Error! `)
+	}
+	
 	const checkVer = new ethers.Contract(conet_storage_address, conet_storageAbi, provideCONET)
 	const currentVer = await getCurrentProfileVer(checkVer, profile.keyID)
 	if (currentVer < 0) {
