@@ -633,11 +633,13 @@ const checkUpdateAccount = () => new Promise(async resolve => {
 	const [nonce, _ver] = await checkProfileVersion( profiles[0].keyID)
 
 	CoNET_Data.nonce = nonce
+	CoNET_Data.ver = CoNET_Data.ver||1
 	if (CoNET_Data.ver && _ver === CoNET_Data.ver) {
 		return resolve (true)
 	}
+	
 	//	Local version big then remote
-	if ( !CoNET_Data.ver || _ver < CoNET_Data.ver ) {
+	if ( CoNET_Data.ver === 1 || _ver < CoNET_Data.ver ) {
 		await updateProfilesVersion()
 		checkcheckUpdateLock = false
 		return resolve (true)
