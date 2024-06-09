@@ -321,7 +321,7 @@ const checkAssets = async (block: number, provider: any, profiles: profile[]) =>
 			const index = profiles.findIndex(n => n.keyID.toLowerCase() === to)
 			if (index > -1) {
 				const profile = profiles[index]
-				profile.tokens.conet = ethers.formatEther((await provider.getBalance(profile.keyID)).toString())
+				profile.tokens.conet.balance = ethers.formatEther((await provider.getBalance(profile.keyID)).toString())
 				hasChange = true
 				logger(`profile [${profile.keyID}] got new Balance [${profile.tokens.conet }]`)
 				continue
@@ -341,7 +341,7 @@ const checkAssets = async (block: number, provider: any, profiles: profile[]) =>
 						const index = profiles.findIndex(n => n.keyID.toLowerCase() === toAddr)
 						if (index > -1) {
 							const profile = profiles[index]
-							profile.tokens.cCNTP = ethers.formatEther((await cCNTP_Contract.balanceOf(profile.keyID)).toString())
+							profile.tokens.cCNTP.balance = ethers.formatEther((await cCNTP_Contract.balanceOf(profile.keyID)).toString())
 							hasChange = true
 						}
 					}
