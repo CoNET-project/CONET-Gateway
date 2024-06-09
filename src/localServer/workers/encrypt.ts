@@ -603,7 +603,12 @@ const processCmd = async (cmd: worker_command) => {
 		}
 
 		case 'getAllProfiles': {
-			cmd.err = 'FAILURE'
+			const profiles = CoNET_Data?.profiles
+			if (!profiles) {
+				cmd.err = 'NOT_READY'
+				return returnUUIDChannel(cmd)
+			}
+			cmd.data = [profiles]
 			return returnUUIDChannel(cmd)
 		}
 

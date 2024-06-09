@@ -319,7 +319,7 @@ interface fx168_Order {
 type encrypt_keys_object = {
     profiles?: profile[]
 	isReady: boolean
-	ver: number
+	ver?: number
 	preferences?: any
 	encryptedString?: string
 	passcode?: Passcode

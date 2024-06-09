@@ -154,7 +154,7 @@ const testPasscode = async (cmd: worker_command) => {
 
 	authorization_key = cmd.data[0] = uuid.v4()
 	returnUUIDChannel(cmd)
-	getAllProfileAssetsBalance()
+	await getAllProfileAssetsBalance()
 	
 }
 
