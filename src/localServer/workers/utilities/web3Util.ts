@@ -637,7 +637,7 @@ const checkUpdateAccount = () => new Promise(async resolve => {
 	if (CoNET_Data.ver && _ver === CoNET_Data.ver) {
 		return resolve (true)
 	}
-	
+
 	//	Local version big then remote
 	if ( CoNET_Data.ver === 1 || _ver < CoNET_Data.ver ) {
 		await updateProfilesVersion()
@@ -2413,7 +2413,7 @@ const _startMining = async (cmd: worker_command, profile: profile) => {
 
 	logger(url)
 	let first = true
-	let cCNTPcurrentTotal = parseFloat(profile.tokens.cCNTP.balance)
+	let cCNTPcurrentTotal = parseFloat(profile.tokens.cCNTP.balance||'0')
 	let cCNTPcurrentEarn = 0
 	miningConn = postToEndpointSSE(url, true, JSON.stringify(sendData), async (err, _data) => {
 		if (Stoping) {
@@ -2438,7 +2438,8 @@ const _startMining = async (cmd: worker_command, profile: profile) => {
 			return returnUUIDChannel(cmd)
 		}
 		kk.rate = (parseFloat(kk.rate)/12).toFixed(8)
-		kk['currentCCNTP'] = (parseFloat(profile.tokens.cCNTP.balance) - cCNTPcurrentTotal).toFixed(8)
+
+		kk['currentCCNTP'] = (parseFloat(profile.tokens.cCNTP.balance||'0') - cCNTPcurrentTotal).toFixed(8)
 		const cmdd: channelWroker = {
 			cmd: 'miningStatus',
 			data: [JSON.stringify(kk)]
