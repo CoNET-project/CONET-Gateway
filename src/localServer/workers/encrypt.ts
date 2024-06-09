@@ -603,7 +603,8 @@ const processCmd = async (cmd: worker_command) => {
 		}
 
 		case 'getAllProfiles': {
-			return getAllProfiles(cmd)
+			cmd.err = 'FAILURE'
+			return returnUUIDChannel(cmd)
 		}
 
 		case 'getAllOtherAssets': {

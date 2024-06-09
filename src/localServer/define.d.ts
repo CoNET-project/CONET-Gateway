@@ -305,6 +305,7 @@ type recipientNode = {
 
 interface FragmentClass {
 	mainFragmentName: string
+	failures: number
 }
 
 interface fx168_Order {
@@ -326,6 +327,7 @@ type encrypt_keys_object = {
 	fragmentClass?: FragmentClass
 	nonce: number
 	fx168Order?: fx168_Order[]
+	upgradev2?: boolean
 }
 
 type pgpKeyPair = {

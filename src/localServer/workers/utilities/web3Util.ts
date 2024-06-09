@@ -14,15 +14,17 @@ const getRegion = async () => {
 
 const registerReferrer = async (referrer: string) => {
 	if (!CoNET_Data?.profiles) {
-		return logger(`registerReferrer CoNET_Data?.profiles Empty error!`)
-	}
-
-	const profile = CoNET_Data.profiles[0]
-	if (!profile||!referrer) {
+		logger(`registerReferrer CoNET_Data?.profiles Empty error!`)
 		return false
 	}
 
-	if (referrer.toLowerCase() === profile.keyID.toLowerCase() || profile.referrer) {
+	const profile = CoNET_Data.profiles[0]
+
+	if (!profile || !referrer) {
+		return false
+	}
+
+	if (referrer.toLowerCase() === profile.keyID.toLowerCase() ) {
 		return false
 	}
 
@@ -31,14 +33,15 @@ const registerReferrer = async (referrer: string) => {
 	const CNTP_Referrals = new ethers.Contract(ReferralsAddressV3, CONET_ReferralsAbi, wallet)
 
 	try {
-		await CNTP_Referrals.addReferrer(referrer)
-	} catch (ex: any) {
-		if (/sender already has referrer/.test(ex.message)) {
-			return false
+		const ref = CNTP_Referrals.getReferrer(profile.keyID)
+		if (ref === '0x0000000000000000000000000000000000000000') {
+			await CNTP_Referrals.addReferrer(referrer)
 		}
-		logger(`registerReferrer Error`, ex)
+		
+	} catch (ex: any) {
 		return false
 	}
+
 	profile.referrer = referrer
 	return true
 }
@@ -358,6 +361,8 @@ const checkAssets = async (block: number, provider: any, profiles: profile[]) =>
 }
 let provideCONET
 let lesteningBlock = false
+
+
 const listenProfileVer = async (profiles: profile[]) => {
 	if (lesteningBlock) {
 		return
@@ -370,7 +375,7 @@ const listenProfileVer = async (profiles: profile[]) => {
 }
 
 
-const checkProfileVersion = async (wallet: string, callback: (ver: number, nonce?: number) => void) => {
+const checkProfileVersion = async (wallet: string) => {
 	
 	const conet_storage = new ethers.Contract(profile_ver_addr, conet_storageAbi, provideCONET)
 	const [count, nonce] = await
@@ -379,7 +384,7 @@ const checkProfileVersion = async (wallet: string, callback: (ver: number, nonce
 			provideCONET.getTransactionCount (wallet)
 		])
 	
-	return callback (parseInt(count.toString()), nonce)
+	return [parseInt(count.toString()), parseInt(nonce.toString())]
 }
 
 const _storagePieceToLocal = (mnemonicPhrasePassword: string, fragment: string, index: number,
@@ -486,7 +491,8 @@ const initSystemDataV1 = async (acc) => {
 		profiles:[profile],
 		ver: 0,
 		isReady: true,
-		nonce: 0
+		nonce: 0,
+		upgradev2: true
 	}
 	
 }
@@ -602,33 +608,41 @@ const resizeImage = ( mediaData: string, imageMaxWidth: number, imageMaxHeight: 
 	
 }
 
-const checkUpdateAccount = (profile: profile) => new Promise(resolve=> checkProfileVersion( profile.keyID, async (_ver, nonce) => {
-		if (!CoNET_Data || !nonce || !_ver) {
-			checkcheckUpdateLock = false
-			return resolve(false)
-		}
+const checkUpdateAccount = () => new Promise(async resolve => {
+	
+	if ( ! CoNET_Data || ! CoNET_Data?.profiles ) {
+		logger(`checkUpdateAccount CoNET_Data?.profiles hasn't ready!`)
+		return resolve (false)
+	}
 
-		CoNET_Data.nonce = nonce
-		if (_ver <= CoNET_Data.ver) {
-			checkcheckUpdateLock = false
-			return resolve(true)
-		}
-		
-		const result = _result => {
-			if ( !_result ) {
-				
-				if (--_ver > 0 ) {
-					logger(`checkUpdateAccount version [${_ver}] getVersonFragments got false ERROR!, try get previous version [${_ver}]`)
-					return getVersonFragments ( _ver, nonce, result)
-				}
-				checkcheckUpdateLock = false
-				return resolve(false)
-			}
-			checkcheckUpdateLock = false
-			resolve(true)
-		}
-		return getVersonFragments ( _ver, nonce, result)
-	}))
+	const profiles = CoNET_Data.profiles
+
+	if (checkcheckUpdateLock) {
+		return resolve (false)
+	}
+
+	checkcheckUpdateLock = true
+
+	const [_ver, nonce] = await checkProfileVersion( profiles[0].keyID)
+
+	CoNET_Data.nonce = nonce
+
+	//	Local version big then remote
+	if ( !CoNET_Data.ver || _ver < CoNET_Data.ver ) {
+		await updateProfilesVersion()
+		checkcheckUpdateLock = false
+		return resolve (true)
+	}
+
+	if (_ver > CoNET_Data.ver) {
+		await getVersonFragments ()
+		return resolve (true)
+	}
+	checkcheckUpdateLock = false
+	return resolve (false)
+	
+})
+	
 	
 
 
@@ -818,7 +832,10 @@ const getNextFragmentIPFS = async (ver: number, passObjPassword: string, i) => {
 		return decryptedFragment.data
 	} catch (ex) {
 		logger(`getNextFragmentIPFS aesGcmDecrypt [${nextFragmentText}] error!`, ex)
+		return ''
+
 	}
+	
 }
 
 const getFragmentsFromPublic: (hash: string) => Promise<string> = (hash) => {
@@ -870,18 +887,6 @@ const updateFragmentsToIPFS = async (encryptData: string, hash: string, keyID: s
 	logger(`updateProfiles got result [${result}] from conet api server!`)
 }
 
-const getCurrentProfileVer = async (storageVer: any, address: string) => {
-	let rc
-	try {
-		rc = await storageVer.count(address)
-	} catch(ex) {
-		logger(`getCurrentVer error! try again`, ex)
-		return -1
-	}
-
-	return parseInt(rc)
-	
-}
 
 let updateChainVersionCount = 0
 const updateChainVersion = async (storageVer: any) => {
@@ -1403,8 +1408,7 @@ const getAllOtherAssets = async () => {
 }
 
 
-const getAllProfileAssetsBalance = async () => {
-	return new Promise(async resolve => {
+const getAllProfileAssetsBalance = () => new Promise ( async resolve => {
 
 		if (!CoNET_Data?.profiles) {
 			logger(`getAllProfileAssetsBalance Error! CoNET_Data.profiles empty!`)
@@ -1414,24 +1418,49 @@ const getAllProfileAssetsBalance = async () => {
 		const profiles = CoNET_Data.profiles
 		
 		const runningList: any = []
+
 		for (let profile of CoNET_Data.profiles) {
+
 			runningList.push(getProfileAssets_CONET_Balance(profile))
+			
 			// runningList.push(getProfileAssets_allOthers_Balance(profile))
 		}
 
 		await Promise.all (runningList)
 		
-		logger(`getAllProfileAssetsBalance stop!`)
-		resolve(true)
+		logger(`getAllProfileAssetsBalance success!`)
+		
+
+		const constBalance = profiles[0].tokens.conet.balance
+		await getAllReferrer()
+
+		
+
+		if (constBalance > '0.0001') {
+			let update = false
+			if ( referrer ) {
+				update = await registerReferrer (referrer)
+			}
+			await checkUpdateAccount()
+		
+		} else {
+			const health = await getCONET_api_health()
+			if (!health) {
+				return logger(`getAllProfileAssetsBalance getCONET_api_health Err`)
+			}
+
+			await getFaucet(profiles[0].keyID)
+		}
 
 		const cmd: channelWroker = {
 			cmd: 'assets',
 			data: [profiles]
 		}
 		sendState('toFrontEnd', cmd)
+		return resolve(true)
 	})
 	
-}
+
 
 const getCONET_HoleskyAssets = (wallet: string) => new Promise( resolve => {
 	if (!wallet) {
@@ -1458,43 +1487,62 @@ const getCONET_HoleskyAssets = (wallet: string) => new Promise( resolve => {
 let checkcheckUpdateLock = false
 let lastCheckcheckUpdateTimeStamp = 0
 
-const getVersonFragments = async (_ver, nonce, resolve) => {
-	if (!CoNET_Data) {
-		checkcheckUpdateLock = false
-		logger(`checkUpdateAccount CoNET_Data is empty Error!`)
-		return resolve(false)
+const getVersonFragments = async () => {
+	if (checkcheckUpdateLock || !CoNET_Data || ! CoNET_Data?.profiles) {
+		return logger(`checkUpdateAccount CoNET_Data is empty Error!`)
 	}
+	checkcheckUpdateLock = true
+	const profile = CoNET_Data.profiles[0]
 
+	const [chainVer, nonce] = await checkProfileVersion( profile.keyID)
+	CoNET_Data.nonce = nonce
+	
+	if ( chainVer > CoNET_Data.ver ) {
 
-	if (typeof nonce !== 'undefined' && nonce > 0) {
-		CoNET_Data.nonce = nonce
-	}
-
-	if (_ver > CoNET_Data.ver) {
-
-		logger (`checkUpdateAccount current ver [${CoNET_Data.ver}] is old! remote is [${_ver}] Update it`)
-
+		logger (`checkUpdateAccount current ver [${CoNET_Data.ver}] is old! remote is [${chainVer}] Update it`)
+		
 		const passward = ethers.id(ethers.id(CoNET_Data.mnemonicPhrase))
-		const partEncryptPassword = encryptPasswordIssue(_ver, passward, 0)
-		const firstFragmentName = createFragmentFileName(_ver, passward, 0)
+		const partEncryptPassword = encryptPasswordIssue(chainVer, passward, 0)
+		const firstFragmentName = createFragmentFileName(chainVer, passward, 0)
 		
 		const firstFragmentEncrypted = await getFragmentsFromPublic(firstFragmentName)
+
 		if (!firstFragmentEncrypted) {
-			logger(`checkUpdateAccount update error! cant get the first Fragment of ver number${_ver} `)
-			checkcheckUpdateLock = false
-			return resolve(false)
+			
+			logger(`getVersonFragments getFragmentsFromPublic error! Fragment of ver number${chainVer} `)
+			return checkcheckUpdateLock = false
 		}
 
-		logger(`checkUpdateAccount fetch ${_ver} first Fragment [${firstFragmentName}] with passward [${partEncryptPassword}]`)
+
+		if (!CoNET_Data?.fragmentClass) {
+			CoNET_Data.fragmentClass = {
+				mainFragmentName: firstFragmentName,
+				failures: 0
+			}
+		} else {
+			CoNET_Data.fragmentClass.mainFragmentName = firstFragmentName
+		}
+		const fragmentClass = CoNET_Data.fragmentClass
+		logger(`checkUpdateAccount fetch ${chainVer} first Fragment [${firstFragmentName}] with passward [${partEncryptPassword}]`)
 
 		let firstFragmentObj
-		try{
+
+		try {
 			const firstFragmentdecrypted = await CoNETModule.aesGcmDecrypt (firstFragmentEncrypted, partEncryptPassword)
 			firstFragmentObj = JSON.parse(firstFragmentdecrypted)
+
 		} catch (ex) {
 			logger(`checkUpdateAccount update create firstFragmentObj error!`, ex)
 			checkcheckUpdateLock = false
-			return resolve(false)
+			fragmentClass.failures ++
+
+			if (fragmentClass.failures > 5) {
+				logger(`getVersonFragments failures number > 5, Overwrite the version!`)
+				
+				await updateProfilesVersion()
+
+				return checkcheckUpdateLock = false
+			}
 		}
 
 		const totalFragment = firstFragmentObj.totalFragment
@@ -1503,7 +1551,7 @@ const getVersonFragments = async (_ver, nonce, resolve) => {
 
 		for (let i = 1; i < totalFragment; i ++) {
 			const stage = next => {
-				getNextFragmentIPFS(_ver, passward, i)
+				getNextFragmentIPFS(chainVer, passward, i)
 				.then(text=> {
 					if (!text) {
 						return next (`getNextFragment [${i}] return NULL Error`)
@@ -1518,39 +1566,38 @@ const getVersonFragments = async (_ver, nonce, resolve) => {
 		return async.series(series)
 			.then (async () => {
 				let profile
-				try{
-					profile = JSON.parse(clearData)
-				} catch(ex){
-					logger(`getLocalProfile JSON.parse(clearData) Error`, ex)
-					checkcheckUpdateLock = false
-					return resolve(false)
-				}
+
+				
+				profile = JSON.parse(clearData)
+				
 
 				if (CoNET_Data) {
 					CoNET_Data.profiles = profile
-					CoNET_Data.ver = _ver
+					CoNET_Data.ver = chainVer
+					fragmentClass.failures = 0
 				}
+
 				await storagePieceToLocal()
 				checkcheckUpdateLock = false
-				const versionMargin = _ver - pushedCurrentProfileVersion
-				if (versionMargin > 0) {
-					const cmd: channelWroker = {
-						cmd: 'profileVer',
-						data: [versionMargin]
-					}
-					sendState('toFrontEnd', cmd)
-				}
+
 				
-				return resolve(true)
+				const cmd: channelWroker = {
+					cmd: 'profileVer',
+					data: [chainVer]
+				}
+				sendState('toFrontEnd', cmd)
+				
+				
+				
 			}).catch ( ex=> {
+				logger(`getLocalProfile JSON.parse(clearData) Error`, ex)
 				checkcheckUpdateLock = false
-				logger(`checkUpdateAccount async.series catch ex`, ex)
-				return resolve(false)
+				return fragmentClass.failures++
 			})
 	}
 
-	checkcheckUpdateLock = false
-	return resolve(false)
+	return checkcheckUpdateLock = false
+	
 }
 
 const splitTextLimitLength: (test: string, limitLength: number) => string[] = (test, limitLength) => {
@@ -1792,26 +1839,32 @@ const scanCONET_dWBNB = async (walletAddr: string, privideCONET: any) => {
 }
 
 const updateProfilesVersion = async () => {
-	sendState('beforeunload', true)
+	
 	if (!CoNET_Data?.profiles || !passObj) {
 		return logger(`updateProfilesVersion !CoNET_Data[${!CoNET_Data}] || !passObj[${!passObj}] === true Error! Stop process.`)
 	}
+
 	const profile = CoNET_Data.profiles[0]
 	const privateKeyArmor = profile.privateKeyArmor || ''
 	
 	if (!profile || !privateKeyArmor) {
 		return logger(`updateProfilesVersion Error! profile empty Error! `)
 	}
-	
-	const checkVer = new ethers.Contract(conet_storage_address, conet_storageAbi, provideCONET)
-	const currentVer = await getCurrentProfileVer(checkVer, profile.keyID)
-	if (currentVer < 0) {
-		return logger(`storeFragmentToIPFS CONET RPC Error! STOP process`)
-	}
+	let chainVer
 
-	++CoNET_Data.ver
+	try {
+
+		[chainVer] = await checkProfileVersion( profile[0].keyID)
+		const health = await getCONET_api_health()
+		if (!health) {
+			return logger (`CONET api server hasn't health`)
+		}
+	} catch (ex: any) {
+		return logger(`updateProfilesVersion checkProfileVersion or getCONET_api_health had Error!`, ex.message )
+	}
+	
 	sendState('beforeunload', true)
-	const chainVer = currentVer + 1
+	
 	const passward = ethers.id(ethers.id(CoNET_Data.mnemonicPhrase))
 	const profilesClearText = JSON.stringify(CoNET_Data.profiles)
 	const fileLength = Math.round(1024 * (10 + Math.random() * 20))
@@ -1819,27 +1872,25 @@ const updateProfilesVersion = async () => {
 
 	const series: any[] = []
 	
-	chearTextFragments.forEach((n, index)=> {
-		const stage = next => storagePieceToLocalAndIPFS(passward, n, index, chearTextFragments.length, 
-				fileLength, chainVer, privateKeyArmor, profile.keyID).then (() => {
-			logger(`piece ${index} finished! goto next!`)
-			return next(null,null)
-		})
-		series.push(stage)
+	chearTextFragments.forEach (( n, index ) => {
+		series.push(storagePieceToLocalAndIPFS(passward, n, index, chearTextFragments.length, 
+			fileLength, chainVer, privateKeyArmor, profile.keyID))
 	})
-	async.series(series).then (async () => {
-		
-		const wallet = new ethers.Wallet(profile.privateKeyArmor, provideCONET)
-		const storageVer = new ethers.Contract(conet_storage_address, conet_storageAbi, wallet)
+	const wallet = new ethers.Wallet(profile.privateKeyArmor, provideCONET)
+	const storageVer = new ethers.Contract(conet_storage_address, conet_storageAbi, wallet)
+	try {
+		await Promise.all([
+			...series
+		])
 		await updateChainVersion(storageVer)
-		
+	} catch (ex: any) {
 		sendState('beforeunload', false)
-		logger(`async.series finished`)
-	}).catch (ex=> {
-		sendState('beforeunload', false)
-		logger(`async.series catch ex`, ex)
-	}) 
-
+		return logger(`updateProfilesVersion storagePieceToLocalAndIPFS Error`, ex.message)
+	}
+	CoNET_Data.ver = chainVer + 1
+	sendState('beforeunload', false)
+	return logger(`updateProfilesVersion finished`)
+	
 }
 
 const scanCONET_dUSDT = async (walletAddr: string, privideCONET: any) => {
