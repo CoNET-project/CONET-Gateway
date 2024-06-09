@@ -102,13 +102,13 @@ const createAccount = async (cmd: worker_command) => {
 	const mainProfile = CoNET_Data.profiles[0]
 	CoNET_Data.preferences = cmd.data[2] || null
 
-	cmd.data[0] = CoNET_Data.mnemonicPhrase
-	returnUUIDChannel (cmd)
+	
 
 	listenProfileVer(CoNET_Data.profiles)
 	getFaucet (mainProfile.keyID)
 	await storeSystemData ()
-	await checkUpdateAccount()
+	cmd.data[0] = CoNET_Data.mnemonicPhrase
+	return returnUUIDChannel (cmd)
 }
 
 let referrer = ''
@@ -349,10 +349,6 @@ const recoverAccount = async (cmd: worker_command) => {
 	initSystemDataV1(acc)
 	await createNumberPasscode (passcode)
 	await storeSystemData ()
-	if (!CoNET_Data || !CoNET_Data?.profiles) {
-		return
-	}
-	await checkUpdateAccount()
 	
 	authorization_key = cmd.data[0] = uuid.v4()
 	returnUUIDChannel(cmd)
