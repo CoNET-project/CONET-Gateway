@@ -50,7 +50,7 @@ const preBurnCCNTP = async (profile: profile, totalBurn: string) => {
 	const provideCONET = new ethers.JsonRpcProvider(conet_rpc)
 	const walletObj = new ethers.Wallet(profile.privateKeyArmor, provideCONET)
 	
-	const erc20 = new ethers.Contract(Claimable_CNTP_holesky, blast_CNTPAbi, walletObj)
+	const erc20 = new ethers.Contract(cCNTP_new_Addr, blast_CNTPAbi, walletObj)
 	let total
 	try {
 		const gasPrice = await provideCONET.getFeeData()
