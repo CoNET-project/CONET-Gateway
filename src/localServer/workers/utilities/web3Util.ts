@@ -302,6 +302,29 @@ const sendState = (state: listenState, value: any) => {
 	sendChannel.close()
 }
 
+const checkSmartContractAsset = async (eventLogs: any[], tokenABILog: any, tokenName: string, profiles: profile[], smartContractObj: any) => {
+	let ret = false
+	for (let transferLog of eventLogs) {
+		let uuu
+		try{
+			uuu = tokenABILog.parseLog(transferLog)
+		} catch(ex) {
+			console.log (`ifaceFor_cCNTP_ABI.parseLog transferLog!`)
+			continue
+		}
+		if (uuu?.name === 'Transfer') {
+			const toAddr = uuu.args[1].toLowerCase()
+			const index = profiles.findIndex(n => n.keyID.toLowerCase() === toAddr)
+			if (index > -1) {
+				const profile = profiles[index]
+				profile.tokens[tokenName].balance = ethers.formatEther((await smartContractObj.balanceOf(profile.keyID)).toString())
+				ret = true
+			}
+		}
+	}
+	return ret
+}
+
 const checkAssets = async (block: number, provider: any, profiles: profile[]) => {
 	const blockInfo = await provider.getBlock(block)
 	const ifaceFor_cCNTP_ABI = new ethers.Interface(cCNTP_ABI)
@@ -315,7 +338,7 @@ const checkAssets = async (block: number, provider: any, profiles: profile[]) =>
 		const event = await provider.getTransactionReceipt(tx)
 		const to = event?.to?.toLowerCase()
 		const cCNTP_Contract = new ethers.Contract(cCNTP_new_Addr, cCNTP_ABI, provider)
-
+		const CNTPV1_Contract = new ethers.Contract(CNTPV1, cCNTP_ABI, provider)
 		logger(`block [${block}] transactions ${to}`)
 		if (to) {
 			const index = profiles.findIndex(n => n.keyID.toLowerCase() === to)
@@ -328,29 +351,18 @@ const checkAssets = async (block: number, provider: any, profiles: profile[]) =>
 			}
 			//		cCNTP
 			if (to === cCNTP_new_Addr) {
-				for (let transferLog of event.logs) {
-					let uuu
-					try{
-						uuu = ifaceFor_cCNTP_ABI.parseLog(transferLog)
-					} catch(ex) {
-						console.log (`ifaceFor_cCNTP_ABI.parseLog transferLog!`)
-						continue
-					}
-					if (uuu?.name === 'Transfer') {
-						const toAddr = uuu.args[1].toLowerCase()
-						const index = profiles.findIndex(n => n.keyID.toLowerCase() === toAddr)
-						if (index > -1) {
-							const profile = profiles[index]
-							profile.tokens.cCNTP.balance = ethers.formatEther((await cCNTP_Contract.balanceOf(profile.keyID)).toString())
-							hasChange = true
-						}
-					}
-				}
+				hasChange = await checkSmartContractAsset(event.logs, ifaceFor_cCNTP_ABI, 'cCNTP', profiles, cCNTP_Contract)
+				continue
+			}
+
+			if (to === CNTPV1) {
+				hasChange = await checkSmartContractAsset(event.logs, ifaceFor_cCNTP_ABI, 'CNTPV1', profiles, CNTPV1_Contract)
+				continue
 			}
 			
 		}
-		
 	}
+	
 	if (hasChange) {
 		const cmd: channelWroker = {
 			cmd: 'assets',
