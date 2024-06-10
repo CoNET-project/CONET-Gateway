@@ -66,7 +66,7 @@ const preBurnCCNTP = async (profile: profile, totalBurn: string) => {
 const burnCCNTP = async (profile: profile, totalBurn: string) => {
 	const provideCONET = new ethers.JsonRpcProvider(conet_rpc)
 	const walletObj = new ethers.Wallet(profile.privateKeyArmor, provideCONET)
-	const erc20 = new ethers.Contract(Claimable_CNTP_holesky, blast_CNTPAbi, walletObj)
+	const erc20 = new ethers.Contract(cCNTP_new_Addr, blast_CNTPAbi, walletObj)
 	const value = parseEther(totalBurn, 'ccntp')
 	let tx
 	try {
@@ -898,7 +898,7 @@ const initProfileTokens = () => {
 			history: [],
 			network: 'CONET Holesky',
 			decimal: 18,
-			contract: Claimable_CNTP_holesky,
+			contract: cCNTP_new_Addr,
 			name: 'cCNTP'
 		},
 		cBNBUSDT:{
@@ -1095,7 +1095,7 @@ const checkTokenStructure = (token: any) => {
 			history: [],
 			network: 'CONET Holesky',
 			decimal: 18,
-			contract: Claimable_CNTP_holesky,
+			contract: cCNTP_new_Addr,
 			name: 'cCNTP'
 		}
 	} else {
@@ -1900,7 +1900,7 @@ const scanCNTPV1 = async (walletAddr: string, privide: any) => {
 
 
 const scanCCNTP = async (walletAddr: string, privide: any ) => {
-	return await scan_erc20_balance(walletAddr, privide, Claimable_CNTP_holesky)
+	return await scan_erc20_balance(walletAddr, privide, cCNTP_new_Addr)
 }
 
 const scanCNTP =  async (walletAddr: string, privide: any) => {
