@@ -9,7 +9,7 @@ const _ethRpc: string[] = ['https://rpc.ankr.com/eth','https://eth.llamarpc.com'
 const blast_mainnet1 = ['https://blast.din.dev/rpc', 'https://rpc.ankr.com/blast', 'https://blastl2-mainnet.public.blastapi.io', 'https://blast.blockpi.network/v1/rpc/public']
 const bsc_mainchain = 'https://bsc-dataseed.binance.org/'
 
-const ReferralsAddressV3 = '0x8f6be4704a3735024F4D2CBC5BAC3722c0C8a0BD'
+const ReferralsAddressV3 = '0x8f6be4704a3735024F4D2CBC5BAC3722c0C8a0BD'.toLowerCase()
 const conet_storage_old_address = `0x7d9CF1dd164D6AF82C00514071990358805d8d80`.toLowerCase()
 
 const conet_storage_address = '0xa67fc26f21BA1552f14E42Db657207dA1620B9ef'.toLowerCase()
@@ -149,7 +149,9 @@ const testPasscode = async (cmd: worker_command) => {
 	}
 	await testFunction(cmd)
 	listenProfileVer(CoNET_Data.profiles)
-
+	const provideNewCONET = new ethers.JsonRpcProvider(conet_rpc)
+	const CNTP_Referrals = new ethers.Contract(ReferralsAddressV3, CONET_ReferralsAbi, provideNewCONET)
+	referrer = await getAllReferees(referrer, CNTP_Referrals)
 	authorization_key = cmd.data[0] = uuid.v4()
 	returnUUIDChannel(cmd)
 	await getAllProfileAssetsBalance()
@@ -553,7 +555,7 @@ const testFunction = async (cmd: worker_command) => {
 	
 	const profile = profiles[0]
 
-	await checkProfileVersion (profile.keyID)
+	//await checkProfileVersion (profile.keyID)
 	// const wallet = await unlock_cCNTP(profile)
 	const wallet1 = '0xD8b12054612119e9E45d5Deef40EDca38d54D3b5'
 	// const result = await preBurnCCNTP (profile, '1')

@@ -335,6 +335,7 @@ const checkAssets = async (block: number, provider: any, profiles: profile[]) =>
 	}
 	const cCNTP_Contract = new ethers.Contract(cCNTP_new_Addr, cCNTP_ABI, provider)
 	const CNTPV1_Contract = new ethers.Contract(CNTPV1, cCNTP_ABI, provider)
+	const CNTP_Referrals = new ethers.Contract(ReferralsAddressV3, CONET_ReferralsAbi, provider)
 	let hasChange = false
 	
 	for (let tx of blockInfo.transactions) {
@@ -362,6 +363,10 @@ const checkAssets = async (block: number, provider: any, profiles: profile[]) =>
 				hasChange = await checkSmartContractAsset(event.logs, ifaceFor_cCNTP_ABI, 'CNTPV1', profiles, CNTPV1_Contract)
 				continue
 			}
+			if (to === ReferralsAddressV3) {
+				referrer = await getAllReferees(referrer, CNTP_Referrals)
+				continue
+			}
 			
 		}
 	}
@@ -387,7 +392,7 @@ const listenProfileVer = async (profiles: profile[]) => {
 		])
 		const cmd: channelWroker = {
 			cmd: 'assets',
-			data: [profiles, leaderboardData]
+			data: [profiles, referrer, leaderboardData]
 		}
 		sendState('toFrontEnd', cmd)
 		
