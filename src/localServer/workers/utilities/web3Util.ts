@@ -317,7 +317,7 @@ const checkSmartContractAsset = async (eventLogs: any[], tokenABILog: any, token
 			const index = profiles.findIndex(n => n.keyID.toLowerCase() === toAddr)
 			if (index > -1) {
 				const profile = profiles[index]
-				profile.tokens[tokenName].balance = ethers.formatEther((await smartContractObj.balanceOf(profile.keyID)).toString())
+				profile.tokens[tokenName].balance = ethers.formatEther((await smartContractObj.balanceOf(profile.keyID)).toString()).toFixed(8)
 				ret = true
 			}
 		}
@@ -332,19 +332,20 @@ const checkAssets = async (block: number, provider: any, profiles: profile[]) =>
 	if (!blockInfo?.transactions) {
 		return logger(`block [${block}] hasn't transactions`)
 	}
-
+	const cCNTP_Contract = new ethers.Contract(cCNTP_new_Addr, cCNTP_ABI, provider)
+	const CNTPV1_Contract = new ethers.Contract(CNTPV1, cCNTP_ABI, provider)
 	let hasChange = false
+	
 	for (let tx of blockInfo.transactions) {
 		const event = await provider.getTransactionReceipt(tx)
 		const to = event?.to?.toLowerCase()
-		const cCNTP_Contract = new ethers.Contract(cCNTP_new_Addr, cCNTP_ABI, provider)
-		const CNTPV1_Contract = new ethers.Contract(CNTPV1, cCNTP_ABI, provider)
+		
 		logger(`block [${block}] transactions ${to}`)
 		if (to) {
 			const index = profiles.findIndex(n => n.keyID.toLowerCase() === to)
 			if (index > -1) {
 				const profile = profiles[index]
-				profile.tokens.conet.balance = ethers.formatEther((await provider.getBalance(profile.keyID)).toString())
+				profile.tokens.conet.balance = ethers.formatEther(await provider.getBalance(profile.keyID)).toFixed(8)
 				hasChange = true
 				logger(`profile [${profile.keyID}] got new Balance [${profile.tokens.conet }]`)
 				continue
@@ -363,14 +364,10 @@ const checkAssets = async (block: number, provider: any, profiles: profile[]) =>
 		}
 	}
 	
-	if (hasChange) {
-		const cmd: channelWroker = {
-			cmd: 'assets',
-			data: [profiles]
-		}
-		sendState('toFrontEnd', cmd)
-	}
+
 }
+
+
 let provideCONET
 let lesteningBlock = false
 
@@ -381,8 +378,17 @@ const listenProfileVer = async (profiles: profile[]) => {
 	}
 	lesteningBlock = true
 	provideCONET.on ('block', async block => {
+		await 
+		Promise.all([
+			selectLeaderboard(block),
+			checkAssets(block, provideCONET, profiles)
+		])
+		const cmd: channelWroker = {
+			cmd: 'assets',
+			data: [profiles, leaderboardData]
+		}
+		sendState('toFrontEnd', cmd)
 		
-		return checkAssets(block, provideCONET, profiles)
 	})
 }
 
@@ -1383,6 +1389,49 @@ const getAllOtherAssets = async () => {
 	
 }
 
+let leaderboardData
+const selectLeaderboard: (block: number) => Promise<boolean> = (block) => new Promise(async resolve => {
+	const [_free] = await Promise.all([
+		getWasabiFile(`${block-10}_free`),
+	])
+	if (!_free) {
+		return resolve(await selectLeaderboard(block-2))
+	}
+	leaderboardData = {
+		epoch: block-10,
+		free_cntp: _free.cntp,
+		free_referrals: _free.referrals,
+		minerRate: _free.minerRate,
+		totalMiner: _free.totalMiner
+	}
+	resolve (true)
+	
+})
+
+
+const getWasabiFile: (fileName: string) => Promise<any> = async (fileName: string) => new Promise(resolve=> {
+	//const cloudStorageEndpointPath = `/conet-mvp/storage/FragmentOcean/${fileName}`
+	const cloudStorageEndpointUrl = `https://s3.us-east-1.wasabisys.com/conet-mvp/storage/FragmentOcean/${fileName}`
+	return fetch(cloudStorageEndpointUrl, {
+		method: 'GET',
+		headers: {
+			'Content-Type': 'application/json;charset=UTF-8',
+			'Connection': 'close',
+		},
+		cache: 'no-store',
+		referrerPolicy: 'no-referrer'
+	}).then ( async res => {
+		if (res.status !== 200){
+			throw(`!200 Error`)
+		}
+		return res.json()
+	}).then(result => {
+		return resolve(result)
+	}).catch (ex => {
+		logger(`getCONET_HoleskyAssets Error!`, ex)
+		return resolve([])
+	})
+})
 
 const getAllProfileAssetsBalance = () => new Promise ( async resolve => {
 
@@ -2449,8 +2498,8 @@ const _startMining = async (cmd: worker_command, profile: profile) => {
 			cmd.data = ['success', JSON.stringify(kk)]
 			return returnUUIDChannel(cmd)
 		}
-		kk.rate = (parseFloat(kk.rate)/12).toFixed(8)
-
+		
+		kk.rate = typeof kk.rate ==='number' ? kk.rate.toFixed(10) : parseFloat(kk.rate).toFixed(10)
 		kk['currentCCNTP'] = (parseFloat(profile.tokens.cCNTP.balance||'0') - cCNTPcurrentTotal).toFixed(8)
 		const cmdd: channelWroker = {
 			cmd: 'miningStatus',

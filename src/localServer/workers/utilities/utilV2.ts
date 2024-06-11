@@ -1,5 +1,5 @@
 const conet_rpc = 'https://rpc.conet.network'
-const api_endpoint = `https://099b18b0166f6d0a.openpgp.online/api/`
+const api_endpoint = `https://api.conet.network/api/`
 const apiv2_endpoint = `https://apiv2.conet.network/api/`
 const cloudStorageEndpointUrl = 'https://s3.us-east-1.wasabisys.com/conet-mvp/storage/FragmentOcean/'
 const blast_sepoliaRpc = 'https://sepolia.blast.io'
