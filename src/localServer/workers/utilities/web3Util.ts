@@ -317,7 +317,8 @@ const checkSmartContractAsset = async (eventLogs: any[], tokenABILog: any, token
 			const index = profiles.findIndex(n => n.keyID.toLowerCase() === toAddr)
 			if (index > -1) {
 				const profile = profiles[index]
-				profile.tokens[tokenName].balance = ethers.formatEther((await smartContractObj.balanceOf(profile.keyID)).toString()).toFixed(8)
+				const balance = await smartContractObj.balanceOf(profile.keyID)
+				profile.tokens[tokenName].balance = parseFloat(ethers.formatEther(balance)).toFixed(8)
 				ret = true
 			}
 		}
@@ -345,7 +346,8 @@ const checkAssets = async (block: number, provider: any, profiles: profile[]) =>
 			const index = profiles.findIndex(n => n.keyID.toLowerCase() === to)
 			if (index > -1) {
 				const profile = profiles[index]
-				profile.tokens.conet.balance = ethers.formatEther(await provider.getBalance(profile.keyID)).toFixed(8)
+				const balance = await provider.getBalance(profile.keyID)
+				profile.tokens.conet.balance = parseFloat(ethers.formatEther(balance)).toFixed(8)
 				hasChange = true
 				logger(`profile [${profile.keyID}] got new Balance [${profile.tokens.conet }]`)
 				continue
