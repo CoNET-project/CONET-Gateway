@@ -1399,7 +1399,7 @@ const getAllOtherAssets = async () => {
 let leaderboardData
 const selectLeaderboard: (block: number) => Promise<boolean> = (block) => new Promise(async resolve => {
 	const [_free] = await Promise.all([
-		getWasabiFile(`${block-10}_free`),
+		getWasabiFile(`${block-20}_free`),
 	])
 	if (!_free) {
 		return resolve(await selectLeaderboard(block-2))
