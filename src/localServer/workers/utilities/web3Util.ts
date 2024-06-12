@@ -1406,19 +1406,32 @@ const getAllOtherAssets = async () => {
 }
 
 let leaderboardData
+const leaderboardDataDelay = 20
 const selectLeaderboard: (block: number) => Promise<boolean> = (block) => new Promise(async resolve => {
-	const [_free] = await Promise.all([
-		getWasabiFile(`${block-20}_free`),
+	const [_free, wallets] = await Promise.all([
+		getWasabiFile(`${block-leaderboardDataDelay}_free`),
+		getWasabiFile(`free_wallets_${block-leaderboardDataDelay}`)
 	])
+
 	if (!_free) {
 		return resolve(await selectLeaderboard(block-2))
 	}
+	
 	leaderboardData = {
-		epoch: block-10,
+		epoch: block - leaderboardDataDelay,
 		free_cntp: _free.cntp,
 		free_referrals: _free.referrals,
 		minerRate: _free.minerRate,
-		totalMiner: _free.totalMiner
+		totalMiner: _free.totalMiner,
+
+	}
+
+	if (RefereesList && wallets?.length) {
+		const allWallet: string[] = wallets.filter(n =>RefereesList.findIndex(nn => nn.toLowerCase() === n.toLowerCase()) > -1)
+
+		leaderboardData.free_referrals_rate = {
+			referrals: allWallet.length
+		}
 	}
 	resolve (true)
 	
@@ -1797,14 +1810,14 @@ const getAllReferees = async (_wallet: string, CNTP_Referrals) => {
 
 let getFaucetRoop = 0
 
-const getFaucet = async (keyID: string) => new Promise (async resolve => {
+const getFaucet = async (keyID: string) => 
+	new Promise (async resolve => {
 		if (++getFaucetRoop > 6) {
 			getFaucetRoop = 0
 			logger(`getFaucet Roop > 6 STOP process!`)
 			return resolve(null)
 		}
-		
-
+	
 		const url = `${apiv2_endpoint}conet-faucet`
 		let result
 		try {
