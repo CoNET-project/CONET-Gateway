@@ -40,7 +40,8 @@ const Claimable_BlastUSDB = '0x53Aee1f4c9b0ff76781eFAC6e20eAe4561e29E8A'.toLower
 // const Claimable_ETH = '0x6Eb683B666310cC4E08f32896ad620E5F204c8f8'.toLowerCase()
 const Claimable_ETHUSDT = '0x95A9d14fC824e037B29F1Fdae8EE3D9369B13915'.toLowerCase()
 
-const CONET_Guardian_Nodes = '0x5e4aE81285b86f35e3370B3EF72df1363DD05286'
+const CONET_Guardian_Nodes1 = '0x5e4aE81285b86f35e3370B3EF72df1363DD05286'
+const CONET_Guardian_NodesV3 = '0x453701b80324C44366B34d167D40bcE2d67D6047'.toLowerCase()
 const CONET_Guardian_NodeInfo = '0xD6C30e7a1527cBDaF0e83930e643E32e7B30c1b4'
 const fx168OrderContractAddress = '0x9aE6D3Bd3029C8B2A73817b9aFa1C029237E3e30'
 
@@ -110,6 +111,7 @@ const createAccount = async (cmd: worker_command) => {
 }
 
 let referrer = ''
+let RefereesList
 const testPasscode = async (cmd: worker_command) => {
 	const passcode: string = cmd.data[0]
 	referrer = cmd.data[1]
@@ -147,15 +149,15 @@ const testPasscode = async (cmd: worker_command) => {
 	if (!CoNET_Data?.upgradev2) {
 		CoNET_Data.upgradev2 = true
 	}
-	await testFunction(cmd)
+	
 	listenProfileVer(CoNET_Data.profiles)
 	const provideNewCONET = new ethers.JsonRpcProvider(conet_rpc)
 	const CNTP_Referrals = new ethers.Contract(ReferralsAddressV3, CONET_ReferralsAbi, provideNewCONET)
-	referrer = await getAllReferees(referrer, CNTP_Referrals)
+	RefereesList = await getAllReferees(referrer, CNTP_Referrals)
 	authorization_key = cmd.data[0] = uuid.v4()
 	returnUUIDChannel(cmd)
 	await getAllProfileAssetsBalance()
-	
+	await testFunction(cmd)
 }
 
 

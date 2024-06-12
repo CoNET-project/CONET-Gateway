@@ -33,7 +33,7 @@ const registerReferrer = async (referrer: string) => {
 	const CNTP_Referrals = new ethers.Contract(ReferralsAddressV3, CONET_ReferralsAbi, wallet)
 
 	try {
-		const ref = CNTP_Referrals.getReferrer(profile.keyID)
+		const ref = await CNTP_Referrals.getReferrer(profile.keyID)
 		if (ref === '0x0000000000000000000000000000000000000000') {
 			await CNTP_Referrals.addReferrer(referrer)
 		}
@@ -228,7 +228,7 @@ const checkGuardianNodes = async () => {
 	}
 	const profile = CoNET_Data.profiles[mainIndex]
 	const provideCONET = new ethers.JsonRpcProvider(conet_rpc)
-	const erc1155 = new ethers.Contract(CONET_Guardian_Nodes, guardian_erc1155, provideCONET)
+	const erc1155 = new ethers.Contract(scan_Guardian_ReferralNodes, guardian_erc1155, provideCONET)
 	let nodeAddress: string[] = [], Ids, numbers
 	try {
 		const ownerIds = await erc1155.getOwnerNodesAddress(profile.keyID)
@@ -392,7 +392,7 @@ const listenProfileVer = async (profiles: profile[]) => {
 		])
 		const cmd: channelWroker = {
 			cmd: 'assets',
-			data: [profiles, referrer, leaderboardData]
+			data: [profiles, RefereesList, leaderboardData]
 		}
 		sendState('toFrontEnd', cmd)
 		
@@ -410,6 +410,19 @@ const checkProfileVersion = async (wallet: string) => {
 		])
 	
 	return [parseInt(count.toString()), parseInt(nonce.toString())]
+}
+
+const checkOldProfileVersion = async (wallet: string ) => {
+	const obdGethRPC = 'http://207.90.195.83:8998'
+	const oldStorageAddr = '0x7d9CF1dd164D6AF82C00514071990358805d8d80'
+	const provideOldCONET = new ethers.JsonRpcProvider(obdGethRPC)
+	const conet_storage = new ethers.Contract(oldStorageAddr, conet_storageAbi, provideOldCONET)
+	const [count] = await
+		Promise.all([
+			conet_storage.count(wallet)
+		])
+	
+	return parseInt(count.toString())
 }
 
 const _storagePieceToLocal = (mnemonicPhrasePassword: string, fragment: string, index: number,
@@ -675,10 +688,6 @@ const checkUpdateAccount = () => new Promise(async resolve => {
 	return resolve (true)
 	
 })
-	
-	
-
-
 
 
 let assetPrice: assetsStructure[] = []
@@ -907,7 +916,7 @@ const initProfileTokens = () => {
 			history: [],
 			network: 'CONET Guardian Nodes (CGPNs)',
 			decimal: 1,
-			contract: CONET_Guardian_Nodes,
+			contract: CONET_Guardian_NodesV3,
 			name: 'CGPNs'
 		},
 		CGPN2s: {
@@ -915,7 +924,7 @@ const initProfileTokens = () => {
 			history: [],
 			network: 'CONET Guardian Nodes (CGPN2s)',
 			decimal: 1,
-			contract: CONET_Guardian_Nodes,
+			contract: CONET_Guardian_NodesV3,
 			name: 'CGPN2s'
 		},
 		cCNTP: {
@@ -1082,7 +1091,7 @@ const checkTokenStructure = (token: any) => {
 			history: [],
 			network: 'CONET Holesky',
 			decimal: 1,
-			contract: CONET_Guardian_Nodes,
+			contract: CONET_Guardian_NodesV3,
 			name: 'CGPNs'
 		}
 	} else {
@@ -1094,7 +1103,7 @@ const checkTokenStructure = (token: any) => {
 			history: [],
 			network: 'CONET Holesky',
 			decimal: 1,
-			contract: CONET_Guardian_Nodes,
+			contract: CONET_Guardian_NodesV3,
 			name: 'CGPN2s'
 		}
 	} else {
@@ -1460,19 +1469,16 @@ const getAllProfileAssetsBalance = () => new Promise ( async resolve => {
 
 		await Promise.all (runningList)
 		
-		logger(`getAllProfileAssetsBalance success!`)
-		
-
 		const constBalance = profiles[0].tokens.conet.balance
 		await getAllReferrer()
 
-		
 
 		if (constBalance > '0.0001') {
 			let update = false
 			if ( referrer ) {
 				update = await registerReferrer (referrer)
 			}
+
 			await checkUpdateAccount()
 		
 		} else {
@@ -2058,11 +2064,11 @@ const scan_erc20_balance = (walletAddr: string, rpcProdive: any, erc20Address: s
 
 
 const scan_Guardian_Nodes = async (walletAddr: string, rpcProdive: any) => {
-	return await scan_src1155_balance(walletAddr, rpcProdive, CONET_Guardian_Nodes, 1)
+	return await scan_src1155_balance(walletAddr, rpcProdive, CONET_Guardian_NodesV3, 1)
 }
 
 const scan_Guardian_ReferralNodes = async (walletAddr: string, rpcProdive: any) => {
-	return await scan_src1155_balance(walletAddr, rpcProdive, CONET_Guardian_Nodes, 2)
+	return await scan_src1155_balance(walletAddr, rpcProdive, CONET_Guardian_NodesV3, 2)
 }
 
 const scan_src1155_balance = (walletAddr: string, rpcProdive: any, erc1155Address: string, id: number) => new Promise(async resolve => {
