@@ -153,7 +153,7 @@ const initEncryptWorker = async () => {
 	responseChannel.postMessage(JSON.stringify(cmd))
 	provideCONET = new ethers.JsonRpcProvider(conet_rpc)
     await checkStorage (channelPlatform)
-	
+	listenProfileVer()
 }
 
 const gettPrimaryProfile = () => {
@@ -309,7 +309,7 @@ const processCmd = async (cmd: worker_command) => {
 			profile.tokens.cCNTP.unlocked = true
 
 			returnUUIDChannel(cmd)
-			await updateProfilesVersion()
+			await updateProfilesVersionToIPFSAndLocal()
 		}
 
 		case 'guardianPurchase': {
@@ -382,7 +382,7 @@ const processCmd = async (cmd: worker_command) => {
 			}
 			cmd.data = [tx]
 			returnUUIDChannel(cmd)
-			await updateProfilesVersion()
+			await updateProfilesVersionToIPFSAndLocal()
 		}
 
 		case 'preBurnCCNTP': {
@@ -511,6 +511,11 @@ const processCmd = async (cmd: worker_command) => {
 		case 'testPasscode': {
 			
 			return testPasscode(cmd)
+		}
+
+		case "showLeaderboard" : {
+			cmd.data[0] = leaderboardData
+			return returnUUIDChannel(cmd)
 		}
 
 		case 'importWallet': {

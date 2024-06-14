@@ -137,5 +137,4 @@ const getHashData = async (hash: string) => {
 		logger(`getHashData Error!`,ex)
 	}
 	return ''
-
 }

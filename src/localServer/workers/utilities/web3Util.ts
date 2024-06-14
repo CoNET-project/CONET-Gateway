@@ -193,6 +193,7 @@ const getProfileAssets_CONET_Balance = async (profile: profile) => {
 }
 
 const maxfindNodeAddressNumber = 1000
+
 const findNodeAddress: (nodeAddress: string, mnemonicPhrase: string) => number = (nodeAddress, mnemonicPhrase) => {
 	const root = ethers.Wallet.fromPhrase(mnemonicPhrase)
 	if (!root?.deriveChild) {
@@ -228,7 +229,7 @@ const checkGuardianNodes = async () => {
 	}
 	const profile = CoNET_Data.profiles[mainIndex]
 	const provideCONET = new ethers.JsonRpcProvider(conet_rpc)
-	const erc1155 = new ethers.Contract(scan_Guardian_ReferralNodes, guardian_erc1155, provideCONET)
+	const erc1155 = new ethers.Contract(CONET_Guardian_NodesV3, guardian_erc1155, provideCONET)
 	let nodeAddress: string[] = [], Ids, numbers
 	try {
 		const ownerIds = await erc1155.getOwnerNodesAddress(profile.keyID)
@@ -326,13 +327,18 @@ const checkSmartContractAsset = async (eventLogs: any[], tokenABILog: any, token
 	return ret
 }
 
-const checkAssets = async (block: number, provider: any, profiles: profile[]) => {
+const checkAssets = async (block: number, provider: any, profiles: profile[]|undefined) => {
 	const blockInfo = await provider.getBlock(block)
 	const ifaceFor_cCNTP_ABI = new ethers.Interface(cCNTP_ABI)
 	
 	if (!blockInfo?.transactions) {
 		return logger(`block [${block}] hasn't transactions`)
 	}
+	if (!profiles?.length) {
+		return logger(`checkAssets profiles length is none!`)
+	}
+
+
 	const cCNTP_Contract = new ethers.Contract(cCNTP_new_Addr, cCNTP_ABI, provider)
 	const CNTPV1_Contract = new ethers.Contract(CNTPV1, cCNTP_ABI, provider)
 	const CNTP_Referrals = new ethers.Contract(ReferralsAddressV3, CONET_ReferralsAbi, provider)
@@ -364,14 +370,13 @@ const checkAssets = async (block: number, provider: any, profiles: profile[]) =>
 				continue
 			}
 			if (to === ReferralsAddressV3) {
-				referrer = await getAllReferees(referrer, CNTP_Referrals)
+				RefereesList = await getAllReferees(profiles[0].keyID, CNTP_Referrals)
 				continue
 			}
 			
 		}
 	}
 	
-
 }
 
 
@@ -379,12 +384,12 @@ let provideCONET
 let lesteningBlock = false
 
 
-const listenProfileVer = async (profiles: profile[]) => {
-	if (lesteningBlock) {
-		return
-	}
+const listenProfileVer = async () => {
+	
 	lesteningBlock = true
 	provideCONET.on ('block', async block => {
+		const profiles = CoNET_Data?.profiles
+		
 		await 
 		Promise.all([
 			selectLeaderboard(block),
@@ -397,6 +402,9 @@ const listenProfileVer = async (profiles: profile[]) => {
 		sendState('toFrontEnd', cmd)
 		
 	})
+	const block = await provideCONET.getBlockNumber()
+	selectLeaderboard(block)
+
 }
 
 
@@ -413,16 +421,18 @@ const checkProfileVersion = async (wallet: string) => {
 }
 
 const checkOldProfileVersion = async (wallet: string ) => {
-	const obdGethRPC = 'http://207.90.195.83:8998'
-	const oldStorageAddr = '0x7d9CF1dd164D6AF82C00514071990358805d8d80'
+	const obdGethRPC = 'https://rpc-old.conet.network'
+	const provideCONET = new ethers.JsonRpcProvider(conet_rpc)
 	const provideOldCONET = new ethers.JsonRpcProvider(obdGethRPC)
-	const conet_storage = new ethers.Contract(oldStorageAddr, conet_storageAbi, provideOldCONET)
-	const [count] = await
+	const old_conet_storage = new ethers.Contract(conet_storage_old_address, conet_storageAbi, provideOldCONET)
+	const new_conet_storage = new ethers.Contract(profile_ver_addr, conet_storageAbi, provideCONET)
+	const [oldVer, newVer] = await
 		Promise.all([
-			conet_storage.count(wallet)
+			old_conet_storage.count(wallet),
+			new_conet_storage.count(wallet)
 		])
 	
-	return parseInt(count.toString())
+	return [oldVer, newVer]
 }
 
 const _storagePieceToLocal = (mnemonicPhrasePassword: string, fragment: string, index: number,
@@ -530,7 +540,8 @@ const initSystemDataV1 = async (acc) => {
 			profiles:[profile],
 			isReady: true,
 			nonce: 0,
-			upgradev2: true
+			upgradev2: true,
+			ver: 0
 		}
 	} 
 	CoNET_Data.profiles = [profile]
@@ -559,7 +570,7 @@ const storeSystemData = async () => {
 		mnemonicPhrase: CoNET_Data.mnemonicPhrase,
 		fx168Order: CoNET_Data.fx168Order||[],
 		dammy: buffer.Buffer.allocUnsafeSlow( 1024 * ( 20 + ( Math.random()*20))),
-		ver: CoNET_Data.ver || 1,
+		ver: (CoNET_Data.ver || 0) + 1,
 		upgradev2: CoNET_Data.upgradev2
 	}
 
@@ -677,13 +688,13 @@ const checkUpdateAccount = () => new Promise(async resolve => {
 	}
 
 	//	Local version big then remote
-	if ( CoNET_Data.ver === 1 || _ver < CoNET_Data.ver ) {
-		await updateProfilesVersion()
+	if (_ver < CoNET_Data.ver ) {
+		await updateProfilesVersionToIPFSAndLocal()
 		checkcheckUpdateLock = false
 		return resolve (true)
 	}
+	await getDetermineVersionProfile(_ver, CoNET_Data)
 	
-	await getVersonFragments ()
 	checkcheckUpdateLock = false
 	return resolve (true)
 	
@@ -792,8 +803,6 @@ const recoverProfileFromSRP = () => {
 			return reject (ex)
 		}
 
-		const privateKey = acc.signingKey.privateKey
-		const publicKey = acc.address
 
 		
 			
@@ -809,8 +818,8 @@ const recoverProfileFromSRP = () => {
 			// 	return resolve(true)
 			// }
 			
-			logger(`recoverProfileFromSRP has update file in IPFS!`)
-			// await getLocalProfile(ver)
+			
+			await getLocalProfile(CoNET_Data.ver)
 
 			return resolve(true)
 			//const firstprice = getFirstFragmentName(SRP, ver)
@@ -878,7 +887,7 @@ const encryptPasswordIssue = (ver: number, passcode: string, part: number) => {
 	return _pass.substring(2)
 }
 
-const updateFragmentsToIPFS = async (encryptData: string, hash: string, keyID: string, privateKeyArmor: string) => {
+const updateFragmentsToIPFS = (encryptData: string, hash: string, keyID: string, privateKeyArmor: string) => new Promise( async resolve => {
 
 	const url = `${ apiv2_endpoint }storageFragments`
 	
@@ -890,19 +899,27 @@ const updateFragmentsToIPFS = async (encryptData: string, hash: string, keyID: s
 	const sendData = {
 		message, signMessage
 	}
-	const result: any = await postToEndpoint(url, true, sendData)
-	logger(`updateProfiles got result [${result}] from conet api server!`)
-}
+
+	try {
+		await postToEndpoint(url, true, sendData)
+	} catch (ex) {
+		return resolve (false)
+	}
+	return resolve (true)
+
+})
 
 
 let updateChainVersionCount = 0
 
 
-const updateChainVersion = async (storageVer: any) => {
-
+const updateChainVersion = async (storageVer: any, conetData: encrypt_keys_object) => {
+	
 	try {
 		const tx = await storageVer.versionUp('0x0')
 		await tx.wait ()
+		const ver = await storageVer.count()
+		conetData.ver = ver.toString()
 	} catch(ex) {
 		return logger(`updateChainVersion error! try again`, ex)
 	}
@@ -1423,16 +1440,26 @@ const selectLeaderboard: (block: number) => Promise<boolean> = (block) => new Pr
 		free_referrals: _free.referrals,
 		minerRate: _free.minerRate,
 		totalMiner: _free.totalMiner,
-
 	}
 
 	if (RefereesList && wallets?.length) {
-		const allWallet: string[] = wallets.filter(n =>RefereesList.findIndex(nn => nn.toLowerCase() === n.toLowerCase()) > -1)
+		const allWallet: string[] = wallets.filter(
+			n => {
+				const kk = RefereesList?.flat()
+				if (!kk) {
+					return false
+				}
+				const index = kk?.findIndex( nn => {
+					Object.keys(nn)[0].toLowerCase() === n.toLowerCase()
+				})
+				return index > -1 ? true: false
+			})
 
 		leaderboardData.free_referrals_rate = {
 			referrals: allWallet.length
 		}
 	}
+
 	resolve (true)
 	
 })
@@ -1462,7 +1489,8 @@ const getWasabiFile: (fileName: string) => Promise<any> = async (fileName: strin
 	})
 })
 
-const getAllProfileAssetsBalance = () => new Promise ( async resolve => {
+const getAllProfileAssetsBalance = () => 
+	new Promise ( async resolve => {
 
 		if (!CoNET_Data?.profiles) {
 			logger(`getAllProfileAssetsBalance Error! CoNET_Data.profiles empty!`)
@@ -1483,7 +1511,6 @@ const getAllProfileAssetsBalance = () => new Promise ( async resolve => {
 		await Promise.all (runningList)
 		
 		const constBalance = profiles[0].tokens.conet.balance
-		await getAllReferrer()
 
 
 		if (constBalance > '0.0001') {
@@ -1538,122 +1565,99 @@ const getCONET_HoleskyAssets = (wallet: string) => new Promise( resolve => {
 let checkcheckUpdateLock = false
 let lastCheckcheckUpdateTimeStamp = 0
 
-const getVersonFragments = async () => new Promise(async resolve1 => {
-	if (!CoNET_Data || ! CoNET_Data?.profiles) {
-		resolve1(false)
-		return logger(`checkUpdateAccount CoNET_Data is empty Error!`)
-	}
-	CoNET_Data.ver = CoNET_Data.ver||1
-	const profile = CoNET_Data.profiles[0]
 
-	const [nonce, chainVer1] = await checkProfileVersion( profile.keyID)
-	CoNET_Data.nonce = nonce
+const getDetermineVersionProfile = (ver: number, CoNET_Data) => new Promise(async resolve => {
 
-	if ( !CoNET_Data?.fragmentClass ) {
-		CoNET_Data.fragmentClass = {
-			mainFragmentName: '',
-			failures: 0
-		}
-	}
-
-	const fragmentClass = CoNET_Data.fragmentClass
-	
-
-	
-
-	const tryGetRemote = async (CoNET_Data) => {
 
 		//	give up get remote version， try back to previous version
-		const failures = async () => {
-			logger(`getVersonFragments getFragmentsFromPublic error! Fragment of ver number${chainVer1} `)
-			fragmentClass.failures = _chainVer - 1
-			return await tryGetRemote (CoNET_Data)
-		}
-		let _chainVer = fragmentClass.failures || chainVer1
-		if ( _chainVer > CoNET_Data.ver ) {
+		// const failures = async () => {
+		// 	logger(`getVersonFragments getFragmentsFromPublic error! Fragment of ver number${chainVer1} `)
+		// 	fragmentClass.failures = _chainVer - 1
+		// 	return await tryGetProfile (CoNET_Data)
+		// }
+
+		let _chainVer = ver
 		
-			logger (`checkUpdateAccount current ver [${CoNET_Data.ver}] is old! remote is [${_chainVer}] Update it`)
-			const passward = ethers.id(ethers.id(CoNET_Data.mnemonicPhrase))
-			const partEncryptPassword = encryptPasswordIssue(_chainVer, passward, 0)
-			const firstFragmentName = createFragmentFileName(_chainVer, passward, 0)
-			CoNET_Data.fragmentClass.mainFragmentName = firstFragmentName
-			const firstFragmentEncrypted = await getFragmentsFromPublic(firstFragmentName)
-			
-			if (!firstFragmentEncrypted) {
-				return failures ()
+		const passward = ethers.id(ethers.id(CoNET_Data.mnemonicPhrase))
+		const partEncryptPassword = encryptPasswordIssue(_chainVer, passward, 0)
+		const firstFragmentName = createFragmentFileName(_chainVer, passward, 0)
+		if (!CoNET_Data.fragmentClass) {
+			CoNET_Data.fragmentClass = {
+				mainFragmentName: firstFragmentName
 			}
-	
-			
-			logger(`checkUpdateAccount fetch ${_chainVer} first Fragment [${firstFragmentName}] with passward [${partEncryptPassword}]`)
-	
-			let firstFragmentObj
-	
-			try {
-				const firstFragmentdecrypted = await CoNETModule.aesGcmDecrypt (firstFragmentEncrypted, partEncryptPassword)
-				firstFragmentObj = JSON.parse(firstFragmentdecrypted)
-	
-			} catch (ex) {
-				return failures ()
-			}
-	
-			const totalFragment = firstFragmentObj.totalFragment
-			let clearData: string = firstFragmentObj.data
-			const series: any[] = []
-	
-			for (let i = 1; i < totalFragment; i ++) {
-				const stage = next => {
-					getNextFragmentIPFS (_chainVer, passward, i)
-					.then( text=> {
-						if (!text) {
-							return next (`getNextFragment [${i}] return NULL Error`)
-						}
-						clearData += text
-						return next(null)
-					})
-				}
-				series.push(stage)
-			}
-	
-			return async.series(series)
-				.then (async () => {
-					let profile
-	
-					
-					profile = JSON.parse(clearData)
-					
-	
-					if (CoNET_Data) {
-						CoNET_Data.profiles = profile
-						CoNET_Data.ver = _chainVer
-						fragmentClass.failures = 0
-					}
-	
-					await storagePieceToLocal()
-					
-					await storeSystemData()
-					
-					const cmd: channelWroker = {
-						cmd: 'profileVer',
-						data: [_chainVer]
-					}
-					sendState('toFrontEnd', cmd)
-					return resolve1(true)
-					
-					
-				}).catch ( ex=> {
-					return failures ()
-				})
-	
 		}
-		//		all remote version failure 
-		//		overwrite remote with local
-		await updateProfilesVersion()
-		return resolve1(true)
-	}
+		CoNET_Data.fragmentClass.mainFragmentName = firstFragmentName
+
+		const firstFragmentEncrypted = await getFragmentsFromPublic(firstFragmentName)
+		
+		if (!firstFragmentEncrypted) {
+			return resolve (false)
+		}
+
+		
+		logger(`checkUpdateAccount fetch ${_chainVer} first Fragment [${firstFragmentName}] with passward [${partEncryptPassword}]`)
+
+		let firstFragmentObj
+
+		try {
+			const firstFragmentdecrypted = await CoNETModule.aesGcmDecrypt (firstFragmentEncrypted, partEncryptPassword)
+			firstFragmentObj = JSON.parse(firstFragmentdecrypted)
+
+		} catch (ex) {
+			return resolve (false)
+		}
+
+		const totalFragment = firstFragmentObj.totalFragment
+		let clearData: string = firstFragmentObj.data
+		const series: any[] = []
+
+		for (let i = 1; i < totalFragment; i ++) {
+			const stage = next => {
+				getNextFragmentIPFS (_chainVer, passward, i)
+				.then( text=> {
+					if (!text) {
+						return next (`getNextFragment [${i}] return NULL Error`)
+					}
+					clearData += text
+					return next(null)
+				})
+			}
+			series.push(stage)
+		}
+
+		return async.series(series)
+			.then (async () => {
+				let profile
+
+				
+				profile = JSON.parse(clearData)
+				
+
+				if (CoNET_Data) {
+					CoNET_Data.profiles = profile
+					CoNET_Data.ver = _chainVer
+					CoNET_Data.fragmentClass.failures = 0
+				}
+
+				await storagePieceToLocal()
+				
+				await storeSystemData()
+				
+				const cmd: channelWroker = {
+					cmd: 'profileVer',
+					data: [_chainVer]
+				}
+				sendState('toFrontEnd', cmd)
+				return resolve(true)
+				
+				
+			}).catch ( ex=> {
+				return resolve (false)
+			})
 	
-	tryGetRemote(CoNET_Data)
+	
 })
-	
+
 
 
 	
@@ -1682,8 +1686,9 @@ const splitTextLimitLength: (test: string, limitLength: number) => string[] = (t
 	return split()
 }
 
-const getLocalProfile = async (ver: number) => {
+const getLocalProfile = (ver: number) => new Promise(async resolve => {
 	if (!CoNET_Data?.profiles || !passObj) {
+		resolve(false)
 		return logger(`updateProfilesVersion !CoNET_Data[${!CoNET_Data}] || !passObj[${!passObj}] === true Error! Stop process.`)
 	}
 	
@@ -1697,6 +1702,7 @@ const getLocalProfile = async (ver: number) => {
 		const firstFragmentdecrypted = await CoNETModule.aesGcmDecrypt (firstFragmentEncrypted, partEncryptPassword)
 		firstFragmentObj = JSON.parse(firstFragmentdecrypted)
 	} catch (ex){
+		resolve(false)
 		return logger(`getLocalProfile JSON.parse(firstFragmentdecrypted) Error!`)
 	}
 	//logger(`getLocalProfile ver [${ver}] first Fragment [${firstFragmentName}] with password [${partEncryptPassword}]`)
@@ -1718,21 +1724,20 @@ const getLocalProfile = async (ver: number) => {
 
 	return async.series(series).then (() => {
 		sendState('beforeunload', false)
-		try{
-			const profile = JSON.parse(clearData)
-			if (CoNET_Data) {
-				CoNET_Data.profiles = profile
-				CoNET_Data.ver = ver
-			}
-			
-		} catch(ex){
-			logger(`getLocalProfile JSON.parse(clearData) Error`, ex)
+		
+		const profile = JSON.parse(clearData)
+		if (CoNET_Data) {
+			CoNET_Data.profiles = profile
+			CoNET_Data.ver = ver
 		}
-	}).catch (ex=> {
+		resolve(true)
+	}).catch ( ex => {
 		sendState('beforeunload', false)
 		logger(`async.series catch ex`, ex)
+		resolve(false)
 	})
-}
+})
+	
 
 const getNextFragmentLocal = async (ver: number, passObjPassword: string, i) => {
 	const nextEncryptPassword = encryptPasswordIssue(ver, passObjPassword, i)
@@ -1847,7 +1852,7 @@ const createKeyHDWallets = () => {
 	return root
 }
 
-const decryptSystemData = async () => new Promise(resolve => {
+const decryptSystemData = async () => new Promise((resolve, reject) => {
 	//	old version data
 
 	if (!CoNET_Data||!passObj) {
@@ -1869,13 +1874,15 @@ const decryptSystemData = async () => new Promise(resolve => {
 	const process = async (CoNET_Data) => {
 		const filename =  filenameIterate3
 		const encryptedObj = await getHashData(filename)
-
+		let encryptIterate1
+		try {
+			const encryptIterate3 = await CoNETModule.aesGcmDecrypt (encryptedObj, filenameIterate2)
 		
-		const encryptIterate3 = await CoNETModule.aesGcmDecrypt (encryptedObj, filenameIterate2)
-		
-		const encryptIterate2 = await CoNETModule.aesGcmDecrypt (encryptIterate3, filenameIterate1)
-		const encryptIterate1 = await CoNETModule.aesGcmDecrypt (encryptIterate2, password)
-		
+			const encryptIterate2 = await CoNETModule.aesGcmDecrypt (encryptIterate3, filenameIterate1)
+			encryptIterate1 = await CoNETModule.aesGcmDecrypt (encryptIterate2, password)
+		} catch (ex) {
+			return reject(false)
+		}
 		const obj = JSON.parse(encryptIterate1)
 		CoNET_Data.mnemonicPhrase = obj.mnemonicPhrase
 		CoNET_Data.fx168Order = obj.fx168Order
@@ -1904,7 +1911,7 @@ const scanCONET_dWBNB = async (walletAddr: string, privideCONET: any) => {
 	return await scan_erc20_balance (walletAddr, privideCONET, conet_dWBNB)
 }
 
-const updateProfilesVersion = async () => {
+const updateProfilesVersionToIPFSAndLocal = async () => {
 	
 	if (!CoNET_Data?.profiles || !passObj) {
 		return logger(`updateProfilesVersion !CoNET_Data[${!CoNET_Data}] || !passObj[${!passObj}] === true Error! Stop process.`)
@@ -1915,6 +1922,11 @@ const updateProfilesVersion = async () => {
 	
 	if (!profile || !privateKeyArmor) {
 		return logger(`updateProfilesVersion Error! profile empty Error! `)
+	}
+	const constBalance = profile.tokens.conet.balance
+	if (constBalance < '0.0001') {
+		await getFaucet(profile.keyID)
+		return logger(`updateProfilesVersion hasn't enough CONET to pay GAS`)
 	}
 	let chainVer
 
@@ -1928,22 +1940,24 @@ const updateProfilesVersion = async () => {
 	} catch (ex: any) {
 		return logger(`updateProfilesVersion checkProfileVersion or getCONET_api_health had Error!`, ex.message )
 	}
+
+
+	const wallet = new ethers.Wallet(profile.privateKeyArmor, provideCONET)
+	const storageVer = new ethers.Contract(profile_ver_addr, conet_storageAbi, wallet)
 	
-	sendState('beforeunload', true)
 	
 	const passward = ethers.id(ethers.id(CoNET_Data.mnemonicPhrase))
 	const profilesClearText = JSON.stringify(CoNET_Data.profiles)
 	const fileLength = Math.round(1024 * (10 + Math.random() * 20))
 	const chearTextFragments = splitTextLimitLength(profilesClearText, fileLength)
-
 	const series: any[] = []
 	
+	sendState('beforeunload', true)
 	chearTextFragments.forEach (( n, index ) => {
 		series.push(storagePieceToLocalAndIPFS(passward, n, index, chearTextFragments.length, 
 			fileLength, chainVer, privateKeyArmor, profile.keyID))
 	})
-	const wallet = new ethers.Wallet(profile.privateKeyArmor, provideCONET)
-	const storageVer = new ethers.Contract(conet_storage_address, conet_storageAbi, wallet)
+	
 	try {
 		await Promise.all([
 			...series
@@ -1954,16 +1968,16 @@ const updateProfilesVersion = async () => {
 		return logger(`updateProfilesVersion storagePieceToLocalAndIPFS Error`, ex.message)
 	}
 	try {
-		await updateChainVersion(storageVer)
+		await updateChainVersion(storageVer, CoNET_Data)
 		const [nonce, chainVer1] = await checkProfileVersion( profile.keyID)
-		CoNET_Data.ver = chainVer1
+		CoNET_Data.ver = parseInt(chainVer1.toString())
 		CoNET_Data.nonce = nonce
 	} catch (ex) {
+		sendState('beforeunload', false)
 		return logger(`updateProfilesVersion Error!`)
 	}
 	
-	
-	await storeSystemData ()
+
 	sendState('beforeunload', false)
 	return logger(`updateProfilesVersion finished`)
 	
@@ -2332,7 +2346,19 @@ const CONET_guardian_purchase: (profile: profile, nodes: number, _total: number,
 	}
 	sendState('toFrontEnd', cmd3)
 	const url = `${ apiv2_endpoint }Purchase-Guardian`
-	const result: any = await postToEndpoint(url, true, sendData)
+	let result: any
+	try {
+		result = await postToEndpoint(url, true, sendData)
+	} catch (ex) {
+		const cmd3: channelWroker = {
+			cmd: 'purchaseStatus',
+			data: [-2, kk1]
+		}
+		sendState('toFrontEnd', cmd3)
+		return false
+	}
+
+	
 	if (!result) {
 		const cmd3: channelWroker = {
 			cmd: 'purchaseStatus',
@@ -2342,7 +2368,7 @@ const CONET_guardian_purchase: (profile: profile, nodes: number, _total: number,
 		return false
 	}
 	
-	await updateProfilesVersion()
+	await updateProfilesVersionToIPFSAndLocal()
 	return true
 }
 
@@ -2430,7 +2456,6 @@ const createWallet =async (profiles: profile[], mnemonicPhrase: string, total: n
 	}
 	return publikPool
 }
-
 
 const getFx168OrderStatus= async (oederID: number, fx168ContractObj: any, wallet: string) => {
 	try {
@@ -2561,7 +2586,7 @@ declare const Jimp
 
 const getAllReferrer = async () => {
 	if (!CoNET_Data?.profiles) {
-		return false
+		return null
 	}
 
 	const provideNewCONET = new ethers.JsonRpcProvider(conet_rpc)

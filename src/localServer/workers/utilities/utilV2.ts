@@ -12,8 +12,6 @@ const bsc_mainchain = 'https://bsc-dataseed.binance.org/'
 const ReferralsAddressV3 = '0x8f6be4704a3735024F4D2CBC5BAC3722c0C8a0BD'.toLowerCase()
 const conet_storage_old_address = `0x7d9CF1dd164D6AF82C00514071990358805d8d80`.toLowerCase()
 
-const conet_storage_address = '0xa67fc26f21BA1552f14E42Db657207dA1620B9ef'.toLowerCase()
-
 const adminCNTP= '0x44d1FCCce6BAF388617ee972A6FB898b6b5629B1'
 const referrerCNTP= '0x63377154F972f6FC1319e382535EC9691754bd18'
 
@@ -72,15 +70,7 @@ const getAddress = (addr: string) => {
 
 const getReferrerList = async (cmd: worker_command) => {
 
-	const referrer = getAddress(cmd.data[0])||getAddress(cmd.data[1])
-	if (!referrer) {
-		cmd.err = 'FAILURE'
-		return returnUUIDChannel(cmd)
-	}
-
-	const provideNewCONET = new ethers.JsonRpcProvider(conet_rpc)
-	const CNTP_Referrals = new ethers.Contract(ReferralsAddressV3, CONET_ReferralsAbi, provideNewCONET)
-	cmd.data = [await getAllReferees(referrer, CNTP_Referrals)]
+	cmd.data = [RefereesList]
 	returnUUIDChannel(cmd)
 }
 
@@ -101,17 +91,17 @@ const createAccount = async (cmd: worker_command) => {
 	const mainProfile = CoNET_Data.profiles[0]
 	CoNET_Data.preferences = cmd.data[2] || null
 
-	
-
-	listenProfileVer(CoNET_Data.profiles)
-	getFaucet (mainProfile.keyID)
+	const tx = await getFaucet (mainProfile.keyID)
+	logger(tx)
 	await storeSystemData ()
+	await storagePieceToLocal()
 	cmd.data[0] = CoNET_Data.mnemonicPhrase
 	return returnUUIDChannel (cmd)
 }
 
-let referrer = ''
-let RefereesList
+let referrer
+let RefereesList: any[]|null
+
 const testPasscode = async (cmd: worker_command) => {
 	const passcode: string = cmd.data[0]
 	referrer = cmd.data[1]
@@ -150,14 +140,14 @@ const testPasscode = async (cmd: worker_command) => {
 		CoNET_Data.upgradev2 = true
 	}
 	
-	listenProfileVer(CoNET_Data.profiles)
-	const provideNewCONET = new ethers.JsonRpcProvider(conet_rpc)
-	const CNTP_Referrals = new ethers.Contract(ReferralsAddressV3, CONET_ReferralsAbi, provideNewCONET)
-	RefereesList = await getAllReferees(referrer, CNTP_Referrals)
+	
+
 	authorization_key = cmd.data[0] = uuid.v4()
 	returnUUIDChannel(cmd)
 	await getAllProfileAssetsBalance()
 	await testFunction(cmd)
+	await checkGuardianNodes ()
+
 }
 
 
@@ -240,7 +230,7 @@ const importWallet = async (cmd: worker_command) => {
 	CoNET_Data.profiles.push(profile)
 	cmd.data[0] = CoNET_Data.profiles
 	returnUUIDChannel(cmd)
-	await updateProfilesVersion()
+	await updateProfilesVersionToIPFSAndLocal()
 	
 
 }
@@ -252,7 +242,8 @@ const updateProfile = async (cmd: worker_command) => {
 		cmd.err = 'FAILURE'
 		return returnUUIDChannel(cmd)
 	}
-	const index = CoNET_Data.profiles.findIndex(n => n.keyID === _profile.keyID)
+	const ketID = _profile.keyID.toLowerCase()
+	const index = CoNET_Data.profiles.findIndex(n => n.keyID.toLowerCase() === ketID)
 	if(index < 0) {
 		cmd.err = 'FAILURE'
 		return returnUUIDChannel(cmd)
@@ -267,7 +258,8 @@ const updateProfile = async (cmd: worker_command) => {
 	cmd.data[0] = CoNET_Data.profiles
 	returnUUIDChannel(cmd)
 
-	await updateProfilesVersion()
+	await storeSystemData ()
+	await updateProfilesVersionToIPFSAndLocal()
 }
 
 const addProfile =  async (cmd: worker_command) => {
@@ -309,7 +301,7 @@ const addProfile =  async (cmd: worker_command) => {
 
 	CoNET_Data.profiles.push(profile)
 	
-	await updateProfilesVersion()
+	await updateProfilesVersionToIPFSAndLocal()
 	cmd.data[0] = CoNET_Data.profiles
 	returnUUIDChannel(cmd)
 	
@@ -350,6 +342,12 @@ const recoverAccount = async (cmd: worker_command) => {
 	}
 	initSystemDataV1(acc)
 	await createNumberPasscode (passcode)
+	
+
+	if (CoNET_Data) {
+		await checkOldVersion (CoNET_Data)
+	}
+
 	await storeSystemData ()
 	
 	authorization_key = cmd.data[0] = uuid.v4()
@@ -387,6 +385,20 @@ const prePurchase = async (cmd: worker_command) => {
 	return returnUUIDChannel(cmd)
 }
 
+const checkOldVersion = async (CoNET_Data: encrypt_keys_object) => {
+	const profile = CoNET_Data?.profiles
+	if (!profile) {
+		return logger(`checkOldVersion profile is none Error, STOP!`)
+	}
+	const [ver, oldVer] = await checkOldProfileVersion (profile[0].keyID)
+	let getVer = ver <= oldVer ? oldVer : ver
+	if (!ver) {
+		return 
+	}
+	
+	await getDetermineVersionProfile(getVer, CoNET_Data)
+	await updateProfilesVersionToIPFSAndLocal()
+}
 
 const nodePrice = 1250
 
@@ -545,6 +557,7 @@ const getReferralsRate = async (wallet: string) => {
 	}
 	
 }
+
 
 const testFunction = async (cmd: worker_command) => {
 	

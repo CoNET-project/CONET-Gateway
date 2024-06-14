@@ -170,7 +170,7 @@ declare type WorkerCommand = 'READY'|'getRegiestNodes'|'beforeunload'|'createAcc
 	'encrypt_TestPasscode'|'encrypt_createPasscode'|'encrypt_lock'|'invitation'|'encrypt_deletePasscode'|'preBurnCCNTP'|
 	'storePreferences'|'newProfile'|'storeProfile'|'urlProxy'|'saveDomain'|'getDomain'|'setRegion'|'getGuardianRegion'|
 	'getFaucet'|'isAddress'|'syncAssetV1'|'sendAsset'|'getUSDCPrice'|'buyUSDC'|'getWorkerClientID'|'getAllOtherAssets'|
-	'mintCoNETCash'|'getSINodes'|'getRecipientCoNETCashAddress'|'getUserProfile'|'burnCCNTP'|
+	'mintCoNETCash'|'getSINodes'|'getRecipientCoNETCashAddress'|'getUserProfile'|'burnCCNTP'|'showLeaderboard'|
 	'sendMessage'|'incomeData'|'WORKER_MESSAGE'|'getCONETBalance'|'startProxy'|'registerReferrer'|
     'SaaSRegister'|'getContainer'|'ipaddress'|'startLiveness'|'stopLiveness'|'isLivenessRunning'|'importWallet'|'startMining'|'stopMining'|
 	//		from service worker
@@ -319,7 +319,7 @@ interface fx168_Order {
 type encrypt_keys_object = {
     profiles?: profile[]
 	isReady: boolean
-	ver?: number
+	ver: number
 	preferences?: any
 	encryptedString?: string
 	passcode?: Passcode
