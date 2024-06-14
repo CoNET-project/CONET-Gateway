@@ -140,11 +140,12 @@ const testPasscode = async (cmd: worker_command) => {
 		CoNET_Data.upgradev2 = true
 	}
 	
-	
+	const profiles = CoNET_Data.profiles[0]
 
 	authorization_key = cmd.data[0] = uuid.v4()
 	returnUUIDChannel(cmd)
 	await getAllProfileAssetsBalance()
+	await getAllReferrer()
 	await testFunction(cmd)
 	await checkGuardianNodes ()
 

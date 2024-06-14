@@ -1509,7 +1509,8 @@ const getAllProfileAssetsBalance = () =>
 		}
 
 		await Promise.all (runningList)
-		
+		const CNTP_Referrals = new ethers.Contract(ReferralsAddressV3, CONET_ReferralsAbi, provideCONET)
+		RefereesList = await getAllReferees(profiles[0].keyID, CNTP_Referrals)
 		const constBalance = profiles[0].tokens.conet.balance
 
 
