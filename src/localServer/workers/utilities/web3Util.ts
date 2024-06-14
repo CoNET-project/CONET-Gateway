@@ -690,6 +690,7 @@ const checkUpdateAccount = () => new Promise(async resolve => {
 	//	Local version big then remote
 	if (_ver < CoNET_Data.ver ) {
 		await updateProfilesVersionToIPFSAndLocal()
+		await storeSystemData ()
 		checkcheckUpdateLock = false
 		return resolve (true)
 	}
@@ -2370,6 +2371,7 @@ const CONET_guardian_purchase: (profile: profile, nodes: number, _total: number,
 	}
 	
 	await updateProfilesVersionToIPFSAndLocal()
+	await storeSystemData ()
 	return true
 }
 

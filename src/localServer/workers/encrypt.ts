@@ -309,6 +309,7 @@ const processCmd = async (cmd: worker_command) => {
 
 			returnUUIDChannel(cmd)
 			await updateProfilesVersionToIPFSAndLocal()
+			await storeSystemData ()
 		}
 
 		case 'guardianPurchase': {
@@ -382,6 +383,7 @@ const processCmd = async (cmd: worker_command) => {
 			cmd.data = [tx]
 			returnUUIDChannel(cmd)
 			await updateProfilesVersionToIPFSAndLocal()
+			await storeSystemData ()
 		}
 
 		case 'preBurnCCNTP': {

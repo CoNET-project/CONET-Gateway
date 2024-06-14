@@ -232,7 +232,7 @@ const importWallet = async (cmd: worker_command) => {
 	cmd.data[0] = CoNET_Data.profiles
 	returnUUIDChannel(cmd)
 	await updateProfilesVersionToIPFSAndLocal()
-	
+	await storeSystemData ()
 
 }
 
@@ -259,8 +259,9 @@ const updateProfile = async (cmd: worker_command) => {
 	cmd.data[0] = CoNET_Data.profiles
 	returnUUIDChannel(cmd)
 
-	await storeSystemData ()
+	
 	await updateProfilesVersionToIPFSAndLocal()
+	await storeSystemData ()
 }
 
 const addProfile =  async (cmd: worker_command) => {
@@ -302,9 +303,12 @@ const addProfile =  async (cmd: worker_command) => {
 
 	CoNET_Data.profiles.push(profile)
 	
-	await updateProfilesVersionToIPFSAndLocal()
+	
 	cmd.data[0] = CoNET_Data.profiles
 	returnUUIDChannel(cmd)
+
+	await updateProfilesVersionToIPFSAndLocal()
+	await storeSystemData ()
 	
 }
 
@@ -399,6 +403,7 @@ const checkOldVersion = async (CoNET_Data: encrypt_keys_object) => {
 	
 	await getDetermineVersionProfile(getVer, CoNET_Data)
 	await updateProfilesVersionToIPFSAndLocal()
+	await storeSystemData ()
 }
 
 const nodePrice = 1250
