@@ -22,7 +22,6 @@ const GasToEth = 0.00000001
 const mintCoNETCashEndpoint = `${ CoNET_SI_Network_Domain }/api/mint_conetcash`
 const openSourceEndpoint = 'https://s3.us-east-1.wasabisys.com/conet-mvp/router/'
 
-
 const databaseName = 'CoNET'
 
 let activeNodes: nodes_info[]|null= null
