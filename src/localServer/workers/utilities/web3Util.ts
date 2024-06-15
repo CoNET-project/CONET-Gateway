@@ -527,11 +527,11 @@ const storagePieceToLocalAndIPFS = ( mnemonicPhrasePassword: string, fragment: s
 			)
 		], err=> {
 			if (err) {
-
+				resolve(false)
 				return storagePieceToLocalAndIPFS (mnemonicPhrasePassword, fragment, index, totalFragment, targetFileLength, ver, privateArmor, keyID)
 			}
 			
-			return resolve(null)
+			return resolve(true)
 		})
 		
 	})
@@ -1937,22 +1937,28 @@ const scanCONET_dWBNB = async (walletAddr: string, privideCONET: any) => {
 	return await scan_erc20_balance (walletAddr, privideCONET, conet_dWBNB)
 }
 
-const updateProfilesVersionToIPFSAndLocal = async () => {
+const updateProfilesVersionToIPFSAndLocal: () => Promise<boolean> = () => new Promise (async resolve => {
 	
 	if (!CoNET_Data?.profiles || !passObj) {
-		return logger(`updateProfilesVersion !CoNET_Data[${!CoNET_Data}] || !passObj[${!passObj}] === true Error! Stop process.`)
+		
+		logger(`updateProfilesVersion !CoNET_Data[${!CoNET_Data}] || !passObj[${!passObj}] === true Error! Stop process.`)
+		return resolve (false)
 	}
 
 	const profile = CoNET_Data.profiles[0]
 	const privateKeyArmor = profile.privateKeyArmor || ''
 	
 	if (!profile || !privateKeyArmor) {
-		return logger(`updateProfilesVersion Error! profile empty Error! `)
+		
+		logger(`updateProfilesVersion Error! profile empty Error! `)
+		return resolve (false)
 	}
 	const constBalance = profile.tokens.conet.balance
 	if (constBalance < '0.0001') {
 		await getFaucet(profile.keyID)
-		return logger(`updateProfilesVersion hasn't enough CONET to pay GAS`)
+		
+		logger(`updateProfilesVersion hasn't enough CONET to pay GAS`)
+		return resolve (false)
 	}
 	let chainVer
 
@@ -1961,10 +1967,12 @@ const updateProfilesVersionToIPFSAndLocal = async () => {
 		[,chainVer] = await checkProfileVersion( profile.keyID)
 		const health = await getCONET_api_health()
 		if (!health) {
-			return logger (`CONET api server hasn't health`)
+			logger (`CONET api server hasn't health`)
+			return resolve (false)
 		}
 	} catch (ex: any) {
-		return logger(`updateProfilesVersion checkProfileVersion or getCONET_api_health had Error!`, ex.message )
+		logger(`updateProfilesVersion checkProfileVersion or getCONET_api_health had Error!`, ex.message )
+		return resolve (false)
 	}
 
 
@@ -1984,30 +1992,29 @@ const updateProfilesVersionToIPFSAndLocal = async () => {
 			fileLength, chainVer, privateKeyArmor, profile.keyID))
 	})
 	
-	try {
-		await Promise.all([
-			...series
-		])
+	
+	await Promise.all([
+		...series
+	])
 		
-	} catch (ex: any) {
-		sendState('beforeunload', false)
-		return logger(`updateProfilesVersion storagePieceToLocalAndIPFS Error`, ex.message)
-	}
+	
 	try {
 		await updateChainVersion(storageVer, CoNET_Data)
 		const [nonce, chainVer1] = await checkProfileVersion( profile.keyID)
 		CoNET_Data.ver = parseInt(chainVer1.toString())
 		CoNET_Data.nonce = nonce
+
 	} catch (ex) {
 		sendState('beforeunload', false)
-		return logger(`updateProfilesVersion Error!`)
+		logger(`updateProfilesVersion Error!`)
+		return resolve (false)
 	}
 	
-
+	resolve(false)
 	sendState('beforeunload', false)
-	return logger(`updateProfilesVersion finished`)
+	logger(`updateProfilesVersion finished`)
 	
-}
+})
 
 const scanCONET_dUSDT = async (walletAddr: string, privideCONET: any) => {
 	return await scan_erc20_balance (walletAddr, privideCONET, conet_dUSDT)
