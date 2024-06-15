@@ -31,12 +31,13 @@ const conet_dWETH = '0x84b6d6A6675F830c8385f022Aefc9e3846A89D3B'
 const conet_dUSDT = '0x0eD55798a8b9647f7908c72a0Ce844ad47274422'
 const conet_dWBNB = '0xd8b094E91c552c623bc054085871F6c1CA3E5cAd'
 
-const Claimable_BNBUSDT = '0xC06D98B3185D3de0dF02b8a7AfD1fF9cB3c9399a'.toLowerCase()
-const Claimable_BlastUSDB = '0x53Aee1f4c9b0ff76781eFAC6e20eAe4561e29E8A'.toLowerCase()
+const Claimable_ETHUSDTv3 = '0xfE75074C273b5e33Fe268B1d5AC700d5b715DA2f'.toLowerCase()
+const Claimable_BNBUSDTv3 = '0xAE752B49385812AF323240b26A49070bB839b10D'.toLowerCase()
+const Claimable_BlastUSDBv3 = '0x3258e9631ca4992F6674b114bd17c83CA30F734B'.toLowerCase()
 //const Claimable_BlastETH = '0x47A10d4BBF904BCd550200CcBB6266fB88EB9804'.toLowerCase()
 // const Claimable_BNB = '0x8E7B1D5f6DF4B0d7576B7430ECB1bEEE0b612382'.toLowerCase()
 // const Claimable_ETH = '0x6Eb683B666310cC4E08f32896ad620E5F204c8f8'.toLowerCase()
-const Claimable_ETHUSDT = '0x95A9d14fC824e037B29F1Fdae8EE3D9369B13915'.toLowerCase()
+
 
 const CONET_Guardian_Nodes1 = '0x5e4aE81285b86f35e3370B3EF72df1363DD05286'
 const CONET_Guardian_NodesV3 = '0x453701b80324C44366B34d167D40bcE2d67D6047'.toLowerCase()
@@ -459,7 +460,7 @@ const getClaimableAddress = (CONET_claimableName: string) => {
 			return '0x53Aee1f4c9b0ff76781eFAC6e20eAe4561e29E8A'
 		}
 		case 'cBNBUSDT': {
-			return '0xC06D98B3185D3de0dF02b8a7AfD1fF9cB3c9399a'
+			return '0xAE752B49385812AF323240b26A49070bB839b10D'
 		}
 		case 'cUSDT': {
 			return '0x95A9d14fC824e037B29F1Fdae8EE3D9369B13915'

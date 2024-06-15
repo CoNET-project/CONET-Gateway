@@ -319,13 +319,21 @@ const checkSmartContractAsset = async (eventLogs: any[], tokenABILog: any, token
 			if (index > -1) {
 				const profile = profiles[index]
 				const balance = await smartContractObj.balanceOf(profile.keyID)
-				profile.tokens[tokenName].balance = parseFloat(ethers.formatEther(balance)).toFixed(8)
+				if (balance) {
+					profile.tokens[tokenName].balance = parseFloat(ethers.formatEther(balance)).toFixed(8)
+				} else {
+					profile.tokens[tokenName].balance = '0'
+				}
+				
 				ret = true
 			}
 		}
 	}
 	return ret
 }
+
+
+const listeningAddress = []
 
 const checkAssets = async (block: number, provider: any, profiles: profile[]|undefined) => {
 	const blockInfo = await provider.getBlock(block)
@@ -342,6 +350,11 @@ const checkAssets = async (block: number, provider: any, profiles: profile[]|und
 	const cCNTP_Contract = new ethers.Contract(cCNTP_new_Addr, cCNTP_ABI, provider)
 	const CNTPV1_Contract = new ethers.Contract(CNTPV1, cCNTP_ABI, provider)
 	const CNTP_Referrals = new ethers.Contract(ReferralsAddressV3, CONET_ReferralsAbi, provider)
+	const bcUSDT_Contract = new ethers.Contract(Claimable_BNBUSDTv3, cCNTP_ABI, provider)
+	const cUSDT_Contract = new ethers.Contract(Claimable_ETHUSDTv3, cCNTP_ABI, provider)
+	const cUSDB_Contract = new ethers.Contract(Claimable_BlastUSDBv3, cCNTP_ABI, provider)
+
+	
 	let hasChange = false
 	
 	for (let tx of blockInfo.transactions) {
@@ -369,6 +382,22 @@ const checkAssets = async (block: number, provider: any, profiles: profile[]|und
 				hasChange = await checkSmartContractAsset(event.logs, ifaceFor_cCNTP_ABI, 'CNTPV1', profiles, CNTPV1_Contract)
 				continue
 			}
+
+			if (to === Claimable_BNBUSDTv3) {
+				hasChange = await checkSmartContractAsset(event.logs, ifaceFor_cCNTP_ABI, 'cBNBUSDT', profiles, bcUSDT_Contract)
+				continue
+			}
+
+			if (to === Claimable_ETHUSDTv3) {
+				hasChange = await checkSmartContractAsset(event.logs, ifaceFor_cCNTP_ABI, 'cUSDT', profiles, cUSDT_Contract)
+				continue
+			}
+
+			if (to === Claimable_BlastUSDBv3) {
+				hasChange = await checkSmartContractAsset(event.logs, ifaceFor_cCNTP_ABI, 'cUSDB', profiles, cUSDB_Contract)
+				continue
+			}
+
 			if (to === ReferralsAddressV3) {
 				RefereesList = await getAllReferees(profiles[0].keyID, CNTP_Referrals)
 				continue
@@ -450,11 +479,8 @@ const _storagePieceToLocal = (mnemonicPhrasePassword: string, fragment: string, 
 		fileName: createFragmentFileName(ver, mnemonicPhrasePassword, index),
 	}
 	//logger(`storage version ${ver} fragment  No.[${index}] [${piece.fileName}] with password ${partEncryptPassword}`)
-	async.parallel([
-		next => storageHashData (piece.fileName, piece.localEncryptedText).then(()=> next(null)),
-	], err=> {
-		logger(`async.parallel finished err = [${err}]`)
-		resolve(false)
+	storageHashData (piece.fileName, piece.localEncryptedText).then(() => {
+		resolve (true)
 	})
 })
 
@@ -570,7 +596,7 @@ const storeSystemData = async () => {
 		mnemonicPhrase: CoNET_Data.mnemonicPhrase,
 		fx168Order: CoNET_Data.fx168Order||[],
 		dammy: buffer.Buffer.allocUnsafeSlow( 1024 * ( 20 + ( Math.random()*20))),
-		ver: (CoNET_Data.ver || 0) + 1,
+		ver: (CoNET_Data.ver || 1),
 		upgradev2: CoNET_Data.upgradev2
 	}
 
@@ -762,28 +788,26 @@ const storagePieceToLocal = () => {
 		const passward = ethers.id(ethers.id(CoNET_Data.mnemonicPhrase))
 		const privateKeyArmor = profile.privateKeyArmor||''
 		const ver = CoNET_Data.ver = CoNET_Data.ver||1
+
 	
-		const series: any[] = []
-	
-		chearTextFragments.forEach((n, index)=> {
-			const stage = next => _storagePieceToLocal(passward, n, index, chearTextFragments.length, 
-					fileLength, ver, privateKeyArmor, profile.keyID ).then (() => {
-				logger(`piece ${index} finished! goto next!`)
-				return next(null,null)
-			})
-			series.push(stage)
-		})
-	
-		return async.series(series).then (async () => {
-			
+		// chearTextFragments.forEach((n, index)=> {
+		// 	const stage = next => _storagePieceToLocal(passward, n, index, chearTextFragments.length, 
+		// 			fileLength, ver, privateKeyArmor, profile.keyID ).then (() => {
+		// 		logger(`piece ${index} finished! goto next!`)
+		// 		return next(null,null)
+		// 	})
+		// 	series.push(stage)
+		// })
+		let index = 0
+		sendState('beforeunload', true)
+		return async.mapLimit(chearTextFragments, 1, async (n: any, next: any) => {
+			await _storagePieceToLocal(passward, n, index++, chearTextFragments.length, 
+				fileLength, ver, privateKeyArmor, profile.keyID )
+		}, () => {
 			sendState('beforeunload', false)
 			logger(`async.series finished`)
 			resolve(true)
-		}).catch (ex=> {
-			sendState('beforeunload', false)
-			logger(`async.series catch ex`, ex)
-			resolve(false)
-		}) 
+		})
 	})
 
 
@@ -958,7 +982,7 @@ const initProfileTokens = () => {
 			history: [],
 			network: 'CONET Holesky',
 			decimal: 18,
-			contract: Claimable_BNBUSDT,
+			contract: Claimable_BNBUSDTv3,
 			name: 'cBNBUSDT'
 		},
 		cUSDB:{
@@ -966,7 +990,7 @@ const initProfileTokens = () => {
 			history: [],
 			network: 'CONET Holesky',
 			decimal: 18,
-			contract: Claimable_BlastUSDB,
+			contract: Claimable_BlastUSDBv3,
 			name: 'cUSDB'
 		},
 		CNTP: {
@@ -990,7 +1014,7 @@ const initProfileTokens = () => {
 			history: [],
 			network: 'CONET Holesky',
 			decimal: 18,
-			contract: Claimable_ETHUSDT,
+			contract: Claimable_ETHUSDTv3,
 			name: 'cUSDT'
 		},
 		// cETH:{
@@ -1307,7 +1331,7 @@ const checkTokenStructure = (token: any) => {
 			history: [],
 			network: 'CONET Holesky',
 			decimal: 18,
-			contract: Claimable_ETHUSDT,
+			contract: Claimable_ETHUSDTv3,
 			name: 'cUSDT'
 		}
 	} else {
@@ -1359,7 +1383,7 @@ const checkTokenStructure = (token: any) => {
 			history: [],
 			network: 'CONET Holesky',
 			decimal: 18,
-			contract: Claimable_BlastUSDB,
+			contract: Claimable_BlastUSDBv3,
 			name: 'cUSDB'
 		}
 	} else {
@@ -1372,7 +1396,7 @@ const checkTokenStructure = (token: any) => {
 			history: [],
 			network: 'CONET Holesky',
 			decimal: 18,
-			contract: Claimable_BNBUSDT,
+			contract: Claimable_BNBUSDTv3,
 			name: 'cBNBUSDT'
 		}
 	} else {
@@ -1888,7 +1912,7 @@ const decryptSystemData = async () => new Promise((resolve, reject) => {
 		const obj = JSON.parse(encryptIterate1)
 		CoNET_Data.mnemonicPhrase = obj.mnemonicPhrase
 		CoNET_Data.fx168Order = obj.fx168Order
-		CoNET_Data.ver = obj.ver
+		CoNET_Data.ver = obj.ver||1
 		CoNET_Data.upgradev2 = obj.upgradev2
 		return resolve (true)
 	}
@@ -2053,11 +2077,11 @@ const scan_natureBalance = (provide: any, walletAddr: string, provideUrl = '') =
 })
 
 const scanCONET_Claimable_BNBUSDT = async (walletAddr: string, privideCONET: any) => {
-	return await scan_erc20_balance(walletAddr, privideCONET, Claimable_BNBUSDT)
+	return await scan_erc20_balance(walletAddr, privideCONET, Claimable_BNBUSDTv3)
 }
 
 const scanCONET_Claimable_BlastUSDB = async (walletAddr: string, privideCONET: any) => {
-	return await scan_erc20_balance(walletAddr, privideCONET, Claimable_BlastUSDB)
+	return await scan_erc20_balance(walletAddr, privideCONET, Claimable_BlastUSDBv3)
 }
 
 // const scanCONET_Claimable_BlastETH = async (walletAddr: string, privideCONET: any) => {
@@ -2073,7 +2097,7 @@ const scanCONET_Claimable_BlastUSDB = async (walletAddr: string, privideCONET: a
 // }
 
 const scanCONET_Claimable_ETHUSDT = async (walletAddr: string, privideCONET: any) => {
-	return await scan_erc20_balance(walletAddr, privideCONET, Claimable_ETHUSDT)
+	return await scan_erc20_balance(walletAddr, privideCONET, Claimable_ETHUSDTv3)
 }
 
 const scan_erc20_balance = (walletAddr: string, rpcProdive: any, erc20Address: string) => new Promise (async resolve => {
