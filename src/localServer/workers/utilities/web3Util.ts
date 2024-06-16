@@ -484,6 +484,35 @@ const _storagePieceToLocal = (mnemonicPhrasePassword: string, fragment: string, 
 	})
 })
 
+const storagePieceToIPFS = (mnemonicPhrasePassword: string, fragment: string, index: number,
+	totalFragment: number, targetFileLength: number, ver: number, privateArmor: string, keyID:string) => new Promise(async resolve => {
+		
+		const _dummylength = targetFileLength - fragment.length > 1024 * 5 ? targetFileLength - totalFragment : 0
+		const dummylength = (totalFragment === 2 && _dummylength )
+			? Math.round((targetFileLength - fragment.length) * Math.random()) : 0
+		const dummyData = buffer.Buffer.allocUnsafeSlow( dummylength)
+		const partEncryptPassword = encryptPasswordIssue(ver, mnemonicPhrasePassword, index)
+		const localData = {
+			data: fragment,
+			totalFragment: totalFragment,
+			index
+		}
+		const IPFSData = {
+			data: fragment,
+			totalFragment: totalFragment,
+			index,
+			dummyData: dummyData
+		}
+		const piece: fragmentsObj = {
+			localEncryptedText: await CoNETModule.aesGcmEncrypt (JSON.stringify(localData), partEncryptPassword),
+			remoteEncryptedText: await CoNETModule.aesGcmEncrypt (JSON.stringify(IPFSData), partEncryptPassword),
+			fileName: createFragmentFileName(ver, mnemonicPhrasePassword, index),
+		}
+		const result = await updateFragmentsToIPFS(piece.remoteEncryptedText, piece.fileName, keyID, privateArmor)
+		resolve (result)
+
+	})
+
 const storagePieceToLocalAndIPFS = ( mnemonicPhrasePassword: string, fragment: string, index: number,
 		totalFragment: number, targetFileLength: number, ver: number, privateArmor: string, keyID:string
 	) => {
@@ -715,8 +744,7 @@ const checkUpdateAccount = () => new Promise(async resolve => {
 
 	//	Local version big then remote
 	if (_ver < CoNET_Data.ver ) {
-		await updateProfilesVersionToIPFSAndLocal()
-		await storeSystemData ()
+		await updateProfilesVersionToIPFS()
 		checkcheckUpdateLock = false
 		return resolve (true)
 	}
@@ -939,11 +967,13 @@ let updateChainVersionCount = 0
 
 
 const updateChainVersion = async (storageVer: any, conetData: encrypt_keys_object) => {
-	
+	const profile = conetData.profiles
+	if (!profile) {
+		return 
+	}
 	try {
 		const tx = await storageVer.versionUp('0x0')
-		await tx.wait ()
-		const ver = await storageVer.count()
+		const ver = await storageVer.count(profile[0].keyID)
 		conetData.ver = ver.toString()
 	} catch(ex) {
 		return logger(`updateChainVersion error! try again`, ex)
@@ -1843,6 +1873,7 @@ let getFaucetRoop = 0
 
 const getFaucet = async (keyID: string) => 
 	new Promise (async resolve => {
+		
 		if (++getFaucetRoop > 6) {
 			getFaucetRoop = 0
 			logger(`getFaucet Roop > 6 STOP process!`)
@@ -1937,7 +1968,8 @@ const scanCONET_dWBNB = async (walletAddr: string, privideCONET: any) => {
 	return await scan_erc20_balance (walletAddr, privideCONET, conet_dWBNB)
 }
 
-const updateProfilesVersionToIPFSAndLocal: () => Promise<boolean> = () => new Promise (async resolve => {
+
+const updateProfilesVersionToIPFS: () => Promise<boolean> = () => new Promise (async resolve => {
 	
 	if (!CoNET_Data?.profiles || !passObj) {
 		
@@ -1988,7 +2020,84 @@ const updateProfilesVersionToIPFSAndLocal: () => Promise<boolean> = () => new Pr
 	
 	sendState('beforeunload', true)
 	chearTextFragments.forEach (( n, index ) => {
-		series.push(storagePieceToLocalAndIPFS(passward, n, index, chearTextFragments.length, 
+		series.push(storagePieceToIPFS(passward, n, index, chearTextFragments.length, 
+			fileLength, chainVer, privateKeyArmor, profile.keyID))
+	})
+	
+	try {
+		await Promise.all([
+			...series
+		])
+		await updateChainVersion(storageVer, CoNET_Data)
+		const [nonce, chainVer1] = await checkProfileVersion( profile.keyID)
+		CoNET_Data.ver = parseInt(chainVer1.toString())
+		CoNET_Data.nonce = nonce
+
+	} catch (ex) {
+		sendState('beforeunload', false)
+		logger(`updateProfilesVersion Error!`)
+		return resolve (false)
+	}
+	
+	resolve(true)
+	sendState('beforeunload', false)
+	logger(`updateProfilesVersion finished`)
+	
+})
+
+
+const updateProfilesVersionToIPFS_old: () => Promise<boolean> = () => new Promise (async resolve => {
+	
+	if (!CoNET_Data?.profiles || !passObj) {
+		
+		logger(`updateProfilesVersion !CoNET_Data[${!CoNET_Data}] || !passObj[${!passObj}] === true Error! Stop process.`)
+		return resolve (false)
+	}
+
+	const profile = CoNET_Data.profiles[0]
+	const privateKeyArmor = profile.privateKeyArmor || ''
+	
+	if (!profile || !privateKeyArmor) {
+		
+		logger(`updateProfilesVersion Error! profile empty Error! `)
+		return resolve (false)
+	}
+	const constBalance = profile.tokens.conet.balance
+	if (constBalance < '0.0001') {
+		await getFaucet(profile.keyID)
+		
+		logger(`updateProfilesVersion hasn't enough CONET to pay GAS`)
+		return resolve (false)
+	}
+	let chainVer
+
+	try {
+
+		[,chainVer] = await checkProfileVersion( profile.keyID)
+		const health = await getCONET_api_health()
+		if (!health) {
+			logger (`CONET api server hasn't health`)
+			return resolve (false)
+		}
+	} catch (ex: any) {
+		logger(`updateProfilesVersion checkProfileVersion or getCONET_api_health had Error!`, ex.message )
+		return resolve (false)
+	}
+
+
+	const wallet = new ethers.Wallet(profile.privateKeyArmor, provideCONET)
+	const storageVer = new ethers.Contract(profile_ver_addr, conet_storageAbi, wallet)
+	
+	
+	const passward = ethers.id(ethers.id(CoNET_Data.mnemonicPhrase))
+	const profilesClearText = JSON.stringify(CoNET_Data.profiles)
+	const fileLength = Math.round(1024 * (10 + Math.random() * 20))
+	const chearTextFragments = splitTextLimitLength(profilesClearText, fileLength)
+	const series: any[] = []
+	
+	sendState('beforeunload', true)
+	chearTextFragments.forEach (( n, index ) => {
+		series.push(storagePieceToIPFS(passward, n, index, chearTextFragments.length, 
 			fileLength, chainVer, privateKeyArmor, profile.keyID))
 	})
 	
@@ -2401,7 +2510,11 @@ const CONET_guardian_purchase: (profile: profile, nodes: number, _total: number,
 		return false
 	}
 	
-	await updateProfilesVersionToIPFSAndLocal()
+	Promise.all ([
+		await updateProfilesVersionToIPFS(),
+		await storagePieceToLocal()
+	
+	])
 	await storeSystemData ()
 	return true
 }

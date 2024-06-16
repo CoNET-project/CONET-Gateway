@@ -232,7 +232,11 @@ const importWallet = async (cmd: worker_command) => {
 	CoNET_Data.profiles.push(profile)
 	cmd.data[0] = CoNET_Data.profiles
 	returnUUIDChannel(cmd)
-	await updateProfilesVersionToIPFSAndLocal()
+	Promise.all ([
+		await updateProfilesVersionToIPFS(),
+		await storagePieceToLocal()
+	
+	])
 	await storeSystemData ()
 
 }
@@ -260,8 +264,11 @@ const updateProfile = async (cmd: worker_command) => {
 	cmd.data[0] = CoNET_Data.profiles
 	returnUUIDChannel(cmd)
 
+	Promise.all ([
+		await updateProfilesVersionToIPFS(),
+		await storagePieceToLocal()
 	
-	await updateProfilesVersionToIPFSAndLocal()
+	])
 	await storeSystemData ()
 }
 
@@ -308,7 +315,11 @@ const addProfile =  async (cmd: worker_command) => {
 	cmd.data[0] = CoNET_Data.profiles
 	returnUUIDChannel(cmd)
 
-	await updateProfilesVersionToIPFSAndLocal()
+	Promise.all ([
+		await updateProfilesVersionToIPFS(),
+		await storagePieceToLocal()
+	
+	])
 	await storeSystemData ()
 	
 }
@@ -396,15 +407,15 @@ const checkOldVersion = async (CoNET_Data: encrypt_keys_object) => {
 	if (!profile) {
 		return logger(`checkOldVersion profile is none Error, STOP!`)
 	}
-	const [ver, oldVer] = await checkOldProfileVersion (profile[0].keyID)
-	let getVer = ver <= oldVer ? oldVer : ver
-	if (!ver) {
-		return 
-	}
+	// const [ver, oldVer] = await checkOldProfileVersion (profile[0].keyID)
+	// let getVer = ver <= oldVer ? oldVer : ver
+	// if (!ver) {
+	// 	return 
+	// }
 	
-	await getDetermineVersionProfile(getVer, CoNET_Data)
-	await updateProfilesVersionToIPFSAndLocal()
-	await storeSystemData ()
+	// await getDetermineVersionProfile(getVer, CoNET_Data)
+	// await updateProfilesVersionToIPFSAndLocal()
+	// await storeSystemData ()
 }
 
 const nodePrice = 1250
