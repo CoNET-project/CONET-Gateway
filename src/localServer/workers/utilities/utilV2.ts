@@ -232,11 +232,10 @@ const importWallet = async (cmd: worker_command) => {
 	CoNET_Data.profiles.push(profile)
 	cmd.data[0] = CoNET_Data.profiles
 	returnUUIDChannel(cmd)
-	Promise.all ([
-		await updateProfilesVersionToIPFS(),
-		await storagePieceToLocal()
+
+	await storagePieceToLocal()
 	
-	])
+	
 	await storeSystemData ()
 
 }
@@ -264,11 +263,10 @@ const updateProfile = async (cmd: worker_command) => {
 	cmd.data[0] = CoNET_Data.profiles
 	returnUUIDChannel(cmd)
 
-	Promise.all ([
-		await updateProfilesVersionToIPFS(),
+
 		await storagePieceToLocal()
 	
-	])
+
 	await storeSystemData ()
 }
 
@@ -315,11 +313,9 @@ const addProfile =  async (cmd: worker_command) => {
 	cmd.data[0] = CoNET_Data.profiles
 	returnUUIDChannel(cmd)
 
-	Promise.all ([
-		await updateProfilesVersionToIPFS(),
 		await storagePieceToLocal()
 	
-	])
+	
 	await storeSystemData ()
 	
 }

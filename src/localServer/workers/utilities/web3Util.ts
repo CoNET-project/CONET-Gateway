@@ -487,6 +487,8 @@ const _storagePieceToLocal = (mnemonicPhrasePassword: string, fragment: string, 
 const storagePieceToIPFS = (mnemonicPhrasePassword: string, fragment: string, index: number,
 	totalFragment: number, targetFileLength: number, ver: number, privateArmor: string, keyID:string) => new Promise(async resolve => {
 		
+
+
 		const _dummylength = targetFileLength - fragment.length > 1024 * 5 ? targetFileLength - totalFragment : 0
 		const dummylength = (totalFragment === 2 && _dummylength )
 			? Math.round((targetFileLength - fragment.length) * Math.random()) : 0
@@ -815,8 +817,7 @@ const storagePieceToLocal = () => {
 		const chearTextFragments = splitTextLimitLength(profilesClearText, fileLength)
 		const passward = ethers.id(ethers.id(CoNET_Data.mnemonicPhrase))
 		const privateKeyArmor = profile.privateKeyArmor||''
-		const ver = CoNET_Data.ver = CoNET_Data.ver||1
-
+		const ver = CoNET_Data.ver = (CoNET_Data.ver||0) + 1
 	
 		// chearTextFragments.forEach((n, index)=> {
 		// 	const stage = next => _storagePieceToLocal(passward, n, index, chearTextFragments.length, 
@@ -973,6 +974,7 @@ const updateChainVersion = async (storageVer: any, conetData: encrypt_keys_objec
 	}
 	try {
 		const tx = await storageVer.versionUp('0x0')
+		await tx.wait()
 		const ver = await storageVer.count(profile[0].keyID)
 		conetData.ver = ver.toString()
 	} catch(ex) {
@@ -1622,6 +1624,96 @@ let checkcheckUpdateLock = false
 let lastCheckcheckUpdateTimeStamp = 0
 
 
+
+const checkIPFSFragmenReadyOrNot = (ver: number, CoNET_data: encrypt_keys_object) => new Promise ( async resolve => {
+	let _chainVer = ver
+		
+	const passward = ethers.id(ethers.id(CoNET_data.mnemonicPhrase))
+	const partEncryptPassword = encryptPasswordIssue(_chainVer, passward, 0)
+	const firstFragmentName = createFragmentFileName(_chainVer, passward, 0)
+	if (!CoNET_data?.fragmentClass) {
+		CoNET_data.fragmentClass = {
+			mainFragmentName: firstFragmentName,
+			failures: 0
+		}
+	} else {
+		CoNET_data.fragmentClass.mainFragmentName = firstFragmentName
+	}
+	
+
+	const firstFragmentEncrypted = await getFragmentsFromPublic(firstFragmentName)
+	if (!firstFragmentEncrypted) {
+		return resolve (false)
+	}
+
+	let firstFragmentObj
+
+		try {
+			const firstFragmentdecrypted = await CoNETModule.aesGcmDecrypt (firstFragmentEncrypted, partEncryptPassword)
+			firstFragmentObj = JSON.parse(firstFragmentdecrypted)
+
+		} catch (ex) {
+			return resolve (false)
+		}
+
+		const totalFragment = firstFragmentObj.totalFragment
+		let clearData: string = firstFragmentObj.data
+		const series: any[] = []
+
+		for (let i = 1; i < totalFragment; i ++) {
+			const stage = next => {
+				getNextFragmentIPFS (_chainVer, passward, i)
+				.then( text=> {
+					if (!text) {
+						return next (`getNextFragment [${i}] return NULL Error`)
+					}
+					clearData += text
+					return next(null)
+				})
+			}
+			series.push(stage)
+		}
+
+		return async.series(series)
+			.then (async () => {
+				let profile
+
+				
+				profile = JSON.parse(clearData)
+				
+
+				if (CoNET_Data) {
+					CoNET_Data.profiles = profile
+					CoNET_Data.ver = _chainVer
+					if (CoNET_Data?.fragmentClass) {
+						CoNET_Data.fragmentClass.failures = 0
+					} else {
+						CoNET_Data.fragmentClass = {
+							failures: 0,
+							mainFragmentName: ''
+						}
+					}
+					
+				}
+
+				await storagePieceToLocal()
+				
+				await storeSystemData()
+				
+				const cmd: channelWroker = {
+					cmd: 'profileVer',
+					data: [_chainVer]
+				}
+				sendState('toFrontEnd', cmd)
+				return resolve(true)
+				
+				
+			}).catch ( ex=> {
+				return resolve (false)
+			})
+	
+})
+
 const getDetermineVersionProfile = (ver: number, CoNET_Data) => new Promise(async resolve => {
 
 
@@ -2264,6 +2356,7 @@ const getNetwork = (networkName: string) => {
 		// case 'dUSDT':
 		// case 'dWBNB':
 		// case 'dWETH':
+		case 'cCNTP':
 		case 'cUSDB':
 		case 'cUSDT':
 		case 'cBNBUSDT':
@@ -2315,6 +2408,10 @@ const getAssetERC20Address = (assetName: string) => {
 
 		case 'dWETH': {
 			return conet_dWETH
+		}
+
+		case 'cCNTP': {
+			return cCNTP_new_Addr
 		}
 	
 		default: {
@@ -2509,13 +2606,9 @@ const CONET_guardian_purchase: (profile: profile, nodes: number, _total: number,
 		sendState('toFrontEnd', cmd3)
 		return false
 	}
-	
-	Promise.all ([
-		await updateProfilesVersionToIPFS(),
-		await storagePieceToLocal()
-	
-	])
+	await storagePieceToLocal()
 	await storeSystemData ()
+	
 	return true
 }
 
