@@ -755,7 +755,6 @@ const checkUpdateAccount = () => new Promise(async resolve => {
 	
 })
 
-
 let assetPrice: assetsStructure[] = []
 
 const CoNET_initData_save = async (database, systemInitialization_uuid: string) => {
@@ -1485,22 +1484,23 @@ interface referrals_rate_list {
 let leaderboardData
 const leaderboardDataDelay = 20
 const selectLeaderboard: (block: number) => Promise<boolean> = (block) => new Promise(async resolve => {
-	const readBlock = block-leaderboardDataDelay
-	const [_free, leaderboardNodes] = await Promise.all([
+	const readBlock = block - leaderboardDataDelay
+	const [leaderboardFree, allWalletsFree, leaderboardNodes] = await Promise.all([
 		getWasabiFile(`${readBlock}_free`),
+		getWasabiFile(`free_wallets_${readBlock}`),
 		getWasabiFile(`${readBlock}_node`)
 	])
 
-	if (!_free) {
-		return resolve(await selectLeaderboard(block-2))
+	if (!leaderboardFree) {
+		return resolve(false)
 	}
 	
 	leaderboardData = {
 		epoch: block - leaderboardDataDelay,
-		free_cntp: _free.cntp.slice(0,10),
-		free_referrals: _free.referrals.slice(0,10),
-		minerRate: _free.minerRate,
-		totalMiner: _free.totalMiner,
+		free_cntp: leaderboardFree.cntp.slice(0,10),
+		free_referrals: leaderboardFree.referrals.slice(0,10),
+		minerRate: leaderboardFree.minerRate,
+		totalMiner: leaderboardFree.totalMiner,
 
 	}
 
@@ -1518,7 +1518,7 @@ const selectLeaderboard: (block: number) => Promise<boolean> = (block) => new Pr
 					leaderboardData.guardian = referrals_rate_list[findIndex]
 				}
 			}
-			const free_rate_list: referrals_rate_list[]= _free.cntp
+			const free_rate_list: referrals_rate_list[]= leaderboardFree.cntp
 			if (free_rate_list.length) {
 				const findIndex = free_rate_list.findIndex(n => n.wallet.toLowerCase() === key)
 				if (findIndex > -1) {
