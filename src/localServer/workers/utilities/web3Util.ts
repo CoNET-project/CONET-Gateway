@@ -64,7 +64,6 @@ const preBurnCCNTP = async (profile: profile, totalBurn: string) => {
 }
 
 const burnCCNTP = async (profile: profile, totalBurn: string) => {
-	const provideCONET = new ethers.JsonRpcProvider(conet_rpc)
 	const walletObj = new ethers.Wallet(profile.privateKeyArmor, provideCONET)
 	const erc20 = new ethers.Contract(cCNTP_new_Addr, blast_CNTPAbi, walletObj)
 	const value = parseEther(totalBurn, 'ccntp')
@@ -74,6 +73,11 @@ const burnCCNTP = async (profile: profile, totalBurn: string) => {
 	} catch (ex) {
 		return false
 	}
+	await tx.wait()
+	const [_tx1] = await Promise.all([
+		provideCONET.getTransactionReceipt(tx.hash),
+		//provideCONET.getTransaction(tx.hash)
+	])
 	const kk1: CryptoAssetHistory = {
 		status: 'Confirmed',
 		Nonce: tx.nonce,
@@ -81,13 +85,17 @@ const burnCCNTP = async (profile: profile, totalBurn: string) => {
 		transactionFee: stringFix(ethers.formatEther((tx.maxFeePerGas||tx.gasPrice) *tx.gasLimit)),
 		gasUsed: (tx.maxFeePerGas||tx.gasPrice).toString(),
 		isSend: true,
-		value: value,
+		value: ethers.formatEther(value),
 		time: new Date().toISOString(),
 		transactionHash: tx.hash,
-		cCNTPBurn: true
+		cCNTPBurn: true,
+		epoch: _tx1.blockNumber,
+		rate: leaderboardData.minerRate
 	}
+
 	profile.tokens.cCNTP.history.push(kk1)
-	return tx
+
+	return kk1
 }
 
 const getProfileAssets_allOthers_Balance = async (profile: profile) => {
@@ -1481,7 +1489,21 @@ interface referrals_rate_list {
 	wallet: string
 }
 
-let leaderboardData
+interface leaderboardData {
+	epoch: number
+	free_cntp?: referrals_rate_list[]
+	free_referrals?: referrals_rate_list[]
+	minerRate?: string
+	totalMiner?: string
+	free?:referrals_rate_list
+	guardian?: referrals_rate_list
+}
+
+let leaderboardData: leaderboardData
+
+
+
+
 const leaderboardDataDelay = 20
 const selectLeaderboard: (block: number) => Promise<boolean> = (block) => new Promise(async resolve => {
 	const readBlock = block - leaderboardDataDelay
@@ -1499,7 +1521,7 @@ const selectLeaderboard: (block: number) => Promise<boolean> = (block) => new Pr
 		epoch: block - leaderboardDataDelay,
 		free_cntp: leaderboardFree.cntp.slice(0,10),
 		free_referrals: leaderboardFree.referrals.slice(0,10),
-		minerRate: leaderboardFree.minerRate,
+		minerRate: (parseFloat(leaderboardFree.minerRate)/12).toFixed(8),
 		totalMiner: leaderboardFree.totalMiner,
 
 	}

@@ -115,6 +115,8 @@ type CryptoAssetHistory = {
 	value: number
 	isSend: boolean
 	cCNTPBurn?: boolean
+	epoch?: number
+	rate?: string
 }
 
 interface TokenPreferences {
@@ -268,6 +270,7 @@ interface profile extends keyPair {
 	}
 	referrer: string|null|undefined
 	data?: any
+	burnCCNTP?: CryptoAssetHistory
 }
 
 interface publicProfile {

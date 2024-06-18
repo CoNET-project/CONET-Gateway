@@ -378,10 +378,15 @@ const processCmd = async (cmd: worker_command) => {
 				return returnUUIDChannel(cmd)
 			}
 			const tx = await burnCCNTP (profile, total)
+
+			
 			if (!tx) {
 				cmd.err = 'INVALID_DATA'
 				return returnUUIDChannel(cmd)
 			}
+
+			profiles[0].burnCCNTP = tx
+			
 			cmd.data = [tx]
 			returnUUIDChannel(cmd)
 			await storagePieceToLocal()
