@@ -1490,9 +1490,9 @@ let leaderboardData
 const leaderboardDataDelay = 20
 const selectLeaderboard: (block: number) => Promise<boolean> = (block) => new Promise(async resolve => {
 	const readBlock = block-leaderboardDataDelay
-	const [_free, wallets, leaderboardNodes] = await Promise.all([
+	const [_free, leaderboardNodes] = await Promise.all([
 		getWasabiFile(`${readBlock}_free`),
-		getWasabiFile(`free_wallets_${readBlock}`),
+		// getWasabiFile(`free_wallets_${readBlock}`),
 		getWasabiFile(`${readBlock}_node`)
 	])
 
@@ -1502,42 +1502,37 @@ const selectLeaderboard: (block: number) => Promise<boolean> = (block) => new Pr
 	
 	leaderboardData = {
 		epoch: block - leaderboardDataDelay,
-		free_cntp: _free.cntp,
-		free_referrals: _free.referrals,
+		free_cntp: _free.cntp.slice(0,10),
+		free_referrals: _free.referrals.slice(0,10),
 		minerRate: _free.minerRate,
 		totalMiner: _free.totalMiner,
 
 	}
 
-	if (RefereesList && wallets?.length) {
-		const allWallet: string[] = wallets.filter(
-			n => {
-				const kk = RefereesList?.flat()
-				if (!kk) {
-					return false
-				}
-				const index = kk?.findIndex( nn => {
-					Object.keys(nn)[0].toLowerCase() === n.toLowerCase()
-				})
-				return index > -1 ? true: false
-			})
-
-		leaderboardData.free_referrals_rate = {
-			referrals: allWallet.length
-		}
-	}
-
 	const profiles = CoNET_Data?.profiles
-	if (profiles && leaderboardNodes?.referrals_rate_list) {
+
+	if (profiles) {
 		const profile = profiles[0]
-		const referrals_rate_list: referrals_rate_list[]= leaderboardNodes.referrals_rate_list
 		if (profile) {
+			
 			const key = profile.keyID.toLowerCase()
-			const findIndex = referrals_rate_list.findIndex(n => n.wallet.toLowerCase() === key)
-			if (findIndex > -1) {
-				leaderboardData.guardian = referrals_rate_list[findIndex]
+			const referrals_rate_list: referrals_rate_list[]= leaderboardNodes?.referrals_rate_list
+			if (referrals_rate_list.length) {
+				const findIndex = referrals_rate_list.findIndex(n => n.wallet.toLowerCase() === key)
+				if (findIndex > -1) {
+					leaderboardData.guardian = referrals_rate_list[findIndex]
+				}
 			}
+			const free_rate_list: referrals_rate_list[]= _free.cntp
+			if (free_rate_list.length) {
+				const findIndex = free_rate_list.findIndex(n => n.wallet.toLowerCase() === key)
+				if (findIndex > -1) {
+					leaderboardData.free = referrals_rate_list[findIndex]
+				}
+			}
+
 		}
+		
 	}
 
 	resolve (true)
