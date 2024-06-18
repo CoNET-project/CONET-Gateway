@@ -152,7 +152,6 @@ const testPasscode = async (cmd: worker_command) => {
 
 }
 
-
 const showSRP = async (cmd: worker_command) => {
 	const passcode: string = cmd.data[0]
 	if (!CoNET_Data || !passObj) {

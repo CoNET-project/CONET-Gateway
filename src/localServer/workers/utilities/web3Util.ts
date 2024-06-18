@@ -1830,10 +1830,6 @@ const getDetermineVersionProfile = (ver: number, CoNET_Data) => new Promise(asyn
 })
 
 
-
-	
-
-
 const splitTextLimitLength: (test: string, limitLength: number) => string[] = (test, limitLength) => {
 	const ret: string[] = []
 	let start = 0
@@ -2255,7 +2251,6 @@ const scanCONETHolesky = async (walletAddr: string, privideCONET: any) => {
 const scanCNTPV1 = async (walletAddr: string, privide: any) => {
 	return await scan_erc20_balance(walletAddr, privide, CNTPV1)
 }
-
 
 const scanCCNTP = async (walletAddr: string, privide: any ) => {
 	return await scan_erc20_balance(walletAddr, privide, cCNTP_new_Addr)
