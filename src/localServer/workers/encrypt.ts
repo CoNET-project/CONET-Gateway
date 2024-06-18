@@ -308,11 +308,9 @@ const processCmd = async (cmd: worker_command) => {
 			profile.tokens.cCNTP.unlocked = true
 
 			returnUUIDChannel(cmd)
-			Promise.all ([
-				await updateProfilesVersionToIPFS(),
-				await storagePieceToLocal()
 			
-			])
+			await storagePieceToLocal()
+			
 			await storeSystemData ()
 		}
 
@@ -386,11 +384,7 @@ const processCmd = async (cmd: worker_command) => {
 			}
 			cmd.data = [tx]
 			returnUUIDChannel(cmd)
-			Promise.all ([
-				await updateProfilesVersionToIPFS(),
-				await storagePieceToLocal()
-			
-			])
+			await storagePieceToLocal()
 			await storeSystemData ()
 		}
 

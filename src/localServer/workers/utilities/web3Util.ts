@@ -2,7 +2,7 @@
 
 const getRegion = async () => {
 	const provideCONET = new ethers.JsonRpcProvider(conet_rpc)
-	const regionContract = new ethers.Contract(CONET_Guardian_NodeInfo, CONET_Guardian_NodeInfo_ABI, provideCONET)
+	const regionContract = new ethers.Contract(CONET_Guardian_NodeInfoV3, CONET_Guardian_NodeInfo_ABI, provideCONET)
 	try {
 		const gasPrice = await regionContract.getAllRegions()
 		return gasPrice
@@ -105,7 +105,6 @@ const getProfileAssets_allOthers_Balance = async (profile: profile) => {
 		// const walletETH = new ethers.Wallet(profile.privateKeyArmor, provideETH)
 		const [ balanceUSDT, ETH, blastETH, usdb, bnb, wusdt] = 
 		await Promise.all([
-
 			scanUSDT (key, provideETH),
 			scanETH (key, provideETH),
 			scanBlastETH (key, provideBlastMainChain),
@@ -143,22 +142,20 @@ const getProfileAssets_CONET_Balance = async (profile: profile) => {
 		const provideBlastMainChain = new ethers.JsonRpcProvider(blast_mainnet())
 		const provideBNB = new ethers.JsonRpcProvider(bsc_mainchain)
 		// const walletETH = new ethers.Wallet(profile.privateKeyArmor, provideETH)
-		const [balanceCNTPV1,balanceCCNTP , balanceUSDT, conet_Holesky,
-			BNBUSDT, BlastUSDB, ETHUSDT, CGPNs, CGPN2s
+		const [
+			balanceCNTPV1,balanceCCNTP, conet_Holesky,
+			BNBUSDT, BlastUSDB, ETHUSDT, 
+			CGPNs, CGPN2s
 		] = await Promise.all([
 			//scanCNTP (key, provideBlastMainChain),
 			scanCNTPV1 (key, provideCONET),
 			scanCCNTP (key, provideCONET),
-
-			scanUSDT (key, provideETH),
 			scanCONETHolesky(key, provideCONET),
 
 			scanCONET_Claimable_BNBUSDT(key, provideCONET),
 			scanCONET_Claimable_BlastUSDB(key, provideCONET),
-			// scanCONET_Claimable_BlastETH(key, provideCONET),
-			// scanCONET_Claimable_BNB(key, provideCONET),
-			// scanCONET_Claimable_ETH(key, provideCONET),
 			scanCONET_Claimable_ETHUSDT(key, provideCONET),
+
 			scan_Guardian_Nodes(key, provideCONET),
 			scan_Guardian_ReferralNodes(key, provideCONET)
 		])
@@ -167,17 +164,10 @@ const getProfileAssets_CONET_Balance = async (profile: profile) => {
 		//current.CNTP.balance = balanceCNTP === BigInt(0) ? '0' : typeof balanceCNTP !== 'boolean' ? parseFloat(ethers.formatEther(balanceCNTP)).toFixed(6) : ''
 		current.CNTPV1.balance = balanceCNTPV1 === BigInt(0) ? '0' : typeof balanceCNTPV1!== 'boolean' ? parseFloat(ethers.formatEther(balanceCNTPV1)).toFixed(6) : ''
 		current.cCNTP.balance = balanceCCNTP === BigInt(0) ? '0' : typeof balanceCCNTP!== 'boolean' ? parseFloat(ethers.formatEther(balanceCCNTP)).toFixed(6): ''
-		current.usdt.balance = balanceUSDT === BigInt(0) ? '0' : typeof balanceUSDT!== 'boolean' ?
-															//	@ts-ignore
-															parseFloat(balanceUSDT/BigInt(10**6)).toFixed(4): ''
-
 		current.conet.balance = conet_Holesky === BigInt(0) ? '0' : typeof conet_Holesky!== 'boolean' ?  parseFloat(ethers.formatEther(conet_Holesky)).toFixed(6): ''
 
 		current.cBNBUSDT.balance = BNBUSDT === BigInt(0) ? '0' : typeof BNBUSDT!== 'boolean' ? parseFloat(ethers.formatEther(BNBUSDT)).toFixed(6): ''
 		current.cUSDB.balance = BlastUSDB === BigInt(0) ? '0' :  typeof BlastUSDB!== 'boolean' ? parseFloat(ethers.formatEther(BlastUSDB)).toFixed(6): ''
-		// current.cBlastETH.balance = BlastETH === BigInt(0) ? '0' :  parseFloat(ethers.formatEther(BlastETH)).toFixed(6)
-		// current.cBNB.balance = cBNB === BigInt(0) ? '0' :  parseFloat(ethers.formatEther(cBNB)).toFixed(6)
-		// current.cETH.balance = cETH === BigInt(0) ? '0' :  parseFloat(ethers.formatEther(cETH)).toFixed(6)
 		current.cUSDT.balance = ETHUSDT === BigInt(0) ? '0' :  typeof ETHUSDT!== 'boolean' ? parseFloat(ethers.formatEther(ETHUSDT)).toFixed(6): ''
 
 		current.CGPNs.balance = CGPNs !== 'boolean' ? 
@@ -299,7 +289,14 @@ let sendStateBeforeunload = false
 
 const sendState = (state: listenState, value: any) => {
 	const sendChannel = new BroadcastChannel(state)
-	sendChannel.postMessage (JSON.stringify(value))
+	let data = ''
+	try {
+		data = JSON.stringify(value)
+	} catch (ex) {
+		logger(`sendState JSON.stringify(value) Error`)
+
+	}
+	sendChannel.postMessage (data)
 	sendChannel.close()
 }
 
@@ -428,6 +425,7 @@ const listenProfileVer = async () => {
 			cmd: 'assets',
 			data: [profiles, RefereesList, leaderboardData]
 		}
+
 		sendState('toFrontEnd', cmd)
 		
 	})
@@ -963,7 +961,6 @@ const updateFragmentsToIPFS = (encryptData: string, hash: string, keyID: string,
 
 })
 
-
 let updateChainVersionCount = 0
 
 
@@ -1156,7 +1153,6 @@ const initProfileTokens = () => {
 	}
 	return ret
 }
-
 
 const checkTokenStructure = (token: any) => {
 	if (!token?.CGPNs) {
@@ -1492,7 +1488,6 @@ const selectLeaderboard: (block: number) => Promise<boolean> = (block) => new Pr
 	const readBlock = block-leaderboardDataDelay
 	const [_free, leaderboardNodes] = await Promise.all([
 		getWasabiFile(`${readBlock}_free`),
-		// getWasabiFile(`free_wallets_${readBlock}`),
 		getWasabiFile(`${readBlock}_node`)
 	])
 
@@ -2146,7 +2141,8 @@ const updateProfilesVersionToIPFS: () => Promise<boolean> = () => new Promise (a
 	}
 	
 	resolve(true)
-	sendState('beforeunload', false)
+	await storagePieceToLocal()
+	await storeSystemData ()
 	logger(`updateProfilesVersion finished`)
 	
 })

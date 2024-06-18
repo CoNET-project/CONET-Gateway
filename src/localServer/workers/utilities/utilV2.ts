@@ -41,7 +41,7 @@ const Claimable_BlastUSDBv3 = '0x3258e9631ca4992F6674b114bd17c83CA30F734B'.toLow
 
 const CONET_Guardian_Nodes1 = '0x5e4aE81285b86f35e3370B3EF72df1363DD05286'
 const CONET_Guardian_NodesV3 = '0x453701b80324C44366B34d167D40bcE2d67D6047'.toLowerCase()
-const CONET_Guardian_NodeInfo = '0xD6C30e7a1527cBDaF0e83930e643E32e7B30c1b4'
+
 const fx168OrderContractAddress = '0x9aE6D3Bd3029C8B2A73817b9aFa1C029237E3e30'
 
 const FragmentNameDeriveChildIndex = 65536
@@ -57,6 +57,7 @@ let authorization_key = ''
 //	******************************************************************
 const cCNTP_new_Addr = '0x530cf1B598D716eC79aa916DD2F05ae8A0cE8ee2'.toLocaleLowerCase()
 const profile_ver_addr = '0x556bB96fC4C1316B2e5CEaA133f5D4157Eb05681'.toLowerCase()
+const CONET_Guardian_NodeInfoV3 = '0x73e315e66F6a34ceA059257e1CE56D9FA2D2d47e'
 //	******************************************************************
 
 const getAddress = (addr: string) => {
