@@ -228,6 +228,9 @@ const checkGuardianNodes = async () => {
 	const profile = CoNET_Data.profiles[mainIndex]
 	const provideCONET = new ethers.JsonRpcProvider(conet_rpc)
 	const erc1155 = new ethers.Contract(CONET_Guardian_NodesV3, guardian_erc1155, provideCONET)
+	const ercGuardianNodesInfoV3 = new ethers.Contract(CONET_Guardian_NodeInfoV3, GuardianNodesInfoV3_ABI, provideCONET)
+
+	GuardianNodesInfoV3_ABI
 	let nodeAddress: string[] = [], Ids, numbers
 	try {
 		const ownerIds = await erc1155.getOwnerNodesAddress(profile.keyID)
@@ -262,11 +265,18 @@ const checkGuardianNodes = async () => {
 		n.isNode = false
 	})
 	const root = ethers.Wallet.fromPhrase(mnemonicPhrase)
+
 	IdsIndex.forEach( async idIndex=> {
 		const index = profiles.findIndex(n => n.index === idIndex)
 		if (index <0) {
 			const newAcc = root.deriveChild(idIndex)
-			const key = await createGPGKey('', '', '')
+			const [key, nodeID] = await 
+			Promise.all ([
+				createGPGKey('', '', ''),
+				erc1155.ownershipForNodeID(newAcc.address),
+				
+			])
+			const nodeInfo = await ercGuardianNodesInfoV3.getNodeInfoById(nodeID)
 			const profile: profile = {
 				isPrimary: false,
 				keyID: newAcc.address,
@@ -274,6 +284,9 @@ const checkGuardianNodes = async () => {
 				hdPath: newAcc.path,
 				index: newAcc.index,
 				isNode: true,
+				nodeID, 
+				nodeIP_address: nodeInfo?.ipaddress,
+				nodeRegion: nodeInfo?.regionName,
 				pgpKey: {
 					privateKeyArmor: key.privateKey,
 					publicKeyArmor: key.publicKey
@@ -6166,3 +6179,388 @@ const cCNTP_ABI = [
     }
 ]
 
+const GuardianNodesInfoV3_ABI = [
+    {
+        "inputs": [],
+        "stateMutability": "nonpayable",
+        "type": "constructor"
+    },
+    {
+        "inputs": [],
+        "name": "getAllRegions",
+        "outputs": [
+            {
+                "internalType": "string[]",
+                "name": "allRegions",
+                "type": "string[]"
+            }
+        ],
+        "stateMutability": "view",
+        "type": "function"
+    },
+    {
+        "inputs": [
+            {
+                "internalType": "string",
+                "name": "ipaddress",
+                "type": "string"
+            }
+        ],
+        "name": "getIpAddressOwn",
+        "outputs": [
+            {
+                "internalType": "address",
+                "name": "ownership",
+                "type": "address"
+            }
+        ],
+        "stateMutability": "view",
+        "type": "function"
+    },
+    {
+        "inputs": [
+            {
+                "internalType": "string",
+                "name": "ipaddress",
+                "type": "string"
+            }
+        ],
+        "name": "getIpAddressReg",
+        "outputs": [
+            {
+                "internalType": "string",
+                "name": "regionName",
+                "type": "string"
+            }
+        ],
+        "stateMutability": "view",
+        "type": "function"
+    },
+    {
+        "inputs": [
+            {
+                "internalType": "uint256",
+                "name": "id",
+                "type": "uint256"
+            }
+        ],
+        "name": "getNodeInfoById",
+        "outputs": [
+            {
+                "internalType": "string",
+                "name": "ipaddress",
+                "type": "string"
+            },
+            {
+                "internalType": "string",
+                "name": "regionName",
+                "type": "string"
+            }
+        ],
+        "stateMutability": "view",
+        "type": "function"
+    },
+    {
+        "inputs": [
+            {
+                "internalType": "string",
+                "name": "ipaddress",
+                "type": "string"
+            }
+        ],
+        "name": "getNodePGP",
+        "outputs": [
+            {
+                "internalType": "string",
+                "name": "pgp",
+                "type": "string"
+            }
+        ],
+        "stateMutability": "view",
+        "type": "function"
+    },
+    {
+        "inputs": [
+            {
+                "internalType": "string",
+                "name": "regionName",
+                "type": "string"
+            }
+        ],
+        "name": "getReginNodes",
+        "outputs": [
+            {
+                "internalType": "string[]",
+                "name": "nodes",
+                "type": "string[]"
+            }
+        ],
+        "stateMutability": "view",
+        "type": "function"
+    },
+    {
+        "inputs": [
+            {
+                "internalType": "uint256",
+                "name": "",
+                "type": "uint256"
+            }
+        ],
+        "name": "id_region",
+        "outputs": [
+            {
+                "internalType": "bytes32",
+                "name": "",
+                "type": "bytes32"
+            }
+        ],
+        "stateMutability": "view",
+        "type": "function"
+    },
+    {
+        "inputs": [
+            {
+                "internalType": "bytes32",
+                "name": "",
+                "type": "bytes32"
+            }
+        ],
+        "name": "ipaddress_owner",
+        "outputs": [
+            {
+                "internalType": "address",
+                "name": "",
+                "type": "address"
+            }
+        ],
+        "stateMutability": "view",
+        "type": "function"
+    },
+    {
+        "inputs": [
+            {
+                "internalType": "bytes32",
+                "name": "",
+                "type": "bytes32"
+            }
+        ],
+        "name": "ipaddress_pgp",
+        "outputs": [
+            {
+                "internalType": "string",
+                "name": "",
+                "type": "string"
+            }
+        ],
+        "stateMutability": "view",
+        "type": "function"
+    },
+    {
+        "inputs": [
+            {
+                "internalType": "bytes32",
+                "name": "",
+                "type": "bytes32"
+            }
+        ],
+        "name": "ipaddress_reg",
+        "outputs": [
+            {
+                "internalType": "bytes32",
+                "name": "",
+                "type": "bytes32"
+            }
+        ],
+        "stateMutability": "view",
+        "type": "function"
+    },
+    {
+        "inputs": [
+            {
+                "internalType": "string",
+                "name": "regionName",
+                "type": "string"
+            }
+        ],
+        "name": "isRegionExisting",
+        "outputs": [
+            {
+                "internalType": "bool",
+                "name": "region_existing",
+                "type": "bool"
+            }
+        ],
+        "stateMutability": "view",
+        "type": "function"
+    },
+    {
+        "inputs": [
+            {
+                "internalType": "uint256",
+                "name": "id",
+                "type": "uint256"
+            },
+            {
+                "internalType": "string",
+                "name": "ipaddress",
+                "type": "string"
+            },
+            {
+                "internalType": "string",
+                "name": "regionName",
+                "type": "string"
+            },
+            {
+                "internalType": "string",
+                "name": "pgp",
+                "type": "string"
+            },
+            {
+                "internalType": "address",
+                "name": "_owner",
+                "type": "address"
+            }
+        ],
+        "name": "modify_nodes",
+        "outputs": [],
+        "stateMutability": "nonpayable",
+        "type": "function"
+    },
+    {
+        "inputs": [
+            {
+                "internalType": "address",
+                "name": "addAddress",
+                "type": "address"
+            },
+            {
+                "internalType": "bool",
+                "name": "setup",
+                "type": "bool"
+            }
+        ],
+        "name": "modify_whiteList",
+        "outputs": [],
+        "stateMutability": "nonpayable",
+        "type": "function"
+    },
+    {
+        "inputs": [
+            {
+                "internalType": "uint256",
+                "name": "",
+                "type": "uint256"
+            }
+        ],
+        "name": "nodeIpAddress",
+        "outputs": [
+            {
+                "internalType": "string",
+                "name": "",
+                "type": "string"
+            }
+        ],
+        "stateMutability": "view",
+        "type": "function"
+    },
+    {
+        "inputs": [
+            {
+                "internalType": "uint256",
+                "name": "",
+                "type": "uint256"
+            }
+        ],
+        "name": "pgp_public",
+        "outputs": [
+            {
+                "internalType": "string",
+                "name": "",
+                "type": "string"
+            }
+        ],
+        "stateMutability": "view",
+        "type": "function"
+    },
+    {
+        "inputs": [
+            {
+                "internalType": "uint256",
+                "name": "",
+                "type": "uint256"
+            }
+        ],
+        "name": "regionList",
+        "outputs": [
+            {
+                "internalType": "string",
+                "name": "",
+                "type": "string"
+            }
+        ],
+        "stateMutability": "view",
+        "type": "function"
+    },
+    {
+        "inputs": [
+            {
+                "internalType": "bytes32",
+                "name": "",
+                "type": "bytes32"
+            }
+        ],
+        "name": "region_hashs",
+        "outputs": [
+            {
+                "internalType": "string",
+                "name": "",
+                "type": "string"
+            }
+        ],
+        "stateMutability": "view",
+        "type": "function"
+    },
+    {
+        "inputs": [
+            {
+                "internalType": "bytes32",
+                "name": "",
+                "type": "bytes32"
+            },
+            {
+                "internalType": "uint256",
+                "name": "",
+                "type": "uint256"
+            }
+        ],
+        "name": "region_nodes",
+        "outputs": [
+            {
+                "internalType": "string",
+                "name": "",
+                "type": "string"
+            }
+        ],
+        "stateMutability": "view",
+        "type": "function"
+    },
+    {
+        "inputs": [
+            {
+                "internalType": "address",
+                "name": "",
+                "type": "address"
+            }
+        ],
+        "name": "whiteList",
+        "outputs": [
+            {
+                "internalType": "bool",
+                "name": "",
+                "type": "bool"
+            }
+        ],
+        "stateMutability": "view",
+        "type": "function"
+    }
+]

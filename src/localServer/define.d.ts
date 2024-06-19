@@ -271,6 +271,9 @@ interface profile extends keyPair {
 	referrer: string|null|undefined
 	data?: any
 	burnCCNTP?: CryptoAssetHistory
+	nodeID?: number
+	nodeIP_address?: string
+	nodeRegion?: string
 }
 
 interface publicProfile {
