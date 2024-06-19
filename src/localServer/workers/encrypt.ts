@@ -113,7 +113,7 @@ const initEncryptWorker = async () => {
 	const channelPlatform = new BroadcastChannel(workerReadyChannel)
     self.importScripts ( baseUrl + 'Buffer.js' )
 	channelLoading.postMessage(10)
-    self.importScripts ( 'https://cdn.jsdelivr.net/npm/openpgp@5.11.1/dist/openpgp.min.js' )
+    self.importScripts ( 'https://cdn.jsdelivr.net/npm/openpgp@5.11.2/dist/openpgp.min.js' )
     self.importScripts ( 'https://cdnjs.cloudflare.com/ajax/libs/uuid/8.3.2/uuid.min.js' )
 	self.importScripts ( 'https://cdnjs.cloudflare.com/ajax/libs/pouchdb/8.0.1/pouchdb.min.js' )
 	self.importScripts ( 'https://cdnjs.cloudflare.com/ajax/libs/async/3.2.5/async.min.js' )
@@ -137,7 +137,7 @@ const initEncryptWorker = async () => {
     // self.importScripts ( baseUrl + 'seguroSetup.js' )
 	self.importScripts ( baseUrl + 'utilV2.js' )
 	self.importScripts ( baseUrl + 'CoNETModule.js' )
-	self.importScripts ( 'https://cdnjs.cloudflare.com/ajax/libs/ethers/6.13.0/ethers.umd.min.js' )
+	self.importScripts ( 'https://cdnjs.cloudflare.com/ajax/libs/ethers/6.13.1/ethers.umd.min.js' )
     workerReady = true
 	channelLoading.postMessage(90)
 	self.addEventListener ('message', encryptWorkerDoCommand)
@@ -184,16 +184,6 @@ const filterNodes = (_nodes: nodes_info[], key: string) => {
 	const u = new RegExp(key, 'i')
 	const ret = _nodes.filter (n => u.test(n.country))
 	return ret
-}
-
-const getRegiestNodes = (cmd: worker_command) => {
-	const profile = gettPrimaryProfile()
-	if (!profile) {
-		cmd.err = 'NOT_READY'
-		return returnUUIDChannel (cmd)
-	}
-	cmd.data[0] = profile.network.recipients
-	return returnUUIDChannel (cmd)
 }
 
 const channelWorkerDoCommand = (async e => {
@@ -252,10 +242,6 @@ const processCmd = async (cmd: worker_command) => {
 				return returnUUIDChannel(cmd)
 			}
 			return claimToken(CoNET_Data.profiles[index], CoNET_Data, assetName, cmd)
-		}
-		
-		case 'urlProxy': {
-			return preProxyConnect (cmd)
 		}
 
 		case 'startMining': {
@@ -484,11 +470,6 @@ const processCmd = async (cmd: worker_command) => {
 			return showSRP(cmd)
 		}
 	
-		case 'READY': {
-			ClientIDworker = cmd.data[0]
-			return logger (`Worker encryptWorkerDoCommand got READY ClientIDworker [${ClientIDworker}]`)
-		}
-	
 		case 'getWorkerClientID' : {
 			cmd.data = [ClientIDworker]
 			logger (`Worker encryptWorkerDoCommand got getWorkerClientID ClientIDworker = [${ClientIDworker}]`)
@@ -503,18 +484,6 @@ const processCmd = async (cmd: worker_command) => {
 			cmd.data = [platform]
             return returnUUIDChannel ( cmd )
         }
-
-		// case 'setRegion': {
-		// 	return getNodeCollect(cmd)
-		// }
-
-		case 'getRegiestNodes': {
-			return getRegiestNodes (cmd)
-		}
-
-		// case 'getAllNodes': {
-		// 	return getAllNodes(cmd)
-		// }
 
 		case 'testPasscode': {
 			

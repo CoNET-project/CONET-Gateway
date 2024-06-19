@@ -305,16 +305,22 @@ const unZIP = (compress: string) => {
 }
 
 
-const makeContainerPGPObj = async () => {
-	if (!containerKeyObj?.privateKeyArmor || !containerKeyObj?.publicKeyArmor ) {
-		throw new Error (`makeContainerPGPObj Error: have no KeyArmor!`)
+const makeContainerPGPObj = async (profile: profile) => {
+	if (!profile.pgpKey?.privateKeyArmor) {
+		return logger(`makeContainerPGPObj profile [${profile.keyID}] has not PGP key Error!`)
 	}
-	if ( !passObj?.passcode ) {
-		throw new Error (`makeContainerPGPObj Error: have no passObj?.passcode!`)
+
+
+	if (!profile.pgpKey?.privateKeyArmor || !profile.pgpKey?.publicKeyArmor ) {
+		return logger(`makeContainerPGPObj Error: have no KeyArmor!`)
 	}
-	return containerKeyObj.keyObj = {
-		publicKeyObj: await makePublicKeyOBJ (containerKeyObj.publicKeyArmor),
-		privateKeyObj: await makePrivateKeyObj (containerKeyObj.privateKeyArmor, passObj.passcode)
+
+	if (!profile.pgpKey?.privateKeyObj) {
+		profile.pgpKey.privateKeyObj = await makePrivateKeyObj (profile.pgpKey.privateKeyArmor, '')
+	}
+	
+	if (!profile.pgpKey?.publicKeyObj) {
+		profile.pgpKey.publicKeyObj = await makePublicKeyOBJ (profile.pgpKey.publicKeyArmor)
 	}
 
 }
@@ -683,24 +689,6 @@ const getTxhashInfo = async (txhash: string, network: string) => {
 	return receipt
 }
 
-const checkAllRowsCurrentSetups = (rows: nodes_info[], setups: nodes_info[]) => {
-	if ( setups.length > 0 ) {
-		const currents: nodes_info[] = JSON.parse(JSON.stringify(setups))
-		currents.forEach ((n, _inedx ) => {
-			const index = rows.findIndex (nn => nn.pgp_publickey_id === n.pgp_publickey_id )
-			if (!index) {
-				return
-			}
-			rows.splice (index, 1)
-			rows.unshift (n)
-			currents.splice (_inedx, 1)
-		})
-		currents.forEach ((n, _inedx ) => {
-			rows.unshift (n)
-		})
-	}
-}
-
 
 const getHtmlHeadersV2 = (rawHeaders: string|undefined, remoteSite: string ) => {
 
@@ -794,47 +782,6 @@ const _getNftArmoredPublicKey = (gatewayNode): Promise<string> => {
 	
 }
 
-const _getSINodes = async (sortby: SINodesSortby, region: SINodesRegion) => {
-	const data = {
-		sortby,
-		region
-	}
-	let result
-
-	try {
-		result = await postToEndpoint(conet_DL_getSINodes, true, data)
-	} catch (ex) {
-		logger (`postToEndpoint [${conet_DL_getSINodes}] Error`, ex)
-		return null
-	}
-	const rows: nodes_info[] = result
-
-	if (rows.length) {
-		//async.series(rows.filter(n => n.country === 'US').map(n=> ( next => _getNftArmoredPublicKey(n).then(nn => {n.armoredPublicKey = nn; next()}))))
-
-		rows.forEach ( async n => {
-			n.disable = n.entryChecked = n.recipientChecked = false
-			//n.customs_review_total = parseFloat(n.customs_review_total.toString())
-			// n.armoredPublicKey = await _getNftArmoredPublicKey (n)
-		})
-		
-	} else {
-		logger (`################ _getSINodes get null nodes Error! `)
-	}
-	return rows
-}
-
-const getSINodes = async (sortby: SINodesSortby, region: SINodesRegion, cmd) => {
-
-	const result = await _getSINodes(sortby, region)
-	if (!result) {
-		logger (`postToEndpoint [${conet_DL_getSINodes}] Error`)
-		cmd.err = 'FAILURE'
-		return returnCommand (cmd)
-	}
-	cmd.data = [result]
-	return returnCommand (cmd)
-}
 
 const generateAesKey = async (length = 256) => {
 	const key = await crypto.subtle.generateKey({
@@ -1031,118 +978,6 @@ const decrypteMessage = (encryptedMessage: string, privatePgpObj: any) => {
 // 	})
 // }
 
-const sendForwardToNode = (currentProfile: profile, client: clientProfile, messageObj: any ) => {
-	return new Promise ( async resolve => {
-		
-		if (!currentProfile?.pgpKey?.publicKeyArmor ) {
-			return resolve (null)
-		}
-		let privateKeyObj = null
-
-		try {
-			privateKeyObj = await makePrivateKeyObj (currentProfile.pgpKey.privateKeyArmor)
-		} catch (ex){
-			logger (ex)
-		}
-
-		const entryNode = await getRandomNode ()
-	
-		if (!entryNode) {
-			return resolve (null)
-		}
-
-		const encryptedData = await encrypt_Message( privateKeyObj, client.armoredPublicKey, messageObj)
-		const encryptedForwardMessage =  await encrypt_Message( privateKeyObj, client.routerArmoredPublicKey, encryptedData)
-
-		const url = `https://${ entryNode.pgp_publickey_id }.${CoNET_SI_Network_Domain}/post`
-		let result
-
-		logger (`connect to ${url}`)
-		try {
-			result = await postToEndpoint(url, true, {data: encryptedForwardMessage})
-		} catch (ex) {
-			return resolve (null)
-		}
-
-		return resolve(true)
-
-	})
-	
-
-}
-
-const sendRequestToNode: (_cmd: SICommandObj_Command, currentProfile: profile, entryNode: nodes_info, node: nodes_info, requestData: any[]) => 
-	Promise<null|SICommandObj> = async (_cmd: SICommandObj_Command, currentProfile: profile, entryNode: nodes_info, node: nodes_info, requestData: any[] ) => {
-
-	return new Promise ( async resolve => {
-
-		if (!currentProfile?.pgpKey?.publicKeyArmor || !node.armoredPublicKey ) {
-			return resolve (null)
-		}
-
-		let key = await crypto.subtle.generateKey({
-			name: 'AES-CBC',
-			length: 256
-		}, true, ['encrypt'])
-
-		let iv = crypto.getRandomValues(new Uint8Array(16))
-
-		const command: SICommandObj = {
-			command: _cmd,
-			publicKeyArmored: currentProfile.pgpKey.publicKeyArmor,
-			algorithm: 'aes-256-cbc',
-			iv: buffer.Buffer.from(iv).toString('base64'),
-			Securitykey: JSON.stringify(await crypto.subtle.exportKey('jwk', key)),
-			requestData
-		}
-
-		let privateKeyObj = null
-
-		try {
-			privateKeyObj = await makePrivateKeyObj (currentProfile.pgpKey.privateKeyArmor)
-		} catch (ex){
-			logger (ex)
-		}
-	
-		const encryptedCommand = await encrypt_Message( privateKeyObj, node.armoredPublicKey, command)
-		
-		const url = `https://${ entryNode.pgp_publickey_id }.${CoNET_SI_Network_Domain}/post`
-
-		if (_cmd === 'SaaS_Proxy') {
-			command.requestData = [encryptedCommand, url, key, iv]
-			return resolve (command)
-		}
-		let result
-
-		try {
-			result = await postToEndpoint(url, true, {data: encryptedCommand})
-		} catch (ex) {
-			return resolve (null)
-		}
-		let res
-		try {
-			const ciphertext = buffer.Buffer.from (result.data, 'base64')
-			res = await crypto.subtle.decrypt({ name: "AES-CBC",iv}, key, ciphertext)
-			
-		} catch (ex){
-			return resolve (null)
-		}
-		
-		const dec = new TextDecoder()
-		const _ret = dec.decode(res)
-		
-		
-		let ret: SICommandObj
-
-		try {
-			ret = JSON.parse (_ret)
-		} catch (ex) {
-			return resolve (null)
-		}
-		return resolve (ret)
-	})
-
-}
 
 
 
@@ -1648,65 +1483,6 @@ const fixHtmlLinks = (htmlText: string, remotrSite: string) => {
 	// return { body: htmlText, rawHeader, status, statusText } 
 }
 
-const getRandomNode = async () => {
-	if (!activeNodes?.length ) {
-		activeNodes = await _getSINodes ('CUSTOMER_REVIEW', 'USA')
-	}
-	if (!activeNodes?.length) {
-		return null
-	}
-	const jj = activeNodes.filter(n => n.country === 'US' && n?.armoredPublicKey)
-	const index =  Math.round(Math.random() * (jj.length -1))
-	const node = jj[index]
-	return node
-}
-
-const getNodeByIpaddress = (ipaddress: string ): Promise<nodes_info|null> => {
-	return new Promise(async resolve=> {
-		if ( !activeNodes) {
-			logger (`getNodeByIpaddress activeNodes === null Error`)
-			return resolve(null)
-		}
-		const index = activeNodes.findIndex(n => n.ip_addr === ipaddress)
-		if ( index < 0 ) {
-			return resolve(null)
-		}
-		const node = activeNodes[index]
-		// if ( !node.armoredPublicKey ) {
-		// 	node.armoredPublicKey = await _getNftArmoredPublicKey(node)
-		// }
-		return resolve (node)
-	})
-	
-}
-
-const createProxyConnect = async (currentProfile: profile, entryNode: nodes_info, node: nodes_info, requestData: any[]) => {
-	if (!currentProfile?.pgpKey|| !node?.armoredPublicKey) {
-		return 
-	}
-	const key = buffer.Buffer.from(crypto.getRandomValues(new Uint8Array(16))).toString('base64')
-	const command: SICommandObj = {
-		command: 'SaaS_Proxy',
-		publicKeyArmored: currentProfile.pgpKey.publicKeyArmor,
-		algorithm: 'AES-GCM',
-		Securitykey: key,
-		requestData
-	}
-	let privateKeyObj = null
-
-	try {
-		privateKeyObj = await makePrivateKeyObj (currentProfile.pgpKey.privateKeyArmor)
-	} catch (ex){
-		logger (ex)
-	}
-
-	const encryptedCommand = await encrypt_Message( privateKeyObj, node.armoredPublicKey, command)
-	const url = `https://${ entryNode.pgp_publickey_id }.${CoNET_SI_Network_Domain}/post`
-
-		
-	command.requestData = [encryptedCommand, url, key]
-	return (command)
-}
 
 const fetchWithTimeout = async (resource, options: any) => {
 	const {timeout = 80000 } = options
@@ -1724,82 +1500,6 @@ const fetchWithTimeout = async (resource, options: any) => {
 	return response
 }
 
-const preProxyConnect = async (cmd: worker_command) => {
-
-	logger ('******************** preProxyConnect **********************\n', cmd)
-	const _site: urlData = cmd.data[0]
-
-	const gatewayNode = (cmd.data.length > 2 && cmd.data[2]) ? cmd.data[2] : await getRandomNode()
-	//const gatewayNode = await getNodeByIpaddress('108.175.5.112')
-	
-	const cacheStore = await cacheProfile (_site)
-	if ( cacheStore ) {
-		cmd.data=[cacheStore.body, cacheStore.headers, {status: cacheStore.status, statusText: cacheStore.statusText }, gatewayNode]
-		return responseChannel.postMessage(JSON.stringify(cmd))
-	}
-	
-	const entryNode = await getRandomNode()
-	
-
-	//const entryNode = await getNodeByIpaddress('74.208.55.241')
-
-
-	if ( !entryNode|| !gatewayNode ||! CoNET_Data?.profiles) {
-		cmd.err = 'NOT_INTERNET'
-		return responseChannel.postMessage(JSON.stringify(cmd))
-	}
-
-	const currentProfile = CoNET_Data.profiles[CoNET_Data.profiles.findIndex(n => n.isPrimary)]
-
-	
-	const site = new URL (_site.href)
-
-	logger (cmd)
-	cmd.data = [await createProxyConnect ( currentProfile, entryNode, gatewayNode, cmd.data)]
-
-	const requestCmd: SICommandObj = cmd.data[0]
-	if (cmd.err || !requestCmd.requestData?.length) {
-		//		have no action nodes
-		return responseChannel.postMessage(JSON.stringify(cmd))
-	}
-
-	const url = requestCmd.requestData[1]
-	const encryptedCommand = requestCmd.requestData[0]
-	const password = requestCmd.requestData[2]
-
-	return fetchWithTimeout (url, 
-	{
-		method: 'POST',
-		headers: {
-			'Content-Type': 'application/json;charset=UTF-8',
-			'Connection': 'close',
-		},
-		body: JSON.stringify ({data: encryptedCommand}),
-		cache: 'no-store',
-		referrerPolicy: 'no-referrer'
-	}).then ( async res => {
-		return res.text()
-	}).then ( async text => {
-		let textContent = await decryptFetchBody(password, text)
-		logger (`Stream ready for service worker [${_site.href}]`)
-		const { body, rawHeader,status, statusText } = fixHtmlLinks(textContent, site.origin)
-		const headers = getHtmlHeadersV2(rawHeader, site.origin)
-		cmd.data=[body, headers, { _site, status, statusText }, gatewayNode]
-		responseChannel.postMessage(JSON.stringify(cmd))
-		if (_site.method === 'GET' && status === 200) {
-			const hash = CoNETModule.Web3Utils.sha3(_site.href)
-			await storageCache (hash, {body, headers, status, statusText})
-		}
-	}).catch (ex=> {
-		logger (`*************************  WORKER FETCH ERROR!  ************************* `)
-		logger (_site.href)
-		logger (ex)
-		cmd.err = 'UNKNOW_ERROR'
-		responseChannel.postMessage(JSON.stringify(cmd))
-		logger (`*************************  WORKER FETCH ERROR!  ************************* `)
-	})
-
-}
 
 const createKey = ( length: number ) => {
 
@@ -1923,12 +1623,6 @@ const encryptWorkerDoCommand = async ( e: MessageEvent<any> ) => {
 			const ret = CoNETModule.Web3Utils.isAddress (address)
 			cmd.data = [ret]
 			return returnCommand (cmd)
-		}
-
-		case 'getSINodes': {
-			const sortby = cmd.data[0][0]
-			const region = cmd.data[0][1]
-			return getSINodes (sortby, region, cmd)
 		}
 
         default: {

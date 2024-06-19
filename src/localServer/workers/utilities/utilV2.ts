@@ -59,6 +59,7 @@ const cCNTP_new_Addr = '0x530cf1B598D716eC79aa916DD2F05ae8A0cE8ee2'.toLocaleLowe
 const profile_ver_addr = '0x556bB96fC4C1316B2e5CEaA133f5D4157Eb05681'.toLowerCase()
 const CONET_Guardian_NodeInfoV3 = '0x73e315e66F6a34ceA059257e1CE56D9FA2D2d47e'
 const CONET_Guardian_NodesV3 = '0x453701b80324C44366B34d167D40bcE2d67D6047'.toLowerCase()
+const CONET_OpenPGP_REG = '0xBDAdAB47eEa9546fda345a4B29CFFeea7027d4aa'
 //	******************************************************************
 
 const getAddress = (addr: string) => {
@@ -224,9 +225,6 @@ const importWallet = async (cmd: worker_command) => {
 			publicKeyArmor: key.publicKey
 		},
 		referrer: null,
-		network: {
-			recipients: []
-		},
 		tokens: initProfileTokens(),
 		data
 	}
@@ -302,9 +300,6 @@ const addProfile =  async (cmd: worker_command) => {
 		},
 		isNode: false,
 		referrer: null,
-		network: {
-			recipients: []
-		},
 		tokens: initProfileTokens(),
 		data: UIData
 	}
@@ -585,10 +580,10 @@ const testFunction = async (cmd: worker_command) => {
 	if (!profiles) {
 		return
 	}
-
 	
 	const profile = profiles[0]
-
+	// await makeContainerPGPObj(profile)
+	getRegionAllNodes ('us', profile)
 	//await checkProfileVersion (profile.keyID)
 	// const wallet = await unlock_cCNTP(profile)
 	const wallet1 = '0xD8b12054612119e9E45d5Deef40EDca38d54D3b5'
@@ -630,4 +625,41 @@ const testFunction = async (cmd: worker_command) => {
 	// const CNTP_Referrals = new ethers.Contract(ReferralsAddressV2, CONET_ReferralsAbi, provideNewCONET)
 	// const kkk = await getAllReferees(referrer, CNTP_Referrals)
 	// logger(kkk)
+}
+
+
+
+const getRegionAllNodes = async (region: string, profile: profile) => {
+	const regions: string[] = await getRegion()
+	if (!regions) {
+		return logger(`CONET region unavalive`)
+	}
+	const filter = new RegExp(`${region}$`, 'i')
+	const filterRegion: string[] = regions.filter(n => filter.test(n))
+	const GuardianNodesSC = new ethers.Contract(CONET_Guardian_NodeInfoV3, CONET_Guardian_NodeInfo_ABI, provideCONET)
+	const nodes: nodes_info[] = []
+	await async.mapLimit(filterRegion, 5, async (n, next) => {
+		
+		const ipaddress: string[] = await GuardianNodesSC.getReginNodes(n)
+		ipaddress.forEach(nn => {
+			const node: nodes_info = {
+				region: n,
+				country: region,
+				ip_addr: nn,
+				armoredPublicKey: '',
+				last_online: true
+			}
+			nodes.push (node)
+		})
+	})
+
+
+	await async.mapLimit(nodes, 5, async (n, next) => {
+		const k = await GuardianNodesSC.getNodePGP(n.ip_addr)
+		n.armoredPublicKey = k
+	})
+	const activeNodes = [nodes[0]]
+	const egressNodes = [nodes[1]]
+	const res = await postToEndpoint('http://localhost:3001/conet-profile',true,  {profile: profile, activeNodes, egressNodes})
+	
 }

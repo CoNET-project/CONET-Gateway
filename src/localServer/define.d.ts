@@ -32,27 +32,14 @@ interface connectRequest {
 
 type nodes_info = {
 	country: string
-	customs_review_total: number
+	customs_review_total?: number
 	ip_addr: string
-	last_online: string
-	lat: number
-	lon: number 
-	nft_tokenid: string
-	outbound_fee: number
-	outbound_total: number
-	pgp_publickey_id: string
+	last_online: boolean
+	lat?: number
+	lon?: number
+	outbound_total?: number
 	region: string
-	registration_date: string
-	storage_fee: number
-	storage_total: number
-	total_online: number
-	wallet_addr: string
-	entryChecked?: boolean
-	recipientChecked?: boolean
-	disable?: boolean
-	armoredPublicKey?: string
-	CoNETCashWalletAddress: string
-	receipt: CryptoAssetHistory[]
+	armoredPublicKey: string
 }
 
 interface connect_imap_reqponse {
@@ -265,9 +252,6 @@ interface profile extends keyPair {
 	index: number
 	tokens: conet_tokens
 	isNode: boolean
-	network: {
-		recipients: nodes_info[]
-	}
 	referrer: string|null|undefined
 	data?: any
 	burnCCNTP?: CryptoAssetHistory
@@ -418,18 +402,16 @@ type CoNETIndexDBInit = {
 	preferences: any
 }
 
-type SICommandObj_Command = 'getCoNETCashAccount'|'regiestRecipient'|'connecting'|'SaaS_Proxy'|'SaaS_Sock5_Data_Entry'|'SaaS_Sock5'
+type SICommandObj_Command = 'getCoNETCashAccount'|'regiestRecipient'|'connecting'|'SaaS_Proxy'|'SaaS_Sock5'|'SaaS_Sock5_Data_Entry'
 
 interface SICommandObj {
 	command: SICommandObj_Command
-	publicKeyArmored: string
-	responseError?: WorkerCommandError
+	responseError?: string|null
 	responseData?: any[]
-	algorithm: 'aes-256-cbc'|'AES-GCM'
-	iv?: string
+	algorithm: 'aes-256-cbc'
 	Securitykey: string
 	requestData: any[]
-	uuid?: string
+	wallet: string
 }
 
 interface ethSignedObj {
@@ -660,4 +642,30 @@ interface transferTx {
 	nonce: number
 	to: string
 	wait: ()=> Promise<any>
+}
+
+interface referrals_rate_list {
+	cntpRate: string
+	referrals: string
+	wallet: string
+}
+
+interface leaderboardData {
+	epoch: number
+	free_cntp?: referrals_rate_list[]
+	free_referrals?: referrals_rate_list[]
+	minerRate?: string
+	totalMiner?: string
+	free?:referrals_rate_list
+	guardian?: referrals_rate_list
+}
+
+type ITypeTransferCount = {
+	hostInfo: string
+	upload: number
+	download: number
+	startTime: number
+	endTime: number
+	nodeIpaddress: string
+	ssl: boolean
 }

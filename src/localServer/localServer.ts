@@ -85,34 +85,6 @@ export const splitIpAddr = (ipaddress: string | undefined) => {
 	return _ret[_ret.length - 1]
 }
 
-const _getSINodes = async (sortby: SINodesSortby, region: SINodesRegion) => {
-	const data = {
-		sortby,
-		region
-	}
-	let result
-
-	try {
-		result = await postToEndpointJSON(conet_DL_getSINodes, '')
-	} catch (ex) {
-		logger (`postToEndpoint [${conet_DL_getSINodes}] Error`, ex)
-		return null
-	}
-	const rows: nodes_info[] = result
-	if (rows.length) {
-		//async.series(rows.filter(n => n.country === 'US').map(n=> ( next => _getNftArmoredPublicKey(n).then(nn => {n.armoredPublicKey = nn; next()}))))
-
-		rows.forEach ( async n => {
-			n.disable = n.entryChecked = n.recipientChecked = false
-			n.customs_review_total = parseFloat(n.customs_review_total.toString())
-			// n.armoredPublicKey = await _getNftArmoredPublicKey (n)
-		})
-		
-	} else {
-		logger (`################ _getSINodes get null nodes Error! `)
-	}
-	return rows
-}
 
 const makeMetadata = ( text: string ) => {
     let ret = '{'
@@ -340,22 +312,26 @@ class LocalServer {
             return res.end ()
         })
 
+		app.post ( '/changeEgressNodes', ( req: express.Request, res: express.Response ) => {
+            
+        })
+
         app.post ( '/conet-profile', ( req: express.Request, res: express.Response ) => {
-            const data: { profile, activeNodes } = req.body
+            const data: { profile, activeNodes, egressNodes } = req.body
             
             //logger (Colors.blue(`Local server get POST /profile req.body = `), inspect(data, false, 3, true))
             if (data.activeNodes.length > 0 && data.profile ) {
                 
                 if (!this._proxyServer) {
 					logger (`Start new proxyServer data.profile [${data.profile}] data.activeNodes [${data.activeNodes}]`)
-                    this._proxyServer = new proxyServer((this.PORT + 2).toString(), data.activeNodes, data.profile, true)
+                    this._proxyServer = new proxyServer((this.PORT + 2).toString(), data.activeNodes, data.egressNodes, data.profile, true)
                 }
-                res.sendStatus(200)
-            } else {
-                logger (`/conet-profile Error data.activeNodes [${data.activeNodes.length}] data.activeNodes.length > 0[${data.activeNodes.length > 0}]`, inspect(data.profile, false, 3, true))
-                res.sendStatus(404)
+
+                return res.sendStatus(200).end()
             }
-            return res.end()
+			logger (`/conet-profile Error data.activeNodes [${data.activeNodes.length}] data.activeNodes.length > 0[${data.activeNodes.length > 0}]`, inspect(data.profile, false, 3, true))
+			res.sendStatus(404).end()
+            
         })
 
 		app.get('/ipaddress', (req, res) => {

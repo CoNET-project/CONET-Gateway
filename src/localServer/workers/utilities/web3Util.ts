@@ -1,7 +1,6 @@
 
 
 const getRegion = async () => {
-	const provideCONET = new ethers.JsonRpcProvider(conet_rpc)
 	const regionContract = new ethers.Contract(CONET_Guardian_NodeInfoV3, CONET_Guardian_NodeInfo_ABI, provideCONET)
 	try {
 		const gasPrice = await regionContract.getAllRegions()
@@ -11,6 +10,8 @@ const getRegion = async () => {
 		return null
 	}
 }
+
+
 
 const registerReferrer = async (referrer: string) => {
 	if (!CoNET_Data?.profiles) {
@@ -78,6 +79,8 @@ const burnCCNTP = async (profile: profile, totalBurn: string) => {
 		provideCONET.getTransactionReceipt(tx.hash),
 		//provideCONET.getTransaction(tx.hash)
 	])
+
+
 	const kk1: CryptoAssetHistory = {
 		status: 'Confirmed',
 		Nonce: tx.nonce,
@@ -95,7 +98,17 @@ const burnCCNTP = async (profile: profile, totalBurn: string) => {
 
 	profile.tokens.cCNTP.history.push(kk1)
 
-	return kk1
+
+	if ( !profile.pgpKey) {
+		logger(`burnCCNTP profile.pgpKey Error!`)
+		return kk1
+	}
+	
+	await makeContainerPGPObj(profile)
+
+	const erc20OpenPGPReg = new ethers.Contract(CONET_OpenPGP_REG, openPGPKeys_ABI, walletObj)
+	const pgpHash = profile.pgpKey?.publicKeyObj
+	
 }
 
 const getProfileAssets_allOthers_Balance = async (profile: profile) => {
@@ -288,9 +301,6 @@ const checkGuardianNodes = async () => {
 					publicKeyArmor: key.publicKey
 				},
 				referrer: null,
-				network: {
-					recipients: []
-				},
 				tokens: initProfileTokens(),
 				data: null
 			}
@@ -471,7 +481,6 @@ const listenProfileVer = async () => {
 
 }
 
-
 const checkProfileVersion = async (wallet: string) => {
 	
 	const conet_storage = new ethers.Contract(profile_ver_addr, conet_storageAbi, provideCONET)
@@ -621,10 +630,7 @@ const initSystemDataV1 = async (acc) => {
 		},
 		privateKeyArmor: acc.signingKey.privateKey,
 		hdPath: acc.path,
-		index: acc.index,
-		network: {
-			recipients: []
-		}
+		index: acc.index
 	}
 	if (!CoNET_Data) {
 		return CoNET_Data = {
@@ -1511,26 +1517,7 @@ const getAllOtherAssets = async () => {
 	
 }
 
-
-interface referrals_rate_list {
-	cntpRate: string
-	referrals: string
-	wallet: string
-}
-
-interface leaderboardData {
-	epoch: number
-	free_cntp?: referrals_rate_list[]
-	free_referrals?: referrals_rate_list[]
-	minerRate?: string
-	totalMiner?: string
-	free?:referrals_rate_list
-	guardian?: referrals_rate_list
-}
-
 let leaderboardData: leaderboardData
-
-
 
 
 const leaderboardDataDelay = 20
@@ -1584,7 +1571,6 @@ const selectLeaderboard: (block: number) => Promise<boolean> = (block) => new Pr
 	resolve (true)
 	
 })
-
 
 const getWasabiFile: (fileName: string) => Promise<any> = async (fileName: string) => new Promise(resolve=> {
 	//const cloudStorageEndpointPath = `/conet-mvp/storage/FragmentOcean/${fileName}`
@@ -2743,9 +2729,6 @@ const createWallet =async (profiles: profile[], mnemonicPhrase: string, total: n
 				publicKeyArmor: key.publicKey
 			},
 			referrer: null,
-			network: {
-				recipients: []
-			},
 			tokens: initProfileTokens(),
 			data: {
 				alias: `CONET Guardian node${i}`,
@@ -6577,6 +6560,60 @@ const GuardianNodesInfoV3_ABI = [
             }
         ],
         "stateMutability": "view",
+        "type": "function"
+    }
+]
+
+const openPGPKeys_ABI = [
+    {
+        "inputs": [
+            {
+                "internalType": "bytes32",
+                "name": "keyHash",
+                "type": "bytes32"
+            }
+        ],
+        "name": "getRegiestWallet",
+        "outputs": [
+            {
+                "internalType": "address",
+                "name": "wallet",
+                "type": "address"
+            }
+        ],
+        "stateMutability": "view",
+        "type": "function"
+    },
+    {
+        "inputs": [
+            {
+                "internalType": "address",
+                "name": "wallet",
+                "type": "address"
+            }
+        ],
+        "name": "getWalletPGP",
+        "outputs": [
+            {
+                "internalType": "bytes32",
+                "name": "keyHash",
+                "type": "bytes32"
+            }
+        ],
+        "stateMutability": "view",
+        "type": "function"
+    },
+    {
+        "inputs": [
+            {
+                "internalType": "bytes32",
+                "name": "keyHash",
+                "type": "bytes32"
+            }
+        ],
+        "name": "regiestPGP",
+        "outputs": [],
+        "stateMutability": "nonpayable",
         "type": "function"
     }
 ]
