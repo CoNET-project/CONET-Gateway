@@ -2482,6 +2482,7 @@ const getNetwork = (networkName: string) => {
 		// case 'dWETH':
 		case 'cCNTP':
 		case 'cUSDB':
+		case 'cCNTP':
 		case 'cUSDT':
 		case 'cBNBUSDT':
 		case 'conet':
@@ -2774,6 +2775,139 @@ const transferAssetToCONET_guardian: (privateKey: string, token: CryptoAsset, tr
 		
 	}
 })
+
+const CONET_transfer_token: (
+  profile: profile,
+  to: string,
+  _total: number,
+  tokenName: string
+) => Promise<boolean | transferTx> = async (profile, to, _total, tokenName) => {
+  const cryptoAsset: CryptoAsset = profile.tokens[tokenName];
+
+  if (!cryptoAsset || !CoNET_Data?.profiles) {
+    const cmd1: channelWroker = {
+      cmd: 'tokenTransferStatus',
+      data: [-1],
+    };
+    sendState('toFrontEnd', cmd1);
+    return false;
+  }
+
+  if (
+    parseFloat(cryptoAsset.balance) - _total < 0 ||
+    !profile.privateKeyArmor
+  ) {
+    const cmd1: channelWroker = {
+      cmd: 'tokenTransferStatus',
+      data: [-1],
+    };
+    sendState('toFrontEnd', cmd1);
+    return false;
+  }
+
+  const cmd1: channelWroker = {
+    cmd: 'tokenTransferStatus',
+    data: [1],
+  };
+
+  sendState('toFrontEnd', cmd1);
+
+  const tx = await transferAssetToCONET_wallet(
+    profile.privateKeyArmor,
+    cryptoAsset,
+    _total.toString(),
+    to
+  );
+
+  if (typeof tx === 'boolean') {
+    const cmd1: channelWroker = {
+      cmd: 'tokenTransferStatus',
+      data: [-1],
+    };
+    sendState('toFrontEnd', cmd1);
+    return false;
+  }
+
+  const cmd2: channelWroker = {
+    cmd: 'tokenTransferStatus',
+    data: [2],
+  };
+  sendState('toFrontEnd', cmd2);
+
+  await tx.wait();
+
+  const kk1: CryptoAssetHistory = {
+    status: 'Confirmed',
+    Nonce: tx.nonce,
+    to: tx.to,
+    transactionFee: stringFix(
+      ethers.formatEther((tx.maxFeePerGas || tx.gasPrice) * tx.gasLimit)
+    ),
+    gasUsed: (tx.maxFeePerGas || tx.gasPrice).toString(),
+    isSend: true,
+    value: parseEther(_total.toString(), cryptoAsset.name).toString(),
+    time: new Date().toISOString(),
+    transactionHash: tx.hash,
+  };
+
+  cryptoAsset.history.push(kk1);
+  
+  Promise.all([
+    await updateProfilesVersionToIPFS(),
+    await storagePieceToLocal(),
+  ]);
+
+  await storeSystemData();
+
+  return tx;
+};
+
+const transferAssetToCONET_wallet: (
+  privateKey: string,
+  token: CryptoAsset,
+  transferNumber: string,
+  toAddr: string
+) => Promise<boolean | transferTx> = (
+  privateKey,
+  token,
+  transferNumber,
+  toAddr
+) =>
+  new Promise(async (resolve) => {
+    const provide = new ethers.JsonRpcProvider(getNetwork(token.name));
+    const wallet = new ethers.Wallet(privateKey, provide);
+    const smartContractAddr = getAssetERC20Address(token.name);
+
+    if (smartContractAddr) {
+      const transferObj = new ethers.Contract(
+        smartContractAddr,
+        blast_CNTPAbi,
+        wallet
+      );
+
+      const amount = parseEther(transferNumber, token.name);
+
+      try {
+        // const k1 = await transferObj.approve(toAddr, amount)
+        const k2 = await transferObj.transfer(toAddr, amount);
+        resolve(k2);
+      } catch (ex) {
+        return resolve(false);
+      }
+    } else {
+      const tx = {
+        to: toAddr,
+        value: ethers.parseEther(transferNumber),
+      };
+
+      try {
+        return resolve(await wallet.sendTransaction(tx));
+      } catch (ex) {
+        return resolve(false);
+      }
+    }
+  }
+);
 
 const getProfileByWallet = (wallet: string) => {
 	if (!CoNET_Data?.profiles) {
