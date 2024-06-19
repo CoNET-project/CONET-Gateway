@@ -225,6 +225,7 @@ const checkGuardianNodes = async () => {
 	if (mainIndex < 0) {
 		return logger(`checkGuardianNodes cannot find main profile STOP process.`)
 	}
+
 	const profile = CoNET_Data.profiles[mainIndex]
 	const provideCONET = new ethers.JsonRpcProvider(conet_rpc)
 	const erc1155 = new ethers.Contract(CONET_Guardian_NodesV3, guardian_erc1155, provideCONET)
@@ -266,27 +267,22 @@ const checkGuardianNodes = async () => {
 	})
 	const root = ethers.Wallet.fromPhrase(mnemonicPhrase)
 
-	IdsIndex.forEach( async idIndex=> {
-		const index = profiles.findIndex(n => n.index === idIndex)
-		if (index <0) {
-			const newAcc = root.deriveChild(idIndex)
-			const [key, nodeID] = await 
-			Promise.all ([
-				createGPGKey('', '', ''),
-				erc1155.ownershipForNodeID(newAcc.address),
-				
-			])
-			const nodeInfo = await ercGuardianNodesInfoV3.getNodeInfoById(nodeID)
-			const profile: profile = {
+	const checkInfo = async (_index: number) => {
+		const index = profiles.findIndex(n => n.index === _index)
+		let profile: profile
+		if (index < 0 ) {
+			const newAcc = root.deriveChild(_index)
+			const key = await createGPGKey('', '', '')
+			profile = {
 				isPrimary: false,
 				keyID: newAcc.address,
 				privateKeyArmor: newAcc.signingKey.privateKey,
 				hdPath: newAcc.path,
 				index: newAcc.index,
 				isNode: true,
-				nodeID, 
-				nodeIP_address: nodeInfo?.ipaddress,
-				nodeRegion: nodeInfo?.regionName,
+				nodeID: 0,
+				nodeIP_address: '',
+				nodeRegion: '',
 				pgpKey: {
 					privateKeyArmor: key.privateKey,
 					publicKeyArmor: key.publicKey
@@ -299,11 +295,31 @@ const checkGuardianNodes = async () => {
 				data: null
 			}
 			profiles.push(profile)
+			profile
 		} else {
-			profiles[index].isNode = true
+			profile = profiles[index]
 		}
+
+		profile.nodeID = await erc1155.ownershipForNodeID(profile.keyID)
+		const nodeInfo = await ercGuardianNodesInfoV3.getNodeInfoById(profile.nodeID)
+		profile.nodeRegion = nodeInfo?.regionName
+		profile.nodeIP_address = nodeInfo?.ipaddress
+		profile.isNode = true
+		
+		
+	}
+
+	const execPool: any[] = []
+
+	IdsIndex.forEach( async idIndex=> {
+		execPool.push(checkInfo (idIndex))
 	})
 	
+	await Promise.all([
+		...execPool
+	])
+	await storagePieceToLocal()
+	await storeSystemData ()
 }
 
 let sendStateBeforeunload = false

@@ -266,7 +266,7 @@ const updateProfile = async (cmd: worker_command) => {
 	returnUUIDChannel(cmd)
 
 
-		await storagePieceToLocal()
+	await storagePieceToLocal()
 	
 
 	await storeSystemData ()
