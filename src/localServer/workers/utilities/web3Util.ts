@@ -765,37 +765,39 @@ const resizeImage = ( mediaData: string, imageMaxWidth: number, imageMaxHeight: 
 
 const checkUpdateAccount = () => new Promise(async resolve => {
 	
-	if ( ! CoNET_Data || ! CoNET_Data?.profiles ) {
-		logger(`checkUpdateAccount CoNET_Data?.profiles hasn't ready!`)
-		return resolve (false)
-	}
-
-	const profiles = CoNET_Data.profiles
-
-	if (checkcheckUpdateLock) {
-		return resolve (false)
-	}
-
-	checkcheckUpdateLock = true
-
-	const [nonce, _ver] = await checkProfileVersion( profiles[0].keyID)
-
-	CoNET_Data.nonce = nonce
-	CoNET_Data.ver = CoNET_Data.ver||1
-	if (CoNET_Data.ver && _ver === CoNET_Data.ver) {
-		return resolve (true)
-	}
-
-	//	Local version big then remote
-	if (_ver < CoNET_Data.ver ) {
-		await updateProfilesVersionToIPFS()
-		checkcheckUpdateLock = false
-		return resolve (true)
-	}
-	await getDetermineVersionProfile(_ver, CoNET_Data)
-	
-	checkcheckUpdateLock = false
 	return resolve (true)
+
+	// if ( ! CoNET_Data || ! CoNET_Data?.profiles ) {
+	// 	logger(`checkUpdateAccount CoNET_Data?.profiles hasn't ready!`)
+	// 	return resolve (false)
+	// }
+
+	// const profiles = CoNET_Data.profiles
+
+	// if (checkcheckUpdateLock) {
+	// 	return resolve (false)
+	// }
+
+	// checkcheckUpdateLock = true
+	
+	// const [nonce, _ver] = await checkProfileVersion( profiles[0].keyID)
+
+	// CoNET_Data.nonce = nonce
+	// CoNET_Data.ver = CoNET_Data.ver||1
+	// if (CoNET_Data.ver && _ver === CoNET_Data.ver) {
+	// 	return resolve (true)
+	// }
+
+	// //	Local version big then remote
+	// if (_ver < CoNET_Data.ver ) {
+	// 	await updateProfilesVersionToIPFS()
+	// 	checkcheckUpdateLock = false
+	// 	return resolve (true)
+	// }
+	// await getDetermineVersionProfile(_ver, CoNET_Data)
+	
+	// checkcheckUpdateLock = false
+	// return resolve (true)
 	
 })
 

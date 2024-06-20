@@ -258,6 +258,7 @@ const ConnectToProxyNode = (cmd : SICommandObj, SaaSnode: nodes_info, nodes: nod
 }
 
 
+
 export class proxyServer {
 	private hostLocalIpv4: { network: string, address: string } []= []
 	private hostLocalIpv6 =''
@@ -373,11 +374,13 @@ export class proxyServer {
 		private egressNodes: nodes_info[],
 		private currentProfile: profile,
 		public debug = false )
-		{
-			logger(inspect(this.currentProfile, false, 1, true))
-			this.startLocalProxy()
-		}
+	{
+		logger(inspect(this.currentProfile, false, 1, true))
+		this.startLocalProxy()
+	}
 }
+
+
 const allNodes = [
     {
         "region": "NY.US",
