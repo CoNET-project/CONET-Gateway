@@ -238,7 +238,7 @@ const checkGuardianNodes = async () => {
 	if (mainIndex < 0) {
 		return logger(`checkGuardianNodes cannot find main profile STOP process.`)
 	}
-
+	const profiles =  CoNET_Data.profiles
 	const profile = CoNET_Data.profiles[mainIndex]
 	const provideCONET = new ethers.JsonRpcProvider(conet_rpc)
 	const erc1155 = new ethers.Contract(CONET_Guardian_NodesV3, guardian_erc1155, provideCONET)
@@ -256,25 +256,42 @@ const checkGuardianNodes = async () => {
 		const _nodeAddress = await Promise.all(IdAddressProcess)
 		const batchAddress: string[] = []
 		const batchIds: string[] = []
-		_nodeAddress.forEach(n => {
-			Ids.forEach(nn => {
-				nodeAddress.push (n)
-				batchIds.push (nn)
-			})
+		_nodeAddress.forEach((n, index) => {
+			
+			nodeAddress.push (n.toLowerCase())
+			batchIds.push (Ids[index])
+			
 		})
 		numbers = await erc1155.balanceOfBatch(nodeAddress, batchIds)
 		
 	} catch (ex) {
 		return logger(`call erc1155 smart contract `)
 	}
-	const assetNodesAddr: string[] = []
+
+	const _assetNodesAddr: string[] = []
 	numbers.forEach((n, index) => {
-		if (n>0){
-			assetNodesAddr.push(nodeAddress[index])
+		if ( n > 0 ){
+			_assetNodesAddr.push(nodeAddress[index])
 		}
 	})
+	const assetNodesAddr = []
+	_assetNodesAddr.forEach(n => {
+		const index = profiles.findIndex(nn => nn.keyID.toLowerCase()=== n)
+		if (index < 0) {
+			assetNodesAddr.push(n)
+		}
+	})
+	
+	if (!assetNodesAddr.length) {
+		return 
+	}
+
 	const IdsIndex: number[] = assetNodesAddr.map (n => findNodeAddress(n, mnemonicPhrase))
-	const profiles = CoNET_Data.profiles
+	
+
+
+
+
 	profiles.forEach(n => {
 		n.isNode = false
 	})
@@ -690,7 +707,7 @@ const storeSystemData = async () => {
 	if (!CoNET_Data.encryptedString) {
 		return logger(`encryptStoreData aesGcmEncrypt Error!`)
 	}
-	passObj.passcode = passObj.password = passObj._passcode = ''
+
 
 	const CoNETIndexDBInit: CoNETIndexDBInit = {
 		id: passObj,
