@@ -246,7 +246,7 @@ interface conet_tokens {
 interface profile extends keyPair {
 	isPrimary?: boolean
 	pgpKey?: pgpKeyPair
-	privateKeyArmor?: string
+	privateKeyArmor: string
 	emailAddr?: string
 	hdPath: string
 	index: number

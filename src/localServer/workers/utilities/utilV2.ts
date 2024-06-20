@@ -658,8 +658,8 @@ const getRegionAllNodes = async (region: string, profile: profile) => {
 		const k = await GuardianNodesSC.getNodePGP(n.ip_addr)
 		n.armoredPublicKey = k
 	})
-	const activeNodes = [nodes[0]]
-	const egressNodes = [nodes[1]]
+	const activeNodes = nodes.slice(0,2)
+	const egressNodes =  nodes.slice(0,1)
 	const res = await postToEndpoint('http://localhost:3001/conet-profile',true,  {profile: profile, activeNodes, egressNodes})
 	
 }

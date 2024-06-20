@@ -1557,10 +1557,11 @@ const selectLeaderboard: (block: number) => Promise<boolean> = (block) => new Pr
 				}
 			}
 			const free_rate_list: referrals_rate_list[]= leaderboardFree.cntp
+			
 			if (free_rate_list.length) {
 				const findIndex = free_rate_list.findIndex(n => n.wallet.toLowerCase() === key)
 				if (findIndex > -1) {
-					leaderboardData.free = referrals_rate_list[findIndex]
+                    leaderboardData.free = free_rate_list[findIndex]
 				}
 			}
 

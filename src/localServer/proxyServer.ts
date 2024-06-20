@@ -13,14 +13,14 @@ import type {RequestOptions} from 'node:https'
 import * as openpgp from 'openpgp'
 import { TransformCallback } from 'stream'
 import { ethers } from 'ethers'
-
+import EthCrypto from 'eth-crypto'
 
 const getRandomSaaSNode = (saasNodes: nodes_info[], allNodes: nodes_info[]) => {
 	if (!saasNodes.length || !allNodes.length) {
 		return null
 	}
 	logger (`getRandomSaaSNode saasNodes length [${saasNodes.length}] allNodes length [${allNodes}]`)
-	const ramdom = Math.round((saasNodes.length - 1 ) * Math.random())
+	const ramdom = Math.trunc((saasNodes.length - 1 ) * Math.random())
 	const _ret = saasNodes[ramdom]
 	const index = allNodes.findIndex(n => n.ip_addr === _ret.ip_addr)
 
@@ -129,7 +129,7 @@ const createSock5ConnectCmd = async (currentProfile: profile, SaaSnode: nodes_in
 
 	const message =JSON.stringify(command)
 	const messageHash = ethers.id(message)
-	const signMessage = CoNETModule.EthCrypto.sign(currentProfile.privateKeyArmor, messageHash)
+	const signMessage = EthCrypto.sign(currentProfile.privateKeyArmor, messageHash)
 
 	let privateKeyObj
 
@@ -339,8 +339,8 @@ export class proxyServer {
 	}
 
 	public requestGetWay = async (requestObj: requestObj, uuuu : VE_IPptpStream, userAgent:string, socket: Net.Socket ) => {
-		const upChannel_SaaS_node  = getRandomSaaSNode(this.egressNodes, this._nodes)	//getNodeByIpaddress('74.208.55.241', this.nodes)
-		
+		const upChannel_SaaS_node  = getRandomSaaSNode(this.egressNodes, this._nodes)
+	
 		if (!upChannel_SaaS_node ) {
 			return logger (Colors.red(`proxyServer makeUpChannel upChannel_SaaS_node Null Error!`))
 		}
