@@ -1,7 +1,7 @@
 
 
 const getRegion = async () => {
-	const regionContract = new ethers.Contract(CONET_Guardian_NodeInfoV3, CONET_Guardian_NodeInfo_ABI, provideCONET)
+	const regionContract = new ethers.Contract(CONET_Guardian_NodeInfoV4, CONET_Guardian_NodeInfo_ABI, provideCONET)
 	try {
 		const gasPrice = await regionContract.getAllRegions()
 		return gasPrice
@@ -242,7 +242,7 @@ const checkGuardianNodes = async () => {
 	const profile = CoNET_Data.profiles[mainIndex]
 	const provideCONET = new ethers.JsonRpcProvider(conet_rpc)
 	const erc1155 = new ethers.Contract(CONET_Guardian_NodesV3, guardian_erc1155, provideCONET)
-	const ercGuardianNodesInfoV3 = new ethers.Contract(CONET_Guardian_NodeInfoV3, GuardianNodesInfoV3_ABI, provideCONET)
+	const ercGuardianNodesInfoV3 = new ethers.Contract(CONET_Guardian_NodeInfoV4, GuardianNodesInfoV3_ABI, provideCONET)
 
 	GuardianNodesInfoV3_ABI
 	let nodeAddress: string[] = [], Ids, numbers
@@ -309,7 +309,8 @@ const checkGuardianNodes = async () => {
 		} else {
 			profile = profiles[index]
 		}
-
+		
+		
 		profile.nodeID = await erc1155.ownershipForNodeID(profile.keyID)
 		const nodeInfo = await ercGuardianNodesInfoV3.getNodeInfoById(profile.nodeID)
 		profile.nodeRegion = nodeInfo?.regionName

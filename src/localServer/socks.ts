@@ -168,9 +168,10 @@ export class socks5 {
 	}
 	
 	private connectStat2 ( data: Buffer ) {
-
+		logger(colors.grey(`connectStat2`))
 		if ( this.debug ) {
-			//hexDebug(data)
+
+			hexDebug(data)
 		}
 		const req = new Rfc1928.Requests ( data )
 
@@ -227,17 +228,17 @@ export class socks5 {
 	}
 
 	constructor ( private socket: Net.Socket, private data: Buffer, private agent: string, private proxyServer: proxyServer ) {
-		if ( this.debug = proxyServer.debug ) {
+		
 			logger (colors.yellow(`new socks v5`))
-			//hexDebug(data)
-		}
+			hexDebug(data)
+		
+
 		this.socket.once ( 'data', ( chunk: Buffer ) => {
 			return this.connectStat2 ( chunk )
 		})
 
-
 		this.socket.write ( server_res.NO_AUTHENTICATION_REQUIRED )
-		this.socket.resume ()
+
 	}
 }
 
