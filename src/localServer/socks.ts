@@ -91,6 +91,12 @@ export class socks5 {
 	}
 
 	private connectStat3 ( req: Rfc1928.Requests ) {
+
+		if (!this.proxyServer.SaaS_payment) {
+			req.REP = Rfc1928.Replies.NETWORK_UNREACHABLE
+			return this.socket.write ( req.buffer )
+		}
+
 		let userAgent = ''
 		switch (req.cmd) {
 			case Rfc1928.CMD.CONNECT: {
@@ -134,12 +140,16 @@ export class socks5 {
 			uuid: uuuu.uuid
 		}
 
+		//		PAYMENT REQUIRE
+
+
 		this.socket.once ( 'data', ( _data: Buffer ) => {
 
-			if ( this.debug ) {
-				logger(`connectStat3 buffer`)
-				//hexDebug(_data)
-			}
+			
+			logger(`connectStat3 buffer`)
+			hexDebug(_data)
+			
+
 			uuuu.ssl = isSslFromBuffer (_data)
 
 			if (!uuuu.ssl) {

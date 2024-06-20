@@ -98,13 +98,11 @@ const getNodeByIpaddress = (ipaddress: string, activeNodes: nodes_info[] ) => {
 	
 }
 
-const encrypt_Message = async (privatePgpObj: any, armoredPublicKey: string, message: any) => {
+const encrypt_Message = async (encryptionKeys, message: any) => {
 	const encryptObj = {
         message: await openpgp.createMessage({text: Buffer.from(JSON.stringify (message)).toString('base64')}),
-        encryptionKeys: await openpgp.readKey ({ armoredKey: armoredPublicKey }),
-        signingKeys: privatePgpObj,
+        encryptionKeys,
 		config: { preferredCompressionAlgorithm: openpgp.enums.compression.zlib }, 		// compress the data with zlib
-
     }
 	return await openpgp.encrypt
 		//@ts-ignore
@@ -118,29 +116,24 @@ const createSock5ConnectCmd = async (currentProfile: profile, SaaSnode: nodes_in
 		return null
 	}
 
-
+	if  (!SaaSnode?.publicKeyObj) {
+		SaaSnode.publicKeyObj = await openpgp.readKey ({ armoredKey: SaaSnode.armoredPublicKey })
+	}
 	const key = Buffer.from(getRandomValues(new Uint8Array(16))).toString('base64')
 	const command: SICommandObj = {
 		command: 'SaaS_Sock5',
 		algorithm: 'aes-256-cbc',
 		Securitykey: key,
 		requestData,
-		wallet: currentProfile.keyID.toLowerCase()
+		walletAddress: currentProfile.keyID.toLowerCase()
 	}
 	logger(Colors.blue(`createSock5ConnectCmd`))
 	const message =JSON.stringify(command)
 	const messageHash = ethers.id(message)
 	const signMessage = EthCrypto.sign(currentProfile.privateKeyArmor, messageHash)
 
-	let privateKeyObj
 
-	try {
-		privateKeyObj = await makePrivateKeyObj (currentProfile.pgpKey.privateKeyArmor)
-	} catch (ex){
-		logger (ex)
-	}
-
-	const encryptedCommand = await encrypt_Message( privateKeyObj, SaaSnode.armoredPublicKey, {messageHash, signMessage})
+	const encryptedCommand = await encrypt_Message( SaaSnode.publicKeyObj, {message, signMessage})
 	command.requestData = [encryptedCommand, '', key]
 	return (command)
 }
@@ -158,6 +151,7 @@ const otherRequestForNet = ( data: string, host: string, port: number, UserAgent
 
 
 class transferCount extends Transform {
+	public data  =''
 	constructor(private upload: boolean, private info: ITypeTransferCount) {
 		super()
 	}
@@ -165,6 +159,7 @@ class transferCount extends Transform {
 		if (this.upload) {
 			this.info.upload += chunk.length
 		} else {
+			this.data += chunk.toString()
 			this.info.download += chunk.length
 		}
 		callback(null, chunk)
@@ -202,12 +197,13 @@ const sendTransferDataToLocalHost = (infoData: ITypeTransferCount) => {
 
 }
 
-const ConnectToProxyNode = (cmd : SICommandObj, SaaSnode: nodes_info, nodes: nodes_info[], socket: Net.Socket, currentProfile: profile, uuuu: VE_IPptpStream) => {
+const ConnectToProxyNode = (cmd : SICommandObj, SaaSnode: nodes_info, nodes: nodes_info[], socket: Net.Socket, uuuu: VE_IPptpStream, server: proxyServer) => {
 
 	const entryNode = getRandomNode(nodes, SaaSnode) //getNodeByIpaddress('18.183.80.90', nodes)//
 	if (!entryNode) {
 		return logger(Colors.red(`ConnectToProxyNode Error! getRandomNode return null nodes!`))
 	}
+	
 	const connectID = Colors.gray('Connect to [') + Colors.green(`${uuuu.host}:${uuuu.port}`)+Colors.gray(']')
 
 	const data = otherRequestForNet(JSON.stringify({data: cmd.requestData[0]}), entryNode.ip_addr, 80, 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/117.0.0.0 Safari/537.36')
@@ -241,7 +237,12 @@ const ConnectToProxyNode = (cmd : SICommandObj, SaaSnode: nodes_info, nodes: nod
 	})
 
 	socket.once ('close', () => {
-		logger(Colors.magenta(`Proxy client on Close! STOP connecting`))
+		const res = download.data
+		if (/^HTTP\/1\.1\ 402\ Payment/i.test(res)) {
+			logger(Colors.red(`Proxy Payment`))
+			server.SaaS_payment = false
+		}
+
 		remoteSocket.end().destroy()
 		infoData.endTime=new Date().getTime()
 		
@@ -263,6 +264,7 @@ export class proxyServer {
 	private hostGlobalIpV4 = ''
 	private hostGlobalIpV6 = ''
 	private network = false
+	public SaaS_payment = true
 	private getGlobalIpRunning = false
 	private server: Net.Server|null = null
 	//public gateway = new gateWay ( this.multipleGateway, this.debug )
@@ -337,6 +339,17 @@ export class proxyServer {
 		this.server.listen ( this.proxyPort, () => {
 			return logger ( Colors.blue(`Proxy SERVER success on port : [${ this.proxyPort }] active nodes =[${this._nodes.length}] Saas nodes = [${this.egressNodes.length}]`))
 		})
+
+		if (!this.currentProfile?.keyObj) {
+			this.currentProfile.keyObj = {
+				privateKeyObj: null,
+				publicKeyObj: null
+			}
+		}
+		if (this.currentProfile.pgpKey?.privateKeyArmor) {
+			this.currentProfile.keyObj.privateKeyObj = await makePrivateKeyObj (this.currentProfile.pgpKey.privateKeyArmor)
+		}
+		
 	}
 
 	public requestGetWay = async (requestObj: requestObj, uuuu : VE_IPptpStream, userAgent:string, socket: Net.Socket ) => {
@@ -351,17 +364,15 @@ export class proxyServer {
 			return logger (Colors.red(`requestGetWay createSock5Connect return Null Error!`))
 		}
 
-		ConnectToProxyNode (cmd, upChannel_SaaS_node, this._nodes, socket, this.currentProfile, uuuu)
+		ConnectToProxyNode (cmd, upChannel_SaaS_node, this._nodes, socket, uuuu, this)
 	}
     
 	constructor (
-		
 		public proxyPort: string,						//			Proxy server listening port number
 		private _nodes: nodes_info[],	 				//			gateway nodes information
 		private egressNodes: nodes_info[],
 		private currentProfile: profile,
 		public debug = false )
-		
 		{
 			logger(inspect(this.currentProfile, false, 1, true))
 			this.startLocalProxy()
@@ -393,6 +404,7 @@ const egressNodes = [
         "last_online": true
     }
 ]
+
 const profile = {
     "tokens": {
         "CGPNs": {
@@ -562,8 +574,9 @@ const profile = {
     "index": 0,
 	referrer: ''
 }
+
 const test = () => {
 	new proxyServer ('3003', allNodes, egressNodes, profile, true)
 }
 
-test()
+// test()

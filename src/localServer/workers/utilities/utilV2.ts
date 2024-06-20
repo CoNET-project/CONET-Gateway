@@ -583,7 +583,7 @@ const testFunction = async (cmd: worker_command) => {
 	
 	const profile = profiles[0]
 	// await makeContainerPGPObj(profile)
-	getRegionAllNodes ('us', profile)
+	// getRegionAllNodes ('us', profile)
 	//await checkProfileVersion (profile.keyID)
 	// const wallet = await unlock_cCNTP(profile)
 	const wallet1 = '0xD8b12054612119e9E45d5Deef40EDca38d54D3b5'
@@ -661,8 +661,8 @@ const getRegionAllNodes = async (region: string, profile: profile) => {
 	const activeNodes = nodes.slice(0,2)
 	const egressNodes =  nodes.slice(0,1)
 
-	const kkk = await openpgp.readKey({ armoredKey: activeNodes[0].armoredPublicKey })
-	const kkk1 = await openpgp.readKey({ armoredKey: activeNodes[1].armoredPublicKey })
+	const kkk = await openpgp.readKey({ armoredKey: nodes[0].armoredPublicKey })
+	const kkk1 = await openpgp.readKey({ armoredKey: nodes[2].armoredPublicKey })
 	const res = await postToEndpoint('http://localhost:3001/conet-profile',true,  {profile: profile, activeNodes, egressNodes})
-	//		curl -v -4 curl -x socks5h://localhost:3003 "https://www.googgle.com"
+	//		curl -v -4 -x socks5h://localhost:3003 "https://www.googgle.com"
 }

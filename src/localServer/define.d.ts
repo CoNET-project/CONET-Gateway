@@ -40,6 +40,7 @@ type nodes_info = {
 	outbound_total?: number
 	region: string
 	armoredPublicKey: string
+	publicKeyObj?: any
 }
 
 interface connect_imap_reqponse {
@@ -411,7 +412,7 @@ interface SICommandObj {
 	algorithm: 'aes-256-cbc'
 	Securitykey: string
 	requestData: any[]
-	wallet: string
+	walletAddress: string
 }
 
 interface ethSignedObj {
