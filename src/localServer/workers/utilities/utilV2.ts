@@ -58,7 +58,7 @@ let authorization_key = ''
 const cCNTP_new_Addr = '0x530cf1B598D716eC79aa916DD2F05ae8A0cE8ee2'.toLocaleLowerCase()
 const profile_ver_addr = '0x556bB96fC4C1316B2e5CEaA133f5D4157Eb05681'.toLowerCase()
 const CONET_Guardian_NodeInfoV4 = '0x264ea87162463165101A500a6Bf8755b91220350'
-const CONET_Guardian_NodesV3 = '0x264ea87162463165101A500a6Bf8755b91220350'.toLowerCase()
+const CONET_Guardian_NodesV3 = '0x453701b80324C44366B34d167D40bcE2d67D6047'.toLowerCase()
 const CONET_OpenPGP_REG = '0xBDAdAB47eEa9546fda345a4B29CFFeea7027d4aa'
 //	******************************************************************
 

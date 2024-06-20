@@ -311,7 +311,7 @@ const checkGuardianNodes = async () => {
 		}
 		
 		
-		profile.nodeID = await erc1155.ownershipForNodeID(profile.keyID)
+		profile.nodeID = (await erc1155.ownershipForNodeID(profile.keyID)).toString()
 		const nodeInfo = await ercGuardianNodesInfoV3.getNodeInfoById(profile.nodeID)
 		profile.nodeRegion = nodeInfo?.regionName
 		profile.nodeIP_address = nodeInfo?.ipaddress
