@@ -104,11 +104,6 @@ const burnCCNTP = async (profile: profile, totalBurn: string) => {
 		return kk1
 	}
 	
-	await makeContainerPGPObj(profile)
-
-	const erc20OpenPGPReg = new ethers.Contract(CONET_OpenPGP_REG, openPGPKeys_ABI, walletObj)
-	const pgpHash = profile.pgpKey?.publicKeyObj
-	
 }
 
 const getProfileAssets_allOthers_Balance = async (profile: profile) => {

@@ -305,26 +305,6 @@ const unZIP = (compress: string) => {
 }
 
 
-const makeContainerPGPObj = async (profile: profile) => {
-	if (!profile.pgpKey?.privateKeyArmor) {
-		return logger(`makeContainerPGPObj profile [${profile.keyID}] has not PGP key Error!`)
-	}
-
-
-	if (!profile.pgpKey?.privateKeyArmor || !profile.pgpKey?.publicKeyArmor ) {
-		return logger(`makeContainerPGPObj Error: have no KeyArmor!`)
-	}
-
-	if (!profile.pgpKey?.privateKeyObj) {
-		profile.pgpKey.privateKeyObj = await makePrivateKeyObj (profile.pgpKey.privateKeyArmor, '')
-	}
-	
-	if (!profile.pgpKey?.publicKeyObj) {
-		profile.pgpKey.publicKeyObj = await makePublicKeyOBJ (profile.pgpKey.publicKeyArmor)
-	}
-
-}
-
 // const getUSDCBalance = async (Addr: string) => {
 // 	const eth = new CoNETModule.Web3Eth ( new CoNETModule.Web3Eth.providers.HttpProvider(usdcNet))
 // 	const uuu = await eth.getBalance(Addr)
