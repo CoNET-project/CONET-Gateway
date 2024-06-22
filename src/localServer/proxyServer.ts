@@ -375,6 +375,7 @@ export class proxyServer {
 		private currentProfile: profile,
 		public debug = false )
 	{
+		logger(inspect(this._nodes, false, 3, true))
 		logger(inspect(this.currentProfile, false, 1, true))
 		this.startLocalProxy()
 	}
