@@ -312,8 +312,14 @@ class LocalServer {
             return res.end ()
         })
 
-		app.post ( '/changeEgressNodes', ( req: express.Request, res: express.Response ) => {
-            
+		app.post ( '/restartProxy', ( req: express.Request, res: express.Response ) => {
+			const data: { profile, activeNodes, egressNodes } = req.body
+            if (this._proxyServer) {
+				this._proxyServer.restart(data.profile, data.activeNodes, data.egressNodes)
+			} else {
+				this._proxyServer = new proxyServer((this.PORT + 2).toString(), data.activeNodes, data.egressNodes, data.profile, true)
+			}
+			return res.sendStatus(200)
         })
 
         app.post ( '/conet-profile', ( req: express.Request, res: express.Response ) => {
@@ -322,10 +328,11 @@ class LocalServer {
             //logger (Colors.blue(`Local server get POST /profile req.body = `), inspect(data, false, 3, true))
             if (data.activeNodes.length > 0 && data.profile ) {
                 
-                if (!this._proxyServer) {
-					logger (`Start new proxyServer data.profile [${data.profile}] data.activeNodes [${data.activeNodes}]`)
-                    this._proxyServer = new proxyServer((this.PORT + 2).toString(), data.activeNodes, data.egressNodes, data.profile, true)
-                }
+				if (this._proxyServer) {
+					this._proxyServer.restart(data.profile, data.activeNodes, data.egressNodes)
+				} else {
+					this._proxyServer = new proxyServer((this.PORT + 2).toString(), data.activeNodes, data.egressNodes, data.profile, true)
+				}
 
                 return res.sendStatus(200).end()
             }

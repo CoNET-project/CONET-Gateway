@@ -244,7 +244,7 @@ const ConnectToProxyNode = (cmd : SICommandObj, SaaSnode: nodes_info, entryNode:
 		const res = download.data
 		if (/^HTTP\/1\.1\ 402\ Payment/i.test(res)) {
 			logger(Colors.red(`Proxy Payment`))
-			server.SaaS_payment = false
+			// server.SaaS_payment = false
 		}
 
 		remoteSocket.end().destroy()
@@ -371,6 +371,12 @@ export class proxyServer {
 		const entryNode = getRandomNode(this._nodes, upChannel_SaaS_node) //getNodeByIpaddress('18.183.80.90', nodes)//
 		logger(Colors.blue (`Create gateway request, Layer minus Random SaaS node [${Colors.magenta(upChannel_SaaS_node.ip_addr)}] entry node [${Colors.magenta(entryNode.ip_addr)}]`))
 		ConnectToProxyNode (cmd, upChannel_SaaS_node, entryNode, socket, uuuu, this)
+	}
+
+	public restart = (currentProfile: profile, _nodes: nodes_info[], egressNodes: nodes_info[]) => {
+		this.currentProfile = currentProfile
+		this._nodes = _nodes
+		this.egressNodes = _nodes
 	}
     
 	constructor (
