@@ -14,12 +14,16 @@ import * as openpgp from 'openpgp'
 import { TransformCallback } from 'stream'
 import { ethers } from 'ethers'
 import EthCrypto from 'eth-crypto'
+import async from 'async'
+import CONET_Guardian_NodeInfo_ABI from './abi/CONET_Guardian_NodeInfo.json'
+
 
 const getRandomSaaSNode = (saasNodes: nodes_info[], allNodes: nodes_info[]) => {
 	if (!saasNodes.length || !allNodes.length) {
+		logger(Colors.red(`getRandomSaaSNode [${saasNodes.length}] or ${allNodes.length} Error!`))
 		return null
 	}
-	logger (`getRandomSaaSNode saasNodes length [${saasNodes.length}] allNodes length [${allNodes}]`)
+	logger (`getRandomSaaSNode saasNodes length [${saasNodes.length}] allNodes length [${allNodes.length}]`)
 	const ramdom = Math.trunc((saasNodes.length - 1 ) * Math.random())
 	const _ret = saasNodes[ramdom]
 	const index = allNodes.findIndex(n => n.ip_addr === _ret.ip_addr)
@@ -197,9 +201,9 @@ const sendTransferDataToLocalHost = (infoData: ITypeTransferCount) => {
 
 }
 
-const ConnectToProxyNode = (cmd : SICommandObj, SaaSnode: nodes_info, nodes: nodes_info[], socket: Net.Socket, uuuu: VE_IPptpStream, server: proxyServer) => {
+const ConnectToProxyNode = (cmd : SICommandObj, SaaSnode: nodes_info, entryNode: nodes_info, socket: Net.Socket, uuuu: VE_IPptpStream, server: proxyServer) => {
 
-	const entryNode = getRandomNode(nodes, SaaSnode) //getNodeByIpaddress('18.183.80.90', nodes)//
+	
 	if (!entryNode) {
 		return logger(Colors.red(`ConnectToProxyNode Error! getRandomNode return null nodes!`))
 	}
@@ -233,7 +237,7 @@ const ConnectToProxyNode = (cmd : SICommandObj, SaaSnode: nodes_info, nodes: nod
 
 	remoteSocket.once('close', async () => {
 		logger (Colors.magenta(`ConnectToProxyNode remote [${entryNode.ip_addr}:${80}] on Close `))
-		await sendTransferDataToLocalHost(infoData)
+		//await sendTransferDataToLocalHost(infoData)
 	})
 
 	socket.once ('close', () => {
@@ -353,8 +357,8 @@ export class proxyServer {
 		
 	}
 
-	public requestGetWay = async (requestObj: requestObj, uuuu : VE_IPptpStream, userAgent:string, socket: Net.Socket ) => {
-		const upChannel_SaaS_node  = getRandomSaaSNode(this.egressNodes, this._nodes)
+	public requestGetWay = async (uuuu : VE_IPptpStream, socket: Net.Socket ) => {
+		const upChannel_SaaS_node: nodes_info  = getRandomSaaSNode(this.egressNodes, this._nodes)
 	
 		if (!upChannel_SaaS_node ) {
 			return logger (Colors.red(`proxyServer makeUpChannel upChannel_SaaS_node Null Error!`))
@@ -364,8 +368,9 @@ export class proxyServer {
 		if (!cmd) {
 			return logger (Colors.red(`requestGetWay createSock5Connect return Null Error!`))
 		}
-
-		ConnectToProxyNode (cmd, upChannel_SaaS_node, this._nodes, socket, uuuu, this)
+		const entryNode = getRandomNode(this._nodes, upChannel_SaaS_node) //getNodeByIpaddress('18.183.80.90', nodes)//
+		logger(Colors.blue (`Create gateway request, Layer minus Random SaaS node [${Colors.magenta(upChannel_SaaS_node.ip_addr)}] entry node [${Colors.magenta(entryNode.ip_addr)}]`))
+		ConnectToProxyNode (cmd, upChannel_SaaS_node, entryNode, socket, uuuu, this)
 	}
     
 	constructor (
@@ -375,212 +380,10 @@ export class proxyServer {
 		private currentProfile: profile,
 		public debug = false )
 	{
-		logger(inspect(this._nodes, false, 3, true))
-		logger(inspect(this.currentProfile, false, 1, true))
+
+		logger(Colors.magenta(`${proxyPort} ALL nodes\n${_nodes.map(n => n.ip_addr)}`))
+		logger(Colors.magenta(`${proxyPort} EgressNodes\n${egressNodes.map(n => n.ip_addr)}`))
+
 		this.startLocalProxy()
 	}
 }
-
-
-const allNodes = [
-    {
-        "region": "NY.US",
-        "country": "us",
-        "ip_addr": "107.173.231.41",
-        "armoredPublicKey": "-----BEGIN PGP PUBLIC KEY BLOCK-----\n\nxjMEZkz/5RYJKwYBBAHaRw8BAQdAs95rXcZIR9ZspYdN4H3Yk4D1jKz7+caS\ns6D+rZRAZcDNKjB4NEMwNkI3M0JlMDc3MTgwMmEzMzYwYzc4ZTMyNjkyM2Iz\nYjBiM2FGN8KMBBAWCgA+BYJmTP/lBAsJBwgJkPFctbV5tkZGAxUICgQWAAIB\nAhkBApsDAh4BFiEEVtlY1Fazor5eUUF68Vy1tXm2RkYAAGLGAP9J/VLVwjef\nOYQIRGj+FRqtRRy5DFrLr9ws2VuLrPMNDwEA3yu3b/rJBmYlXBT8YJy27vhg\nTYsrmr/uAHUr5EGk7gvOOARmTP/lEgorBgEEAZdVAQUBAQdAzS1NQ7hT/8BK\nFJNNABHuQlVgsLhVe7uKvYJYnpn5IAADAQgHwngEGBYKACoFgmZM/+UJkPFc\ntbV5tkZGApsMFiEEVtlY1Fazor5eUUF68Vy1tXm2RkYAAJrJAQC+VbInBYAW\nYzrEZLchuYiMfamgTXTqowU1We8yqxBidAD/TTMbC+SHct6jxCTqlFbiBl/G\nnArfXG3fi2lylZg+VwU=\n=BA+x\n-----END PGP PUBLIC KEY BLOCK-----\n",
-        "last_online": true
-    },
-    {
-        "region": "NY.US",
-        "country": "us",
-        "ip_addr": "66.179.254.158",
-        "armoredPublicKey": "-----BEGIN PGP PUBLIC KEY BLOCK-----\n\nxjMEZbtcYRYJKwYBBAHaRw8BAQdAeUzGNiRh80QxglyYCqHTRLuMiB6ylTuj\nuF71rXHobxzNKjB4ZjM1MEU5OWJGMjY1MDYzOEU2Y2UxZTM5NjJEM2U0MjIy\nOUU2N0UyNsKMBBAWCgA+BYJlu1xhBAsJBwgJkHvVlSgxe6a4AxUICgQWAAIB\nAhkBApsDAh4BFiEERkjxewvTKzDOTKRee9WVKDF7prgAAJN+AQCGaRsODRU4\n7Xt/kFeiufrqYaef6dVucRYvikOKLBUnNAD/VppbLV5S5I2qe/AssY/xcgY0\nflb9oKC3Z8HQn7Jf3A3OOARlu1xhEgorBgEEAZdVAQUBAQdAgRzKRtXiQU7K\n7PSl8OwigBzbR4+U6FY/kOCjKuEwJVgDAQgHwngEGBYKACoFgmW7XGEJkHvV\nlSgxe6a4ApsMFiEERkjxewvTKzDOTKRee9WVKDF7prgAAOwBAP0fDiL+WDSf\nyn2y1ISMposJAlRfOKop5bUK37KP7WtIpwEAoEjF67X29qHCq9hJBZ4AFVOf\nDEm4590Ucty1cWFU3wA=\n=q/kV\n-----END PGP PUBLIC KEY BLOCK-----\n",
-        "last_online": true
-    }
-]
-
-const egressNodes = [
-    {
-        "region": "NY.US",
-        "country": "us",
-        "ip_addr": "107.173.231.41",
-        "armoredPublicKey": "-----BEGIN PGP PUBLIC KEY BLOCK-----\n\nxjMEZkz/5RYJKwYBBAHaRw8BAQdAs95rXcZIR9ZspYdN4H3Yk4D1jKz7+caS\ns6D+rZRAZcDNKjB4NEMwNkI3M0JlMDc3MTgwMmEzMzYwYzc4ZTMyNjkyM2Iz\nYjBiM2FGN8KMBBAWCgA+BYJmTP/lBAsJBwgJkPFctbV5tkZGAxUICgQWAAIB\nAhkBApsDAh4BFiEEVtlY1Fazor5eUUF68Vy1tXm2RkYAAGLGAP9J/VLVwjef\nOYQIRGj+FRqtRRy5DFrLr9ws2VuLrPMNDwEA3yu3b/rJBmYlXBT8YJy27vhg\nTYsrmr/uAHUr5EGk7gvOOARmTP/lEgorBgEEAZdVAQUBAQdAzS1NQ7hT/8BK\nFJNNABHuQlVgsLhVe7uKvYJYnpn5IAADAQgHwngEGBYKACoFgmZM/+UJkPFc\ntbV5tkZGApsMFiEEVtlY1Fazor5eUUF68Vy1tXm2RkYAAJrJAQC+VbInBYAW\nYzrEZLchuYiMfamgTXTqowU1We8yqxBidAD/TTMbC+SHct6jxCTqlFbiBl/G\nnArfXG3fi2lylZg+VwU=\n=BA+x\n-----END PGP PUBLIC KEY BLOCK-----\n",
-        "last_online": true
-    }
-]
-
-const profile = {
-    "tokens": {
-        "CGPNs": {
-            "balance": "false",
-            "history": [],
-            "network": "CONET Guardian Nodes (CGPNs)",
-            "decimal": 1,
-            "contract": "0x453701b80324c44366b34d167d40bce2d67d6047",
-            "name": "CGPNs"
-        },
-        "CGPN2s": {
-            "balance": "false",
-            "history": [],
-            "network": "CONET Guardian Nodes (CGPN2s)",
-            "decimal": 1,
-            "contract": "0x453701b80324c44366b34d167d40bce2d67d6047",
-            "name": "CGPN2s"
-        },
-        "cCNTP": {
-            "balance": "4935.438941",
-            "history": [],
-            "network": "CONET Holesky",
-            "decimal": 18,
-            "contract": "0x530cf1b598d716ec79aa916dd2f05ae8a0ce8ee2",
-            "name": "cCNTP",
-            "unlocked": true
-        },
-        "cBNBUSDT": {
-            "balance": "0",
-            "history": [],
-            "network": "CONET Holesky",
-            "decimal": 18,
-            "contract": "0xae752b49385812af323240b26a49070bb839b10d",
-            "name": "cBNBUSDT"
-        },
-        "cUSDB": {
-            "balance": "0",
-            "history": [],
-            "network": "CONET Holesky",
-            "decimal": 18,
-            "contract": "0x3258e9631ca4992f6674b114bd17c83ca30f734b",
-            "name": "cUSDB"
-        },
-        "CNTP": {
-            "balance": "0",
-            "history": [],
-            "network": "Blast Mainnet",
-            "decimal": 18,
-            "contract": "0x0f43685B2cB08b9FB8Ca1D981fF078C22Fec84c5",
-            "name": "CNTP"
-        },
-        "cUSDT": {
-            "balance": "0",
-            "history": [],
-            "network": "CONET Holesky",
-            "decimal": 18,
-            "contract": "0xfe75074c273b5e33fe268b1d5ac700d5b715da2f",
-            "name": "cUSDT"
-        },
-        "dWETH": {
-            "balance": "0",
-            "history": [],
-            "network": "CONET Holesky",
-            "decimal": 18,
-            "contract": "0x84b6d6A6675F830c8385f022Aefc9e3846A89D3B",
-            "name": "dWETH"
-        },
-        "dUSDT": {
-            "balance": "0",
-            "history": [],
-            "network": "CONET Holesky",
-            "decimal": 18,
-            "contract": "0x0eD55798a8b9647f7908c72a0Ce844ad47274422",
-            "name": "dUSDT"
-        },
-        "dWBNB": {
-            "balance": "0",
-            "history": [],
-            "network": "CONET Holesky",
-            "decimal": 18,
-            "contract": "0xd8b094E91c552c623bc054085871F6c1CA3E5cAd",
-            "name": "dWBNB"
-        },
-        "conet": {
-            "balance": "0.017404",
-            "history": [],
-            "network": "CONET Holesky",
-            "decimal": 18,
-            "contract": "",
-            "name": "conet"
-        },
-        "CNTPV1": {
-            "balance": "0",
-            "history": [],
-            "network": "CONET Holesky",
-            "decimal": 18,
-            "contract": "0x1a73e00ce25e5d56db1b5dd7b2dcdf8ec9f208d2",
-            "name": "CNTPV1"
-        },
-        "usdt": {
-            "balance": "0",
-            "history": [],
-            "network": "ETH",
-            "decimal": 6,
-            "contract": "0xdac17f958d2ee523a2206206994597c13d831ec7",
-            "name": "usdt"
-        },
-        "usdb": {
-            "balance": "0",
-            "history": [],
-            "network": "Blast Mainnet",
-            "decimal": 18,
-            "contract": "0xdac17f958d2ee523a2206206994597c13d831ec7",
-            "name": "usdb"
-        },
-        "eth": {
-            "balance": "0",
-            "history": [],
-            "network": "ETH",
-            "decimal": 18,
-            "contract": "",
-            "name": "eth"
-        },
-        "blastETH": {
-            "balance": "0",
-            "history": [],
-            "network": "Blast Mainnet",
-            "decimal": 18,
-            "contract": "",
-            "name": "blastETH"
-        },
-        "wbnb": {
-            "balance": "0",
-            "history": [],
-            "network": "BSC",
-            "decimal": 18,
-            "contract": "0xbb4CdB9CBd36B01bD1cBaEBF2De08d9173bc095c",
-            "name": "wbnb"
-        },
-        "bnb": {
-            "balance": "0",
-            "history": [],
-            "network": "BSC",
-            "decimal": 18,
-            "contract": "",
-            "name": "bnb"
-        },
-        "wusdt": {
-            "balance": "0",
-            "history": [],
-            "network": "BSC",
-            "decimal": 18,
-            "contract": "0x55d398326f99059fF775485246999027B3197955",
-            "name": "wusdt"
-        }
-    },
-    "publicKeyArmor": "0x0220519d1b68cfb67b09dde97eb19defdb8cd1b9ac2b9bd22b459061248abda721",
-    "keyID": "0x73940fcb2211c1c09eceb6f42846e30af6b459bc",
-    "isPrimary": true,
-    "isNode": false,
-    "pgpKey": {
-        "privateKeyArmor": "-----BEGIN PGP PRIVATE KEY BLOCK-----\n\nxVgEZnBBRxYJKwYBBAHaRw8BAQdAi/liPbZzHckXHNLYbrKf+2akXClWJfkP\nOwFwVbQ1y0wAAQDIpqo2LWQqZXOUX/vwqcfJqA9XQz9aPVMrqcpkTM9NGg73\nzQDCjAQQFgoAPgWCZnBBRwQLCQcICZDVD8uvl8i6/AMVCAoEFgACAQIZAQKb\nAwIeARYhBMtc4KHkODlxe5hWotUPy6+XyLr8AACI6gEA6TfZEeBqHFINjuff\nTcdk5gjrXqsz+5Ea5TaHDLkMxZoA/ijbxKeNLjvfKujdBG/oOsOVsVLPUGjN\np6gFWTl4NYoEx10EZnBBRxIKKwYBBAGXVQEFAQEHQMp1bHUE3Bc0HtWpxAe/\nnengCnwKp/Arl5Gd4LPtpqVnAwEIBwAA/25FNtT288504qL7+5cFFEEPVMxH\nG96PYmC+6Di6ejEwEYXCeAQYFgoAKgWCZnBBRwmQ1Q/Lr5fIuvwCmwwWIQTL\nXOCh5Dg5cXuYVqLVD8uvl8i6/AAAfX8BALPVKlSkMy0eyXC1IwTsqMbT6xFf\n6GR4BozxxSYQGXjpAQDgHVMMrHYX/bwztqTg9QXL9HlNSXrxlTmm//yA/kTa\nAA==\n=uc7i\n-----END PGP PRIVATE KEY BLOCK-----\n",
-        "publicKeyArmor": "-----BEGIN PGP PUBLIC KEY BLOCK-----\n\nxjMEZnBBRxYJKwYBBAHaRw8BAQdAi/liPbZzHckXHNLYbrKf+2akXClWJfkP\nOwFwVbQ1y0zNAMKMBBAWCgA+BYJmcEFHBAsJBwgJkNUPy6+XyLr8AxUICgQW\nAAIBAhkBApsDAh4BFiEEy1zgoeQ4OXF7mFai1Q/Lr5fIuvwAAIjqAQDpN9kR\n4GocUg2O599Nx2TmCOteqzP7kRrlNocMuQzFmgD+KNvEp40uO98q6N0Eb+g6\nw5WxUs9QaM2nqAVZOXg1igTOOARmcEFHEgorBgEEAZdVAQUBAQdAynVsdQTc\nFzQe1anEB7+d6eAKfAqn8CuXkZ3gs+2mpWcDAQgHwngEGBYKACoFgmZwQUcJ\nkNUPy6+XyLr8ApsMFiEEy1zgoeQ4OXF7mFai1Q/Lr5fIuvwAAH1/AQCz1SpU\npDMtHslwtSME7KjG0+sRX+hkeAaM8cUmEBl46QEA4B1TDKx2F/28M7ak4PUF\ny/R5TUl68ZU5pv/8gP5E2gA=\n=XbcA\n-----END PGP PUBLIC KEY BLOCK-----\n"
-    },
-    "privateKeyArmor": "0xf0830399be50b96bb10ee01307700e51cd2de4995b307344273dfca6ff6b0925",
-    "hdPath": "m/44'/60'/0'/0/0",
-    "index": 0,
-	referrer: ''
-}
-
-const test = () => {
-	new proxyServer ('3003', allNodes, egressNodes, profile, true)
-}
-
-// test()

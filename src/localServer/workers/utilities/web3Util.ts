@@ -326,9 +326,9 @@ const checkGuardianNodes = async () => {
 			_assetNodesAddr.push(nodeAddress[index])
 		}
 	})
-	const assetNodesAddr:any = []
+	const assetNodesAddr: any[] = []
 	_assetNodesAddr.forEach(n => {
-		const index = profiles.findIndex(nn => nn.keyID.toLowerCase()=== n)
+		const index = profiles.findIndex(nn => nn.keyID.toLowerCase() === n)
 		if (index < 0) {
 			assetNodesAddr.push(n)
 		}
@@ -629,59 +629,59 @@ const storagePieceToIPFS = (mnemonicPhrasePassword: string, fragment: string, in
 
 	})
 
-const storagePieceToLocalAndIPFS = ( mnemonicPhrasePassword: string, fragment: string, index: number,
-		totalFragment: number, targetFileLength: number, ver: number, privateArmor: string, keyID:string
-	) => {
-	return new Promise(async resolve=> {
+// const storagePieceToLocalAndIPFS = ( mnemonicPhrasePassword: string, fragment: string, index: number,
+// 		totalFragment: number, targetFileLength: number, ver: number, privateArmor: string, keyID:string
+// 	) => {
+// 	return new Promise(async resolve=> {
 		
-		const _dummylength = targetFileLength - fragment.length > 1024 * 5 ? targetFileLength - totalFragment : 0
-		const dummylength = (totalFragment === 2 && _dummylength )
-			? Math.round((targetFileLength - fragment.length) * Math.random()) : 0
-		const dummyData = buffer.Buffer.allocUnsafeSlow( dummylength)
-		const partEncryptPassword = encryptPasswordIssue(ver, mnemonicPhrasePassword, index)
-		const localData = {
-			data: fragment,
-			totalFragment: totalFragment,
-			index
-		}
-		const IPFSData = {
-			data: fragment,
-			totalFragment: totalFragment,
-			index,
-			dummyData: dummyData
-		}
-		const piece: fragmentsObj = {
-			localEncryptedText: await CoNETModule.aesGcmEncrypt (JSON.stringify(localData), partEncryptPassword),
-			remoteEncryptedText: await CoNETModule.aesGcmEncrypt (JSON.stringify(IPFSData), partEncryptPassword),
-			fileName: createFragmentFileName(ver, mnemonicPhrasePassword, index),
-		}
+// 		const _dummylength = targetFileLength - fragment.length > 1024 * 5 ? targetFileLength - totalFragment : 0
+// 		const dummylength = (totalFragment === 2 && _dummylength )
+// 			? Math.round((targetFileLength - fragment.length) * Math.random()) : 0
+// 		const dummyData = buffer.Buffer.allocUnsafeSlow( dummylength)
+// 		const partEncryptPassword = encryptPasswordIssue(ver, mnemonicPhrasePassword, index)
+// 		const localData = {
+// 			data: fragment,
+// 			totalFragment: totalFragment,
+// 			index
+// 		}
+// 		const IPFSData = {
+// 			data: fragment,
+// 			totalFragment: totalFragment,
+// 			index,
+// 			dummyData: dummyData
+// 		}
+// 		const piece: fragmentsObj = {
+// 			localEncryptedText: await CoNETModule.aesGcmEncrypt (JSON.stringify(localData), partEncryptPassword),
+// 			remoteEncryptedText: await CoNETModule.aesGcmEncrypt (JSON.stringify(IPFSData), partEncryptPassword),
+// 			fileName: createFragmentFileName(ver, mnemonicPhrasePassword, index),
+// 		}
 		
-		return async.parallel([
-			next => storageHashData (piece.fileName, piece.localEncryptedText).then(()=> next(null)),
-			next => updateFragmentsToIPFS(piece.remoteEncryptedText, piece.fileName, keyID, privateArmor)
-				.then(() => getFragmentsFromPublic(piece.fileName)
-				.then( data=> {
-					if (!data) {
-						const err = `storagePieceToLocalAndIPFS review storage version ${ver} fragment No.[${index}] Error! try again`
-						logger(err)
-						return next(err)
-					}
-					return next(null)
-					}
-				)
-			)
-		], err=> {
-			if (err) {
-				resolve(false)
-				return storagePieceToLocalAndIPFS (mnemonicPhrasePassword, fragment, index, totalFragment, targetFileLength, ver, privateArmor, keyID)
-			}
+// 		return async.parallel([
+// 			next => storageHashData (piece.fileName, piece.localEncryptedText).then(()=> next(null)),
+// 			next => updateFragmentsToIPFS(piece.remoteEncryptedText, piece.fileName, keyID, privateArmor)
+// 				.then(() => getFragmentsFromPublic(piece.fileName)
+// 				.then( data=> {
+// 					if (!data) {
+// 						const err = `storagePieceToLocalAndIPFS review storage version ${ver} fragment No.[${index}] Error! try again`
+// 						logger(err)
+// 						return next(new Error(err))
+// 					}
+// 					return next(null)
+// 					}
+// 				)
+// 			)
+// 		], err=> {
+// 			if (err) {
+// 				resolve(false)
+// 				return storagePieceToLocalAndIPFS (mnemonicPhrasePassword, fragment, index, totalFragment, targetFileLength, ver, privateArmor, keyID)
+// 			}
 			
-			return resolve(true)
-		})
+// 			return resolve(true)
+// 		})
 		
-	})
+// 	})
 
-}
+// }
 
 const initSystemDataV1 = async (acc) => {
 	

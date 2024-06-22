@@ -144,12 +144,7 @@ export class socks5 {
 
 
 		this.socket.once ( 'data', ( _data: Buffer ) => {
-
 			
-			logger(`connectStat3 buffer`)
-			hexDebug(_data)
-			
-
 			uuuu.ssl = isSslFromBuffer (_data)
 
 			if (!uuuu.ssl) {
@@ -164,7 +159,7 @@ export class socks5 {
 			}
 
 			uuuu.buffer = _data.toString ( 'base64' )
-			return this.proxyServer.requestGetWay ( requestObj, uuuu, userAgent, this.socket )
+			return this.proxyServer.requestGetWay ( uuuu, this.socket )
 		})
 
 
@@ -178,9 +173,8 @@ export class socks5 {
 	}
 	
 	private connectStat2 ( data: Buffer ) {
-		logger(colors.grey(`connectStat2`))
-		if ( this.debug ) {
 
+		if ( this.debug ) {
 			hexDebug(data)
 		}
 		const req = new Rfc1928.Requests ( data )
@@ -240,8 +234,6 @@ export class socks5 {
 	constructor ( private socket: Net.Socket, private data: Buffer, private agent: string, private proxyServer: proxyServer ) {
 		
 			logger (colors.yellow(`new socks v5`))
-			hexDebug(data)
-		
 
 		this.socket.once ( 'data', ( chunk: Buffer ) => {
 			return this.connectStat2 ( chunk )
@@ -375,7 +367,7 @@ export class sockt4 {
 
 		
 			
-		return this.proxyServer.requestGetWay ( requestObj, uuuu, userAgent, this.socket )
+		return this.proxyServer.requestGetWay ( uuuu, this.socket )
 		
 
 		//return this.socket.end ( this.req.request_failed )

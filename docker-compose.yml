@@ -1,0 +1,11 @@
+version: "3.9"
+services:
+  #Creates NodeJS
+  #
+  #
+  conet-platform-local:
+    image: "conetnetwork/conet-daemon:lasest"
+    ports:
+      - 3001:3001
+      - 3003:3003
+      
