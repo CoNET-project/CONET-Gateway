@@ -98,12 +98,69 @@ const burnCCNTP = async (profile: profile, totalBurn: string) => {
 
 	profile.tokens.cCNTP.history.push(kk1)
 
-
 	if ( !profile.pgpKey) {
 		logger(`burnCCNTP profile.pgpKey Error!`)
 		return kk1
 	}
-	
+ 
+    return kk1
+}
+
+const startSilentPass = async (profile: profile, region: string): Promise<Object | false> => {
+	if (!profile) {
+        logger(`startSilentPass profile is null Error!`)
+		return false 
+	}
+	if (!region) {
+        logger(`startSilentPass region is null Error!`)
+		return false
+	}
+
+    const regions: string[] = await getRegion()
+	if (!regions) {
+        logger(`CONET region unavailable`)
+		return false 
+	}
+
+    if (profile.pgpKey) {
+        const publicKeyArmor = profile.pgpKey.publicKeyArmor;
+        const privateKeyArmor = profile.pgpKey.privateKeyArmor;
+        profile.pgpKey = {privateKeyArmor, publicKeyArmor};
+    }
+
+	const filter = new RegExp(`${region}$`, 'i')
+	const filterRegion: string[] = regions.filter(n => filter.test(n))
+	const GuardianNodesSC = new ethers.Contract(CONET_Guardian_NodeInfoV4, CONET_Guardian_NodeInfo_ABI, provideCONET)
+	const nodes: nodes_info[] = []
+
+	await async.mapLimit(filterRegion, 5, async (n, next) => {
+		
+		const ipaddress: string[] = await GuardianNodesSC.getReginNodes(n)
+		ipaddress.forEach(nn => {
+			const node: nodes_info = {
+				region: n,
+				country: region,
+				ip_addr: nn,
+				armoredPublicKey: '',
+				last_online: true
+			}
+			nodes.push (node)
+		})
+	})
+
+	await async.mapLimit(nodes, 5, async (n, next) => {
+		const k = await GuardianNodesSC.getNodePGP(n.ip_addr)
+		n.armoredPublicKey = buffer.Buffer.from(k,'base64').toString()
+	})
+
+	const activeNodes = nodes.slice(0,2)
+	const egressNodes =  nodes.slice(0,1)
+
+	const kkk = await openpgp.readKey({ armoredKey: nodes[0].armoredPublicKey })
+	const kkk1 = await openpgp.readKey({ armoredKey: nodes[1].armoredPublicKey })
+	const res = await postToEndpoint('http://localhost:3001/conet-profile',true,  {profile, activeNodes, egressNodes})
+
+    return {status: 'Confirmed'};
 }
 
 const getProfileAssets_allOthers_Balance = async (profile: profile) => {
@@ -269,7 +326,7 @@ const checkGuardianNodes = async () => {
 			_assetNodesAddr.push(nodeAddress[index])
 		}
 	})
-	const assetNodesAddr = []
+	const assetNodesAddr:any = []
 	_assetNodesAddr.forEach(n => {
 		const index = profiles.findIndex(nn => nn.keyID.toLowerCase()=== n)
 		if (index < 0) {
@@ -868,6 +925,13 @@ const storagePieceToLocal = () => {
 		}
 		const profile = CoNET_Data.profiles[0]
 		const fileLength = Math.round(1024 * (10 + Math.random() * 20))
+
+        let firstProfilePgpKey = {publicKeyArmor: '', privateKeyArmor: ''}
+        if(CoNET_Data.profiles[0].pgpKey) {
+            firstProfilePgpKey = {publicKeyArmor: CoNET_Data.profiles[0].pgpKey.publicKeyArmor, privateKeyArmor: CoNET_Data.profiles[0].pgpKey.privateKeyArmor}
+            CoNET_Data.profiles[0].pgpKey = firstProfilePgpKey
+        }
+
 		const profilesClearText = JSON.stringify(CoNET_Data.profiles)
 		const chearTextFragments = splitTextLimitLength(profilesClearText, fileLength)
 		const passward = ethers.id(ethers.id(CoNET_Data.mnemonicPhrase))

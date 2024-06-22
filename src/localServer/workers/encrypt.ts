@@ -365,7 +365,6 @@ const processCmd = async (cmd: worker_command) => {
 			}
 			const tx = await burnCCNTP (profile, total)
 
-			
 			if (!tx) {
 				cmd.err = 'INVALID_DATA'
 				return returnUUIDChannel(cmd)
@@ -407,6 +406,38 @@ const processCmd = async (cmd: worker_command) => {
 				return returnUUIDChannel(cmd)
 			}
 			cmd.data = [gasFee]
+			return returnUUIDChannel(cmd)
+		}
+
+		case 'startSilentPass': {
+			const [profileKeyId, region] = cmd.data
+
+			if (!profileKeyId || !region) {
+				cmd.err = 'INVALID_DATA'
+				return returnUUIDChannel(cmd)
+			}
+
+			const profiles = CoNET_Data?.profiles
+			if (!profiles) {
+				cmd.err = 'NOT_READY'
+				return returnUUIDChannel(cmd)
+			}
+
+			const profileIndex = profiles.findIndex(n => n.keyID.toLowerCase() === profileKeyId.toLowerCase())
+			if (profileIndex < 0) {
+				cmd.err = 'INVALID_DATA'
+				return returnUUIDChannel(cmd)
+			}
+			const profile = profiles[profileIndex]
+
+			var result = await startSilentPass(profile, region)
+
+			if (result === false) {
+				cmd.err = 'FAILURE'
+				return returnUUIDChannel(cmd)
+			}
+
+			cmd.data = [result]
 			return returnUUIDChannel(cmd)
 		}
 

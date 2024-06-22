@@ -664,5 +664,5 @@ const getRegionAllNodes = async (region: string, profile: profile) => {
 	const kkk = await openpgp.readKey({ armoredKey: nodes[0].armoredPublicKey })
 	const kkk1 = await openpgp.readKey({ armoredKey: nodes[2].armoredPublicKey })
 	const res = await postToEndpoint('http://localhost:3001/conet-profile',true,  {profile: profile, activeNodes, egressNodes})
-	//		curl -v -4 -x socks5h://localhost:3003 "https://www.googgle.com"
+	//		curl -v -4 -x socks5h://localhost:3003 "https://www.google.com"
 }
