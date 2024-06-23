@@ -119,45 +119,21 @@ export class socks5 {
 			}
 		}
 
-		const uuuu : VE_IPptpStream = {
-			uuid: this.uuid,
-			host: req.host,
-			buffer: '',
-			cmd: this._cmd,
-			port: req.port,
-			ssl: false,
-			order: 0
-		}
 
-		const requestObj: requestObj = {
-			remotePort: this.socket.remotePort,
-			remoteAddress: this.socket.remoteAddress,
-			targetHost: uuuu.host,
-			targetPort: uuuu.port,
-			methods: '',
-			socks: 'Sock5',
-			uuid: uuuu.uuid
-		}
 
 		//		PAYMENT REQUIRE
 
 
 		this.socket.once ( 'data', ( _data: Buffer ) => {
-			
-			uuuu.ssl = isSslFromBuffer (_data)
-
-			if (!uuuu.ssl) {
-				const httpHeader = new httpProxyHeader (_data)
-				uuuu.host = httpHeader.host || uuuu.host
-				if ( !httpHeader.host ) {
-					logger(colors.red(`Socks 5 have no host [header]`))
-					logger(Util.inspect(httpHeader.headers, false, 3, true))
-				}
-				userAgent = httpHeader.headers [ 'user-agent' ]
-				requestObj.methods = httpHeader.methods
+			const uuuu : VE_IPptpStream = {
+				uuid: this.uuid,
+				host: req.host,
+				buffer:  _data.toString ( 'base64' ),
+				cmd: this._cmd,
+				port: req.port,
+				ssl: isSslFromBuffer (_data),
+				order: 0
 			}
-
-			uuuu.buffer = _data.toString ( 'base64' )
 			return this.proxyServer.requestGetWay ( uuuu, this.socket )
 		})
 
@@ -328,10 +304,6 @@ export class sockt4 {
 
 	public connect ( buffer: Buffer) {
 		
-		const isSsl = isSslFromBuffer ( buffer )
-		let userAgent = ''
-		let methods = 'GET'
-		const httpHeader = new httpProxyHeader (buffer)
 		const uuuu : VE_IPptpStream = {
 			uuid: this.uuid,
 			host: this.req.domainName||this.req.targetIp,
@@ -342,29 +314,6 @@ export class sockt4 {
 			order: 0
 		}
 		
-		if (!isSsl) {
-			uuuu.host = httpHeader.host
-			userAgent = httpHeader.headers [ 'user-agent' ]
-			methods = httpHeader.methods
-		}
-		
-		const requestObj: requestObj = {
-			remotePort: this.socket.remotePort,
-			remoteAddress: this.socket.remoteAddress,
-			targetHost: uuuu.host,
-			targetPort: uuuu.port,
-			methods: httpHeader ? httpHeader.methods : 'CONNECT',
-			socks: this.req.targetIp ? 'Sock4' : 'Sock4a',
-			uuid: uuuu.uuid
-		}
-
-		if ( this.debug ) {
-			logger(Util.inspect (uuuu, false, 3, true ))
-			logger(Util.inspect (requestObj, false, 3, true ))
-		}
-
-		
-			
 		return this.proxyServer.requestGetWay ( uuuu, this.socket )
 		
 

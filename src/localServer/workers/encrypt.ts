@@ -542,34 +542,6 @@ const processCmd = async (cmd: worker_command) => {
 			
         }
 
-		case 'startProxy': {
-			// const profile = gettPrimaryProfile()
-			// const region: string = cmd.data[0]
-			// const nodes = await getAllNodesInfo()
-			// if (profile && nodes !== null && nodes.node.length ) {
-			// 	const activeNodes = nodes.node
-			// 	let _activeNodes = JSON.parse(JSON.stringify(nodes.node))
-			// 	if (region && region !=='none' ) {
-			// 		_activeNodes = nodes.node.filter(n => n.country === region )
-			// 	}
-			// 	if (_activeNodes?.length) {
-			// 		//@ts-ignore
-			// 		profile.network.recipients = _activeNodes
-					
-			// 		const url = `http://localhost:3001/conet-profile`
-			// 		await postToEndpoint(url, true, { profile, activeNodes })
-			// 		// fetchProxyData(`http://localhost:3001/getProxyusage`, '', data=> {
-			// 		//     logger (`fetchProxyData GOT DATA FROM locathost `, data)
-			// 		// })
-			// 		return returnUUIDChannel(cmd)
-			// 	}
-				
-			// }
-			
-			cmd.err = 'FAILURE'
-			return returnUUIDChannel(cmd)
-		}
-
 		case 'ipaddress': {
 			
 			const url = `http://localhost:3001/ipaddress`
