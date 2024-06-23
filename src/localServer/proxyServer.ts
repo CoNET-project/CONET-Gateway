@@ -17,6 +17,8 @@ import EthCrypto from 'eth-crypto'
 import async from 'async'
 import CONET_Guardian_NodeInfo_ABI from './abi/CONET_Guardian_NodeInfo.json'
 
+// const httpProxy = ( clientSocket: Net.Socket, buffer: Buffer, _gatway: gateWay, debug: boolean ) => {
+// }
 
 const getRandomSaaSNode = (saasNodes: nodes_info[], allNodes: nodes_info[]) => {
 	if (!saasNodes.length || !allNodes.length) {
@@ -207,12 +209,12 @@ const ConnectToProxyNode = (cmd : SICommandObj, SaaSnode: nodes_info, entryNode:
 	if (!entryNode) {
 		return logger(Colors.red(`ConnectToProxyNode Error! getRandomNode return null nodes!`))
 	}
-	
-	const connectID = Colors.gray('Connect to [') + Colors.green(`${uuuu.host}:${uuuu.port}`)+Colors.gray(']')
+	const hostInfo = `${uuuu.host}:${uuuu.port}`
+	const connectID = Colors.gray('Connect to [') + Colors.green(`${hostInfo}`)+Colors.gray(']')
 
 	const data = otherRequestForNet(JSON.stringify({data: cmd.requestData[0]}), entryNode.ip_addr, 80, 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/117.0.0.0 Safari/537.36')
 	const infoData: ITypeTransferCount = {
-		hostInfo: `${uuuu.host}:${uuuu.port}`,
+		hostInfo: hostInfo,
 		ssl: uuuu.ssl,
 		startTime: new Date().getTime(),
 		download: 0,
@@ -260,7 +262,6 @@ const ConnectToProxyNode = (cmd : SICommandObj, SaaSnode: nodes_info, entryNode:
 	remoteSocket.write(data)
 
 }
-
 
 
 export class proxyServer {
@@ -393,3 +394,4 @@ export class proxyServer {
 		this.startLocalProxy()
 	}
 }
+

@@ -512,7 +512,6 @@ interface VE_IPptpStream {
     length?:number
     randomBuffer?: Buffer
     ssl: boolean
-    hostIPAddress: string|null
     hostName?: string       //      for test gateway from client
 	order: number
 }

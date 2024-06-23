@@ -153,12 +153,10 @@ const startSilentPass = async (profile: profile, region: string): Promise<Object
 		n.armoredPublicKey = buffer.Buffer.from(k,'base64').toString()
 	})
 
-	const activeNodes = nodes.slice(0,2)
-	const egressNodes =  nodes.slice(0,1)
+	const activeNodes = nodes
+	const egressNodes =  [nodes[Math.floor(nodes.length * Math.random())]]
 
-	const kkk = await openpgp.readKey({ armoredKey: nodes[0].armoredPublicKey })
-	const kkk1 = await openpgp.readKey({ armoredKey: nodes[1].armoredPublicKey })
-	const res = await postToEndpoint('http://localhost:3001/conet-profile',true,  {profile, activeNodes, egressNodes})
+	await postToEndpoint('http://localhost:3001/conet-profile',true,  {profile, activeNodes, egressNodes})
 
     return {status: 'Confirmed'};
 }

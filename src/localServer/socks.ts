@@ -122,7 +122,6 @@ export class socks5 {
 		const uuuu : VE_IPptpStream = {
 			uuid: this.uuid,
 			host: req.host,
-			hostIPAddress: req.hostAddress,
 			buffer: '',
 			cmd: this._cmd,
 			port: req.port,
@@ -335,8 +334,7 @@ export class sockt4 {
 		const httpHeader = new httpProxyHeader (buffer)
 		const uuuu : VE_IPptpStream = {
 			uuid: this.uuid,
-			host: this.host,
-			hostIPAddress: this.req.targetIp,
+			host: this.req.domainName||this.req.targetIp,
 			buffer: buffer.toString ( 'base64' ),
 			cmd: this._cmd,
 			port: this.req.port,
