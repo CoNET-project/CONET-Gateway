@@ -2622,6 +2622,51 @@ const getEstimateGas = (privateKey: string, asset: string, _transferNumber: stri
 	
 })
 
+const getEstimateGasForTokenTransfer = (
+  privateKey: string,
+  asset: string,
+  _transferNumber: string,
+  toAddr: string
+) =>
+  new Promise(async (resolve) => {
+    const provide = new ethers.JsonRpcProvider(getNetwork(asset));
+    const wallet = new ethers.Wallet(privateKey, provide);
+    let _fee, _fee1;
+    const transferNumber = parseEther(_transferNumber, asset);
+    const smartContractAddr = getAssetERC20Address(asset);
+    if (smartContractAddr) {
+      const estGas = new ethers.Contract(
+        smartContractAddr,
+        blast_CNTPAbi,
+        wallet
+      );
+      try {
+        _fee = await estGas.transfer.estimateGas(toAddr, transferNumber);
+      } catch (ex) {
+        return resolve(false);
+      }
+    } else {
+      const tx = {
+        to: toAddr,
+        value: transferNumber,
+      };
+      try {
+        _fee = await wallet.estimateGas(tx);
+      } catch (ex) {
+        return resolve(false);
+      }
+    }
+    try {
+      const Fee = await provide.getFeeData();
+      const gasPrice = ethers.formatUnits(Fee.gasPrice, 'gwei');
+      const fee = parseFloat(ethers.formatEther(_fee * Fee.gasPrice)).toFixed(
+        8
+      );
+      return resolve({ gasPrice, fee });
+    } catch (ex) {
+      return resolve(false);
+    }
+  });
 
 const CONET_guardian_purchase: (profile: profile, nodes: number, _total: number, tokenName: string) => Promise<boolean> = async (profile, nodes, _total, tokenName ) => {
 	const cryptoAsset: CryptoAsset = profile.tokens[tokenName]
