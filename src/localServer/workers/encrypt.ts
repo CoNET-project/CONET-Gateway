@@ -341,6 +341,112 @@ const processCmd = async (cmd: worker_command) => {
 			return returnUUIDChannel(cmd)
 		}
 
+		case 'transferToken': {
+			const [amount, sourceProfileKeyID, assetName, toAddress] = cmd.data;
+			
+			if (!assetName || !toAddress || !amount || !sourceProfileKeyID) {
+				cmd.err = 'INVALID_DATA'
+				return returnUUIDChannel(cmd)
+			}
+			
+			if(!getAddress(toAddress) && !getAddress(sourceProfileKeyID)) {
+				cmd.err = 'INVALID_DATA'
+				return returnUUIDChannel(cmd)
+			}
+
+			const profiles = CoNET_Data?.profiles
+
+			if (!profiles) {
+				cmd.err = 'NOT_READY'
+				return returnUUIDChannel(cmd)
+			}
+
+			const profileIndex = profiles.findIndex(
+        (n) => n.keyID.toLowerCase() === sourceProfileKeyID.toLowerCase()
+      );
+			
+			if (profileIndex < 0) {
+				cmd.err = 'INVALID_DATA'
+				return returnUUIDChannel(cmd)
+			}
+
+			const health = await getCONET_api_health()
+			if (!health) {
+				cmd.err = 'Err_Server_Unreachable'
+				return returnUUIDChannel(cmd)
+			}
+
+			const sourceProfile = profiles[profileIndex]
+
+			sendState('beforeunload', true)
+			const kk = await CONET_transfer_token (sourceProfile, toAddress, amount, assetName)
+			sendState('beforeunload', false)
+			
+			if (!!kk !== true) {
+				cmd.err = 'INVALID_DATA'
+				return returnUUIDChannel(cmd)
+			}
+
+			const cmd1: channelWroker = {
+				cmd: 'tokenTransferStatus',
+				data: [4, kk]
+			}
+			sendState('toFrontEnd', cmd1)
+			
+			return returnUUIDChannel(cmd)
+		}
+
+		case 'estimateGas': {
+			const [amount, sourceProfileKeyID, assetName, toAddress] = cmd.data;
+
+			if (!assetName || !toAddress || !amount || !sourceProfileKeyID) {
+				cmd.err = 'INVALID_DATA'
+				return returnUUIDChannel(cmd)
+			}
+
+				const profiles = CoNET_Data?.profiles;
+        if (!profiles) {
+          cmd.err = 'FAILURE';
+          return returnUUIDChannel(cmd);
+        }
+
+				const profileIndex = profiles.findIndex(
+          (n) => n.keyID.toLowerCase() === sourceProfileKeyID.toLowerCase()
+        );
+        if (profileIndex < 0) {
+          cmd.err = 'INVALID_DATA';
+          return returnUUIDChannel(cmd);
+        }
+
+        const profile = profiles[profileIndex];
+
+        const asset: CryptoAsset = profile.tokens[assetName];
+        if (
+          !profile.privateKeyArmor ||
+          !asset
+        ) {
+          cmd.err = 'INVALID_DATA';
+          return returnUUIDChannel(cmd);
+        }
+
+        const data: any = await getEstimateGasForTokenTransfer(
+          profile.privateKeyArmor,
+          assetName,
+          amount,
+          toAddress
+        );
+
+        cmd.data = [data.gasPrice, data.fee, true, 5000];
+        return returnUUIDChannel(cmd);
+		}
+
+		case 'isAddress' : {
+			const address = cmd.data[0]
+			const ret = getAddress(address)
+			cmd.data = [ret === '' ? false : true]
+			return returnUUIDChannel(cmd)
+		}
+
 		case 'burnCCNTP': {
 			const [_profile, total] = cmd.data
 			if (!_profile) {

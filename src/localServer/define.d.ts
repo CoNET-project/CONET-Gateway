@@ -165,7 +165,7 @@ declare type WorkerCommand = 'READY'|'getRegiestNodes'|'beforeunload'|'createAcc
     'SaaSRegister'|'getContainer'|'ipaddress'|'startLiveness'|'stopLiveness'|'isLivenessRunning'|'importWallet'|'startMining'|'stopMining'|
 	//		from service worker
 	'urlProxy'|'saveDomain'|'getDomain'|'getWorkerClientID'|'getRefereesList'|'getAllNodes'|'getAllProfiles'|'updateProfile'|'addProfile'|'resetPasscode'|
-	'getAssetsPrice'|'recoverAccount'|'CONETFaucet'|'prePurchase'|'guardianPurchase'|'fx168PrePurchase'|'claimToken' | 'startSilentPass'
+	'getAssetsPrice'|'recoverAccount'|'CONETFaucet'|'prePurchase'|'guardianPurchase'|'fx168PrePurchase'|'claimToken' | 'transferToken' | 'estimateGas' | 'startSilentPass'
 
 type SINodesSortby = 'CUSTOMER_REVIEW'|'TOTAL_ONLINE_TIME'|
 	'STORAGE_PRICE_LOW'|'STORAGE_PRICE_HIGH'|'OUTBOUND_PRICE_HIGH'|'OUTBOUND_PRICE_LOW'
@@ -607,7 +607,7 @@ interface conetPlatform {
 	passcode: 'LOCKED'|'UNLOCKED'|'NONE'
 }
 
-type command = 'profileVer'|'assets'|'purchaseStatus'|'miningStatus'
+type command = 'profileVer'|'assets'|'purchaseStatus'|'miningStatus' | 'tokenTransferStatus'
 interface channelWroker {
 	cmd: command,
 	data: any[]
