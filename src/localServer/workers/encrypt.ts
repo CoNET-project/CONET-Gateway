@@ -444,7 +444,7 @@ const processCmd = async (cmd: worker_command) => {
 			const address = cmd.data[0]
 			const ret = getAddress(address)
 			cmd.data = [ret === '' ? false : true]
-			return returnCommand(cmd)
+			return returnUUIDChannel(cmd)
 		}
 
 		case 'burnCCNTP': {
