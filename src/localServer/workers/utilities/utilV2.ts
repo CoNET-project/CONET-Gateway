@@ -350,7 +350,7 @@ const recoverAccount = async (cmd: worker_command) => {
 
 	authorization_key = cmd.data[0] = uuid.v4()
 	returnUUIDChannel(cmd)
-	
+
 	await storagePieceToLocal()
 	await storeSystemData ()
 	
@@ -545,9 +545,23 @@ const getReferralsRate = async (wallet: string) => {
 	}
 	
 }
-
-const getNodesInfo = (nodeID: number) => {
-	
+const fetchTest = () => {
+	const url = 'http://localhost:3001/ver'
+	fetch(url, {
+		method: 'GET',
+		headers: {
+			'Content-Type': 'application/json;charset=UTF-8',
+			'Connection': 'close',
+		},
+		cache: 'no-store',
+		referrerPolicy: 'no-referrer'
+	}).then ( async res => res.json())
+	.then(ver => {
+		logger(ver)
+	})
+	.catch(ex=> {
+		logger(ex)
+	})
 }
 
 const testFunction = async (cmd: worker_command) => {
@@ -557,10 +571,10 @@ const testFunction = async (cmd: worker_command) => {
 	if (!profiles) {
 		return
 	}
-	
+	await fetchTest()
 	const profile = profiles[0]
 	// await makeContainerPGPObj(profile)
-	getRegionAllNodes ('us', profile)
+	//getRegionAllNodes ('us', profile)
 	//await checkProfileVersion (profile.keyID)
 	// const wallet = await unlock_cCNTP(profile)
 	const wallet1 = '0xD8b12054612119e9E45d5Deef40EDca38d54D3b5'
