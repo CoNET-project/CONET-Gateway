@@ -11,8 +11,6 @@ const getRegion = async () => {
 	}
 }
 
-
-
 const registerReferrer = async (referrer: string) => {
 	if (!CoNET_Data?.profiles) {
 		logger(`registerReferrer CoNET_Data?.profiles Empty error!`)
@@ -472,7 +470,7 @@ const checkAssets = async (block: number, provider: any, profiles: profile[]|und
 	for (let tx of blockInfo.transactions) {
 		const event = await provider.getTransactionReceipt(tx)
 		const to = event?.to?.toLowerCase()
-		
+		const from = event?.to?.toLowerCase()
 		logger(`block [${block}] transactions ${to}`)
 		if (to) {
 			const index = profiles.findIndex(n => n.keyID.toLowerCase() === to)
@@ -511,7 +509,12 @@ const checkAssets = async (block: number, provider: any, profiles: profile[]|und
 			}
 
 			if (to === ReferralsAddressV3) {
-				RefereesList = await getAllReferees(profiles[0].keyID, CNTP_Referrals)
+				RefereesList = await getAllReferees(profiles[0].keyID.toLowerCase(), CNTP_Referrals)
+				continue
+			}
+
+			if (to === profile_ver_addr && from === profiles[0].keyID.toLowerCase()) {
+				await checkUpdateAccount()
 				continue
 			}
 			
@@ -519,7 +522,6 @@ const checkAssets = async (block: number, provider: any, profiles: profile[]|und
 	}
 	
 }
-
 
 let provideCONET
 let lesteningBlock = false
@@ -531,11 +533,12 @@ const listenProfileVer = async () => {
 	provideCONET.on ('block', async block => {
 		const profiles = CoNET_Data?.profiles
 		
-		await 
-		Promise.all([
+		await Promise.all([
 			selectLeaderboard(block),
 			checkAssets(block, provideCONET, profiles)
+
 		])
+
 		const cmd: channelWroker = {
 			cmd: 'assets',
 			data: [profiles, RefereesList, leaderboardData]
@@ -832,39 +835,56 @@ const resizeImage = ( mediaData: string, imageMaxWidth: number, imageMaxHeight: 
 
 const checkUpdateAccount = () => new Promise(async resolve => {
 	
+
+	if ( ! CoNET_Data || ! CoNET_Data?.profiles ) {
+		logger(`checkUpdateAccount CoNET_Data?.profiles hasn't ready!`)
+		return resolve (false)
+	}
+
+	const profiles = CoNET_Data.profiles
+
+	if (checkcheckUpdateLock) {
+		return resolve (false)
+	}
+
+	checkcheckUpdateLock = true
+	
+	const [nonce, _ver] = await checkProfileVersion( profiles[0].keyID)
+
+	CoNET_Data.nonce = nonce
+
+	if (_ver === CoNET_Data.ver) {
+		return resolve (true)
+	}
+
+	//	Local version big then remote
+	if (_ver < CoNET_Data.ver ) {
+		const result = await updateProfilesVersionToIPFS()
+		if (!result) {
+			return resolve (false)
+		}
+
+		const result1 = await checkIPFSFragmenReadyOrNot(_ver, CoNET_Data)
+		if (!result1) {
+			return resolve (false)
+		}
+
+		const ver = await updateChainVersion(profiles[0])
+		if (ver < '0') {
+			return resolve (false)
+		}
+
+		await storagePieceToLocal(ver)
+		await storeSystemData ()
+
+		checkcheckUpdateLock = false
+		return resolve (true)
+	}
+
+	await getDetermineVersionProfile(_ver, CoNET_Data)
+	
+	checkcheckUpdateLock = false
 	return resolve (true)
-
-	// if ( ! CoNET_Data || ! CoNET_Data?.profiles ) {
-	// 	logger(`checkUpdateAccount CoNET_Data?.profiles hasn't ready!`)
-	// 	return resolve (false)
-	// }
-
-	// const profiles = CoNET_Data.profiles
-
-	// if (checkcheckUpdateLock) {
-	// 	return resolve (false)
-	// }
-
-	// checkcheckUpdateLock = true
-	
-	// const [nonce, _ver] = await checkProfileVersion( profiles[0].keyID)
-
-	// CoNET_Data.nonce = nonce
-	// CoNET_Data.ver = CoNET_Data.ver||1
-	// if (CoNET_Data.ver && _ver === CoNET_Data.ver) {
-	// 	return resolve (true)
-	// }
-
-	// //	Local version big then remote
-	// if (_ver < CoNET_Data.ver ) {
-	// 	await updateProfilesVersionToIPFS()
-	// 	checkcheckUpdateLock = false
-	// 	return resolve (true)
-	// }
-	// await getDetermineVersionProfile(_ver, CoNET_Data)
-	
-	// checkcheckUpdateLock = false
-	// return resolve (true)
 	
 })
 
@@ -914,7 +934,7 @@ const CoNET_initData_save = async (database, systemInitialization_uuid: string) 
 
 }
 
-const storagePieceToLocal = () => {
+const storagePieceToLocal = (newVer= '-1') => {
 	
 	return new Promise(resolve => {
 		if (!CoNET_Data||! CoNET_Data.profiles) {
@@ -934,7 +954,7 @@ const storagePieceToLocal = () => {
 		const chearTextFragments = splitTextLimitLength(profilesClearText, fileLength)
 		const passward = ethers.id(ethers.id(CoNET_Data.mnemonicPhrase))
 		const privateKeyArmor = profile.privateKeyArmor||''
-		const ver = CoNET_Data.ver = (CoNET_Data.ver||0) + 1
+		const ver = CoNET_Data.ver = newVer < '0' ? CoNET_Data.ver + 1: parseInt(newVer)
 	
 		// chearTextFragments.forEach((n, index)=> {
 		// 	const stage = next => _storagePieceToLocal(passward, n, index, chearTextFragments.length, 
@@ -974,28 +994,9 @@ const recoverProfileFromSRP = () => {
 			return reject (ex)
 		}
 
-
-		
+		await initSystemDataV1(acc)
+		return resolve(true)
 			
-			// //		network error!
-			// if (ver < 0) {
-			// 	const errMessage =`recoverProfileFromSRP checkProfileVersion RoopCount > 5! Stop trying!`
-			// 	return reject (new Error(errMessage))
-			// }
-			//		init
-			await initSystemDataV1(acc)
-			// if (ver === 0) {
-			// 	// await getFaucet (publicKey)
-			// 	return resolve(true)
-			// }
-			
-			
-			await getLocalProfile(CoNET_Data.ver)
-
-			return resolve(true)
-			//const firstprice = getFirstFragmentName(SRP, ver)
-			
-		
 	})
 
 }
@@ -1080,23 +1081,18 @@ const updateFragmentsToIPFS = (encryptData: string, hash: string, keyID: string,
 
 })
 
-let updateChainVersionCount = 0
-
-
-const updateChainVersion = async (storageVer: any, conetData: encrypt_keys_object) => {
-	const profile = conetData.profiles
-	if (!profile) {
-		return 
-	}
+const updateChainVersion: (profile: profile) => Promise<string> = async (profile: profile) => {
+	const wallet = new ethers.Wallet(profile.privateKeyArmor, provideCONET)
+	const conet_storage = new ethers.Contract(profile_ver_addr, conet_storageAbi, wallet)
 	try {
-		const tx = await storageVer.versionUp('0x0')
+		const tx = await conet_storage.versionUp('0x0')
 		await tx.wait()
-		const ver = await storageVer.count(profile[0].keyID)
-		conetData.ver = ver.toString()
+		const ver = await conet_storage.count(profile.keyID)
+		return ver.toString()
 	} catch(ex) {
-		return logger(`updateChainVersion error! try again`, ex)
+		logger(`updateChainVersion error! try again`, ex)
+		return '-1'
 	}
-
 }
 
 const initProfileTokens = () => {
@@ -1752,8 +1748,7 @@ let checkcheckUpdateLock = false
 let lastCheckcheckUpdateTimeStamp = 0
 
 
-
-const checkIPFSFragmenReadyOrNot = (ver: number, CoNET_data: encrypt_keys_object) => new Promise ( async resolve => {
+const checkIPFSFragmenReadyOrNot: (ver: number, CoNET_data: encrypt_keys_object) => Promise<boolean>  = (ver: number, CoNET_data: encrypt_keys_object) => new Promise ( async resolve => {
 	let _chainVer = ver
 		
 	const passward = ethers.id(ethers.id(CoNET_data.mnemonicPhrase))
@@ -1784,61 +1779,23 @@ const checkIPFSFragmenReadyOrNot = (ver: number, CoNET_data: encrypt_keys_object
 			return resolve (false)
 		}
 
-		const totalFragment = firstFragmentObj.totalFragment
-		let clearData: string = firstFragmentObj.data
-		const series: any[] = []
-
-		for (let i = 1; i < totalFragment; i ++) {
-			const stage = next => {
-				getNextFragmentIPFS (_chainVer, passward, i)
-				.then( text=> {
-					if (!text) {
-						return next (`getNextFragment [${i}] return NULL Error`)
-					}
-					clearData += text
-					return next(null)
-				})
-			}
-			series.push(stage)
+		const totalFragment: number[] = []
+		for (let i = 0; i < firstFragmentObj.totalFragment; i ++) {
+			totalFragment.push(i)
 		}
 
-		return async.series(series)
-			.then (async () => {
-				let profile
-
-				
-				profile = JSON.parse(clearData)
-				
-
-				if (CoNET_Data) {
-					CoNET_Data.profiles = profile
-					CoNET_Data.ver = _chainVer
-					if (CoNET_Data?.fragmentClass) {
-						CoNET_Data.fragmentClass.failures = 0
-					} else {
-						CoNET_Data.fragmentClass = {
-							failures: 0,
-							mainFragmentName: ''
-						}
-					}
-					
-				}
-
-				await storagePieceToLocal()
-				
-				await storeSystemData()
-				
-				const cmd: channelWroker = {
-					cmd: 'profileVer',
-					data: [_chainVer]
-				}
-				sendState('toFrontEnd', cmd)
-				return resolve(true)
-				
-				
-			}).catch ( ex=> {
-				return resolve (false)
-			})
+		let clearData: string = firstFragmentObj.data
+		const series: any[] = []
+		let success = false
+		await async.mapLimit(totalFragment, 3, async (n, next) => {
+			const cleartext = await getNextFragmentIPFS (_chainVer, passward, n)
+			if (!cleartext) {
+				success = false
+			}
+			
+		})
+		
+		return resolve (success)
 	
 })
 
@@ -2177,8 +2134,6 @@ const decryptSystemData = async () => new Promise((resolve, reject) => {
 })
 	
 
-
-
 //*		scan assets
 const scanCONET_dWBNB = async (walletAddr: string, privideCONET: any) => {
 	return await scan_erc20_balance (walletAddr, privideCONET, conet_dWBNB)
@@ -2244,10 +2199,12 @@ const updateProfilesVersionToIPFS: () => Promise<boolean> = () => new Promise (a
 		await Promise.all([
 			...series
 		])
-		await updateChainVersion(storageVer, CoNET_Data)
-		const [nonce, chainVer1] = await checkProfileVersion( profile.keyID)
-		CoNET_Data.ver = parseInt(chainVer1.toString())
-		CoNET_Data.nonce = nonce
+		const cloud = await checkIPFSFragmenReadyOrNot(chainVer, CoNET_Data)
+		if (!cloud) {
+			logger(`updateProfilesVersionToIPFS has failed!`)
+			return resolve (false)
+		}
+		
 
 	} catch (ex) {
 		sendState('beforeunload', false)
@@ -2256,90 +2213,6 @@ const updateProfilesVersionToIPFS: () => Promise<boolean> = () => new Promise (a
 	}
 	
 	resolve(true)
-	await storagePieceToLocal()
-	await storeSystemData ()
-	logger(`updateProfilesVersion finished`)
-	
-})
-
-
-const updateProfilesVersionToIPFS_old: () => Promise<boolean> = () => new Promise (async resolve => {
-	
-	if (!CoNET_Data?.profiles || !passObj) {
-		
-		logger(`updateProfilesVersion !CoNET_Data[${!CoNET_Data}] || !passObj[${!passObj}] === true Error! Stop process.`)
-		return resolve (false)
-	}
-
-	const profile = CoNET_Data.profiles[0]
-	const privateKeyArmor = profile.privateKeyArmor || ''
-	
-	if (!profile || !privateKeyArmor) {
-		
-		logger(`updateProfilesVersion Error! profile empty Error! `)
-		return resolve (false)
-	}
-	const constBalance = profile.tokens.conet.balance
-	if (constBalance < '0.0001') {
-		await getFaucet(profile.keyID)
-		
-		logger(`updateProfilesVersion hasn't enough CONET to pay GAS`)
-		return resolve (false)
-	}
-	let chainVer
-
-	try {
-
-		[,chainVer] = await checkProfileVersion( profile.keyID)
-		const health = await getCONET_api_health()
-		if (!health) {
-			logger (`CONET api server hasn't health`)
-			return resolve (false)
-		}
-	} catch (ex: any) {
-		logger(`updateProfilesVersion checkProfileVersion or getCONET_api_health had Error!`, ex.message )
-		return resolve (false)
-	}
-
-
-	const wallet = new ethers.Wallet(profile.privateKeyArmor, provideCONET)
-	const storageVer = new ethers.Contract(profile_ver_addr, conet_storageAbi, wallet)
-	
-	
-	const passward = ethers.id(ethers.id(CoNET_Data.mnemonicPhrase))
-	const profilesClearText = JSON.stringify(CoNET_Data.profiles)
-	const fileLength = Math.round(1024 * (10 + Math.random() * 20))
-	const chearTextFragments = splitTextLimitLength(profilesClearText, fileLength)
-	const series: any[] = []
-	
-	sendState('beforeunload', true)
-	chearTextFragments.forEach (( n, index ) => {
-		series.push(storagePieceToIPFS(passward, n, index, chearTextFragments.length, 
-			fileLength, chainVer, privateKeyArmor, profile.keyID))
-	})
-	
-	
-	await Promise.all([
-		...series
-	])
-		
-	
-	try {
-		await updateChainVersion(storageVer, CoNET_Data)
-		const [nonce, chainVer1] = await checkProfileVersion( profile.keyID)
-		CoNET_Data.ver = parseInt(chainVer1.toString())
-		CoNET_Data.nonce = nonce
-
-	} catch (ex) {
-		sendState('beforeunload', false)
-		logger(`updateProfilesVersion Error!`)
-		return resolve (false)
-	}
-	
-	resolve(false)
-	sendState('beforeunload', false)
-	logger(`updateProfilesVersion finished`)
-	
 })
 
 const scanCONET_dUSDT = async (walletAddr: string, privideCONET: any) => {
@@ -2897,15 +2770,11 @@ const CONET_transfer_token: (
 
   cryptoAsset.history.push(kk1);
   
-  Promise.all([
-    await updateProfilesVersionToIPFS(),
-    await storagePieceToLocal(),
-  ]);
+    await storagePieceToLocal()
+  	await storeSystemData()
 
-  await storeSystemData();
-
-  return tx;
-};
+  return tx
+}
 
 const transferAssetToCONET_wallet: (
   privateKey: string,

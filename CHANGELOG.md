@@ -357,7 +357,7 @@
 
 ### Fixes
 
-- Add missing `launchSeguroGateway` arguments.
+- Add missing `Daemon` arguments.
 
 ---
 
@@ -373,7 +373,7 @@
 
 ### Fixes
 
-- Fix call to `launchSeguroGateway` function.
+- Fix call to `Daemon` function.
 
 ---
 
@@ -389,7 +389,7 @@
 
 ### Fixes
 
-- Fix call to `launchSeguroGateway` to work even without CLI arguments.
+- Fix call to `Daemon` to work even without CLI arguments.
 
 ---
 
@@ -405,7 +405,7 @@
 
 ### Fixes
 
-- Fix call to `launchSeguroGateway` to work even without CLI arguments.
+- Fix call to `Daemon` to work even without CLI arguments.
 
 ---
 
@@ -421,7 +421,7 @@
 
 ### Fixes
 
-- Fix call to `launchSeguroGateway` to work even without CLI arguments.
+- Fix call to `Daemon` to work even without CLI arguments.
 
 ---
 

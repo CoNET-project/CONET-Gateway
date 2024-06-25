@@ -12,7 +12,7 @@ import Ip from "ip"
 
 
 
-const ver = '0.1.3'
+const ver = '0.1.4'
 
 
 const CoNET_SI_Network_Domain = 'openpgp.online'
@@ -135,7 +135,7 @@ export const return404 = () => {
 }
 
 
-class LocalServer {
+export class Daemon {
     private logsPool: proxyLogs[] = []
 
     private loginListening: express.Response|null = null
@@ -533,22 +533,3 @@ class LocalServer {
         })
     }
 }
-
-export default LocalServer
-
-/**
- *          test()
- */
-
-
-// const doTest = async () => {
-//     const uu = await _getSINodes ('CUSTOMER_REVIEW', 'USA')
-//     logger (inspect(uu, false, 3, true))
-// }
-
-
-
-
-
-
-// doTest()

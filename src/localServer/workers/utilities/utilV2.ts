@@ -97,8 +97,9 @@ const createAccount = async (cmd: worker_command) => {
 
 	const tx = await getFaucet (mainProfile.keyID)
 	logger(tx)
-	await storeSystemData ()
 	await storagePieceToLocal()
+	await storeSystemData ()
+	
 	cmd.data[0] = CoNET_Data.mnemonicPhrase
 	return returnUUIDChannel (cmd)
 }
@@ -234,8 +235,6 @@ const importWallet = async (cmd: worker_command) => {
 	returnUUIDChannel(cmd)
 
 	await storagePieceToLocal()
-	
-	
 	await storeSystemData ()
 
 }
@@ -265,8 +264,6 @@ const updateProfile = async (cmd: worker_command) => {
 
 
 	await storagePieceToLocal()
-	
-
 	await storeSystemData ()
 }
 
@@ -310,9 +307,7 @@ const addProfile =  async (cmd: worker_command) => {
 	cmd.data[0] = CoNET_Data.profiles
 	returnUUIDChannel(cmd)
 
-		await storagePieceToLocal()
-	
-	
+	await storagePieceToLocal()
 	await storeSystemData ()
 	
 }
@@ -352,16 +347,14 @@ const recoverAccount = async (cmd: worker_command) => {
 	}
 	initSystemDataV1(acc)
 	await createNumberPasscode (passcode)
-	
 
-	if (CoNET_Data) {
-		await checkOldVersion (CoNET_Data)
-	}
-
-	await storeSystemData ()
-	
 	authorization_key = cmd.data[0] = uuid.v4()
 	returnUUIDChannel(cmd)
+	
+	await storagePieceToLocal()
+	await storeSystemData ()
+	
+
 }
 
 const prePurchase = async (cmd: worker_command) => {
@@ -393,22 +386,6 @@ const prePurchase = async (cmd: worker_command) => {
 
 	cmd.data = [data.gasPrice, data.fee, true, 5000]
 	return returnUUIDChannel(cmd)
-}
-
-const checkOldVersion = async (CoNET_Data: encrypt_keys_object) => {
-	const profile = CoNET_Data?.profiles
-	if (!profile) {
-		return logger(`checkOldVersion profile is none Error, STOP!`)
-	}
-	// const [ver, oldVer] = await checkOldProfileVersion (profile[0].keyID)
-	// let getVer = ver <= oldVer ? oldVer : ver
-	// if (!ver) {
-	// 	return 
-	// }
-	
-	// await getDetermineVersionProfile(getVer, CoNET_Data)
-	// await updateProfilesVersionToIPFSAndLocal()
-	// await storeSystemData ()
 }
 
 const nodePrice = 1250

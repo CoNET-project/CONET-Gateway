@@ -296,7 +296,6 @@ const processCmd = async (cmd: worker_command) => {
 			returnUUIDChannel(cmd)
 			
 			await storagePieceToLocal()
-			
 			await storeSystemData ()
 		}
 
