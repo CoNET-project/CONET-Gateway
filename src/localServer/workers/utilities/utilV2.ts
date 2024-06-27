@@ -571,7 +571,7 @@ const testFunction = async (cmd: worker_command) => {
 	if (!profiles) {
 		return
 	}
-	await fetchTest()
+	//await fetchTest()
 	const profile = profiles[0]
 	// await makeContainerPGPObj(profile)
 	//getRegionAllNodes ('us', profile)

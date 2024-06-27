@@ -513,9 +513,12 @@ const checkAssets = async (block: number, provider: any, profiles: profile[]|und
 				continue
 			}
 
-			if (to === profile_ver_addr && from === profiles[0].keyID.toLowerCase()) {
-				await checkUpdateAccount()
-				continue
+			if (to === profile_ver_addr ) {
+				if (from === profiles[0].keyID.toLowerCase()){
+					await checkUpdateAccount()
+					continue
+				}
+				
 			}
 			
 		}
@@ -601,8 +604,12 @@ const _storagePieceToLocal = (mnemonicPhrasePassword: string, fragment: string, 
 
 const storagePieceToIPFS = (mnemonicPhrasePassword: string, fragment: string, index: number,
 	totalFragment: number, targetFileLength: number, ver: number, privateArmor: string, keyID:string) => new Promise(async resolve => {
-		
+		const fileName = createFragmentFileName(ver, mnemonicPhrasePassword, index)
 
+		const text = await getFragmentsFromPublic(fileName)
+		if (text) {
+			return resolve (true)
+		}
 
 		const _dummylength = targetFileLength - fragment.length > 1024 * 5 ? targetFileLength - totalFragment : 0
 		const dummylength = (totalFragment === 2 && _dummylength )
@@ -620,69 +627,19 @@ const storagePieceToIPFS = (mnemonicPhrasePassword: string, fragment: string, in
 			index,
 			dummyData: dummyData
 		}
+
 		const piece: fragmentsObj = {
 			localEncryptedText: await CoNETModule.aesGcmEncrypt (JSON.stringify(localData), partEncryptPassword),
 			remoteEncryptedText: await CoNETModule.aesGcmEncrypt (JSON.stringify(IPFSData), partEncryptPassword),
-			fileName: createFragmentFileName(ver, mnemonicPhrasePassword, index),
+			fileName,
 		}
+
+
 		const result = await updateFragmentsToIPFS(piece.remoteEncryptedText, piece.fileName, keyID, privateArmor)
 		resolve (result)
 
 	})
 
-// const storagePieceToLocalAndIPFS = ( mnemonicPhrasePassword: string, fragment: string, index: number,
-// 		totalFragment: number, targetFileLength: number, ver: number, privateArmor: string, keyID:string
-// 	) => {
-// 	return new Promise(async resolve=> {
-		
-// 		const _dummylength = targetFileLength - fragment.length > 1024 * 5 ? targetFileLength - totalFragment : 0
-// 		const dummylength = (totalFragment === 2 && _dummylength )
-// 			? Math.round((targetFileLength - fragment.length) * Math.random()) : 0
-// 		const dummyData = buffer.Buffer.allocUnsafeSlow( dummylength)
-// 		const partEncryptPassword = encryptPasswordIssue(ver, mnemonicPhrasePassword, index)
-// 		const localData = {
-// 			data: fragment,
-// 			totalFragment: totalFragment,
-// 			index
-// 		}
-// 		const IPFSData = {
-// 			data: fragment,
-// 			totalFragment: totalFragment,
-// 			index,
-// 			dummyData: dummyData
-// 		}
-// 		const piece: fragmentsObj = {
-// 			localEncryptedText: await CoNETModule.aesGcmEncrypt (JSON.stringify(localData), partEncryptPassword),
-// 			remoteEncryptedText: await CoNETModule.aesGcmEncrypt (JSON.stringify(IPFSData), partEncryptPassword),
-// 			fileName: createFragmentFileName(ver, mnemonicPhrasePassword, index),
-// 		}
-		
-// 		return async.parallel([
-// 			next => storageHashData (piece.fileName, piece.localEncryptedText).then(()=> next(null)),
-// 			next => updateFragmentsToIPFS(piece.remoteEncryptedText, piece.fileName, keyID, privateArmor)
-// 				.then(() => getFragmentsFromPublic(piece.fileName)
-// 				.then( data=> {
-// 					if (!data) {
-// 						const err = `storagePieceToLocalAndIPFS review storage version ${ver} fragment No.[${index}] Error! try again`
-// 						logger(err)
-// 						return next(new Error(err))
-// 					}
-// 					return next(null)
-// 					}
-// 				)
-// 			)
-// 		], err=> {
-// 			if (err) {
-// 				resolve(false)
-// 				return storagePieceToLocalAndIPFS (mnemonicPhrasePassword, fragment, index, totalFragment, targetFileLength, ver, privateArmor, keyID)
-// 			}
-			
-// 			return resolve(true)
-// 		})
-		
-// 	})
-
-// }
 
 const initSystemDataV1 = async (acc) => {
 	
@@ -995,6 +952,7 @@ const recoverProfileFromSRP = () => {
 		}
 
 		await initSystemDataV1(acc)
+		await getLocalProfile(CoNET_Data.ver)
 		return resolve(true)
 			
 	})
@@ -1789,8 +1747,8 @@ const checkIPFSFragmenReadyOrNot: (ver: number, CoNET_data: encrypt_keys_object)
 		let success = false
 		await async.mapLimit(totalFragment, 3, async (n, next) => {
 			const cleartext = await getNextFragmentIPFS (_chainVer, passward, n)
-			if (!cleartext) {
-				success = false
+			if (cleartext) {
+				success = true
 			}
 			
 		})
@@ -1798,6 +1756,7 @@ const checkIPFSFragmenReadyOrNot: (ver: number, CoNET_data: encrypt_keys_object)
 		return resolve (success)
 	
 })
+
 
 const getDetermineVersionProfile = (ver: number, CoNET_Data) => new Promise(async resolve => {
 
@@ -1824,6 +1783,10 @@ const getDetermineVersionProfile = (ver: number, CoNET_Data) => new Promise(asyn
 		const firstFragmentEncrypted = await getFragmentsFromPublic(firstFragmentName)
 		
 		if (!firstFragmentEncrypted) {
+			//	try to get Previous bersion
+			if (ver > 2) {
+				return resolve (await getDetermineVersionProfile (ver-1, CoNET_Data))
+			}
 			return resolve (false)
 		}
 
@@ -2157,12 +2120,7 @@ const updateProfilesVersionToIPFS: () => Promise<boolean> = () => new Promise (a
 		return resolve (false)
 	}
 	const constBalance = profile.tokens.conet.balance
-	if (constBalance < '0.0001') {
-		await getFaucet(profile.keyID)
-		
-		logger(`updateProfilesVersion hasn't enough CONET to pay GAS`)
-		return resolve (false)
-	}
+
 	let chainVer
 
 	try {
@@ -2178,9 +2136,6 @@ const updateProfilesVersionToIPFS: () => Promise<boolean> = () => new Promise (a
 		return resolve (false)
 	}
 
-
-	const wallet = new ethers.Wallet(profile.privateKeyArmor, provideCONET)
-	const storageVer = new ethers.Contract(profile_ver_addr, conet_storageAbi, wallet)
 	
 	
 	const passward = ethers.id(ethers.id(CoNET_Data.mnemonicPhrase))
@@ -2199,6 +2154,7 @@ const updateProfilesVersionToIPFS: () => Promise<boolean> = () => new Promise (a
 		await Promise.all([
 			...series
 		])
+
 		const cloud = await checkIPFSFragmenReadyOrNot(chainVer, CoNET_Data)
 		if (!cloud) {
 			logger(`updateProfilesVersionToIPFS has failed!`)
