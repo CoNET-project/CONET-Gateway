@@ -396,6 +396,7 @@ const checkGuardianNodes = async () => {
 	])
 	await storagePieceToLocal()
 	await storeSystemData ()
+	needUpgradeVer = epoch + 25
 }
 
 let sendStateBeforeunload = false
@@ -470,7 +471,7 @@ const checkAssets = async (block: number, provider: any, profiles: profile[]|und
 	for (let tx of blockInfo.transactions) {
 		const event = await provider.getTransactionReceipt(tx)
 		const to = event?.to?.toLowerCase()
-		const from = event?.to?.toLowerCase()
+		const from = event?.from?.toLowerCase()
 		logger(`block [${block}] transactions ${to}`)
 		if (to) {
 			const index = profiles.findIndex(n => n.keyID.toLowerCase() === to)
@@ -528,12 +529,14 @@ const checkAssets = async (block: number, provider: any, profiles: profile[]|und
 
 let provideCONET
 let lesteningBlock = false
-
+let epoch = 0
+let needUpgradeVer = 0
 
 const listenProfileVer = async () => {
 	
 	lesteningBlock = true
 	provideCONET.on ('block', async block => {
+		epoch = block
 		const profiles = CoNET_Data?.profiles
 		
 		await Promise.all([
@@ -548,10 +551,14 @@ const listenProfileVer = async () => {
 		}
 
 		sendState('toFrontEnd', cmd)
-		
+		if (needUpgradeVer === epoch && profiles ) {
+			const [nonce, _ver] = await checkProfileVersion( profiles[0].keyID)
+			await updateProfilesToRemote (_ver, CoNET_Data, profiles)
+			
+		}
 	})
-	const block = await provideCONET.getBlockNumber()
-	selectLeaderboard(block)
+	epoch = await provideCONET.getBlockNumber()
+	selectLeaderboard(epoch)
 
 }
 
@@ -790,6 +797,31 @@ const resizeImage = ( mediaData: string, imageMaxWidth: number, imageMaxHeight: 
 	
 }
 
+const updateProfilesToRemote = (_ver, CoNET_Data, profiles) => new Promise (async  resolve => {
+	const result = await updateProfilesVersionToIPFS()
+	if (!result) {
+		return resolve (false)
+	}
+
+	const result1 = await checkIPFSFragmenReadyOrNot(_ver, CoNET_Data)
+	if (!result1) {
+		return resolve (false)
+	}
+
+	const ver = await updateChainVersion(profiles[0])
+	if (ver < '0') {
+		return resolve (false)
+	}
+
+	await storagePieceToLocal(ver)
+	await storeSystemData ()
+
+	checkcheckUpdateLock = false
+	return resolve (true)
+
+})
+	
+
 const checkUpdateAccount = () => new Promise(async resolve => {
 	
 
@@ -816,26 +848,8 @@ const checkUpdateAccount = () => new Promise(async resolve => {
 
 	//	Local version big then remote
 	if (_ver < CoNET_Data.ver ) {
-		const result = await updateProfilesVersionToIPFS()
-		if (!result) {
-			return resolve (false)
-		}
-
-		const result1 = await checkIPFSFragmenReadyOrNot(_ver, CoNET_Data)
-		if (!result1) {
-			return resolve (false)
-		}
-
-		const ver = await updateChainVersion(profiles[0])
-		if (ver < '0') {
-			return resolve (false)
-		}
-
-		await storagePieceToLocal(ver)
-		await storeSystemData ()
-
-		checkcheckUpdateLock = false
-		return resolve (true)
+		const result = await updateProfilesToRemote (_ver, CoNET_Data, profiles)
+		return resolve (result)
 	}
 
 	await getDetermineVersionProfile(_ver, CoNET_Data)
@@ -2607,7 +2621,7 @@ const CONET_guardian_purchase: (profile: profile, nodes: number, _total: number,
 	}
 	await storagePieceToLocal()
 	await storeSystemData ()
-	
+	needUpgradeVer = epoch + 25
 	return true
 }
 
@@ -2728,7 +2742,7 @@ const CONET_transfer_token: (
   
     await storagePieceToLocal()
   	await storeSystemData()
-
+	needUpgradeVer = epoch + 25
   return tx
 }
 

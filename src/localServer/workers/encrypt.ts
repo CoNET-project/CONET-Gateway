@@ -297,6 +297,7 @@ const processCmd = async (cmd: worker_command) => {
 			
 			await storagePieceToLocal()
 			await storeSystemData ()
+			needUpgradeVer = epoch + 25
 		}
 
 		case 'guardianPurchase': {
@@ -481,6 +482,7 @@ const processCmd = async (cmd: worker_command) => {
 			returnUUIDChannel(cmd)
 			await storagePieceToLocal()
 			await storeSystemData ()
+
 		}
 
 		case 'preBurnCCNTP': {

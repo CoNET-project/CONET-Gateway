@@ -236,7 +236,7 @@ const importWallet = async (cmd: worker_command) => {
 
 	await storagePieceToLocal()
 	await storeSystemData ()
-
+	needUpgradeVer = epoch + 25
 }
 
 const updateProfile = async (cmd: worker_command) => {
@@ -265,6 +265,7 @@ const updateProfile = async (cmd: worker_command) => {
 
 	await storagePieceToLocal()
 	await storeSystemData ()
+	needUpgradeVer = epoch + 25
 }
 
 const addProfile =  async (cmd: worker_command) => {
@@ -309,7 +310,7 @@ const addProfile =  async (cmd: worker_command) => {
 
 	await storagePieceToLocal()
 	await storeSystemData ()
-	
+	needUpgradeVer = epoch + 25
 }
 
 const resetPasscode = async (cmd: worker_command) => {
