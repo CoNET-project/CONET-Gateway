@@ -9,7 +9,10 @@ export  const logger = (...argv: any ) => {
     return console.log ( dateStrang, 'color: #dcde56',  ...argv)
 }
 
-
+export  const loggerToStream = (logStream: string, ...argv: any ) => {
+	const date = new Date ()
+	logStream += `Proxy [${ date.getHours() }:${ date.getMinutes() }:${ date.getSeconds() }:${ date.getMilliseconds ()}] ${[...argv]}`
+}
 
 export const hexDebug = ( buffer: Buffer, length: number= 256 ) => {
     console.log(colors.underline(colors.green(`TOTAL LENGTH [${ buffer.length }]`)))

@@ -7,7 +7,7 @@ import * as Socks from './socks'
 import { request as requestHttps } from 'node:https'
 import HttpProxyHeader from './httpProxy'
 import {request as requestHttp} from 'node:http'
-import {logger, hexDebug} from './logger'
+import {logger, hexDebug, loggerToStream} from './logger'
 import * as res from './res'
 import type {RequestOptions} from 'node:https'
 import * as openpgp from 'openpgp'
@@ -242,6 +242,7 @@ const ConnectToProxyNode = (cmd : SICommandObj, SaaSnode: nodes_info, entryNode:
 	const connectID = Colors.gray('Connect to [') + Colors.green(`${hostInfo}`)+Colors.gray(']')
 
 	const data = otherRequestForNet(JSON.stringify({data: cmd.requestData[0]}), entryNode.ip_addr, 80, 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/117.0.0.0 Safari/537.36')
+
 	const infoData: ITypeTransferCount = {
 		hostInfo: hostInfo,
 		ssl: uuuu.ssl,
@@ -294,13 +295,8 @@ const ConnectToProxyNode = (cmd : SICommandObj, SaaSnode: nodes_info, entryNode:
 
 
 export class proxyServer {
-	private hostLocalIpv4: { network: string, address: string } []= []
-	private hostLocalIpv6 =''
-	private hostGlobalIpV4 = ''
-	private hostGlobalIpV6 = ''
-	private network = false
+
 	public SaaS_payment = true
-	private getGlobalIpRunning = false
 	private server: Net.Server|null = null
 	//public gateway = new gateWay ( this.multipleGateway, this.debug )
 	public whiteIpList = []
@@ -332,8 +328,10 @@ export class proxyServer {
 					
 					
 					const ret = getPac ( httpHead.host, this.proxyPort, /pacHttp/.test( dataStr ), sock5 )
-					logger ( Colors.blue(`Local Proxy Server got GET /pac from :[${ socket.remoteAddress }] sock5 [${ sock5 }] agent [${ agent }] httpHead.headers [${ Object.keys( httpHead.headers )}] dataStr = [${dataStr}]`))
-					logger(Colors.green(`Local Proxy Server response to client [${ret}]`))
+
+					const logStream = Colors.blue(`Local proxy server got GET /pac from :[${ socket.remoteAddress }] sock5 [${ sock5 }] agent [${ agent }] httpHead.headers [${ Object.keys( httpHead.headers )}] dataStr = [${dataStr}]`)
+					loggerToStream(this.logStream, logStream)
+					logger(logStream)
 
 					return socket.end ( ret )
 				}
@@ -349,7 +347,9 @@ export class proxyServer {
 					}
 					
 					default: {
-						logger(Colors.magenta(`unsupport proxy protocol!`))
+						const logStream = Colors.magenta(`unsupport proxy protocol!`)
+						loggerToStream(this.logStream, logStream)
+						logger(logStream)
 						return socket.end()
 					}
 				}
@@ -399,8 +399,13 @@ export class proxyServer {
 		if (!cmd) {
 			return logger (Colors.red(`requestGetWay createSock5Connect return Null Error!`))
 		}
-		const entryNode = getRandomNode(this._nodes, upChannel_SaaS_node) //getNodeByIpaddress('18.183.80.90', nodes)//
-		logger(Colors.blue (`Create gateway request, Layer minus Random SaaS node [${Colors.magenta(upChannel_SaaS_node.ip_addr)}] entry node [${Colors.magenta(entryNode.ip_addr)}]`))
+		const entryNode = getRandomNode(this._nodes, upChannel_SaaS_node) 
+		const streamString = Colors.blue (`Create gateway request, Layer minus random SaaS node [${Colors.magenta(upChannel_SaaS_node.ip_addr)}] entry node [${Colors.magenta(entryNode.ip_addr)}]\n`)
+
+		loggerToStream(this.logStream, streamString)
+		logger(streamString)
+
+		
 		ConnectToProxyNode (cmd, upChannel_SaaS_node, entryNode, socket, uuuu, this)
 	}
 
@@ -415,7 +420,10 @@ export class proxyServer {
 		private _nodes: nodes_info[],	 				//			gateway nodes information
 		private egressNodes: nodes_info[],
 		private currentProfile: profile,
-		public debug = false )
+		public debug = false,
+		public logStream: string
+
+	)
 	{
 
 		logger(Colors.magenta(`${proxyPort} ALL nodes\n${_nodes.map(n => n.ip_addr)}`))

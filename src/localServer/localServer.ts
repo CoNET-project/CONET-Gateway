@@ -143,7 +143,7 @@ export class Daemon {
     private connect_peer_pool: any [] = []
 	private appsPath: string = join ( __dirname )
     private worker_command_waiting_pool: Map<string, express.Response> = new Map()
-    
+    private logStram = ''
 
     constructor ( private PORT = 3000, private reactBuildFolder: string ) {
         this.initialize()
@@ -312,16 +312,6 @@ export class Daemon {
             return res.end ()
         })
 
-		app.post ( '/restartProxy', ( req: express.Request, res: express.Response ) => {
-			const data: { profile, activeNodes, egressNodes } = req.body
-            if (this._proxyServer) {
-				this._proxyServer.restart(data.profile, data.activeNodes, data.egressNodes)
-			} else {
-				this._proxyServer = new proxyServer((this.PORT + 2).toString(), data.activeNodes, data.egressNodes, data.profile, true)
-			}
-			return res.sendStatus(200)
-        })
-
         app.post ( '/conet-profile', ( req: express.Request, res: express.Response ) => {
             const data: { profile, activeNodes, egressNodes } = req.body
             
@@ -331,7 +321,8 @@ export class Daemon {
 				if (this._proxyServer) {
 					this._proxyServer.restart(data.profile, data.activeNodes, data.egressNodes)
 				} else {
-					this._proxyServer = new proxyServer((this.PORT + 2).toString(), data.activeNodes, data.egressNodes, data.profile, true)
+
+					this._proxyServer = new proxyServer((this.PORT + 2).toString(), data.activeNodes, data.egressNodes, data.profile, true, this.logStram)
 				}
 
                 return res.sendStatus(200).end()
