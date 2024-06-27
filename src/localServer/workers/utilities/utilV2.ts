@@ -355,7 +355,6 @@ const recoverAccount = async (cmd: worker_command) => {
 	await storagePieceToLocal()
 	await storeSystemData ()
 	
-
 }
 
 const prePurchase = async (cmd: worker_command) => {

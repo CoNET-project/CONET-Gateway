@@ -362,8 +362,7 @@ const processCmd = async (cmd: worker_command) => {
 			}
 
 			const profileIndex = profiles.findIndex(
-        (n) => n.keyID.toLowerCase() === sourceProfileKeyID.toLowerCase()
-      );
+        		(n) => n.keyID.toLowerCase() === sourceProfileKeyID.toLowerCase());
 			
 			if (profileIndex < 0) {
 				cmd.err = 'INVALID_DATA'
@@ -387,6 +386,11 @@ const processCmd = async (cmd: worker_command) => {
 				return returnUUIDChannel(cmd)
 			}
 
+			if (sourceProfile.keyID.toLowerCase() == miningAddress) {
+				cCNTPcurrentTotal -= amount
+			}
+			
+			
 			const cmd1: channelWroker = {
 				cmd: 'tokenTransferStatus',
 				data: [4, kk]

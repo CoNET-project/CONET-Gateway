@@ -554,7 +554,7 @@ const listenProfileVer = async () => {
 		if (needUpgradeVer === epoch && profiles ) {
 			const [nonce, _ver] = await checkProfileVersion( profiles[0].keyID)
 			await updateProfilesToRemote (_ver, CoNET_Data, profiles)
-			
+
 		}
 	})
 	epoch = await provideCONET.getBlockNumber()
@@ -2889,10 +2889,12 @@ let miningConn
 let Stoping = false
 
 
-
+let cCNTPcurrentTotal = 0
+let miningAddress = ''
 const _startMining = async (cmd: worker_command, profile: profile) => {
 	
-
+	miningAddress = profile.keyID.toLowerCase()
+	
 	const message =JSON.stringify({walletAddress: profile.keyID})
 	const messageHash =  ethers.id(message)
 	const signMessage = CoNETModule.EthCrypto.sign(profile.privateKeyArmor, messageHash)
@@ -2904,8 +2906,7 @@ const _startMining = async (cmd: worker_command, profile: profile) => {
 
 	logger(url)
 	let first = true
-	let cCNTPcurrentTotal = parseFloat(profile.tokens.cCNTP.balance||'0')
-	let cCNTPcurrentEarn = 0
+	cCNTPcurrentTotal = parseFloat(profile.tokens.cCNTP.balance||'0')
 	miningConn = postToEndpointSSE(url, true, JSON.stringify(sendData), async (err, _data) => {
 		if (Stoping) {
 			if (miningConn) {
