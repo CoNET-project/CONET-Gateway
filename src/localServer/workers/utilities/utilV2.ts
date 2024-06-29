@@ -1,7 +1,7 @@
 const conet_rpc = 'https://rpc.conet.network'
 const api_endpoint = `https://api.conet.network/api/`
 const apiv2_endpoint = `https://apiv2.conet.network/api/`
-const cloudStorageEndpointUrl = 'https://s3.us-east-1.wasabisys.com/conet-mvp/storage/FragmentOcean/'
+const ipfsEndpoint = `https://ipfs.conet.network/api/`
 const blast_sepoliaRpc = 'https://sepolia.blast.io'
 const _ethRpc: string[] = ['https://rpc.ankr.com/eth','https://eth.llamarpc.com','https://ethereum-rpc.publicnode.com']
 
@@ -355,7 +355,6 @@ const recoverAccount = async (cmd: worker_command) => {
 	await storagePieceToLocal()
 	await storeSystemData ()
 	
-
 }
 
 const prePurchase = async (cmd: worker_command) => {

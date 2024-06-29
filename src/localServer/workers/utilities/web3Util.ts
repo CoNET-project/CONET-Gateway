@@ -152,7 +152,7 @@ const startSilentPass = async (profile: profile, region: string): Promise<Object
 	})
 
 	const activeNodes = nodes
-	const egressNodes =  [nodes[Math.floor(nodes.length * Math.random())]]
+	const egressNodes =  [nodes[Math.floor(nodes.length * Math.random())],nodes[Math.floor(nodes.length * Math.random())],nodes[Math.floor(nodes.length * Math.random())],nodes[Math.floor(nodes.length * Math.random())]]
 
 	await postToEndpoint('http://localhost:3001/conet-profile',true,  {profile, activeNodes, egressNodes})
 
@@ -302,7 +302,6 @@ const checkGuardianNodes = async () => {
 		Ids = ownerIds.map(n => n.toString())
 		const IdAddressProcess = Ids.map(n => erc1155.getOwnership(n))
 		const _nodeAddress = await Promise.all(IdAddressProcess)
-		const batchAddress: string[] = []
 		const batchIds: string[] = []
 		_nodeAddress.forEach((n, index) => {
 			
@@ -327,7 +326,13 @@ const checkGuardianNodes = async () => {
 		const index = profiles.findIndex(nn => nn.keyID.toLowerCase() === n)
 		if (index < 0) {
 			assetNodesAddr.push(n)
+		} else {
+			const profile = profiles[index]
+			if (!profile?.isNode) {
+				profile.isNode = true
+			}
 		}
+		
 	})
 	
 	if (!assetNodesAddr.length) {
@@ -554,7 +559,7 @@ const listenProfileVer = async () => {
 		if (needUpgradeVer === epoch && profiles ) {
 			const [nonce, _ver] = await checkProfileVersion( profiles[0].keyID)
 			await updateProfilesToRemote (_ver, CoNET_Data, profiles)
-			
+
 		}
 	})
 	epoch = await provideCONET.getBlockNumber()
@@ -999,7 +1004,7 @@ const getNextFragmentIPFS = async (ver: number, passObjPassword: string, i) => {
 }
 
 const getFragmentsFromPublic: (hash: string) => Promise<string> = (hash) => {
-	const fileUrl = cloudStorageEndpointUrl + `${hash}`
+	const fileUrl = ipfsEndpoint + `getFragment/${hash}`
 	return new Promise(resolve=> {fetchWithTimeout (fileUrl, 
 		{
 			method: 'GET',
@@ -1033,7 +1038,7 @@ const encryptPasswordIssue = (ver: number, passcode: string, part: number) => {
 
 const updateFragmentsToIPFS = (encryptData: string, hash: string, keyID: string, privateKeyArmor: string) => new Promise( async resolve => {
 
-	const url = `${ apiv2_endpoint }storageFragments`
+	const url = `${ ipfsEndpoint }storageFragment`
 	
 	const message =JSON.stringify({ walletAddress: keyID, data: encryptData, hash})
 	const messageHash = ethers.id(message)
@@ -1569,9 +1574,9 @@ const leaderboardDataDelay = 20
 const selectLeaderboard: (block: number) => Promise<boolean> = (block) => new Promise(async resolve => {
 	const readBlock = block - leaderboardDataDelay
 	const [leaderboardFree, allWalletsFree, leaderboardNodes] = await Promise.all([
-		getWasabiFile(`${readBlock}_free`),
-		getWasabiFile(`free_wallets_${readBlock}`),
-		getWasabiFile(`${readBlock}_node`)
+		getIpfsFile(`${readBlock}_free`),
+		getIpfsFile(`free_wallets_${readBlock}`),
+		getIpfsFile(`${readBlock}_node`)
 	])
 
 	if (!leaderboardFree) {
@@ -1618,9 +1623,9 @@ const selectLeaderboard: (block: number) => Promise<boolean> = (block) => new Pr
 	
 })
 
-const getWasabiFile: (fileName: string) => Promise<any> = async (fileName: string) => new Promise(resolve=> {
+const getIpfsFile: (fileName: string) => Promise<any> = async (fileName: string) => new Promise(resolve=> {
 	//const cloudStorageEndpointPath = `/conet-mvp/storage/FragmentOcean/${fileName}`
-	const cloudStorageEndpointUrl = `https://s3.us-east-1.wasabisys.com/conet-mvp/storage/FragmentOcean/${fileName}`
+	const cloudStorageEndpointUrl = `${ipfsEndpoint}getFragment/${fileName}`
 	return fetch(cloudStorageEndpointUrl, {
 		method: 'GET',
 		headers: {
@@ -2889,10 +2894,12 @@ let miningConn
 let Stoping = false
 
 
-
+let cCNTPcurrentTotal = 0
+let miningAddress = ''
 const _startMining = async (cmd: worker_command, profile: profile) => {
 	
-
+	miningAddress = profile.keyID.toLowerCase()
+	
 	const message =JSON.stringify({walletAddress: profile.keyID})
 	const messageHash =  ethers.id(message)
 	const signMessage = CoNETModule.EthCrypto.sign(profile.privateKeyArmor, messageHash)
@@ -2904,8 +2911,7 @@ const _startMining = async (cmd: worker_command, profile: profile) => {
 
 	logger(url)
 	let first = true
-	let cCNTPcurrentTotal = parseFloat(profile.tokens.cCNTP.balance||'0')
-	let cCNTPcurrentEarn = 0
+	cCNTPcurrentTotal = parseFloat(profile.tokens.cCNTP.balance||'0')
 	miningConn = postToEndpointSSE(url, true, JSON.stringify(sendData), async (err, _data) => {
 		if (Stoping) {
 			if (miningConn) {
