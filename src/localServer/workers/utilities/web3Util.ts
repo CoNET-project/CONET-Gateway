@@ -104,15 +104,19 @@ const burnCCNTP = async (profile: profile, totalBurn: string) => {
     return kk1
 }
 
-const startSilentPass = async (profile: profile, region: string): Promise<Object | false> => {
+const startSilentPass = async (profile: profile, entryRegion: string, egressRegion: string): Promise<Object | false> => {
 	if (!profile) {
         logger(`startSilentPass profile is null Error!`)
 		return false 
 	}
-	if (!region) {
-        logger(`startSilentPass region is null Error!`)
+	if (!entryRegion) {
+        logger(`startSilentPass entry region is null Error!`)
 		return false
 	}
+    if (!egressRegion) {
+      logger(`startSilentPass egress region is null Error!`);
+      return false;
+    }
 
     const regions: string[] = await getRegion()
 	if (!regions) {
@@ -120,41 +124,57 @@ const startSilentPass = async (profile: profile, region: string): Promise<Object
 		return false 
 	}
 
-    if (profile.pgpKey) {
-        const publicKeyArmor = profile.pgpKey.publicKeyArmor;
-        const privateKeyArmor = profile.pgpKey.privateKeyArmor;
-        profile.pgpKey = {privateKeyArmor, publicKeyArmor};
-    }
-
-	const filter = new RegExp(`${region}$`, 'i')
-	const filterRegion: string[] = regions.filter(n => filter.test(n))
+	const entryFilter = new RegExp(`${entryRegion}$`, 'i')
+	const entryFilterRegion: string[] = regions.filter(n => entryFilter.test(n))
+	const egressFilter = new RegExp(`${egressRegion}$`, 'i')
+	const egressFilterRegion: string[] = regions.filter(n => egressFilter.test(n))
+    
 	const GuardianNodesSC = new ethers.Contract(CONET_Guardian_NodeInfoV4, CONET_Guardian_NodeInfo_ABI, provideCONET)
-	const nodes: nodes_info[] = []
+	const entryNodes: nodes_info[] = []
+	const egressNodes: nodes_info[] = []
 
-	await async.mapLimit(filterRegion, 5, async (n, next) => {
-		
+	await async.mapLimit(entryFilterRegion, 5, async (n, next) => {
 		const ipaddress: string[] = await GuardianNodesSC.getReginNodes(n)
 		ipaddress.forEach(nn => {
 			const node: nodes_info = {
 				region: n,
-				country: region,
+				country: entryRegion,
 				ip_addr: nn,
 				armoredPublicKey: '',
 				last_online: true
 			}
-			nodes.push (node)
+			entryNodes.push(node)
 		})
 	})
 
-	await async.mapLimit(nodes, 5, async (n, next) => {
+	await async.mapLimit(egressFilterRegion, 5, async (n, next) => {
+		const ipaddress: string[] = await GuardianNodesSC.getReginNodes(n)
+		ipaddress.forEach(nn => {
+			const node: nodes_info = {
+				region: n,
+				country: egressRegion,
+				ip_addr: nn,
+				armoredPublicKey: '',
+				last_online: true
+			}
+			egressNodes.push(node)
+		})
+	})
+
+	await async.mapLimit(entryNodes, 5, async (n, next) => {
 		const k = await GuardianNodesSC.getNodePGP(n.ip_addr)
 		n.armoredPublicKey = buffer.Buffer.from(k,'base64').toString()
 	})
 
-	const activeNodes = nodes
-	const egressNodes =  [nodes[Math.floor(nodes.length * Math.random())],nodes[Math.floor(nodes.length * Math.random())],nodes[Math.floor(nodes.length * Math.random())],nodes[Math.floor(nodes.length * Math.random())]]
+	await async.mapLimit(egressNodes, 5, async (n, next) => {
+		const k = await GuardianNodesSC.getNodePGP(n.ip_addr)
+		n.armoredPublicKey = buffer.Buffer.from(k,'base64').toString()
+	})
 
-	await postToEndpoint('http://localhost:3001/conet-profile',true,  {profile, activeNodes, egressNodes})
+	const activeEntryNodes = entryNodes
+	const activeEgressNodes =  [egressNodes[Math.floor(egressNodes.length * Math.random())]]
+
+	await postToEndpoint('http://localhost:3001/conet-profile',true,  {profile, activeNodes: activeEntryNodes, egressNodes: activeEgressNodes})
 
     return {status: 'Confirmed'};
 }

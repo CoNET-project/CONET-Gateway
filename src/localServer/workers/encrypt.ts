@@ -522,9 +522,9 @@ const processCmd = async (cmd: worker_command) => {
 		}
 
 		case 'startSilentPass': {
-			const [profileKeyId, region] = cmd.data
+			const [profileKeyId, entryRegion, egressRegion] = cmd.data
 
-			if (!profileKeyId || !region) {
+			if (!profileKeyId || !entryRegion || !egressRegion) {
 				cmd.err = 'INVALID_DATA'
 				return returnUUIDChannel(cmd)
 			}
@@ -542,7 +542,7 @@ const processCmd = async (cmd: worker_command) => {
 			}
 			const profile = profiles[profileIndex]
 
-			var result = await startSilentPass(profile, region)
+			var result = await startSilentPass(profile, entryRegion, egressRegion)
 
 			if (result === false) {
 				cmd.err = 'FAILURE'
