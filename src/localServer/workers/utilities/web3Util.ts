@@ -172,7 +172,7 @@ const startSilentPass = async (profile: profile, entryRegion: string, egressRegi
 	})
 
 	const activeEntryNodes = entryNodes
-	const activeEgressNodes =  [egressNodes[Math.floor(egressNodes.length * Math.random())]]
+	const activeEgressNodes =  egressNodes
 
 	await postToEndpoint('http://localhost:3001/conet-profile',true,  {profile, activeNodes: activeEntryNodes, egressNodes: activeEgressNodes})
 
