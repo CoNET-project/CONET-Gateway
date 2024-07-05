@@ -1,5 +1,5 @@
 
-FROM node:bookworm-slim
+FROM --platform=$BUILDPLATFORM node:bookworm-slim
 WORKDIR /usr/src
 # Install app dependencies
 # A wildcard is used to ensure both package.json AND package-lock.json are copied

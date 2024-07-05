@@ -1600,7 +1600,7 @@ const selectLeaderboard: (block: number) => Promise<boolean> = (block) => new Pr
 			
 			const key = profile.keyID.toLowerCase()
 			const referrals_rate_list: referrals_rate_list[]= leaderboardNodes?.referrals_rate_list
-			if (referrals_rate_list.length) {
+			if (referrals_rate_list?.length) {
 				const findIndex = referrals_rate_list.findIndex(n => n.wallet.toLowerCase() === key)
 				if (findIndex > -1) {
 					leaderboardData.guardian = referrals_rate_list[findIndex]
@@ -1608,7 +1608,7 @@ const selectLeaderboard: (block: number) => Promise<boolean> = (block) => new Pr
 			}
 			const free_rate_list: referrals_rate_list[]= leaderboardFree.cntp
 			
-			if (free_rate_list.length) {
+			if (free_rate_list?.length) {
 				const findIndex = free_rate_list.findIndex(n => n.wallet.toLowerCase() === key)
 				if (findIndex > -1) {
                     leaderboardData.free = free_rate_list[findIndex]

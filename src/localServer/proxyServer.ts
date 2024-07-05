@@ -49,24 +49,17 @@ const httpProxy = ( clientSocket: Net.Socket, buffer: Buffer, proxyServer: proxy
 
 }
 
-const getRandomSaaSNode = (saasNodes: nodes_info[], allNodes: nodes_info[]) => {
-	if (!saasNodes.length || !allNodes.length) {
-		logger(Colors.red(`getRandomSaaSNode [${saasNodes.length}] or ${allNodes.length} Error!`))
+const getRandomSaaSNode = (saasNodes: nodes_info[]) => {
+	if (!saasNodes.length) {
+		logger(Colors.red(`getRandomSaaSNode saasNodes length [${saasNodes.length}]  Error!`))
 		return null
 	}
-	logger (`getRandomSaaSNode saasNodes length [${saasNodes.length}] allNodes length [${allNodes.length}]`)
-	const ramdom = Math.trunc((saasNodes.length - 1 ) * Math.random())
-	const _ret = saasNodes[ramdom]
-	const index = allNodes.findIndex(n => n.ip_addr === _ret.ip_addr)
 
-	if (index === -1 ) {
-		saasNodes = saasNodes.filter(n => n.ip_addr !== _ret.ip_addr)
-		if (saasNodes.length < 1)  {
-			return null
-		}
-		return getRandomSaaSNode (saasNodes, allNodes)
-	}
-	return allNodes[index]
+
+	const ramdom = Math.floor(( saasNodes.length - 1 ) * Math.random())
+	const _ret = saasNodes[ramdom]
+
+	return _ret
 }
 
 const getRandomNode = (activeNodes: nodes_info[], saasNode: nodes_info) => {
@@ -373,7 +366,7 @@ export class proxyServer {
 		this.server.maxConnections = 65536
 
 		this.server.listen ( this.proxyPort, () => {
-			return logger ( Colors.blue(`Proxy SERVER success on port : [${ this.proxyPort }] active nodes =[${this._nodes.length}] Saas nodes = [${this.egressNodes.length}]`))
+			return logger ( Colors.blue(`Proxy SERVER success on port : [${ this.proxyPort }] entry nodes length =[${this._egressNodes?.length}] SaaS nodes = [${this._egressNodes?.length}]`))
 		})
 
 		if (!this.currentProfile?.keyObj) {
@@ -389,7 +382,7 @@ export class proxyServer {
 	}
 
 	public requestGetWay = async (uuuu : VE_IPptpStream, socket: Net.Socket ) => {
-		const upChannel_SaaS_node: nodes_info  = getRandomSaaSNode(this.egressNodes, this._nodes)
+		const upChannel_SaaS_node: nodes_info|null  = getRandomSaaSNode(this._egressNodes)
 	
 		if (!upChannel_SaaS_node ) {
 			return logger (Colors.red(`proxyServer makeUpChannel upChannel_SaaS_node Null Error!`))
@@ -399,7 +392,7 @@ export class proxyServer {
 		if (!cmd) {
 			return logger (Colors.red(`requestGetWay createSock5Connect return Null Error!`))
 		}
-		const entryNode = getRandomNode(this._nodes, upChannel_SaaS_node) 
+		const entryNode = getRandomNode(this._entryNodes, upChannel_SaaS_node) 
 		const streamString = Colors.blue (`Create gateway request, Layer minus random SaaS node [${Colors.magenta(upChannel_SaaS_node.ip_addr)}] entry node [${Colors.magenta(entryNode.ip_addr)}]\n`)
 
 		loggerToStream(this.logStream, streamString)
@@ -409,16 +402,16 @@ export class proxyServer {
 		ConnectToProxyNode (cmd, upChannel_SaaS_node, entryNode, socket, uuuu, this)
 	}
 
-	public restart = (currentProfile: profile, _nodes: nodes_info[], egressNodes: nodes_info[]) => {
+	public restart = (currentProfile: profile, entryNodes: nodes_info[], egressNodes: nodes_info[]) => {
 		this.currentProfile = currentProfile
-		this._nodes = _nodes
-		this.egressNodes = _nodes
+		this._entryNodes = entryNodes
+		this._egressNodes = egressNodes
 	}
     
 	constructor (
 		public proxyPort: string,						//			Proxy server listening port number
-		private _nodes: nodes_info[],	 				//			gateway nodes information
-		private egressNodes: nodes_info[],
+		private _entryNodes: nodes_info[],	 				//			gateway nodes information
+		private _egressNodes: nodes_info[],
 		private currentProfile: profile,
 		public debug = false,
 		public logStream: string
@@ -426,8 +419,8 @@ export class proxyServer {
 	)
 	{
 
-		logger(Colors.magenta(`${proxyPort} ALL nodes\n${_nodes.map(n => n.ip_addr)}`))
-		logger(Colors.magenta(`${proxyPort} EgressNodes\n${egressNodes.map(n => n.ip_addr)}`))
+		logger(Colors.magenta(`${proxyPort} Entry Nodes\n${_entryNodes.map(n => n.ip_addr)}`))
+		logger(Colors.magenta(`${proxyPort} Egress Nodes\n${ _egressNodes.map(n => n.ip_addr)}`))
 
 		this.startLocalProxy()
 	}

@@ -1,6 +1,6 @@
 {
     "name": "@conet.project/conet-proxy",
-    "version": "0.2.4",
+    "version": "0.2.6",
     "license": "UNLICENSED",
     "files": [
         "./build"
@@ -35,14 +35,12 @@
         "@types/express": "^4.17.21",
         "@types/fs-extra": "^11.0.4",
         "@types/jest": "^29.5.12",
-
-        "@types/node": "^20.14.8",
-		
+        "@types/node": "^20.14.9",
         "@types/pouchdb": "^6.4.2",
         "@types/uuid": "^10.0.0",
-        "@typescript-eslint/eslint-plugin": "^7.13.1",
-        "@typescript-eslint/parser": "^7.13.1",
-        "eslint": "^9.5.0",
+        "@typescript-eslint/eslint-plugin": "^7.14.1",
+        "@typescript-eslint/parser": "^7.14.1",
+        "eslint": "^9.6.0",
         "eslint-config-airbnb-base": "^15.0.0",
         "eslint-config-prettier": "^9.1.0",
         "jszip": "^3.10.1",
@@ -50,7 +48,7 @@
         "pouchdb": "^9.0.0",
         "ts-jest": "^29.1.5",
         "ts-node": "^10.9.2",
-        "typescript": "^5.4.5"
+        "typescript": "^5.5.2"
     },
     "bin": {
         "conet-platform": "./build/index.js"

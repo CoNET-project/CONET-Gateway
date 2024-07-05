@@ -115,7 +115,7 @@ const initEncryptWorker = async () => {
 	channelLoading.postMessage(10)
     self.importScripts ( 'https://cdn.jsdelivr.net/npm/openpgp@5.11.2/dist/openpgp.min.js' )
     self.importScripts ( 'https://cdnjs.cloudflare.com/ajax/libs/uuid/8.3.2/uuid.min.js' )
-	self.importScripts ( 'https://cdnjs.cloudflare.com/ajax/libs/pouchdb/8.0.1/pouchdb.min.js' )
+	self.importScripts ( 'https://cdnjs.cloudflare.com/ajax/libs/pouchdb/9.0.0/pouchdb.min.js' )
 	self.importScripts ( 'https://cdnjs.cloudflare.com/ajax/libs/async/3.2.5/async.min.js' )
 	self.importScripts ( 'https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js' )
 	self.importScripts ( 'https://cdnjs.cloudflare.com/ajax/libs/jimp/0.22.12/jimp.min.js')
