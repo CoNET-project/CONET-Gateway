@@ -316,7 +316,7 @@ export class Daemon {
             const data: { profile, activeNodes, egressNodes } = req.body
             
             //logger (Colors.blue(`Local server get POST /profile req.body = `), inspect(data, false, 3, true))
-            if (data.activeNodes.length > 0 && data.profile ) {
+            if (data.activeNodes.length > 0 && data.egressNodes.length > 0 && data.profile ) {
                 
 				if (this._proxyServer) {
 					this._proxyServer.restart(data.profile, data.activeNodes, data.egressNodes)
