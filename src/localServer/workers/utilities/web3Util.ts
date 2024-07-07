@@ -1,7 +1,7 @@
 
 
 const getRegion = async () => {
-	const regionContract = new ethers.Contract(CONET_Guardian_NodeInfoV4, CONET_Guardian_NodeInfo_ABI, provideCONET)
+	const regionContract = new ethers.Contract(CONET_Guardian_NodeInfoV5, CONET_Guardian_NodeInfo_ABI, provideCONET)
 	try {
 		const gasPrice = await regionContract.getAllRegions()
 		return gasPrice
@@ -129,7 +129,7 @@ const startSilentPass = async (profile: profile, entryRegion: string, egressRegi
 	const egressFilter = new RegExp(`${egressRegion}$`, 'i')
 	const egressFilterRegion: string[] = regions.filter(n => egressFilter.test(n))
     
-	const GuardianNodesSC = new ethers.Contract(CONET_Guardian_NodeInfoV4, CONET_Guardian_NodeInfo_ABI, provideCONET)
+	const GuardianNodesSC = new ethers.Contract(CONET_Guardian_NodeInfoV5, CONET_Guardian_NodeInfo_ABI, provideCONET)
 	const entryNodes: nodes_info[] = []
 	const egressNodes: nodes_info[] = []
 
@@ -310,7 +310,7 @@ const checkGuardianNodes = async () => {
 	const profile = CoNET_Data.profiles[mainIndex]
 	const provideCONET = new ethers.JsonRpcProvider(conet_rpc)
 	const erc1155 = new ethers.Contract(CONET_Guardian_NodesV3, guardian_erc1155, provideCONET)
-	const ercGuardianNodesInfoV3 = new ethers.Contract(CONET_Guardian_NodeInfoV4, GuardianNodesInfoV3_ABI, provideCONET)
+	const ercGuardianNodesInfoV3 = new ethers.Contract(CONET_Guardian_NodeInfoV5, GuardianNodesInfoV3_ABI, provideCONET)
 
 	GuardianNodesInfoV3_ABI
 	let nodeAddress: string[] = [], Ids, numbers
@@ -1591,6 +1591,7 @@ let leaderboardData: leaderboardData
 
 
 const leaderboardDataDelay = 20
+
 const selectLeaderboard: (block: number) => Promise<boolean> = (block) => new Promise(async resolve => {
 	const readBlock = block - leaderboardDataDelay
 	const [leaderboardFree, allWalletsFree, leaderboardNodes] = await Promise.all([
@@ -1599,7 +1600,7 @@ const selectLeaderboard: (block: number) => Promise<boolean> = (block) => new Pr
 		getIpfsFile(`${readBlock}_node`)
 	])
 
-	if (!leaderboardFree) {
+	if (!leaderboardFree?.cntp?.length) {
 		return resolve(false)
 	}
 	
@@ -1639,6 +1640,18 @@ const selectLeaderboard: (block: number) => Promise<boolean> = (block) => new Pr
 		
 	}
 
+	const walltes: string[] = allWalletsFree
+
+	if (miningProfile && walltes?.length) {
+		const walltes: string[] = allWalletsFree
+		const currentWallet = miningProfile.keyID.toLowerCase()
+		const index = walltes.findIndex(n => n.toLowerCase() === currentWallet)
+		if (index < 0) {
+			logger(`Mining restart`)
+			miningStatus = 'RESTART'
+		}
+	}
+	
 	resolve (true)
 	
 })
@@ -2911,15 +2924,12 @@ const fx168PrePurchase =  async (cmd: worker_command) => {
 }
 
 let miningConn
-let Stoping = false
-
-
 let cCNTPcurrentTotal = 0
-let miningAddress = ''
-const _startMining = async (cmd: worker_command, profile: profile) => {
-	
-	miningAddress = profile.keyID.toLowerCase()
-	
+let miningProfile:profile|null = null
+let miningStatus:'STOP'|'RESTART'|'MINING' = 'STOP'
+
+const _startMining = async (profile: profile, cmd: worker_command|null =null ) => {
+
 	const message =JSON.stringify({walletAddress: profile.keyID})
 	const messageHash =  ethers.id(message)
 	const signMessage = CoNETModule.EthCrypto.sign(profile.privateKeyArmor, messageHash)
@@ -2931,32 +2941,52 @@ const _startMining = async (cmd: worker_command, profile: profile) => {
 
 	logger(url)
 	let first = true
-	cCNTPcurrentTotal = parseFloat(profile.tokens.cCNTP.balance||'0')
-	miningConn = postToEndpointSSE(url, true, JSON.stringify(sendData), async (err, _data) => {
-		if (Stoping) {
-			if (miningConn) {
+	
+	return miningConn = postToEndpointSSE(url, true, JSON.stringify(sendData), async (err, _data) => {
+
+		switch (miningStatus) {
+			case 'RESTART': {
 				miningConn.abort()
+				miningStatus = 'MINING'
+				return _startMining (profile)
 			}
-			return
-			
+
+			case 'STOP': {
+				miningConn.abort()
+				return
+			}
 		}
+
 		if (err) {
 			logger(err)
-			cmd.err = err
-			return returnUUIDChannel(cmd)
+			if (cmd) {
+				cmd.err = err
+				return returnUUIDChannel(cmd)
+			}
+			return
 		}
+
 		logger('success', _data)
 		const kk = JSON.parse(_data)
 		
 		if (first) {
+			miningProfile = profile
 			first = false
-			kk['currentCCNTP'] = '0'
-			cmd.data = ['success', JSON.stringify(kk)]
-			return returnUUIDChannel(cmd)
+			if (cmd) {
+				cCNTPcurrentTotal = parseFloat(profile.tokens.cCNTP.balance||'0')
+				
+				kk['currentCCNTP'] = '0'
+				cmd.data = ['success', JSON.stringify(kk)]
+				return returnUUIDChannel(cmd)
+			}
+			return
 		}
+
 		
+
 		kk.rate = typeof kk.rate ==='number' ? kk.rate.toFixed(10) : parseFloat(kk.rate).toFixed(10)
-		kk['currentCCNTP'] = (parseFloat(profile.tokens.cCNTP.balance||'0') - cCNTPcurrentTotal).toFixed(8)
+		kk['currentCCNTP'] = (parseFloat(profile.tokens.cCNTP.balance ||'0') - cCNTPcurrentTotal).toFixed(8)
+
 		const cmdd: channelWroker = {
 			cmd: 'miningStatus',
 			data: [JSON.stringify(kk)]
@@ -2975,12 +3005,13 @@ const startMining = async (cmd: worker_command) => {
 	}
 	const index = CoNET_Data.profiles.findIndex(n => n.keyID.toLowerCase() === _profile.keyID.toLowerCase())
 
-	if (index < 0||Stoping) {
+	if (index < 0) {
 		cmd.err = 'FAILURE'
 		return returnUUIDChannel(cmd)
 	}
+	miningStatus = 'MINING'
 	const profile =  CoNET_Data.profiles[index]
-	return await _startMining(cmd, profile)
+	return await _startMining(profile, cmd)
 }
 
 //

@@ -249,16 +249,7 @@ const processCmd = async (cmd: worker_command) => {
 		}
 
 		case 'stopMining': {
-			
-			if (miningConn) {
-				miningConn.abort()
-				Stoping = true
-				setTimeout(() => {
-					Stoping = false
-					return returnUUIDChannel(cmd)
-				}, 12000)
-				return
-			}
+			miningStatus = 'STOP'
 			return returnUUIDChannel(cmd)
 		}
 
@@ -386,8 +377,11 @@ const processCmd = async (cmd: worker_command) => {
 				return returnUUIDChannel(cmd)
 			}
 
-			if (sourceProfile.keyID.toLowerCase() == miningAddress) {
-				cCNTPcurrentTotal -= amount
+			if (miningProfile) {
+				const miningAddress = miningProfile.keyID.toLowerCase()
+				if (sourceProfile.keyID.toLowerCase() === miningAddress) {
+					cCNTPcurrentTotal -= amount
+				}
 			}
 			
 			

@@ -57,7 +57,7 @@ let authorization_key = ''
 //	******************************************************************
 const cCNTP_new_Addr = '0x530cf1B598D716eC79aa916DD2F05ae8A0cE8ee2'.toLocaleLowerCase()
 const profile_ver_addr = '0x556bB96fC4C1316B2e5CEaA133f5D4157Eb05681'.toLowerCase()
-const CONET_Guardian_NodeInfoV4 = '0x264ea87162463165101A500a6Bf8755b91220350'
+const CONET_Guardian_NodeInfoV5 = '0x617b3CE079c653c8A9Af1B5957e69384919a7084'
 const CONET_Guardian_NodesV3 = '0x453701b80324C44366B34d167D40bcE2d67D6047'.toLowerCase()
 const CONET_OpenPGP_REG = '0xBDAdAB47eEa9546fda345a4B29CFFeea7027d4aa'
 //	******************************************************************
@@ -627,7 +627,7 @@ const getRegionAllNodes = async (region: string, profile: profile) => {
 	}
 	const filter = new RegExp(`${region}$`, 'i')
 	const filterRegion: string[] = regions.filter(n => filter.test(n))
-	const GuardianNodesSC = new ethers.Contract(CONET_Guardian_NodeInfoV4, CONET_Guardian_NodeInfo_ABI, provideCONET)
+	const GuardianNodesSC = new ethers.Contract(CONET_Guardian_NodeInfoV5, CONET_Guardian_NodeInfo_ABI, provideCONET)
 	const nodes: nodes_info[] = []
 	await async.mapLimit(filterRegion, 5, async (n, next) => {
 		
