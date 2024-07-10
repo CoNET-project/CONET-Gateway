@@ -2239,9 +2239,7 @@ const scanCNTPV1 = async (walletAddr: string, privide: any) => {
 	return await scan_erc20_balance(walletAddr, privide, CNTPV1)
 }
 
-const scanCCNTP = async (walletAddr: string, privide: any ) => {
-	return await scan_erc20_balance(walletAddr, privide, cCNTP_new_Addr)
-}
+
 
 const scanCNTP =  async (walletAddr: string, privide: any) => {
 	return await scan_erc20_balance(walletAddr, privide, blast_mainnet_CNTP)
@@ -2297,20 +2295,14 @@ const scanCONET_Claimable_BlastUSDB = async (walletAddr: string, privideCONET: a
 	return await scan_erc20_balance(walletAddr, privideCONET, Claimable_BlastUSDBv3)
 }
 
-// const scanCONET_Claimable_BlastETH = async (walletAddr: string, privideCONET: any) => {
-// 	return await scan_erc20_balance(walletAddr, privideCONET, Claimable_BlastETH)
-// }
-
-// const scanCONET_Claimable_BNB = async (walletAddr: string, privideCONET: any) => {
-// 	return await scan_erc20_balance(walletAddr, privideCONET, Claimable_BNB)
-// }
-
-// const scanCONET_Claimable_ETH = async (walletAddr: string, privideCONET: any) => {
-// 	return await scan_erc20_balance(walletAddr, privideCONET, Claimable_ETH)
-// }
 
 const scanCONET_Claimable_ETHUSDT = async (walletAddr: string, privideCONET: any) => {
 	return await scan_erc20_balance(walletAddr, privideCONET, Claimable_ETHUSDTv3)
+}
+
+
+const scanCCNTP = async (walletAddr: string, privide: any ) => {
+	return await scan_erc20_balance(walletAddr, privide, cCNTP_new_Addr)
 }
 
 const scan_erc20_balance = (walletAddr: string, rpcProdive: any, erc20Address: string) => new Promise (async resolve => {
@@ -3037,7 +3029,6 @@ const getAllReferrer = async () => {
 		i.referrer = kk
 	}
 }
-
 
 const getReferrer = async (wallet: string, CNTP_Referrals) => {
 	let result: string 

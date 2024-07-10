@@ -577,7 +577,7 @@ const testFunction = async (cmd: worker_command) => {
 	//getRegionAllNodes ('us', profile)
 	//await checkProfileVersion (profile.keyID)
 	// const wallet = await unlock_cCNTP(profile)
-	const wallet1 = '0xD8b12054612119e9E45d5Deef40EDca38d54D3b5'
+	const wallet1 = '0x23033811Ae9A29d01BC6a8368449f74d18c2Ce18'
 	// const result = await preBurnCCNTP (profile, '1')
 	// const result1 = await burnCCNTP (profile, '1')
 	// const result = await getRegion ()

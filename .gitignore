@@ -4,6 +4,8 @@
 
 .*
 yarn*
-
+test.*
 .idea
 .vscode
+./test.*
+tsconfig2.json
