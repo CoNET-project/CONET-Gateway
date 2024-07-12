@@ -297,6 +297,8 @@ const findNodeAddress: (nodeAddress: string, mnemonicPhrase: string) => number =
 	return findIndex ()
 }
 
+
+
 const checkGuardianNodes = async () => {
 	if (!CoNET_Data||!CoNET_Data?.profiles) {
 		return logger(`checkGuardianNodes !CoNET_Data||!CoNET_Data?.profiles Error! STOP process.`)
@@ -314,6 +316,26 @@ const checkGuardianNodes = async () => {
 
 	GuardianNodesInfoV3_ABI
 	let nodeAddress: string[] = [], Ids, numbers
+	const batchIds: string[] = []
+
+
+	const getNodeInfo = async(profiles: profile[]) => {
+
+		await async.mapLimit(profiles, 1, async (profile, next) => {
+			const NodeID = parseInt((await erc1155.ownershipForNodeID(profile.keyID)).toString())
+			if (NodeID > 99) {
+				profile.nodeID = NodeID.toString()
+				const nodeInfo = await ercGuardianNodesInfoV3.getNodeInfoById(NodeID)
+				profile.nodeRegion = nodeInfo?.regionName
+				profile.nodeIP_address = nodeInfo?.ipaddress
+				profile.isNode = true
+			}
+			
+		})
+		
+	}
+
+
 	try {
 		const ownerIds = await erc1155.getOwnerNodesAddress(profile.keyID)
 		if (!ownerIds) {
@@ -322,7 +344,7 @@ const checkGuardianNodes = async () => {
 		Ids = ownerIds.map(n => n.toString())
 		const IdAddressProcess = Ids.map(n => erc1155.getOwnership(n))
 		const _nodeAddress = await Promise.all(IdAddressProcess)
-		const batchIds: string[] = []
+		
 		_nodeAddress.forEach((n, index) => {
 			
 			nodeAddress.push (n.toLowerCase())
@@ -336,6 +358,7 @@ const checkGuardianNodes = async () => {
 	}
 
 	const _assetNodesAddr: string[] = []
+	const _nodeIdArray: number[] = []
 	numbers.forEach((n, index) => {
 		if ( n > 0 ){
 			_assetNodesAddr.push(nodeAddress[index])
@@ -356,13 +379,12 @@ const checkGuardianNodes = async () => {
 	})
 	
 	if (!assetNodesAddr.length) {
+		await getNodeInfo (profiles)
 		return 
 	}
 
 	const IdsIndex: number[] = assetNodesAddr.map (n => findNodeAddress(n, mnemonicPhrase))
 	
-
-
 
 
 	profiles.forEach(n => {
@@ -419,6 +441,7 @@ const checkGuardianNodes = async () => {
 	await Promise.all([
 		...execPool
 	])
+
 	await storagePieceToLocal()
 	await storeSystemData ()
 	needUpgradeVer = epoch + 25
