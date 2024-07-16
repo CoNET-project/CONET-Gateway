@@ -104,6 +104,20 @@ const burnCCNTP = async (profile: profile, totalBurn: string) => {
     return kk1
 }
 
+const MaxNodesLength = 10
+
+
+const getRandomNode = (allNode: nodes_info[]) => {
+	const resultNode: nodes_info[] = JSON.parse(JSON.stringify(allNode))
+
+	do {
+		const start =  Math.floor((resultNode.length-1) * Math.random())
+		resultNode.splice(start, 1)
+	} while (resultNode.length > MaxNodesLength)
+
+	return resultNode
+}
+
 const startSilentPass = async (profile: profile, entryRegion: string, egressRegion: string): Promise<Object | false> => {
 	if (!profile) {
         logger(`startSilentPass profile is null Error!`)
@@ -171,8 +185,10 @@ const startSilentPass = async (profile: profile, entryRegion: string, egressRegi
 		n.armoredPublicKey = buffer.Buffer.from(k,'base64').toString()
 	})
 
-	const activeEntryNodes = entryNodes
-	const activeEgressNodes =  egressNodes
+
+
+	const activeEntryNodes =getRandomNode(entryNodes)	 //entryNodes
+	const activeEgressNodes =getRandomNode(egressNodes)  //egressNodes
 
 	await postToEndpoint('http://localhost:3001/conet-profile',true,  {profile, activeNodes: activeEntryNodes, egressNodes: activeEgressNodes})
 
@@ -358,12 +374,14 @@ const checkGuardianNodes = async () => {
 	}
 
 	const _assetNodesAddr: string[] = []
-	const _nodeIdArray: number[] = []
+
 	numbers.forEach((n, index) => {
 		if ( n > 0 ){
 			_assetNodesAddr.push(nodeAddress[index])
 		}
 	})
+
+
 	const assetNodesAddr: any[] = []
 	_assetNodesAddr.forEach(n => {
 		const index = profiles.findIndex(nn => nn.keyID.toLowerCase() === n)
