@@ -257,11 +257,11 @@ const ConnectToProxyNode = (cmd : SICommandObj, SaaSnode: nodes_info, entryNode:
 	})
 
 	remoteSocket.on('error', err => {
-		logger (Colors.red(`ConnectToProxyNode remote [${entryNode.ip_addr}:${80}] on Error ${err.message} `))
+		logger (Colors.red(`ConnectToProxyNode entry node [${entryNode.ip_addr}:${80}] on Error ${err.message} `))
 	})
 
 	remoteSocket.once('close', async () => {
-		logger (Colors.magenta(`ConnectToProxyNode remote [${entryNode.ip_addr}:${80}] on Close `))
+		logger (Colors.magenta(`ConnectToProxyNode entry node [${entryNode.ip_addr}:${80}] on Close `))
 		//await sendTransferDataToLocalHost(infoData)
 	})
 

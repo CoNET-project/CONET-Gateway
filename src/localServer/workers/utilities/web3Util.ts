@@ -104,6 +104,20 @@ const burnCCNTP = async (profile: profile, totalBurn: string) => {
     return kk1
 }
 
+const MaxNodesLength = 10
+
+
+const getRandomNode = (allNode: nodes_info[]) => {
+	const resultNode: nodes_info[] = JSON.parse(JSON.stringify(allNode))
+
+	do {
+		const start =  Math.floor((resultNode.length-1) * Math.random())
+		resultNode.splice(start, 1)
+	} while (resultNode.length > MaxNodesLength)
+
+	return resultNode
+}
+
 const startSilentPass = async (profile: profile, entryRegion: string, egressRegion: string): Promise<Object | false> => {
 	if (!profile) {
         logger(`startSilentPass profile is null Error!`)
@@ -171,8 +185,10 @@ const startSilentPass = async (profile: profile, entryRegion: string, egressRegi
 		n.armoredPublicKey = buffer.Buffer.from(k,'base64').toString()
 	})
 
-	const activeEntryNodes = entryNodes
-	const activeEgressNodes =  egressNodes
+
+
+	const activeEntryNodes =getRandomNode(entryNodes)	 //entryNodes
+	const activeEgressNodes =getRandomNode(egressNodes)  //egressNodes
 
 	await postToEndpoint('http://localhost:3001/conet-profile',true,  {profile, activeNodes: activeEntryNodes, egressNodes: activeEgressNodes})
 
@@ -358,12 +374,14 @@ const checkGuardianNodes = async () => {
 	}
 
 	const _assetNodesAddr: string[] = []
-	const _nodeIdArray: number[] = []
+
 	numbers.forEach((n, index) => {
 		if ( n > 0 ){
 			_assetNodesAddr.push(nodeAddress[index])
 		}
 	})
+
+
 	const assetNodesAddr: any[] = []
 	_assetNodesAddr.forEach(n => {
 		const index = profiles.findIndex(nn => nn.keyID.toLowerCase() === n)
@@ -512,9 +530,6 @@ const checkAssets = async (block: number, provider: any, profiles: profile[]|und
 	const bcUSDT_Contract = new ethers.Contract(Claimable_BNBUSDTv3, cCNTP_ABI, provider)
 	const cUSDT_Contract = new ethers.Contract(Claimable_ETHUSDTv3, cCNTP_ABI, provider)
 	const cUSDB_Contract = new ethers.Contract(Claimable_BlastUSDBv3, cCNTP_ABI, provider)
-
-	
-	let hasChange = false
 	
 	for (let tx of blockInfo.transactions) {
 		const event = await provider.getTransactionReceipt(tx)
@@ -522,40 +537,7 @@ const checkAssets = async (block: number, provider: any, profiles: profile[]|und
 		const from = event?.from?.toLowerCase()
 		logger(`block [${block}] transactions ${to}`)
 		if (to) {
-			const index = profiles.findIndex(n => n.keyID.toLowerCase() === to)
-			if (index > -1) {
-				const profile = profiles[index]
-				const balance = await provider.getBalance(profile.keyID)
-				profile.tokens.conet.balance = parseFloat(ethers.formatEther(balance)).toFixed(8)
-				hasChange = true
-				logger(`profile [${profile.keyID}] got new Balance [${profile.tokens.conet }]`)
-				continue
-			}
-			//		cCNTP
-			if (to === cCNTP_new_Addr) {
-				hasChange = await checkSmartContractAsset(event.logs, ifaceFor_cCNTP_ABI, 'cCNTP', profiles, cCNTP_Contract)
-				continue
-			}
-
-			if (to === CNTPV1) {
-				hasChange = await checkSmartContractAsset(event.logs, ifaceFor_cCNTP_ABI, 'CNTPV1', profiles, CNTPV1_Contract)
-				continue
-			}
-
-			if (to === Claimable_BNBUSDTv3) {
-				hasChange = await checkSmartContractAsset(event.logs, ifaceFor_cCNTP_ABI, 'cBNBUSDT', profiles, bcUSDT_Contract)
-				continue
-			}
-
-			if (to === Claimable_ETHUSDTv3) {
-				hasChange = await checkSmartContractAsset(event.logs, ifaceFor_cCNTP_ABI, 'cUSDT', profiles, cUSDT_Contract)
-				continue
-			}
-
-			if (to === Claimable_BlastUSDBv3) {
-				hasChange = await checkSmartContractAsset(event.logs, ifaceFor_cCNTP_ABI, 'cUSDB', profiles, cUSDB_Contract)
-				continue
-			}
+			
 
 			if (to === ReferralsAddressV3) {
 				RefereesList = await getAllReferees(profiles[0].keyID.toLowerCase(), CNTP_Referrals)
@@ -573,6 +555,7 @@ const checkAssets = async (block: number, provider: any, profiles: profile[]|und
 		}
 	}
 	
+	await getAllProfileAssetsBalance()
 }
 
 let provideCONET
@@ -586,13 +569,28 @@ const listenProfileVer = async () => {
 	provideCONET.on ('block', async block => {
 		epoch = block
 		const profiles = CoNET_Data?.profiles
-		
+		if (!profiles) {
+			return
+		}
+		const beforeP = profiles.map(n => n.tokens.cCNTP.balance)
+		let totalB = 0
+		beforeP.forEach(n => {
+			totalB += parseInt(n)
+		})
+		logger(beforeP)
+		logger('totalB',totalB, `profile Length = [${profiles.length}]`)
 		await Promise.all([
 			selectLeaderboard(block),
 			checkAssets(block, provideCONET, profiles)
 
 		])
-
+		const afterB = profiles.map(n => n.tokens.cCNTP.balance)
+		let totalA = 0
+		afterB.forEach(n => {
+			totalA += parseInt(n)
+		})
+		logger(afterB)
+		logger('totalA',totalA,`profile Length = [${profiles.length}]`)
 		const cmd: channelWroker = {
 			cmd: 'assets',
 			data: [profiles, RefereesList, leaderboardData]
