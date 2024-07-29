@@ -72,12 +72,11 @@ const burnCCNTP = async (profile: profile, totalBurn: string) => {
 	} catch (ex) {
 		return false
 	}
-	await tx.wait()
+    
 	const [_tx1] = await Promise.all([
 		provideCONET.getTransactionReceipt(tx.hash),
 		//provideCONET.getTransaction(tx.hash)
 	])
-
 
 	const kk1: CryptoAssetHistory = {
 		status: 'Confirmed',
@@ -90,7 +89,6 @@ const burnCCNTP = async (profile: profile, totalBurn: string) => {
 		time: new Date().toISOString(),
 		transactionHash: tx.hash,
 		cCNTPBurn: true,
-		epoch: _tx1.blockNumber,
 		rate: leaderboardData.minerRate
 	}
 
