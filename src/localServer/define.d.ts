@@ -5,7 +5,9 @@ declare const scrypt: any
 declare const async: any
 declare const JSZip: any
 declare const PouchDB: any
-
+declare const ethers: any
+declare const uuid
+declare const Jimp
 
 interface imapConnect {
 	imapServer: string
@@ -668,3 +670,7 @@ type ITypeTransferCount = {
 	nodeIpaddress: string
 	ssl: boolean
 }
+
+
+//
+//			git reset --soft HEAD~[number] to delete commit

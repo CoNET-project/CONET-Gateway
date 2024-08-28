@@ -49,6 +49,36 @@ const httpProxy = ( clientSocket: Net.Socket, buffer: Buffer, proxyServer: proxy
 
 }
 
+
+	const request = buffer.toString()
+	return /^CONNECT\ /i.test(request)
+}
+
+const httpProxy = ( clientSocket: Net.Socket, buffer: Buffer, proxyServer: proxyServer) => {
+
+		
+	const httpHead = new HttpProxyHeader ( buffer )
+	const hostName = httpHead.host
+
+
+	const connect = ( _, _data?: Buffer ) => {
+		const uuuu : VE_IPptpStream = {
+			uuid: Crypto.randomBytes (10).toString ('hex'),
+			host: hostName,
+			buffer: buffer.toString ( 'base64' ),
+			cmd: httpHead.methods,
+			port: httpHead.Port,
+			ssl: isSslFromBuffer ( _data ),
+			order: 0
+		}
+		return proxyServer.requestGetWay ( uuuu, clientSocket )
+	}
+		
+	return connect (null, buffer )
+	
+
+}
+
 const getRandomSaaSNode = (saasNodes: nodes_info[]) => {
 	if (!saasNodes.length) {
 		logger(Colors.red(`getRandomSaaSNode saasNodes length [${saasNodes.length}]  Error!`))
@@ -382,7 +412,9 @@ export class proxyServer {
 	}
 
 	public requestGetWay = async (uuuu : VE_IPptpStream, socket: Net.Socket ) => {
+
 		const upChannel_SaaS_node: nodes_info|null  = getRandomSaaSNode(this._egressNodes)
+
 	
 		if (!upChannel_SaaS_node ) {
 			return logger (Colors.red(`proxyServer makeUpChannel upChannel_SaaS_node Null Error!`))
@@ -392,7 +424,9 @@ export class proxyServer {
 		if (!cmd) {
 			return logger (Colors.red(`requestGetWay createSock5Connect return Null Error!`))
 		}
+
 		const entryNode = getRandomNode(this._entryNodes, upChannel_SaaS_node) 
+
 		const streamString = Colors.blue (`Create gateway request, Layer minus random SaaS node [${Colors.magenta(upChannel_SaaS_node.ip_addr)}] entry node [${Colors.magenta(entryNode.ip_addr)}]\n`)
 
 		loggerToStream(this.logStream, streamString)
@@ -424,6 +458,7 @@ export class proxyServer {
 
 		this.startLocalProxy()
 	}
+
 }
 const profile = {
     "isPrimary": false,

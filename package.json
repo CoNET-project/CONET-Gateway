@@ -1,6 +1,8 @@
 {
     "name": "@conet.project/conet-proxy",
+
     "version": "0.2.13",
+
     "license": "UNLICENSED",
     "files": [
         "./build"
