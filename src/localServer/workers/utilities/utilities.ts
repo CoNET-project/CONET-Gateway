@@ -785,7 +785,7 @@ const postToEndpointSSE = ( url: string, post: boolean, jsonData, CallBack:(err:
 			if (e.eventPhase<2) {
 				return logger(`xhr.status = ${xhr.status} e.eventPhase [${e.eventPhase}]`, data)
 			}
-			logger (`postToEndpointSSE xhr.onprogress!  ${xhr.readyState} xhr.status [${xhr.status}]`)
+		
 			
 			if (xhr.status ===401) {
 				return CallBack('Err_Multiple_IP','')

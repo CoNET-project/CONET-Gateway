@@ -84,19 +84,22 @@ self.onhashchange = () => {
     self.removeEventListener('message', encryptWorkerDoCommand);
 };
 const initEncryptWorker = async () => {
-    const baseUrl = self.name + '/utilities/';
-    const channelLoading = new BroadcastChannel(workerProcessChannel);
-    const channelPlatform = new BroadcastChannel(workerReadyChannel);
-    self.importScripts(baseUrl + 'Buffer.js');
-    channelLoading.postMessage(10);
-    self.importScripts('https://cdn.jsdelivr.net/npm/openpgp@5.11.2/dist/openpgp.min.js');
-    self.importScripts('https://cdnjs.cloudflare.com/ajax/libs/uuid/8.3.2/uuid.min.js');
-    self.importScripts('https://cdnjs.cloudflare.com/ajax/libs/pouchdb/8.0.1/pouchdb.min.js');
-    self.importScripts('https://cdnjs.cloudflare.com/ajax/libs/async/3.2.5/async.min.js');
-    self.importScripts('https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js');
-    self.importScripts('https://cdnjs.cloudflare.com/ajax/libs/jimp/0.22.12/jimp.min.js');
-    channelLoading.postMessage(30);
-    // self.importScripts ( 'https://cdnjs.cloudflare.com/ajax/libs/forge/1.3.1/forge.min.js' )
+
+	
+    const baseUrl = self.name + '/utilities/'
+	const channelLoading = new BroadcastChannel(workerProcessChannel)
+	const channelPlatform = new BroadcastChannel(workerReadyChannel)
+    self.importScripts ( baseUrl + 'Buffer.js' )
+	channelLoading.postMessage(10)
+    self.importScripts ( 'https://cdn.jsdelivr.net/npm/openpgp@5.11.2/dist/openpgp.min.js' )
+    self.importScripts ( 'https://cdnjs.cloudflare.com/ajax/libs/uuid/8.3.2/uuid.min.js' )
+	self.importScripts ( 'https://cdnjs.cloudflare.com/ajax/libs/pouchdb/9.0.0/pouchdb.min.js' )
+	self.importScripts ( 'https://cdnjs.cloudflare.com/ajax/libs/async/3.2.5/async.min.js' )
+	self.importScripts ( 'https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js' )
+	self.importScripts ( 'https://cdnjs.cloudflare.com/ajax/libs/jimp/0.22.12/jimp.min.js')
+	channelLoading.postMessage(30)
+	// self.importScripts ( 'https://cdnjs.cloudflare.com/ajax/libs/forge/1.3.1/forge.min.js' )
+
     //self.importScripts ( baseUrl + 'Pouchdb.js' )
     // self.importScripts (  baseUrl + 'PouchdbFind.js' )
     // self.importScripts ( baseUrl + 'PouchdbMemory.js' )
@@ -440,19 +443,394 @@ const processCmd = async (cmd) => {
             return prePurchase(cmd);
         }
 
-        case 'saveDomain': {
-            const domain = cmd.data[0];
-            const id = cmd.data[1];
-            const node = cmd.data[2];
-            const index = backGroundPoolWorker.findIndex(n => n.id === id);
-            if (index > -1) {
-                backGroundPoolWorker.splice(index);
-            }
-            return backGroundPoolWorker.push({ id, domain, node });
+		case 'claimToken': {
+			const _profile: profile = cmd.data[0]
+			const assetName = cmd.data[1]
+			if (!_profile ||!assetName||!CoNET_Data?.profiles) {
+				cmd.err = 'INVALID_DATA'
+				return returnUUIDChannel(cmd)
+			}
+			const index = CoNET_Data.profiles.findIndex(n => n.keyID.toLowerCase() ===  _profile.keyID.toLowerCase())
+			if (index < 0) {
+				cmd.err = 'INVALID_DATA'
+				return returnUUIDChannel(cmd)
+			}
+			return claimToken(CoNET_Data.profiles[index], CoNET_Data, assetName, cmd)
+		}
+
+		case 'startMining': {
+			return startMining (cmd)
+		}
+
+		case 'stopMining': {
+			miningStatus = 'STOP'
+			return returnUUIDChannel(cmd)
+		}
+
+		case 'unlock_cCNTP': {
+			const [_profile] = cmd.data
+			if (!_profile) {
+				cmd.err = 'INVALID_DATA'
+				return returnUUIDChannel(cmd)
+			}
+			const profiles = CoNET_Data?.profiles
+			if (!profiles) {
+				cmd.err = 'NOT_READY'
+				return returnUUIDChannel(cmd)
+			}
+			const profileIndex = profiles.findIndex(n => n.keyID.toLowerCase() === _profile.keyID.toLowerCase())
+			if (profileIndex < 0) {
+				cmd.err = 'INVALID_DATA'
+				return returnUUIDChannel(cmd)
+			}
+			const profile = profiles[profileIndex]
+			if (parseFloat(profile.tokens.cCNTP.balance) < 0.001|| profile.tokens.cCNTP?.unlocked) {
+				cmd.err = 'INVALID_DATA'
+				return returnUUIDChannel(cmd)
+			}
+
+
+			const result = await unlock_cCNTP(profile)
+			if (!result) {
+				cmd.err = 'FAILURE'
+				return returnUUIDChannel(cmd)
+			}
+
+			profile.tokens.cCNTP.unlocked = true
+
+			returnUUIDChannel(cmd)
+			
+			await storagePieceToLocal()
+			await storeSystemData ()
+			needUpgradeVer = epoch + 25
+		}
+
+		case 'guardianPurchase': {
+			const [nodes, amount, profile, payAssetName] = cmd.data
+
+			if (!nodes||!amount||!profile|| !payAssetName) {
+				cmd.err = 'INVALID_DATA'
+				return returnUUIDChannel(cmd)
+			}
+
+			const profiles = CoNET_Data?.profiles
+			if (!profiles) {
+				cmd.err = 'NOT_READY'
+				return returnUUIDChannel(cmd)
+			}
+
+			const profileIndex = profiles.findIndex(n => n.keyID.toLowerCase() === profile.keyID.toLowerCase())
+			if (profileIndex < 0) {
+				cmd.err = 'INVALID_DATA'
+				return returnUUIDChannel(cmd)
+			}
+
+			const health = await getCONET_api_health()
+			if (!health) {
+				cmd.err = 'Err_Server_Unreachable'
+				return returnUUIDChannel(cmd)
+			}
+
+			sendState('beforeunload', true)
+			const kk = await CONET_guardian_purchase (profile, nodes, amount, payAssetName)
+			sendState('beforeunload', false)
+			if (kk !== true) {
+				cmd.err = 'INVALID_DATA'
+				return returnUUIDChannel(cmd)
+			}
+			const cmd1: channelWroker = {
+				cmd: 'purchaseStatus',
+				data: [4]
+			}
+			sendState('toFrontEnd', cmd1)
+			return returnUUIDChannel(cmd)
+		}
+
+		case 'transferToken': {
+			const [amount, sourceProfileKeyID, assetName, toAddress] = cmd.data;
+			
+			if (!assetName || !toAddress || !amount || !sourceProfileKeyID) {
+				cmd.err = 'INVALID_DATA'
+				return returnUUIDChannel(cmd)
+			}
+			
+			if(!getAddress(toAddress) && !getAddress(sourceProfileKeyID)) {
+				cmd.err = 'INVALID_DATA'
+				return returnUUIDChannel(cmd)
+			}
+
+			const profiles = CoNET_Data?.profiles
+
+			if (!profiles) {
+				cmd.err = 'NOT_READY'
+				return returnUUIDChannel(cmd)
+			}
+
+			const profileIndex = profiles.findIndex(
+        		(n) => n.keyID.toLowerCase() === sourceProfileKeyID.toLowerCase());
+			
+			if (profileIndex < 0) {
+				cmd.err = 'INVALID_DATA'
+				return returnUUIDChannel(cmd)
+			}
+
+			const health = await getCONET_api_health()
+			if (!health) {
+				cmd.err = 'Err_Server_Unreachable'
+				return returnUUIDChannel(cmd)
+			}
+
+			const sourceProfile = profiles[profileIndex]
+
+			sendState('beforeunload', true)
+			const kk = await CONET_transfer_token (sourceProfile, toAddress, amount, assetName)
+			sendState('beforeunload', false)
+			
+			if (!!kk !== true) {
+				cmd.err = 'INVALID_DATA'
+				return returnUUIDChannel(cmd)
+			}
+
+			if (miningProfile) {
+				const miningAddress = miningProfile.keyID.toLowerCase()
+				if (sourceProfile.keyID.toLowerCase() === miningAddress) {
+					cCNTPcurrentTotal -= amount
+				}
+			}
+			
+			
+			const cmd1: channelWroker = {
+				cmd: 'tokenTransferStatus',
+				data: [4, kk]
+			}
+
+			sendState('toFrontEnd', cmd1)
+			
+			return returnUUIDChannel(cmd)
+		}
+
+		case 'estimateGas': {
+			const [amount, sourceProfileKeyID, assetName, toAddress] = cmd.data;
+
+			if (!assetName || !toAddress || !amount || !sourceProfileKeyID) {
+				cmd.err = 'INVALID_DATA'
+				return returnUUIDChannel(cmd)
+			}
+
+				const profiles = CoNET_Data?.profiles;
+        if (!profiles) {
+          cmd.err = 'FAILURE';
+          return returnUUIDChannel(cmd);
         }
-        case 'fx168PrePurchase': {
-            return fx168PrePurchase(cmd);
+
+				const profileIndex = profiles.findIndex(
+          (n) => n.keyID.toLowerCase() === sourceProfileKeyID.toLowerCase()
+        );
+        if (profileIndex < 0) {
+          cmd.err = 'INVALID_DATA';
+          return returnUUIDChannel(cmd);
         }
+
+        const profile = profiles[profileIndex];
+
+        const asset: CryptoAsset = profile.tokens[assetName];
+        if (
+          !profile.privateKeyArmor ||
+          !asset
+        ) {
+          cmd.err = 'INVALID_DATA';
+          return returnUUIDChannel(cmd);
+        }
+
+        const data: any = await getEstimateGasForTokenTransfer(
+          profile.privateKeyArmor,
+          assetName,
+          amount,
+          toAddress
+        );
+
+        cmd.data = [data.gasPrice, data.fee, true, 5000];
+        return returnUUIDChannel(cmd);
+		}
+
+		case 'isAddress' : {
+			const address = cmd.data[0]
+			const ret = getAddress(address)
+			cmd.data = [ret === '' ? false : true]
+			return returnUUIDChannel(cmd)
+		}
+
+		case 'burnCCNTP': {
+			const [_profile, total] = cmd.data
+			if (!_profile) {
+				cmd.err = 'INVALID_DATA'
+				return returnUUIDChannel(cmd)
+			}
+			const profiles = CoNET_Data?.profiles
+			if (!profiles) {
+				cmd.err = 'NOT_READY'
+				return returnUUIDChannel(cmd)
+			}
+			const profileIndex = profiles.findIndex(n => n.keyID.toLowerCase() === _profile.keyID.toLowerCase())
+			if (profileIndex < 0) {
+				cmd.err = 'INVALID_DATA'
+				return returnUUIDChannel(cmd)
+			}
+
+			const profile = profiles[profileIndex]
+			if ( !profile.tokens.cCNTP?.unlocked || parseFloat(profile.tokens.cCNTP.balance)< parseFloat(total)) {
+				cmd.err = 'INVALID_DATA'
+				return returnUUIDChannel(cmd)
+			}
+			const tx = await burnCCNTP (profile, total)
+
+			if (!tx) {
+				cmd.err = 'INVALID_DATA'
+				return returnUUIDChannel(cmd)
+			}
+
+			profiles[0].burnCCNTP = tx
+			
+			cmd.data = [tx]
+			returnUUIDChannel(cmd)
+			await storagePieceToLocal()
+			await storeSystemData ()
+
+		}
+
+		case 'preBurnCCNTP': {
+			const [_profile, total] = cmd.data
+			if (!_profile) {
+				cmd.err = 'INVALID_DATA'
+				return returnUUIDChannel(cmd)
+			}
+			const profiles = CoNET_Data?.profiles
+			if (!profiles) {
+				cmd.err = 'NOT_READY'
+				return returnUUIDChannel(cmd)
+			}
+			const profileIndex = profiles.findIndex(n => n.keyID.toLowerCase() === _profile.keyID.toLowerCase())
+			if (profileIndex < 0) {
+				cmd.err = 'INVALID_DATA'
+				return returnUUIDChannel(cmd)
+			}
+
+			const profile = profiles[profileIndex]
+			if ( !profile.tokens.cCNTP?.unlocked || parseFloat(profile.tokens.cCNTP.balance)< parseFloat(total)) {
+				cmd.err = 'INVALID_DATA'
+				return returnUUIDChannel(cmd)
+			}
+			const gasFee = await preBurnCCNTP (profile, total)
+			if (!gasFee) {
+				cmd.err = 'INVALID_DATA'
+				return returnUUIDChannel(cmd)
+			}
+			cmd.data = [gasFee]
+			return returnUUIDChannel(cmd)
+		}
+
+		case 'startSilentPass': {
+			const [profileKeyId, entryRegion, egressRegion] = cmd.data
+
+			if (!profileKeyId || !entryRegion || !egressRegion) {
+				cmd.err = 'INVALID_DATA'
+				return returnUUIDChannel(cmd)
+			}
+
+			const profiles = CoNET_Data?.profiles
+			if (!profiles) {
+				cmd.err = 'NOT_READY'
+				return returnUUIDChannel(cmd)
+			}
+
+			const profileIndex = profiles.findIndex(n => n.keyID.toLowerCase() === profileKeyId.toLowerCase())
+			if (profileIndex < 0) {
+				cmd.err = 'INVALID_DATA'
+				return returnUUIDChannel(cmd)
+			}
+			const profile = profiles[profileIndex]
+
+			var result = await startSilentPass(profile, entryRegion, egressRegion)
+
+			if (result === false) {
+				cmd.err = 'FAILURE'
+				return returnUUIDChannel(cmd)
+			}
+
+			cmd.data = [result]
+			return returnUUIDChannel(cmd)
+		}
+
+		case 'getGuardianRegion' : {
+			const result = await getRegion ()
+			cmd.data = [result]
+			return returnUUIDChannel(cmd)
+		}
+
+		case 'prePurchase': {
+			return prePurchase(cmd)
+		}
+
+		case 'saveDomain': {
+			const domain: URL = cmd.data[0]
+			const id = cmd.data[1]
+			const node = cmd.data[2]
+			const index = backGroundPoolWorker.findIndex(n => n.id === id)
+			if (index > -1) {
+				backGroundPoolWorker.splice(index)
+			}
+			return backGroundPoolWorker.push({id, domain, node})
+		}
+
+		case 'fx168PrePurchase': {
+			return fx168PrePurchase (cmd)
+		}
+
+		case 'CONETFaucet': {
+			
+			const health = await getCONET_api_health()
+			if (!health) {
+				cmd.err = 'Err_Server_Unreachable'
+				return returnUUIDChannel(cmd)
+			}
+			const keyID = cmd.data[0]
+			cmd.data = [await getFaucet(keyID)]
+			return returnUUIDChannel(cmd)
+		}
+	
+		case 'getDomain': {
+			const id = cmd.data[0]
+			if (id) {
+				const index = backGroundPoolWorker.findIndex(n => n.id === id)
+				if (index > -1) {
+					cmd.data[1] = backGroundPoolWorker[index]
+				} else {
+					cmd.err = 'UNKNOW_ERROR'
+				}
+			} else {
+				cmd.data[1] = backGroundPoolWorker[backGroundPoolWorker.length - 1]
+				if (!cmd.data[1]) {
+					cmd.err = 'INVALID_DATA'
+				}
+			}
+			
+			return responseChannel.postMessage(JSON.stringify(cmd))
+		}
+
+		case 'showSRP': {
+			return showSRP(cmd)
+		}
+	
+		case 'getWorkerClientID' : {
+			cmd.data = [ClientIDworker]
+			logger (`Worker encryptWorkerDoCommand got getWorkerClientID ClientIDworker = [${ClientIDworker}]`)
+			return responseChannel.postMessage(JSON.stringify(cmd))
+		}
+
+		case 'createAccount': {
+			return createAccount(cmd)
+		}
+
 
         case 'CONETFaucet': {
             const health = await getCONET_api_health();
@@ -516,78 +894,98 @@ const processCmd = async (cmd) => {
             returnUUIDChannel(cmd);
             return await deleteExistDB();
         }
-        case 'ipaddress': {
-            const url = `http://localhost:3001/ipaddress`;
-            cmd.data = [await postToEndpoint(url, false, '')];
-            return returnUUIDChannel(cmd);
-        }
-        case 'syncAssetV1': {
-            const profile = gettPrimaryProfile();
-            if (profile) {
-                return getProfileAssets_CONET_Balance(profile);
-            }
-            return;
-        }
-        case 'registerReferrer': {
-            const referrer = cmd.data[0];
-            if (!referrer) {
-                cmd.err = 'FAILURE';
-                returnUUIDChannel(cmd);
-            }
-            const isAddr = ethers.isAddress(referrer);
-            if (!isAddr) {
-                cmd.err = 'FAILURE';
-                return returnUUIDChannel(cmd);
-            }
-            const result = await registerReferrer(referrer);
-            if (result === false) {
-                cmd.err = 'FAILURE';
-                return returnUUIDChannel(cmd);
-            }
-            return returnUUIDChannel(cmd);
-        }
-        case 'getRefereesList': {
-            return getReferrerList(cmd);
-        }
-        case 'recoverAccount': {
-            return recoverAccount(cmd);
-        }
-        case 'getAllProfiles': {
-            const profiles = CoNET_Data?.profiles;
-            if (!profiles) {
-                cmd.err = 'NOT_READY';
-                return returnUUIDChannel(cmd);
-            }
-            cmd.data = [profiles];
-            return returnUUIDChannel(cmd);
-        }
-        case 'getAllOtherAssets': {
-            const profiles = CoNET_Data?.profiles;
-            if (!profiles) {
-                cmd.err = 'NOT_READY';
-                return returnUUIDChannel(cmd);
-            }
-            await getAllOtherAssets();
-            cmd.data = [profiles];
-            return returnUUIDChannel(cmd);
-        }
-        case 'updateProfile': {
-            return updateProfile(cmd);
-        }
-        case 'addProfile': {
-            return addProfile(cmd);
-        }
-        case 'resetPasscode': {
-            return resetPasscode(cmd);
-        }
-        default: {
-            cmd.err = 'INVALID_COMMAND';
-            responseChannel.postMessage(JSON.stringify(cmd));
-            console.log(`channelWorkerDoCommand unknow command!`, cmd);
-            return returnUUIDChannel(cmd);
-        }
-    }
-};
+
+
+		case 'ipaddress': {
+			
+			const url = `http://localhost:3001/ipaddress`
+			cmd.data = [await postToEndpoint(url, false, '')]
+			
+			return returnUUIDChannel(cmd)
+			
+		}
+
+		case 'syncAssetV1': {
+			const profile = gettPrimaryProfile()
+			if (profile) {
+				return getProfileAssets_CONET_Balance(profile)
+			}
+			return
+		}
+
+		case 'registerReferrer': {
+			const referrer = cmd.data[0]
+			if (!referrer) {
+				cmd.err='FAILURE'
+				returnUUIDChannel(cmd)
+			}
+			const isAddr = CoNETModule.Web3Eth.utils.isAddress(referrer)
+
+			if (!isAddr) {
+				cmd.err='FAILURE'
+				return returnUUIDChannel(cmd)
+			}
+			const result = await registerReferrer(referrer)
+			if (result === false)  {
+				cmd.err='FAILURE'
+				return returnUUIDChannel(cmd)
+			}
+			return returnUUIDChannel(cmd)
+		}
+
+		case 'getRefereesList': {
+			return getReferrerList(cmd)
+		}
+
+		case 'recoverAccount': {
+			return recoverAccount(cmd)
+		}
+
+		case 'getAllProfiles': {
+			const profiles = CoNET_Data?.profiles
+			if (!profiles) {
+				cmd.err = 'NOT_READY'
+				return returnUUIDChannel(cmd)
+			}
+			cmd.data = [profiles]
+			return returnUUIDChannel(cmd)
+		}
+
+		case 'getAllOtherAssets': {
+
+			
+			const profiles = CoNET_Data?.profiles
+			if (!profiles) {
+				cmd.err = 'NOT_READY'
+				return returnUUIDChannel(cmd)
+			}
+			await getAllOtherAssets()
+			cmd.data = [profiles]
+			return returnUUIDChannel(cmd)
+		}
+
+		case 'updateProfile': {
+			return updateProfile(cmd)
+		}
+
+		case 'addProfile': {
+			return addProfile (cmd)
+		}
+
+		case 'resetPasscode': {
+			return resetPasscode (cmd)
+		}
+
+		default: {
+			cmd.err = 'INVALID_COMMAND'
+			responseChannel.postMessage(JSON.stringify(cmd))
+			console.log (`channelWorkerDoCommand unknow command!`, cmd)
+			return returnUUIDChannel(cmd)
+		}
+	}
+}
+
+
 /**
  *
  */

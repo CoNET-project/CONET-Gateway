@@ -1,5 +1,6 @@
 
 const getRegion = async () => {
+
     const regionContract = new ethers.Contract(CONET_Guardian_NodeInfoV5, CONET_Guardian_NodeInfo_ABI, provideCONET);
     try {
         const gasPrice = await regionContract.getAllRegions();
@@ -499,6 +500,7 @@ const storagePieceToIPFS = (mnemonicPhrasePassword, fragment, index, totalFragme
     const result = await updateFragmentsToIPFS(piece.remoteEncryptedText, piece.fileName, keyID, privateArmor);
     resolve(result);
 });
+
 const initSystemDataV1 = async (acc) => {
     const key = await createGPGKey('', '', '');
     const profile = {
@@ -540,6 +542,7 @@ const initCoNET_Data = async (passcode = '') => {
     await initSystemDataV1(acc);
 };
 const storeSystemData = async () => {
+
     if (!CoNET_Data || !passObj?.passcode) {
         return;
     }
@@ -837,6 +840,7 @@ const updateChainVersion = async (profile) => {
         return '-1';
     }
 };
+
 const initProfileTokens = () => {
     const ret = {
         CGPNs: {
@@ -1302,6 +1306,7 @@ let lastAllProfileAssetsBalanceTimeStamp = 0
 let lastgetAllOtherAssetsBalanceTimeStamp = 0
 const minCheckTimestamp = 1000 * 12; //			must big than 12s
 const getAllOtherAssets = async () => {
+
     return new Promise(async (resolve) => {
         if (!CoNET_Data?.profiles) {
             logger(`getAllOtherAssets Error! CoNET_Data.profiles empty!`);
@@ -1848,6 +1853,7 @@ const updateProfilesVersionToIPFS = () => new Promise(async (resolve) => {
         return resolve(false)
     }
 
+
     const passward = ethers.id(ethers.id(CoNET_Data.mnemonicPhrase))
     const profilesClearText = JSON.stringify(CoNET_Data.profiles)
     const fileLength = Math.round(1024 * (10 + Math.random() * 20))
@@ -2083,10 +2089,12 @@ const getEstimateGas = (privateKey, asset, _transferNumber, keyAddr) => new Prom
     const provide = new ethers.JsonRpcProvider(getNetwork(asset));
     const wallet = new ethers.Wallet(privateKey, provide);
     const toAddr = CONET_guardian_Address(asset);
+
     let _fee, _fee1;
     const transferNumber = parseEther(_transferNumber, asset);
     const smartContractAddr = getAssetERC20Address(asset);
     if (smartContractAddr) {
+
         const estGas = new ethers.Contract(smartContractAddr, blast_CNTPAbi, wallet);
         try {
             _fee = await estGas.transfer.estimateGas(toAddr, transferNumber);
@@ -2418,6 +2426,7 @@ const createWallet = async (profiles, mnemonicPhrase, total) => {
         profiles.push(_profile)
     }
     return publikPool
+
 }
 
 
@@ -2468,6 +2477,7 @@ const fx168PrePurchase = async (cmd) => {
     cmd.data = [[last]]
     return returnUUIDChannel(cmd)
 }
+
 
 let miningConn: any = null
 let Stoping = false
@@ -2576,7 +2586,7 @@ const getReferrer = async (wallet, CNTP_Referrals) => {
         return null;
     }
     return result;
-};
+}
 const CONET_ReferralsAbi = [
     {
         "inputs": [

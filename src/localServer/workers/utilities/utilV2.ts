@@ -1,4 +1,5 @@
 
+
 const conet_rpc = 'https://rpc.conet.network';
 const api_endpoint = `https://api.conet.network/api/`;
 const apiv2_endpoint = `https://apiv2.conet.network/api/`;
@@ -35,6 +36,7 @@ const ethRpc = () => _ethRpc[Math.round(Math.random() * (_ethRpc.length - 1))];
 let allNodes;
 let authorization_key = '';
 //	******************************************************************
+
 const cCNTP_new_Addr = '0xa4b389994A591735332A67f3561D60ce96409347'.toLocaleLowerCase();
 const profile_ver_addr = '0xB56Dfa5154B0DF39639eF701202f6e04EAc8Dda4'.toLowerCase();
 const CONET_Guardian_NodeInfoV5 = '0x264ea87162463165101A500a6Bf8755b91220350';
@@ -317,6 +319,342 @@ const prePurchase = async (cmd) => {
     return returnUUIDChannel(cmd);
 };
 const nodePrice = 1250;
+=======
+const cCNTP_new_Addr = '0x530cf1B598D716eC79aa916DD2F05ae8A0cE8ee2'.toLocaleLowerCase()
+const profile_ver_addr = '0x556bB96fC4C1316B2e5CEaA133f5D4157Eb05681'.toLowerCase()
+const CONET_Guardian_NodeInfoV5 = '0x617b3CE079c653c8A9Af1B5957e69384919a7084'
+const CONET_Guardian_NodesV3 = '0x453701b80324C44366B34d167D40bcE2d67D6047'.toLowerCase()
+const CONET_OpenPGP_REG = '0xBDAdAB47eEa9546fda345a4B29CFFeea7027d4aa'
+//	******************************************************************
+
+const getAddress = (addr: string) => {
+	let ret = ''
+	try {
+		ret = ethers.getAddress(addr)
+	} catch (ex) {
+		return ret
+	}
+	return ret
+}
+
+const getReferrerList = async (cmd: worker_command) => {
+
+	cmd.data = [RefereesList]
+	returnUUIDChannel(cmd)
+}
+
+const createAccount = async (cmd: worker_command) => {
+	const passcode: string = cmd.data[0]
+	const _referrer = cmd.data[1]
+
+	//	create passObj
+	await createNumberPasscode (passcode)
+	//	create GPG OBJ
+	await initCoNET_Data ()
+	//	Error
+	if (!CoNET_Data?.profiles) {
+		cmd.data[0] = ''
+		return returnUUIDChannel (cmd)
+	}
+
+	const mainProfile = CoNET_Data.profiles[0]
+	CoNET_Data.preferences = cmd.data[2] || null
+
+	const tx = await getFaucet (mainProfile.keyID)
+	logger(tx)
+	await storagePieceToLocal()
+	await storeSystemData ()
+	
+	cmd.data[0] = CoNET_Data.mnemonicPhrase
+	return returnUUIDChannel (cmd)
+}
+
+let referrer
+let RefereesList: any[]|null
+
+const testPasscode = async (cmd: worker_command) => {
+	const passcode: string = cmd.data[0]
+	referrer = cmd.data[1]
+	if ( !passcode || !passObj ) {
+		cmd.err = 'INVALID_DATA'
+		return returnUUIDChannel(cmd)
+	}
+
+	passObj.password = passcode
+	await decodePasscode ()
+
+	try {
+		await decryptSystemData ()
+		await recoverProfileFromSRP()
+	} catch (ex) {
+		logger (`encrypt_TestPasscode get password error!`)
+		cmd.err = 'FAILURE'
+		return returnUUIDChannel(cmd)
+	}
+
+	if (!CoNET_Data?.profiles) {
+		cmd.err = 'FAILURE'
+		returnUUIDChannel(cmd)
+		return logger(`testPasscode CoNET_Data?.profiles Empty error!`)
+	}
+	
+
+	CoNET_Data.profiles.forEach(n => {
+		n.keyID = n.keyID.toLocaleLowerCase()
+		if ( !CoNET_Data?.upgradev2 ) {
+			n.tokens.cCNTP.unlocked = false
+		}
+	})
+	
+	if (!CoNET_Data?.upgradev2) {
+		CoNET_Data.upgradev2 = true
+	}
+	
+	const profiles = CoNET_Data.profiles[0]
+
+	authorization_key = cmd.data[0] = uuid.v4()
+	returnUUIDChannel(cmd)
+
+	await getAllProfileAssetsBalance()
+	await getAllReferrer()
+	await testFunction(cmd)
+	await checkGuardianNodes ()
+
+}
+
+const showSRP = async (cmd: worker_command) => {
+	const passcode: string = cmd.data[0]
+	if (!CoNET_Data || !passObj) {
+		cmd.err = 'FAILURE'
+		return returnUUIDChannel(cmd)
+	}
+
+	passObj.password = passcode
+	await decodePasscode ()
+
+	try {
+		await decryptSystemData ()
+		await recoverProfileFromSRP()
+	} catch (ex) {
+		logger (`encrypt_TestPasscode get password error!`)
+		cmd.err = 'FAILURE'
+		return returnUUIDChannel(cmd)
+	}
+	
+	cmd.data = [CoNET_Data.mnemonicPhrase]
+	return returnUUIDChannel(cmd)
+}
+
+let getAllProfilesCount = 0
+let lastTimeGetAllProfilesCount = 0
+const minTimeStamp = 1000 * 15
+let pushedCurrentProfileVersion = 0
+let referralsRate
+let getAllProfilesRunning = false
+let didGetBalance = false
+
+
+const importWallet = async (cmd: worker_command) => {
+	const _authorization_key: string = cmd.data[0]
+	const privateKey = cmd.data[1]
+	const data = cmd.data[2]
+	cmd.data = []
+	if (!CoNET_Data || !CoNET_Data?.profiles || authorization_key !== _authorization_key) {
+		cmd.err = 'FAILURE'
+		return returnUUIDChannel(cmd)
+	}
+	let wallet
+	try {
+		wallet = new ethers.Wallet(privateKey)
+	} catch (ex) {
+		cmd.err = 'FAILURE'
+		return returnUUIDChannel(cmd)
+	}
+	const profiles = CoNET_Data.profiles
+	const checkIndex = profiles.findIndex(n => n.keyID.toLowerCase() === wallet.address.toLowerCase())
+	if (checkIndex > -1) {
+		cmd.data[0] = CoNET_Data.profiles
+		cmd.err = 'FAILURE'
+		return returnUUIDChannel(cmd)
+	}
+	const key = await createGPGKey('', '', '')
+
+	const profile: profile = {
+		isPrimary: false,
+		keyID: wallet.address,
+		privateKeyArmor: privateKey,
+		hdPath: '',
+		index: -1,
+		isNode: false,
+		pgpKey: {
+			privateKeyArmor: key.privateKey,
+			publicKeyArmor: key.publicKey
+		},
+		referrer: null,
+		tokens: initProfileTokens(),
+		data
+	}
+
+	CoNET_Data.profiles.push(profile)
+	cmd.data[0] = CoNET_Data.profiles
+	returnUUIDChannel(cmd)
+
+	await storagePieceToLocal()
+	await storeSystemData ()
+	needUpgradeVer = epoch + 25
+}
+
+const updateProfile = async (cmd: worker_command) => {
+	const _authorization_key: string = cmd.data[0]
+	const _profile:profile = cmd.data[1]
+	if (!CoNET_Data || !CoNET_Data?.profiles|| !_profile.keyID || authorization_key !== _authorization_key) {
+		cmd.err = 'FAILURE'
+		return returnUUIDChannel(cmd)
+	}
+	const ketID = _profile.keyID.toLowerCase()
+	const index = CoNET_Data.profiles.findIndex(n => n.keyID.toLowerCase() === ketID)
+	if(index < 0) {
+		cmd.err = 'FAILURE'
+		return returnUUIDChannel(cmd)
+	}
+	const profileImg = _profile?.data?.profileImg
+	if (profileImg) {
+		const resized: any = await resizeImage(profileImg, 180, 180)
+		_profile.data.profileImg = 'data:image/png;base64,' + resized.rawData
+	}
+	CoNET_Data.profiles[index].data = _profile.data
+	
+	cmd.data[0] = CoNET_Data.profiles
+	returnUUIDChannel(cmd)
+
+
+	await storagePieceToLocal()
+	await storeSystemData ()
+	needUpgradeVer = epoch + 25
+}
+
+const addProfile =  async (cmd: worker_command) => {
+	const _authorization_key: string = cmd.data[0]
+	if (!CoNET_Data || !CoNET_Data?.profiles|| authorization_key !== _authorization_key) {
+		cmd.err = 'FAILURE'
+		return returnUUIDChannel(cmd)
+	}
+	const UIData = cmd.data[1]
+
+	const indexMap = CoNET_Data.profiles.map(n=> n.index)
+	const nextIndex = indexMap.sort((a,b) => b-a)[0] + 1
+	const root = ethers.Wallet.fromPhrase(CoNET_Data.mnemonicPhrase)
+	const newAcc = root.deriveChild(nextIndex)
+	const key = await createGPGKey('', '', '')
+	const profileImg = UIData?.data?.profileImg
+	if (profileImg) {
+		const resized: any = await resizeImage(profileImg, 180, 180)
+		UIData.data.profileImg = 'data:image/png;base64,' + resized.rawData
+	}
+	const profile: profile = {
+		isPrimary: false,
+		keyID: newAcc.address,
+		privateKeyArmor: newAcc.signingKey.privateKey,
+		hdPath: newAcc.path,
+		index: newAcc.index,
+		pgpKey: {
+			privateKeyArmor: key.privateKey,
+			publicKeyArmor: key.publicKey
+		},
+		isNode: false,
+		referrer: null,
+		tokens: initProfileTokens(),
+		data: UIData
+	}
+
+	CoNET_Data.profiles.push(profile)
+	
+	
+	cmd.data[0] = CoNET_Data.profiles
+	returnUUIDChannel(cmd)
+
+	await storagePieceToLocal()
+	await storeSystemData ()
+	needUpgradeVer = epoch + 25
+}
+
+const resetPasscode = async (cmd: worker_command) => {
+	const oldPasscode: string = cmd.data[0]
+	const newPasscode: string = cmd.data[1]
+	if ( !oldPasscode || !passObj ) {
+		cmd.err = 'INVALID_DATA'
+		return returnUUIDChannel(cmd)
+	}
+	passObj.password = oldPasscode
+	await decodePasscode ()
+	try {
+		await decryptSystemData ()
+	} catch (ex) {
+		logger (`encrypt_TestPasscode get password error!`)
+		cmd.err = 'FAILURE'
+		return returnUUIDChannel(cmd)
+	}
+	await createNumberPasscode (newPasscode)
+	await storeSystemData()
+	authorization_key = cmd.data[0] = uuid.v4()
+	return returnUUIDChannel(cmd)
+}
+
+const recoverAccount = async (cmd: worker_command) => {
+	const SRP: string = cmd.data[0]
+	const passcode: string = cmd.data[1]
+	let acc
+	try {
+		acc = ethers.Wallet.fromPhrase(SRP)
+	} catch (ex) {
+		logger(`recoverAccount Phrase SRP Error! [${SRP}]`)
+		cmd.err = 'FAILURE'
+		return returnUUIDChannel(cmd)
+	}
+	initSystemDataV1(acc)
+	await createNumberPasscode (passcode)
+
+	authorization_key = cmd.data[0] = uuid.v4()
+	returnUUIDChannel(cmd)
+
+	await storagePieceToLocal()
+	await storeSystemData ()
+	
+}
+
+const prePurchase = async (cmd: worker_command) => {
+	const [nodes, amount, purchaseProfile, payAssetName] = cmd.data
+
+	if (!nodes||!amount||!purchaseProfile|| !payAssetName) {
+		cmd.err = 'INVALID_DATA'
+		return returnUUIDChannel(cmd)
+	}
+	const profiles = CoNET_Data?.profiles
+	if (!profiles) {
+		cmd.err = 'FAILURE'
+		return returnUUIDChannel(cmd)
+	}
+	const profileIndex = profiles.findIndex(n => n.keyID.toLowerCase() === purchaseProfile.keyID.toLowerCase())
+	if (profileIndex < 0) {
+		cmd.err = 'INVALID_DATA'
+		return returnUUIDChannel(cmd)
+	}
+
+	const profile = profiles[profileIndex]
+	const asset: CryptoAsset = profile.tokens[payAssetName]
+	if (!profile.privateKeyArmor||!asset||!CONET_guardian_Address(payAssetName)) {
+		cmd.err = 'INVALID_DATA'
+		return returnUUIDChannel(cmd)
+	}
+
+	const data: any = await getEstimateGas (profile.privateKeyArmor, payAssetName, amount, profile.keyID)
+
+	cmd.data = [data.gasPrice, data.fee, true, 5000]
+	return returnUUIDChannel(cmd)
+}
+
+const nodePrice = 1250
+
 // const getAmountOfNodes: (nodes: number, assetName: string) => Promise<number> = (nodes, assetName) => new Promise(async resolve => {
 // 	const assetPrice = await getAPIPrice ()
 // 	if (typeof assetPrice === 'boolean') {
@@ -371,215 +709,211 @@ const getClaimableAddress = (CONET_claimableName) => {
     }
 };
 const getCONET_api_health = async () => {
-    const url = `${apiv2_endpoint}health`;
-    const result: any = await postToEndpoint(url, false, null);
-    return result?.health;
-};
-const claimToken = async (profile, CoNET_Data, assetName, cmd) => {
-    const asset = profile.tokens[assetName];
-    let balance;
-    if (!asset || parseFloat(balance = asset.balance) < 0.0001) {
-        cmd.err = 'INVALID_DATA';
-        return returnUUIDChannel(cmd);
-    }
-    const health = await getCONET_api_health();
-    if (!health) {
-        cmd.err = 'Err_Server_Unreachable';
-        return returnUUIDChannel(cmd);
-    }
-    const rpc = getNetwork(assetName);
-    const contractAddr = getClaimableAddress(assetName);
-    if (!rpc || !contractAddr) {
-        cmd.err = 'INVALID_DATA';
-        return returnUUIDChannel(cmd);
-    }
-    const conetProvider = new ethers.JsonRpcProvider(conet_rpc);
-    const wallet = new ethers.Wallet(profile.privateKeyArmor, conetProvider);
-    const contractObj = new ethers.Contract(contractAddr, claimableContract, wallet);
-    try {
-        const _balance = await contractObj.balanceOf(profile.keyID);
-        const tx = await contractObj.approve(claimAdmin, _balance);
-        await tx.wait();
-        logger(tx);
-    }
-    catch (ex) {
-        cmd.err = 'Err_Existed';
-        return returnUUIDChannel(cmd);
-    }
-    const data = {
-        tokenName: assetName,
-        network: asset.network,
-        amount: balance
-    };
-    const message = JSON.stringify({ walletAddress: profile.keyID, data });
-    const messageHash = ethers.id(message);
-    const signMessage = CoNETModule.EthCrypto.sign(profile.privateKeyArmor, messageHash);
-    const sendData = {
-        message, signMessage
-    };
-    logger(sendData);
-    const url = `${apiv2_endpoint}claimToken`;
-    const result = await postToEndpoint(url, true, sendData);
-    if (!result) {
-        cmd.data = [false];
-        return returnUUIDChannel(cmd);
-    }
-    cmd.data = [true];
-    return returnUUIDChannel(cmd);
-};
-const unlock_cCNTP = async (profile) => {
-    const message = JSON.stringify({ walletAddress: profile.keyID });
-    const messageHash = ethers.id(message);
-    const signMessage = CoNETModule.EthCrypto.sign(profile.privateKeyArmor, messageHash);
-    const sendData = {
-        message, signMessage
-    };
-    const url = `${apiv2_endpoint}unlockCONET`;
-    const result = await postToEndpoint(url, true, sendData);
-    return result;
-};
-const getReferralsRate = async (wallet) => {
-    if (!wallet) {
-        return null;
-    }
-    const url = `${apiv2_endpoint}leaderboardData`;
-    try {
-        const result = await postToEndpoint(url, true, { wallet });
-        return result;
-    }
-    catch (ex) {
-        return null;
-    }
-};
+	const url = `${apiv2_endpoint}health`
+	const result: any = await postToEndpoint(url, false, null)
+	return result?.health
+}
+
+
+const claimToken = async (profile: profile, CoNET_Data: encrypt_keys_object, assetName: string, cmd: worker_command) => {
+	const asset: CryptoAsset = profile.tokens[assetName]
+	let balance
+	if (!asset|| parseFloat(balance = asset.balance) < 0.0001) {
+		cmd.err = 'INVALID_DATA'
+		return returnUUIDChannel(cmd)
+	}
+
+	const health = await getCONET_api_health()
+	if (!health) {
+		cmd.err = 'Err_Server_Unreachable'
+		return returnUUIDChannel(cmd)
+	}
+
+	const rpc = getNetwork(assetName)
+	const contractAddr = getClaimableAddress(assetName)
+
+	if (!rpc|| !contractAddr) {
+		cmd.err = 'INVALID_DATA'
+		return returnUUIDChannel(cmd)
+	}
+
+	const conetProvider = new ethers.JsonRpcProvider(conet_rpc)
+	const wallet = new ethers.Wallet(profile.privateKeyArmor, conetProvider)
+
+	const contractObj = new ethers.Contract(contractAddr, claimableContract, wallet)
+
+	try {
+		const _balance = await contractObj.balanceOf(profile.keyID)
+		const tx = await contractObj.approve(claimAdmin, _balance)
+		await tx.wait()
+		logger(tx)
+	} catch (ex) {
+		cmd.err = 'Err_Existed'
+		return returnUUIDChannel(cmd)
+	}
+
+	const data = {
+		tokenName: assetName,
+		network: asset.network,
+		amount: balance
+	}
+
+	const message =JSON.stringify({ walletAddress: profile.keyID, data})
+	const messageHash = ethers.id(message)
+	const signMessage = CoNETModule.EthCrypto.sign(profile.privateKeyArmor, messageHash)
+
+	const sendData = {
+		message, signMessage
+	}
+	logger(sendData)
+	const url = `${ apiv2_endpoint }claimToken`
+	const result: any = await postToEndpoint(url, true, sendData)
+	if (!result) {
+		cmd.data = [false]
+		return returnUUIDChannel(cmd)
+	}
+	cmd.data = [true]
+	return returnUUIDChannel(cmd)
+}
+
+const unlock_cCNTP = async (profile: profile) => {
+	const message =JSON.stringify({ walletAddress: profile.keyID})
+	const messageHash = ethers.id(message)
+	const signMessage = CoNETModule.EthCrypto.sign(profile.privateKeyArmor, messageHash)
+	const sendData = {
+		message, signMessage
+	}
+	const url = `${ apiv2_endpoint }unlockCONET`
+	const result: any = await postToEndpoint(url, true, sendData)
+	return result
+}
+
+const getReferralsRate = async (wallet: string) => {
+	if (!wallet) {
+		return null
+	}
+	const url = `${apiv2_endpoint}leaderboardData`
+	try {
+		const result: any = await postToEndpoint(url, true, {wallet})
+		return result
+	} catch (ex) {
+		return null
+	}
+	
+}
 const fetchTest = () => {
-    const url = 'http://localhost:3001/ver';
-    fetch(url, {
-        method: 'GET',
-        headers: {
-            'Content-Type': 'application/json;charset=UTF-8',
-            'Connection': 'close',
-        },
-        cache: 'no-store',
-        referrerPolicy: 'no-referrer'
-    }).then(async (res) => res.json())
-        .then(ver => {
-        logger(ver);
-    })
-        .catch(ex => {
-        logger(ex);
-    });
-};
-const testLottery = async (profile) => {
-    //		api server health check
-    const health = await getCONET_api_health();
-    if (!health) {
-        return null;
-    }
-    //		make post obj
-    const message = JSON.stringify({ walletAddress: profile.keyID });
-    //		use private key to sign post obj 
-    const messageHash = ethers.id(message);
-    const signMessage = CoNETModule.EthCrypto.sign(profile.privateKeyArmor, messageHash);
-    const sendData = {
-        message, signMessage
-    };
-    //		lottery url
-    const url = `${apiv2_endpoint}lottery`;
-    //		post request
-    const result = await postToEndpoint(url, true, sendData);
-    //		Error!
-    if (!result) {
-        return null;
-    }
-    //		get lottery result
-    logger(`testLottery got response ${result}`);
-};
-const testFunction = async (cmd) => {
-    const profiles = CoNET_Data?.profiles;
-    if (!profiles) {
-        return;
-    }
-    //await fetchTest()
-    const profile = profiles[0];
-    //testLottery (profile)
-    // await makeContainerPGPObj(profile)
-    //getRegionAllNodes ('us', profile)
-    //await checkProfileVersion (profile.keyID)
-    // const wallet = await unlock_cCNTP(profile)
-    // const wallet1 = '0xD8b12054612119e9E45d5Deef40EDca38d54D3b5'
-    // const result = await preBurnCCNTP (profile, '1')
-    // const result1 = await burnCCNTP (profile, '1')
-    // const result = await getRegion ()
-    // const wallet = await getReferralsRate(wallet1)
-    // if (wallet?.privateKeyArmor) {
-    if (CoNET_Data) {
-        // claimToken(wallet, CoNET_Data, 'cUSDB', cmd)
-    }
-    // _startMining(cmd, wallet)
-    // cmd.data = [5]
-    // fx168PrePurchase(cmd)
-    // setTimeout(async () => {
-    // 	const assetPrice = await getAPIPrice()
-    // }, 15000)
-    // const assetPrice = await getAPIPrice()
-    //logger(assetPrice)
-    // const uu = await getEstimateGas(wallet.privateKeyArmor, 'usdt', '8', wallet.keyID)
-    // logger(uu)
-    //const kk = await transferAssetToCONET_guardian(wallet.privateKeyArmor, wallet.tokens.dUSDT, '10')
-    //await CONET_guardian_purchase(wallet.tokens.dWBNB, 1, 1250, 'dWBNB')
-    // const oo = await getAmountOfNodes(5, 'dWETH')
-    // const kk = await getAmountOfNodes(5, 'dUSDT')
-    // const pp = await getAmountOfNodes(5, 'dWBNB')
-    // logger(oo)
-    // logger(pp)
-    // logger(kk)
-    // const uuu = await CONET_guardian_purchase (wallet, 5, 6250, 'dUSDT')
-    // }
-    // const referrer = '0x848b08302bF95DE9a1BF6be988c9D9Ef5616c4eF'
-    // const provideNewCONET = new ethers.JsonRpcProvider(conet_rpc)
-    // const CNTP_Referrals = new ethers.Contract(ReferralsAddressV2, CONET_ReferralsAbi, provideNewCONET)
-    // const kkk = await getAllReferees(referrer, CNTP_Referrals)
-    // logger(kkk)
-};
-const initV2 = async (profile) => {
-    const url = `${apiv2_endpoint}initV3`;
-    const result = await postToEndpoint(url, true, { walletAddress: profile.keyID });
-    setTimeout(async () => {
-        await checkGuardianNodes();
-    }, 2000);
-};
-const getRegionAllNodes = async (region, profile) => {
-    const regions = await getRegion();
-    if (!regions) {
-        return logger(`CONET region unavalive`);
-    }
-    const filter = new RegExp(`${region}$`, 'i');
-    const filterRegion = regions.filter(n => filter.test(n));
-    const GuardianNodesSC = new ethers.Contract(CONET_Guardian_NodeInfoV5, CONET_Guardian_NodeInfo_ABI, provideCONET);
-    const nodes: any = []
-    await async.mapLimit(filterRegion, 5, async (n, next) => {
-        const ipaddress = await GuardianNodesSC.getReginNodes(n);
-        ipaddress.forEach(nn => {
-            const node = {
-                region: n,
-                country: region,
-                ip_addr: nn,
-                armoredPublicKey: '',
-                last_online: true
-            };
-            nodes.push(node)
-        });
-    });
-    await async.mapLimit(nodes, 5, async (n, next) => {
-        const k = await GuardianNodesSC.getNodePGP(n.ip_addr);
-        n.armoredPublicKey = buffer.Buffer.from(k, 'base64').toString();
-    });
-    const activeNodes = nodes.slice();
-    const egressNodes = nodes.slice(0, 1);
-    // const kkk = await openpgp.readKey({ armoredKey: nodes[0].armoredPublicKey })
-    // const kkk1 = await openpgp.readKey({ armoredKey: nodes[1].armoredPublicKey })
-    // const res = await postToEndpoint('http://localhost:3001/conet-profile',true,  {profile: profile, activeNodes, egressNodes})
-    //		curl -v -4 -x socks5h://localhost:3003 "https://www.google.com"
-    //		curl -v -4 -x socks5h://localhost:3004 "https://www.google.com"
-    //		curl -v -4 -x socks4://localhost:3003 "https://www.google.com"
-};
+	const url = 'http://localhost:3001/ver'
+	fetch(url, {
+		method: 'GET',
+		headers: {
+			'Content-Type': 'application/json;charset=UTF-8',
+			'Connection': 'close',
+		},
+		cache: 'no-store',
+		referrerPolicy: 'no-referrer'
+	}).then ( async res => res.json())
+	.then(ver => {
+		logger(ver)
+	})
+	.catch(ex=> {
+		logger(ex)
+	})
+}
+
+const testFunction = async (cmd: worker_command) => {
+	
+	
+	const profiles = CoNET_Data?.profiles
+	if (!profiles) {
+		return
+	}
+	//await fetchTest()
+	const profile = profiles[0]
+	// await makeContainerPGPObj(profile)
+	//getRegionAllNodes ('us', profile)
+	//await checkProfileVersion (profile.keyID)
+	// const wallet = await unlock_cCNTP(profile)
+	const wallet1 = '0x23033811Ae9A29d01BC6a8368449f74d18c2Ce18'
+	// const result = await preBurnCCNTP (profile, '1')
+	// const result1 = await burnCCNTP (profile, '1')
+	// const result = await getRegion ()
+	// const wallet = await getReferralsRate(wallet1)
+	// if (wallet?.privateKeyArmor) {
+		if (CoNET_Data) {
+			// claimToken(wallet, CoNET_Data, 'cUSDB', cmd)
+		}
+		
+
+		// _startMining(cmd, wallet)
+		// cmd.data = [5]
+		// fx168PrePurchase(cmd)
+		// setTimeout(async () => {
+		// 	const assetPrice = await getAPIPrice()
+		// }, 15000)
+		// const assetPrice = await getAPIPrice()
+		//logger(assetPrice)
+		// const uu = await getEstimateGas(wallet.privateKeyArmor, 'usdt', '8', wallet.keyID)
+		// logger(uu)
+
+		//const kk = await transferAssetToCONET_guardian(wallet.privateKeyArmor, wallet.tokens.dUSDT, '10')
+		//await CONET_guardian_purchase(wallet.tokens.dWBNB, 1, 1250, 'dWBNB')
+		
+		// const oo = await getAmountOfNodes(5, 'dWETH')
+		// const kk = await getAmountOfNodes(5, 'dUSDT')
+		// const pp = await getAmountOfNodes(5, 'dWBNB')
+		// logger(oo)
+		// logger(pp)
+		// logger(kk)
+		// const uuu = await CONET_guardian_purchase (wallet, 5, 6250, 'dUSDT')
+	// }
+
+	// const referrer = '0x848b08302bF95DE9a1BF6be988c9D9Ef5616c4eF'
+	// const provideNewCONET = new ethers.JsonRpcProvider(conet_rpc)
+	// const CNTP_Referrals = new ethers.Contract(ReferralsAddressV2, CONET_ReferralsAbi, provideNewCONET)
+	// const kkk = await getAllReferees(referrer, CNTP_Referrals)
+	// logger(kkk)
+}
+
+
+
+const getRegionAllNodes = async (region: string, profile: profile) => {
+	const regions: string[] = await getRegion()
+	if (!regions) {
+		return logger(`CONET region unavalive`)
+	}
+	const filter = new RegExp(`${region}$`, 'i')
+	const filterRegion: string[] = regions.filter(n => filter.test(n))
+	const GuardianNodesSC = new ethers.Contract(CONET_Guardian_NodeInfoV5, CONET_Guardian_NodeInfo_ABI, provideCONET)
+	const nodes: nodes_info[] = []
+	await async.mapLimit(filterRegion, 5, async (n, next) => {
+		
+		const ipaddress: string[] = await GuardianNodesSC.getReginNodes(n)
+		ipaddress.forEach(nn => {
+			const node: nodes_info = {
+				region: n,
+				country: region,
+				ip_addr: nn,
+				armoredPublicKey: '',
+				last_online: true
+			}
+			nodes.push (node)
+		})
+	})
+
+
+	await async.mapLimit(nodes, 5, async (n, next) => {
+		const k = await GuardianNodesSC.getNodePGP(n.ip_addr)
+		n.armoredPublicKey = buffer.Buffer.from(k,'base64').toString()
+	})
+
+	const activeNodes = nodes.slice()
+	const egressNodes =  nodes.slice(0,1)
+
+	// const kkk = await openpgp.readKey({ armoredKey: nodes[0].armoredPublicKey })
+	// const kkk1 = await openpgp.readKey({ armoredKey: nodes[1].armoredPublicKey })
+	// const res = await postToEndpoint('http://localhost:3001/conet-profile',true,  {profile: profile, activeNodes, egressNodes})
+	//		curl -v -4 -x socks5h://localhost:3003 "https://www.google.com"
+	//		curl -v -4 -x socks5h://localhost:3004 "https://www.google.com"
+	//		curl -v -4 -x socks4://localhost:3003 "https://www.google.com"
+}
+
