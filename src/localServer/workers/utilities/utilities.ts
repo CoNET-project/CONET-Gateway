@@ -390,8 +390,7 @@ const getCNTPBalance: (Addr: string) => Promise<string> = (Addr: string) => {
 
 const XMLHttpRequestTimeout = 30 * 1000
 
-const postToEndpoint = ( url: string, post: boolean, jsonData ) => {
-	return new Promise ((resolve, reject) => {
+const postToEndpoint = ( url: string, post: boolean, jsonData ) => new Promise ((resolve, reject) => {
 		const xhr = new XMLHttpRequest()
 		xhr.onload = () => {
 			clearTimeout (timeCount)
@@ -431,7 +430,7 @@ const postToEndpoint = ( url: string, post: boolean, jsonData ) => {
 		}, XMLHttpRequestTimeout )
 	})
 	
-}
+
 
 const changeBigIntToString = (Obj: any) => {
 	const keys = Object.keys(Obj)

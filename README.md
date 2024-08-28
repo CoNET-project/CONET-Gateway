@@ -13,13 +13,13 @@ yarn add @conet-project/seguro-gateway
 Import from the package:
 
 ```ts
-import { launchSeguroGateway } from '@conet-project/seguro-gateway'
+import { Daemon } from '@conet-project/seguro-gateway'
 
 // Launch with default port of 3001 and path of ''
-launchSeguroGateway()
+Daemon()
 
 // Launch on port 3005 and path of './'
-launchSeguroGateway(3005, './')
+Daemon(3005, './')
 ```
 
 Run CLI command:

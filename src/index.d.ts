@@ -1,1 +1,3 @@
-export declare const launchSeguroGateway:(port: number, path: string) => void
+
+
+export declare const launchDaemon : (port: number, path: string) => void

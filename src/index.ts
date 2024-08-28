@@ -1,5 +1,5 @@
 #!/usr/local/bin
-import LocalServer from './localServer/localServer'
+import {Daemon} from './localServer/localServer'
 const yargs = require('yargs')
 const argv = yargs(process.argv.slice(2))
     .usage('Usage: yarn run seguro-gateway --port [number] --path [string]')
@@ -31,8 +31,8 @@ const argv = yargs(process.argv.slice(2))
 let PORT = 3001
 let PATH = ''
 
-export const launchSeguroGateway = (port: number, path: string) => {
-    new LocalServer ( port, path )
+export const launchDaemon = (port: number, path: string) => {
+    new Daemon ( port, path )
 }
 
 if (argv.port || argv.path) {
@@ -42,5 +42,5 @@ if (argv.port || argv.path) {
     } else {
         console.log('Invalid PORT, running on PORT 3001.')
     }
-    launchSeguroGateway(PORT, PATH)
+    launchDaemon(PORT, PATH)
 }

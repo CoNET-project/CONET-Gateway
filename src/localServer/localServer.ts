@@ -12,7 +12,7 @@ import Ip from "ip"
 
 
 
-const ver = '0.1.3'
+const ver = '0.1.4'
 
 
 const CoNET_SI_Network_Domain = 'openpgp.online'
@@ -135,7 +135,7 @@ export const return404 = () => {
 }
 
 
-class LocalServer {
+export class Daemon {
     private logsPool: proxyLogs[] = []
 
     private loginListening: express.Response|null = null
@@ -143,7 +143,7 @@ class LocalServer {
     private connect_peer_pool: any [] = []
 	private appsPath: string = join ( __dirname )
     private worker_command_waiting_pool: Map<string, express.Response> = new Map()
-    
+    private logStram = ''
 
     constructor ( private PORT = 3000, private reactBuildFolder: string ) {
         this.initialize()
@@ -312,16 +312,6 @@ class LocalServer {
             return res.end ()
         })
 
-		app.post ( '/restartProxy', ( req: express.Request, res: express.Response ) => {
-			const data: { profile, activeNodes, egressNodes } = req.body
-            if (this._proxyServer) {
-				this._proxyServer.restart(data.profile, data.activeNodes, data.egressNodes)
-			} else {
-				this._proxyServer = new proxyServer((this.PORT + 2).toString(), data.activeNodes, data.egressNodes, data.profile, true)
-			}
-			return res.sendStatus(200)
-        })
-
         app.post ( '/conet-profile', ( req: express.Request, res: express.Response ) => {
             const data: { profile, activeNodes, egressNodes } = req.body
             
@@ -331,7 +321,8 @@ class LocalServer {
 				if (this._proxyServer) {
 					this._proxyServer.restart(data.profile, data.activeNodes, data.egressNodes)
 				} else {
-					this._proxyServer = new proxyServer((this.PORT + 2).toString(), data.activeNodes, data.egressNodes, data.profile, true)
+
+					this._proxyServer = new proxyServer((this.PORT + 2).toString(), data.activeNodes, data.egressNodes, data.profile, true, this.logStram)
 				}
 
                 return res.sendStatus(200).end()
@@ -533,22 +524,3 @@ class LocalServer {
         })
     }
 }
-
-export default LocalServer
-
-/**
- *          test()
- */
-
-
-// const doTest = async () => {
-//     const uu = await _getSINodes ('CUSTOMER_REVIEW', 'USA')
-//     logger (inspect(uu, false, 3, true))
-// }
-
-
-
-
-
-
-// doTest()
