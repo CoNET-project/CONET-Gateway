@@ -37,19 +37,22 @@ let allNodes;
 let authorization_key = ''
 
 const initV2 = async (profile) => {
-    const url = `${apiv2_endpoint}initV3`;
-    const result = await postToEndpoint(url, true, { walletAddress: profile.keyID });
+    const url = `${apiv2_endpoint}initV3`
+    const result = await postToEndpoint(url, true, { walletAddress: profile.keyID })
     setTimeout(async () => {
-        await checkGuardianNodes();
-    }, 2000);
-};
+        await checkGuardianNodes()
+    }, 2000)
+}
 
 //	******************************************************************
 
-const cCNTP_new_Addr = '0xa4b389994A591735332A67f3561D60ce96409347'.toLocaleLowerCase();
-const profile_ver_addr = '0xB56Dfa5154B0DF39639eF701202f6e04EAc8Dda4'.toLowerCase();
-const CONET_Guardian_NodeInfoV5 = '0x264ea87162463165101A500a6Bf8755b91220350';
-const CONET_Guardian_PlanV7 = '0x35c6f84C5337e110C9190A5efbaC8B850E960384'.toLowerCase();
+const cCNTP_new_Addr = '0xa4b389994A591735332A67f3561D60ce96409347'.toLocaleLowerCase()
+const profile_ver_addr = '0xB56Dfa5154B0DF39639eF701202f6e04EAc8Dda4'.toLowerCase()
+const CONET_Guardian_NodeInfoV5 = '0x264ea87162463165101A500a6Bf8755b91220350'
+const CONET_Guardian_PlanV7 = '0x35c6f84C5337e110C9190A5efbaC8B850E960384'.toLowerCase()
+const CONET_Faucet_Smart_Contract_addr = '0x04CD419cb93FD4f70059cAeEe34f175459Ae1b6a'
+const CONET_CNTP_V1_Addr = '0xb182d2c2338775B0aC3e177351D638b23D3Da4Ea'
+const CONET_ReferralsAddressV3 = '0x1b104BCBa6870D518bC57B5AF97904fBD1030681'
 //	******************************************************************
 const getAddress = (addr) => {
     let ret = '';
@@ -62,66 +65,74 @@ const getAddress = (addr) => {
     return ret;
 };
 const getReferrerList = async (cmd) => {
-    cmd.data = [RefereesList];
-    returnUUIDChannel(cmd);
-};
+    cmd.data = [RefereesList]
+    returnUUIDChannel(cmd)
+}
+
 const createAccount = async (cmd) => {
-    const passcode = cmd.data[0];
-    const _referrer = cmd.data[1];
+    const passcode = cmd.data[0]
+    const _referrer = cmd.data[1]
     //	create passObj
-    await createNumberPasscode(passcode);
+    await createNumberPasscode(passcode)
     //	create GPG OBJ
-    await initCoNET_Data();
+    await initCoNET_Data()
     //	Error
     if (!CoNET_Data?.profiles) {
-        cmd.data[0] = '';
-        return returnUUIDChannel(cmd);
+        cmd.data[0] = ''
+        return returnUUIDChannel(cmd)
     }
-    const mainProfile = CoNET_Data.profiles[0];
-    CoNET_Data.preferences = cmd.data[2] || null;
-    const tx = await getFaucet(mainProfile.keyID);
-    logger(tx);
-    await storagePieceToLocal();
-    await storeSystemData();
-    cmd.data[0] = CoNET_Data.mnemonicPhrase;
-    return returnUUIDChannel(cmd);
-};
-let referrer;
-let RefereesList;
+
+    const mainProfile = CoNET_Data.profiles[0]
+    CoNET_Data.preferences = cmd.data[2] || null
+    await getFaucet(mainProfile)
+
+    await storagePieceToLocal()
+    await storeSystemData()
+    cmd.data[0] = CoNET_Data.mnemonicPhrase
+    return returnUUIDChannel(cmd)
+}
+let referrer
+let RefereesList
+
 const testPasscode = async (cmd) => {
-    const passcode = cmd.data[0];
-    referrer = cmd.data[1];
+    const passcode = cmd.data[0]
+    referrer = cmd.data[1]
     if (!passcode || !passObj) {
-        cmd.err = 'INVALID_DATA';
-        return returnUUIDChannel(cmd);
+        cmd.err = 'INVALID_DATA'
+        return returnUUIDChannel(cmd)
     }
-    passObj.password = passcode;
-    await decodePasscode();
+
+    passObj.password = passcode
+    await decodePasscode()
     try {
-        await decryptSystemData();
-        await recoverProfileFromSRP();
+        await decryptSystemData()
+        await recoverProfileFromSRP()
     }
     catch (ex) {
         logger(`encrypt_TestPasscode get password error!`);
-        cmd.err = 'FAILURE';
-        return returnUUIDChannel(cmd);
+        cmd.err = 'FAILURE'
+        return returnUUIDChannel(cmd)
     }
+
     if (!CoNET_Data?.profiles) {
-        cmd.err = 'FAILURE';
-        returnUUIDChannel(cmd);
-        return logger(`testPasscode CoNET_Data?.profiles Empty error!`);
+        cmd.err = 'FAILURE'
+        returnUUIDChannel(cmd)
+        return logger(`testPasscode CoNET_Data?.profiles Empty error!`)
     }
+
     CoNET_Data.profiles.forEach(async (n) => {
-        n.keyID = n.keyID.toLocaleLowerCase();
-        await initV2(n);
-        n.tokens.cCNTP.unlocked = true;
-    });
+        n.keyID = n.keyID.toLocaleLowerCase()
+        await initV2(n)
+        n.tokens.cCNTP.unlocked = true
+    })
+
     authorization_key = cmd.data[0] = uuid.v4()
-    returnUUIDChannel(cmd);
-    await getAllProfileAssetsBalance();
-    await getAllReferrer();
-    await testFunction(cmd);
-};
+    returnUUIDChannel(cmd)
+    await getAllProfileAssetsBalance()
+    await getAllReferrer()
+    await testFunction(cmd)
+}
+
 const showSRP = async (cmd) => {
     const passcode = cmd.data[0];
     if (!CoNET_Data || !passObj) {
@@ -141,14 +152,16 @@ const showSRP = async (cmd) => {
     }
     cmd.data = [CoNET_Data.mnemonicPhrase];
     return returnUUIDChannel(cmd);
-};
-let getAllProfilesCount = 0;
-let lastTimeGetAllProfilesCount = 0;
-const minTimeStamp = 1000 * 15;
-let pushedCurrentProfileVersion = 0;
-let referralsRate;
-let getAllProfilesRunning = false;
-let didGetBalance = false;
+}
+
+let getAllProfilesCount = 0
+let lastTimeGetAllProfilesCount = 0
+const minTimeStamp = 1000 * 15
+let pushedCurrentProfileVersion = 0
+let referralsRate
+let getAllProfilesRunning = false
+let didGetBalance = false
+
 const importWallet = async (cmd) => {
     const _authorization_key = cmd.data[0];
     const privateKey = cmd.data[1];
@@ -195,7 +208,8 @@ const importWallet = async (cmd) => {
     await storagePieceToLocal();
     await storeSystemData();
     needUpgradeVer = epoch + 25;
-};
+}
+
 const updateProfile = async (cmd) => {
     const _authorization_key = cmd.data[0];
     const _profile = cmd.data[1];
@@ -220,7 +234,8 @@ const updateProfile = async (cmd) => {
     await storagePieceToLocal();
     await storeSystemData();
     needUpgradeVer = epoch + 25;
-};
+}
+
 const addProfile = async (cmd) => {
     const _authorization_key = cmd.data[0];
     if (!CoNET_Data || !CoNET_Data?.profiles || authorization_key !== _authorization_key) {
@@ -259,7 +274,8 @@ const addProfile = async (cmd) => {
     await storagePieceToLocal();
     await storeSystemData();
     needUpgradeVer = epoch + 25;
-};
+}
+
 const resetPasscode = async (cmd) => {
     const oldPasscode = cmd.data[0];
     const newPasscode = cmd.data[1];
@@ -281,7 +297,8 @@ const resetPasscode = async (cmd) => {
     await storeSystemData();
     authorization_key = cmd.data[0] = uuid.v4();
     return returnUUIDChannel(cmd);
-};
+}
+
 const recoverAccount = async (cmd) => {
     const SRP = cmd.data[0];
     const passcode = cmd.data[1];
@@ -300,7 +317,8 @@ const recoverAccount = async (cmd) => {
     returnUUIDChannel(cmd);
     await storagePieceToLocal();
     await storeSystemData();
-};
+}
+
 const prePurchase = async (cmd) => {
     const [nodes, amount, purchaseProfile, payAssetName] = cmd.data;
     if (!nodes || !amount || !purchaseProfile || !payAssetName) {
@@ -326,8 +344,8 @@ const prePurchase = async (cmd) => {
     const data: any = await getEstimateGas(profile.privateKeyArmor, payAssetName, amount, profile.keyID);
     cmd.data = [data.gasPrice, data.fee, true, 5000];
     return returnUUIDChannel(cmd);
-};
-const nodePrice = 1250;
+}
+const nodePrice = 1250
 
 // const getAmountOfNodes: (nodes: number, assetName: string) => Promise<number> = (nodes, assetName) => new Promise(async resolve => {
 // 	const assetPrice = await getAPIPrice ()
@@ -365,23 +383,26 @@ const nodePrice = 1250;
 // 		resolve(null)
 // 	})
 // })
-const claimAdmin = '0x418833b70F882C833EF0F0Fcee3FB9d89C79d47C';
+const claimAdmin = '0x418833b70F882C833EF0F0Fcee3FB9d89C79d47C'
 const getClaimableAddress = (CONET_claimableName) => {
     switch (CONET_claimableName) {
         case 'cUSDB': {
-            return '0x53Aee1f4c9b0ff76781eFAC6e20eAe4561e29E8A';
+            return '0x53Aee1f4c9b0ff76781eFAC6e20eAe4561e29E8A'
         }
         case 'cBNBUSDT': {
-            return '0xAE752B49385812AF323240b26A49070bB839b10D';
+            return '0xAE752B49385812AF323240b26A49070bB839b10D'
         }
         case 'cUSDT': {
-            return '0x95A9d14fC824e037B29F1Fdae8EE3D9369B13915';
+            return '0x95A9d14fC824e037B29F1Fdae8EE3D9369B13915'
         }
         default: {
-            return '';
+            return ''
         }
     }
-};
+}
+
+
+
 const getCONET_api_health = async () => {
 	const url = `${apiv2_endpoint}health`
 	const result: any = await postToEndpoint(url, false, null)
@@ -501,6 +522,8 @@ const testFunction = async (cmd: worker_command) => {
 	if (!profiles) {
 		return
 	}
+
+	//getFaucetFromSmartContract(profiles[0])
 	//await fetchTest()
 	const profile = profiles[0]
 	// await makeContainerPGPObj(profile)

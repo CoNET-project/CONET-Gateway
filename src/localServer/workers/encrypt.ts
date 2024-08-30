@@ -102,33 +102,33 @@ const initEncryptWorker = async () => {
 
     //self.importScripts ( baseUrl + 'Pouchdb.js' )
     // self.importScripts (  baseUrl + 'PouchdbFind.js' )
-    // self.importScripts ( baseUrl + 'PouchdbMemory.js' )
-    self.importScripts(baseUrl + 'scrypt.js');
+    self.importScripts ( baseUrl + 'smartContractABI.js' )
+    self.importScripts(baseUrl + 'scrypt.js')
     // self.importScripts ( baseUrl + 'async.js' )
-    self.importScripts(baseUrl + 'forge.all.min.js');
-    channelLoading.postMessage(50);
+    self.importScripts(baseUrl + 'forge.all.min.js')
+    channelLoading.postMessage(50)
     //self.importScripts ( baseUrl + 'openpgp.min.js' )
-    self.importScripts(baseUrl + 'utilities.js');
-    self.importScripts(baseUrl + 'web3Util.js');
-    self.importScripts(baseUrl + 'generatePassword.js');
-    self.importScripts(baseUrl + 'storage.js');
-    channelLoading.postMessage(70);
+    self.importScripts(baseUrl + 'utilities.js')
+    self.importScripts(baseUrl + 'web3Util.js')
+    self.importScripts(baseUrl + 'generatePassword.js')
+    self.importScripts(baseUrl + 'storage.js')
+    channelLoading.postMessage(70)
     // self.importScripts ( baseUrl + 'seguroSetup.js' )
-    self.importScripts(baseUrl + 'utilV2.js');
-    self.importScripts(baseUrl + 'CoNETModule.js');
-    self.importScripts('https://cdnjs.cloudflare.com/ajax/libs/ethers/6.13.1/ethers.umd.min.js');
-    workerReady = true;
-    channelLoading.postMessage(90);
-    self.addEventListener('message', encryptWorkerDoCommand);
-    channel.addEventListener('message', channelWorkerDoCommand);
+    self.importScripts(baseUrl + 'utilV2.js')
+    self.importScripts(baseUrl + 'CoNETModule.js')
+    self.importScripts('https://cdnjs.cloudflare.com/ajax/libs/ethers/6.13.1/ethers.umd.min.js')
+    workerReady = true
+    channelLoading.postMessage(90)
+    self.addEventListener('message', encryptWorkerDoCommand)
+    channel.addEventListener('message', channelWorkerDoCommand)
     const cmd = {
         cmd: 'READY',
         data: [],
     };
-    responseChannel.postMessage(JSON.stringify(cmd));
-    provideCONET = new ethers.JsonRpcProvider(conet_rpc);
-    await checkStorage(channelPlatform);
-    listenProfileVer();
+    responseChannel.postMessage(JSON.stringify(cmd))
+    provideCONET = new ethers.JsonRpcProvider(conet_rpc)
+    await checkStorage(channelPlatform)
+    listenProfileVer()
 };
 const gettPrimaryProfile = () => {
     if (!CoNET_Data || !CoNET_Data?.profiles) {
@@ -191,7 +191,7 @@ const responseLocalHost = async (cmd) => {
     });
 };
 let getFaucetCount = 0;
-const processCmd = async (cmd) => {
+const processCmd = async (cmd: worker_command) => {
     switch (cmd.cmd) {
         case 'claimToken': {
             const _profile = cmd.data[0];
@@ -207,6 +207,7 @@ const processCmd = async (cmd) => {
             }
             return claimToken(CoNET_Data.profiles[index], CoNET_Data, assetName, cmd);
         }
+
         case 'startMining': {
             return startMining(cmd);
         }
@@ -469,13 +470,21 @@ const processCmd = async (cmd) => {
 
 		case 'CONETFaucet': {
 			
-			const health = await getCONET_api_health()
-			if (!health) {
-				cmd.err = 'Err_Server_Unreachable'
+			const keyID = cmd.data[0]
+		
+			const profile = getProfileFromKeyID(keyID)
+			if (!profile) {
+				cmd.err = 'INVALID_DATA'
 				return returnUUIDChannel(cmd)
 			}
-			const keyID = cmd.data[0]
-			cmd.data = [await getFaucet(keyID)]
+
+			const result = await getFaucet(profile)
+
+			if (!result) {
+				cmd.err='FAILURE'
+				return returnUUIDChannel(cmd)
+			}
+			
 			return returnUUIDChannel(cmd)
 		}
 	
@@ -523,6 +532,7 @@ const processCmd = async (cmd) => {
             cmd.data = [await getFaucet(keyID)];
             return returnUUIDChannel(cmd);
         }
+
         case 'getDomain': {
             const id = cmd.data[0];
             if (id) {
@@ -670,7 +680,7 @@ const processCmd = async (cmd) => {
 /**
  *
  */
-initEncryptWorker();
+initEncryptWorker()
 const fetchProxyData = async (url, data, callBack) => {
     const xhr = new XMLHttpRequest();
     let last_response_len = 0;
@@ -723,43 +733,43 @@ const fetchProxyData = async (url, data, callBack) => {
     //     logger (data)
     // })
     // logger (`fetchProxyData [${url}]`)
-};
+}
 const returnNullContainerUUIDChannel = async (cmd) => {
     delete cmd.err;
     initNullSystemInitialization();
     cmd.data = ['NoContainer'];
     returnUUIDChannel(cmd);
-};
+}
 //	for production
-const LivenessURL1 = 'https://api.openpgp.online:4001/api/livenessListening';
-const LivenessStopUrl = `https://api.openpgp.online:4001/api/stop-liveness`;
+const LivenessURL1 = 'https://api.openpgp.online:4001/api/livenessListening'
+const LivenessStopUrl = `https://api.openpgp.online:4001/api/stop-liveness`
 //	for debug
 // const LivenessURL1 = 'http://104.152.210.149:4001/api/livenessListening'
 // const LivenessStopUrl = `http://104.152.210.149:4001/api/stop-liveness`
-let LivenessCurrentData = ['', '', null];
+let LivenessCurrentData = ['', '', null]
 //	Detect interruption of information from the server
-const listenServerTime = 6 * 1000;
-const listenServerTimeCountMaximum = 4;
+const listenServerTime = 6 * 1000
+const listenServerTimeCountMaximum = 4
 const stopLivenessUrl = 'https://api.openpgp.online:4001/api/livenessStop';
 const stopLiveness = async (cmd) => {
-    const profile = gettPrimaryProfile();
+    const profile = gettPrimaryProfile()
     if (!profile) {
         cmd.err = 'NOT_READY';
-        return returnUUIDChannel(cmd);
+        return returnUUIDChannel(cmd)
     }
     if (Liveness && typeof Liveness.abort === 'function') {
-        Liveness.abort();
+        Liveness.abort()
     }
-    Liveness = null;
-    const message = JSON.stringify({ walletAddress: profile.keyID });
-    const messageHash = CoNETModule.EthCrypto.hash.keccak256(message);
-    const signMessage = CoNETModule.EthCrypto.sign(profile.privateKeyArmor, messageHash);
+    Liveness = null
+    const message = JSON.stringify({ walletAddress: profile.keyID })
+    const messageHash = CoNETModule.EthCrypto.hash.keccak256(message)
+    const signMessage = CoNETModule.EthCrypto.sign(profile.privateKeyArmor, messageHash)
     const data = {
         message, signMessage
-    };
+    }
     postToEndpoint(LivenessStopUrl, true, data).then(n => {
-        return returnUUIDChannel(cmd);
+        return returnUUIDChannel(cmd)
     }).catch(ex => {
-        return returnUUIDChannel(cmd);
-    });
-};
+        return returnUUIDChannel(cmd)
+    })
+}
