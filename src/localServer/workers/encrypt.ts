@@ -484,7 +484,7 @@ const processCmd = async (cmd: worker_command) => {
 				cmd.err='FAILURE'
 				return returnUUIDChannel(cmd)
 			}
-			
+			await getAllProfileAssetsBalance()
 			return returnUUIDChannel(cmd)
 		}
 	
@@ -520,18 +520,6 @@ const processCmd = async (cmd: worker_command) => {
 		case 'createAccount': {
 			return createAccount(cmd)
 		}
-
-
-        case 'CONETFaucet': {
-            const health = await getCONET_api_health();
-            if (!health) {
-                cmd.err = 'Err_Server_Unreachable';
-                return returnUUIDChannel(cmd);
-            }
-            const keyID = cmd.data[0];
-            cmd.data = [await getFaucet(keyID)];
-            return returnUUIDChannel(cmd);
-        }
 
         case 'getDomain': {
             const id = cmd.data[0];
