@@ -12,63 +12,76 @@ const getRegion = async () => {
     }
 };
 const registerReferrer = async (referrer) => {
+
     if (!CoNET_Data?.profiles) {
-        logger(`registerReferrer CoNET_Data?.profiles Empty error!`);
-        return false;
+        logger(`registerReferrer CoNET_Data?.profiles Empty error!`)
+        return false
     }
-    const profile = CoNET_Data.profiles[0];
+
+    const profile = CoNET_Data.profiles[0]
     if (!profile || !referrer) {
-        return false;
+        return false
     }
+
     if (referrer.toLowerCase() === profile.keyID.toLowerCase()) {
-        return false;
+        return false
     }
-    const provideNewCONET = new ethers.JsonRpcProvider(conet_rpc);
-    const wallet = new ethers.Wallet(profile.privateKeyArmor, provideNewCONET);
-    const CNTP_Referrals = new ethers.Contract(ReferralsAddressV3, CONET_ReferralsAbi, wallet);
+
+    const provideNewCONET = new ethers.JsonRpcProvider(conet_rpc)
+    const wallet = new ethers.Wallet(profile.privateKeyArmor, provideNewCONET)
+    const CNTP_Referrals = new ethers.Contract(CONET_ReferralsAddressV3, CONET_ReferralsAbi, wallet)
     try {
-        const ref = await CNTP_Referrals.getReferrer(profile.keyID);
+        const ref = await CNTP_Referrals.getReferrer(profile.keyID)
         if (ref === '0x0000000000000000000000000000000000000000') {
-            await CNTP_Referrals.addReferrer(referrer);
+            const tx = await CNTP_Referrals.addReferrer(referrer)
+			const tr = await tx.wait()
+			if (!tr) {
+				logger(`CNTP_Referrals.addReferrer got error`)
+				return false
+			}
         }
+    } catch (ex) {
+        return false
     }
-    catch (ex) {
-        return false;
-    }
-    profile.referrer = referrer;
-    return true;
-};
+
+    profile.referrer = referrer
+    return true
+}
+
+
 const preBurnCCNTP = async (profile, totalBurn) => {
-    const provideCONET = new ethers.JsonRpcProvider(conet_rpc);
-    const walletObj = new ethers.Wallet(profile.privateKeyArmor, provideCONET);
-    const erc20 = new ethers.Contract(cCNTP_new_Addr, blast_CNTPAbi, walletObj);
-    let total;
+    const provideCONET = new ethers.JsonRpcProvider(conet_rpc)
+    const walletObj = new ethers.Wallet(profile.privateKeyArmor, provideCONET)
+    const erc20 = new ethers.Contract(cCNTP_new_Addr, blast_CNTPAbi, walletObj)
+    let total
     try {
-        const gasPrice = await provideCONET.getFeeData();
-        const gasFees = await erc20.burn.estimateGas(parseEther(totalBurn, 'ccntp'));
-        total = gasPrice.gasPrice * gasFees;
+        const gasPrice = await provideCONET.getFeeData()
+        const gasFees = await erc20.burn.estimateGas(parseEther(totalBurn, 'ccntp'))
+        total = gasPrice.gasPrice * gasFees
     }
     catch (ex) {
-        return false;
+        return false
     }
-    return ethers.formatEther(total);
-};
+    return ethers.formatEther(total)
+}
+
 const burnCCNTP = async (profile, totalBurn) => {
-    const walletObj = new ethers.Wallet(profile.privateKeyArmor, provideCONET);
-    const erc20 = new ethers.Contract(cCNTP_new_Addr, blast_CNTPAbi, walletObj);
-    const value = parseEther(totalBurn, 'ccntp');
-    let tx;
+    const walletObj = new ethers.Wallet(profile.privateKeyArmor, provideCONET)
+    const erc20 = new ethers.Contract(cCNTP_new_Addr, blast_CNTPAbi, walletObj)
+    const value = parseEther(totalBurn, 'ccntp')
+    let tx
     try {
-        tx = await erc20.burn(value);
+        tx = await erc20.burn(value)
     }
     catch (ex) {
-        return false;
+        return false
     }
-    await tx.wait();
+
+    await tx.wait()
     const [_tx1] = await Promise.all([
         provideCONET.getTransactionReceipt(tx.hash),
         //provideCONET.getTransaction(tx.hash)
-    ]);
+    ])
     const kk1: CryptoAssetHistory = {
         status: 'Confirmed',
         Nonce: tx.nonce,
@@ -85,8 +98,8 @@ const burnCCNTP = async (profile, totalBurn) => {
     };
     profile.tokens.cCNTP.history.push(kk1);
     if (!profile.pgpKey) {
-        logger(`burnCCNTP profile.pgpKey Error!`);
-        return kk1;
+        logger(`burnCCNTP profile.pgpKey Error!`)
+        return kk1
     }
     return kk1
 }
@@ -178,25 +191,40 @@ const startSilentPass = async (profile: profile, entryRegion: string, egressRegi
 
 	await postToEndpoint('http://localhost:3001/conet-profile',true,  {profile, activeNodes: activeEntryNodes, egressNodes: activeEgressNodes})
 
-    return {status: 'Confirmed'};
+    return {status: 'Confirmed'}
 }
+let provideBlastMainChain = null
+let provideETH = null
+let provideBNB = null
+
 const getProfileAssets_allOthers_Balance = async (profile) => {
-    const key = profile.keyID;
+    const key = profile.keyID
     if (key) {
-        const current = profile.tokens;
-        checkTokenStructure(current);
-        const provideETH = new ethers.JsonRpcProvider(ethRpc());
-        const provideCONET = new ethers.JsonRpcProvider(conet_rpc);
-        const provideBlastMainChain = new ethers.JsonRpcProvider(blast_mainnet());
-        const provideBNB = new ethers.JsonRpcProvider(bsc_mainchain);
+		if (!provideBlastMainChain) {
+			provideBlastMainChain = new ethers.JsonRpcProvider(blast_mainnet())
+		}
+
+		if (!provideETH) {
+			provideETH = new ethers.JsonRpcProvider(ethRpc())
+		}
+		
+		if (!provideBNB) {
+			provideBNB = new ethers.JsonRpcProvider(bsc_mainchain)
+		}
+
+        const current = profile.tokens
+        checkTokenStructure(current)
+        
+       
+       
         // const walletETH = new ethers.Wallet(profile.privateKeyArmor, provideETH)
         const [balanceUSDT, ETH, blastETH, usdb, bnb, wusdt] = await Promise.all([
-            scanUSDT(key, provideETH),
-            scanETH(key, provideETH),
-            scanBlastETH(key, provideBlastMainChain),
-            scanUSDB(key, provideBlastMainChain),
-            scanBNB(key, provideBNB),
-            scanWUSDT(key, provideBNB),
+            scanUSDT(key),
+            scanETH(key),
+            scanBlastETH(key),
+            scanUSDB(key),
+            scanBNB(key),
+            scanWUSDT(key),
         ]);
         current.usdt.balance = balanceUSDT === BigInt(0) ? '0' : typeof balanceUSDT !== 'boolean' ?
             //	@ts-ignore
@@ -215,18 +243,18 @@ const getProfileAssets_CONET_Balance = async (profile) => {
         const current = profile.tokens;
         checkTokenStructure(current);
         const provideETH = new ethers.JsonRpcProvider(ethRpc());
-        const provideCONET = new ethers.JsonRpcProvider(conet_rpc);
+
         const provideBlastMainChain = new ethers.JsonRpcProvider(blast_mainnet());
         const provideBNB = new ethers.JsonRpcProvider(bsc_mainchain);
         // const walletETH = new ethers.Wallet(profile.privateKeyArmor, provideETH)
         const [balanceCNTPV1, balanceCCNTP, conet_Holesky, BNBUSDT, BlastUSDB, ETHUSDT, CGPNs, CGPN2s] = await Promise.all([
             //scanCNTP (key, provideBlastMainChain),
-            scanCNTPV1(key, provideCONET),
-            scanCCNTP(key, provideCONET),
+            scanCNTPV1(key),
+            scanCCNTP(key),
             scanCONETHolesky(key, provideCONET),
-            scanCONET_Claimable_BNBUSDT(key, provideCONET),
-            scanCONET_Claimable_BlastUSDB(key, provideCONET),
-            scanCONET_Claimable_ETHUSDT(key, provideCONET),
+            scanCONET_Claimable_BNBUSDT(key),
+            scanCONET_Claimable_BlastUSDB(key),
+            scanCONET_Claimable_ETHUSDT(key),
             scan_Guardian_Nodes(key, provideCONET),
             scan_Guardian_ReferralNodes(key, provideCONET)
         ]);
@@ -385,120 +413,138 @@ const checkSmartContractAsset = async (eventLogs, tokenABILog, tokenName, profil
     return ret;
 };
 const listeningAddress = [];
-const checkAssets = async (block, provider, profiles) => {
-    const blockInfo = await provider.getBlock(block);
-    const ifaceFor_cCNTP_ABI = new ethers.Interface(cCNTP_ABI);
+const checkAssets = async (block, provider) => {
+    const blockInfo = await provider.getBlock(block)
+    const ifaceFor_cCNTP_ABI = new ethers.Interface(cCNTP_ABI)
+
     if (!blockInfo?.transactions) {
         return logger(`block [${block}] hasn't transactions`);
     }
-    if (!profiles?.length) {
-        return logger(`checkAssets profiles length is none!`);
+	const profiles = CoNET_Data?.profiles
+
+    if (!profiles) {
+        return logger(`checkAssets profiles length is none!`)
     }
-    const cCNTP_Contract = new ethers.Contract(cCNTP_new_Addr, cCNTP_ABI, provider);
-    const CNTPV1_Contract = new ethers.Contract(CNTPV1, cCNTP_ABI, provider);
-    const CNTP_Referrals = new ethers.Contract(ReferralsAddressV3, CONET_ReferralsAbi, provider);
-    const bcUSDT_Contract = new ethers.Contract(Claimable_BNBUSDTv3, cCNTP_ABI, provider);
-    const cUSDT_Contract = new ethers.Contract(Claimable_ETHUSDTv3, cCNTP_ABI, provider);
-    const cUSDB_Contract = new ethers.Contract(Claimable_BlastUSDBv3, cCNTP_ABI, provider);
-    let hasChange = false;
+
+    const cCNTP_Contract = new ethers.Contract(cCNTP_new_Addr, cCNTP_ABI, provider)
+    const CNTPV1_Contract = new ethers.Contract(CNTPV1, cCNTP_ABI, provider)
+    const CNTP_Referrals = new ethers.Contract(ReferralsAddressV3, CONET_ReferralsAbi, provider)
+    const bcUSDT_Contract = new ethers.Contract(Claimable_BNBUSDTv3, cCNTP_ABI, provider)
+    const cUSDT_Contract = new ethers.Contract(Claimable_ETHUSDTv3, cCNTP_ABI, provider)
+    const cUSDB_Contract = new ethers.Contract(Claimable_BlastUSDBv3, cCNTP_ABI, provider)
+    let hasChange = false
+
     for (let tx of blockInfo.transactions) {
-        const event = await provider.getTransactionReceipt(tx);
-        const to = event?.to?.toLowerCase();
-        const from = event?.from?.toLowerCase();
-        logger(`block [${block}] transactions ${to}`);
+        const event = await provider.getTransactionReceipt(tx)
+        const to = event?.to?.toLowerCase()
+        const from = event?.from?.toLowerCase()
+
+        logger(`block [${block}] transactions ${to}`)
         if (to) {
-            const index = profiles.findIndex(n => n.keyID.toLowerCase() === to);
+            const index = profiles.findIndex(n => n.keyID.toLowerCase() === to)
             if (index > -1) {
-                const profile = profiles[index];
-                const balance = await provider.getBalance(profile.keyID);
-                profile.tokens.conet.balance = parseFloat(ethers.formatEther(balance)).toFixed(8);
-                hasChange = true;
-                logger(`profile [${profile.keyID}] got new Balance [${profile.tokens.conet}]`);
-                continue;
+                const profile = profiles[index]
+                const balance = await provider.getBalance(profile.keyID)
+                profile.tokens.conet.balance = parseFloat(ethers.formatEther(balance)).toFixed(8)
+                hasChange = true
+                logger(`profile [${profile.keyID}] got new Balance [${profile.tokens.conet}]`)
+                continue
             }
             //		cCNTP
             if (to === cCNTP_new_Addr) {
-                hasChange = await checkSmartContractAsset(event.logs, ifaceFor_cCNTP_ABI, 'cCNTP', profiles, cCNTP_Contract);
-                continue;
+                hasChange = await checkSmartContractAsset(event.logs, ifaceFor_cCNTP_ABI, 'cCNTP', profiles, cCNTP_Contract)
+                continue
             }
             if (to === CNTPV1) {
-                hasChange = await checkSmartContractAsset(event.logs, ifaceFor_cCNTP_ABI, 'CNTPV1', profiles, CNTPV1_Contract);
-                continue;
+                hasChange = await checkSmartContractAsset(event.logs, ifaceFor_cCNTP_ABI, 'CNTPV1', profiles, CNTPV1_Contract)
+                continue
             }
             if (to === Claimable_BNBUSDTv3) {
-                hasChange = await checkSmartContractAsset(event.logs, ifaceFor_cCNTP_ABI, 'cBNBUSDT', profiles, bcUSDT_Contract);
-                continue;
+                hasChange = await checkSmartContractAsset(event.logs, ifaceFor_cCNTP_ABI, 'cBNBUSDT', profiles, bcUSDT_Contract)
+                continue
             }
             if (to === Claimable_ETHUSDTv3) {
-                hasChange = await checkSmartContractAsset(event.logs, ifaceFor_cCNTP_ABI, 'cUSDT', profiles, cUSDT_Contract);
-                continue;
+                hasChange = await checkSmartContractAsset(event.logs, ifaceFor_cCNTP_ABI, 'cUSDT', profiles, cUSDT_Contract)
+                continue
             }
             if (to === Claimable_BlastUSDBv3) {
-                hasChange = await checkSmartContractAsset(event.logs, ifaceFor_cCNTP_ABI, 'cUSDB', profiles, cUSDB_Contract);
-                continue;
+                hasChange = await checkSmartContractAsset(event.logs, ifaceFor_cCNTP_ABI, 'cUSDB', profiles, cUSDB_Contract)
+                continue
             }
             if (to === ReferralsAddressV3) {
-                RefereesList = await getAllReferees(profiles[0].keyID.toLowerCase(), CNTP_Referrals);
-                continue;
+                RefereesList = await getAllReferees(profiles[0].keyID.toLowerCase(), CNTP_Referrals)
+                continue
             }
             if (to === profile_ver_addr) {
                 if (from === profiles[0].keyID.toLowerCase()) {
-                    await checkUpdateAccount();
-                    continue;
+                    await checkUpdateAccount()
+                    continue
                 }
             }
         }
     }
-};
-let provideCONET;
-let lesteningBlock = false;
-let epoch = 0;
-let needUpgradeVer = 0;
+}
+let provideCONET
+let lesteningBlock = false
+let epoch = 0
+let needUpgradeVer = 0
+
 const listenProfileVer = async () => {
-    epoch = await provideCONET.getBlockNumber();
-    lesteningBlock = true;
+    epoch = await provideCONET.getBlockNumber()
+	
+    lesteningBlock = true
     provideCONET.on('block', async (block) => {
         if (block === epoch + 1) {
             epoch++;
-            const profiles = CoNET_Data?.profiles;
+            const profiles = CoNET_Data?.profiles
+			if (!profiles) {
+				return
+			}
             await Promise.all([
                 selectLeaderboard(block),
-                checkAssets(block, provideCONET, profiles)
-            ]);
+                checkAssets(block, provideCONET)
+            ])
+
             const cmd = {
                 cmd: 'assets',
                 data: [profiles, RefereesList, leaderboardData]
-            };
-            sendState('toFrontEnd', cmd);
+            }
+
+            sendState('toFrontEnd', cmd)
             if (needUpgradeVer === epoch && profiles) {
-                const [nonce, _ver] = await checkProfileVersion(profiles[0].keyID);
-                await updateProfilesToRemote(_ver, CoNET_Data, profiles);
+                const [nonce, _ver] = await checkProfileVersion(profiles[0].keyID)
+                await updateProfilesToRemote(_ver, CoNET_Data, profiles)
             }
         }
-    });
-    epoch = await provideCONET.getBlockNumber();
-    selectLeaderboard(epoch);
-};
+    })
+    epoch = await provideCONET.getBlockNumber()
+    selectLeaderboard(epoch)
+}
+
+
 const checkProfileVersion = async (wallet) => {
-    const conet_storage = new ethers.Contract(profile_ver_addr, conet_storageAbi, provideCONET);
+    const conet_storage = new ethers.Contract(profile_ver_addr, conet_storageAbi, provideCONET)
     const [count, nonce] = await Promise.all([
         conet_storage.count(wallet),
         provideCONET.getTransactionCount(wallet)
-    ]);
-    return [parseInt(count.toString()), parseInt(nonce.toString())];
-};
+    ])
+    return [parseInt(count.toString()), parseInt(nonce.toString())]
+}
+
+
 const checkOldProfileVersion = async (wallet) => {
-    const obdGethRPC = 'https://rpc-old.conet.network';
-    const provideCONET = new ethers.JsonRpcProvider(conet_rpc);
-    const provideOldCONET = new ethers.JsonRpcProvider(obdGethRPC);
-    const old_conet_storage = new ethers.Contract(conet_storage_old_address, conet_storageAbi, provideOldCONET);
-    const new_conet_storage = new ethers.Contract(profile_ver_addr, conet_storageAbi, provideCONET);
+    const obdGethRPC = 'https://rpc-old.conet.network'
+    const provideCONET = new ethers.JsonRpcProvider(conet_rpc)
+    const provideOldCONET = new ethers.JsonRpcProvider(obdGethRPC)
+    const old_conet_storage = new ethers.Contract(conet_storage_old_address, conet_storageAbi, provideOldCONET)
+    const new_conet_storage = new ethers.Contract(profile_ver_addr, conet_storageAbi, provideCONET)
     const [oldVer, newVer] = await Promise.all([
         old_conet_storage.count(wallet),
         new_conet_storage.count(wallet)
-    ]);
-    return [oldVer, newVer];
-};
+    ])
+    return [oldVer, newVer]
+}
+
 const _storagePieceToLocal = (mnemonicPhrasePassword, fragment, index, totalFragment, targetFileLength, ver, privateArmor, keyID) => new Promise(async (resolve) => {
     const partEncryptPassword = encryptPasswordIssue(ver, mnemonicPhrasePassword, index);
     const localData = {
@@ -513,8 +559,9 @@ const _storagePieceToLocal = (mnemonicPhrasePassword, fragment, index, totalFrag
     //logger(`storage version ${ver} fragment  No.[${index}] [${piece.fileName}] with password ${partEncryptPassword}`)
     storageHashData(piece.fileName, piece.localEncryptedText).then(() => {
         resolve(true);
-    });
-});
+    })
+})
+
 const storagePieceToIPFS = (mnemonicPhrasePassword, fragment, index, totalFragment, targetFileLength, ver, privateArmor, keyID) => new Promise(async (resolve) => {
     const fileName = createFragmentFileName(ver, mnemonicPhrasePassword, index);
     const text = await getFragmentsFromPublic(fileName);
@@ -1439,61 +1486,60 @@ const selectLeaderboard = (block) => new Promise(async (resolve) => {
     // 		miningStatus = 'RESTART'
     // 	}
     // }
-    resolve(true);
-});
-const getWasabiFile = async (fileName) => new Promise(resolve => {
-    //const cloudStorageEndpointPath = `/conet-mvp/storage/FragmentOcean/${fileName}`
-    const cloudStorageEndpointUrl = `https://s3.us-east-1.wasabisys.com/conet-mvp/storage/FragmentOcean/${fileName}`;
-    return fetch(cloudStorageEndpointUrl, {
-        method: 'GET',
-        headers: {
-            'Content-Type': 'application/json;charset=UTF-8',
-            'Connection': 'close',
-        },
-        cache: 'no-store',
-        referrerPolicy: 'no-referrer'
-    }).then(async (res) => {
-        if (res.status !== 200) {
-            throw (`!200 Error`);
-        }
-        return res.json();
-    }).then(result => {
-        return resolve(result);
-    }).catch(ex => {
-        logger(`getCONET_HoleskyAssets Error!`, ex);
-        return resolve([]);
-    });
-});
+    resolve(true)
+})
+
+// const getWasabiFile = async (fileName) => new Promise(resolve => {
+//     //const cloudStorageEndpointPath = `/conet-mvp/storage/FragmentOcean/${fileName}`
+//     const cloudStorageEndpointUrl = `https://s3.us-east-1.wasabisys.com/conet-mvp/storage/FragmentOcean/${fileName}`;
+//     return fetch(cloudStorageEndpointUrl, {
+//         method: 'GET',
+//         headers: {
+//             'Content-Type': 'application/json;charset=UTF-8',
+//             'Connection': 'close',
+//         },
+//         cache: 'no-store',
+//         referrerPolicy: 'no-referrer'
+//     }).then(async (res) => {
+//         if (res.status !== 200) {
+//             throw (`!200 Error`)
+//         }
+//         return res.json();
+//     }).then(result => {
+//         return resolve(result)
+//     }).catch(ex => {
+//         logger(`getCONET_HoleskyAssets Error!`, ex)
+//         return resolve([])
+//     })
+// })
+
 const getAllProfileAssetsBalance = () => new Promise(async (resolve) => {
     if (!CoNET_Data?.profiles) {
-        logger(`getAllProfileAssetsBalance Error! CoNET_Data.profiles empty!`);
-        return resolve(false);
+        logger(`getAllProfileAssetsBalance Error! CoNET_Data.profiles empty!`)
+        return resolve(false)
     }
     const profiles = CoNET_Data.profiles
     const runningList: any[] = []
 
     for (let profile of CoNET_Data.profiles) {
-        runningList.push(getProfileAssets_CONET_Balance(profile));
+        runningList.push(getProfileAssets_CONET_Balance(profile))
         // runningList.push(getProfileAssets_allOthers_Balance(profile))
     }
-    await Promise.all(runningList);
+    await Promise.all(runningList)
     const CNTP_Referrals = new ethers.Contract(ReferralsAddressV3, CONET_ReferralsAbi, provideCONET)
     RefereesList = await getAllReferees(profiles[0].keyID, CNTP_Referrals)
     const constBalance = profiles[0].tokens.conet.balance
 
     if (constBalance > '0.0001') {
-        let update = false;
+        let update = false
         if (referrer) {
-            update = await registerReferrer(referrer);
+            update = await registerReferrer(referrer)
         }
-        await checkUpdateAccount();
-    }
-    else {
-        const health = await getCONET_api_health();
-        if (!health) {
-            return logger(`getAllProfileAssetsBalance getCONET_api_health Err`)
-        }
-        await getFaucet(profiles[0].keyID);
+
+        await checkUpdateAccount()
+    } else {
+        
+        await getFaucet(profiles[0])
     }
     const cmd = {
         cmd: 'assets',
@@ -1501,33 +1547,39 @@ const getAllProfileAssetsBalance = () => new Promise(async (resolve) => {
     };
     sendState('toFrontEnd', cmd);
     return resolve(true);
-});
-const getCONET_HoleskyAssets = (wallet) => new Promise(resolve => {
-    if (!wallet) {
-        return resolve([]);
-    }
-    const api_url = `https://scan.conet.network/api/v2/addresses/${wallet.toLowerCase()}/tokens?type=ERC-20%2CERC-721%2CERC-1155`;
-    return fetch(api_url, {
-        method: 'GET',
-        headers: {
-            'Content-Type': 'application/json;charset=UTF-8',
-            'Connection': 'close',
-        },
-        cache: 'no-store',
-        referrerPolicy: 'no-referrer'
-    }).then(async (res) => res.json())
-        .then(result => {
-        return resolve(result.items);
-    }).catch(ex => {
-        logger(`getCONET_HoleskyAssets Error!`, ex);
-        return resolve([]);
-    });
-});
-let checkcheckUpdateLock = false;
-let lastCheckcheckUpdateTimeStamp = 0;
+})
+
+
+// const getCONET_HoleskyAssets = (wallet) => new Promise(resolve => {
+//     if (!wallet) {
+//         return resolve([]);
+//     }
+//     const api_url = `https://scan.conet.network/api/v2/addresses/${wallet.toLowerCase()}/tokens?type=ERC-20%2CERC-721%2CERC-1155`;
+//     return fetch(api_url, {
+//         method: 'GET',
+//         headers: {
+//             'Content-Type': 'application/json;charset=UTF-8',
+//             'Connection': 'close',
+//         },
+//         cache: 'no-store',
+//         referrerPolicy: 'no-referrer'
+//     }).then(async (res) => res.json())
+//         .then(result => {
+//         return resolve(result.items);
+//     }).catch(ex => {
+//         logger(`getCONET_HoleskyAssets Error!`, ex);
+//         return resolve([]);
+//     });
+// });
+
+
+let checkcheckUpdateLock = false
+let lastCheckcheckUpdateTimeStamp = 0
+
+
 const getIpfsFile = async (fileName) => new Promise(resolve => {
     //const cloudStorageEndpointPath = `/conet-mvp/storage/FragmentOcean/${fileName}`
-    const cloudStorageEndpointUrl = `${ipfsEndpoint}getFragment/${fileName}`;
+    const cloudStorageEndpointUrl = `${ipfsEndpoint}getFragment/${fileName}`
     return fetch(cloudStorageEndpointUrl, {
         method: 'GET',
         headers: {
@@ -1538,16 +1590,17 @@ const getIpfsFile = async (fileName) => new Promise(resolve => {
         referrerPolicy: 'no-referrer'
     }).then(async (res) => {
         if (res.status !== 200) {
-            throw (`!200 Error`);
+            throw (`!200 Error`)
         }
-        return res.json();
+        return res.json()
     }).then(result => {
-        return resolve(result);
+        return resolve(result)
     }).catch(ex => {
-        logger(`getCONET_HoleskyAssets Error!`, ex);
-        return resolve([]);
-    });
-});
+        logger(`getCONET_HoleskyAssets from getIpfsFile got Error!`, ex)
+        return resolve([])
+    })
+})
+
 const checkIPFSFragmenReadyOrNot = (ver, CoNET_data) => new Promise(async (resolve) => {
     let _chainVer = ver;
     const passward = ethers.id(ethers.id(CoNET_data.mnemonicPhrase));
@@ -1762,7 +1815,7 @@ const getReferee = async (wallet, CNTP_Referrals) => {
         result = await CNTP_Referrals.getReferrer(wallet);
     }
     catch (ex) {
-        logger(`getReferees [${wallet}] Error! try again!`);
+        logger(`getReferees [${wallet}] Error! try again!`)
         return null;
     }
     return result;
@@ -1793,30 +1846,49 @@ const getAllReferees = async (_wallet, CNTP_Referrals) => {
         ret.push(k)
     }
     return ret
-};
-let getFaucetRoop = 0;
-const getFaucet = async (keyID) => new Promise(async (resolve) => {
-    if (++getFaucetRoop > 6) {
-        getFaucetRoop = 0;
-        logger(`getFaucet Roop > 6 STOP process!`);
-        return resolve(null);
-    }
-    const url = `${apiv2_endpoint}conet-faucet`;
-    let result;
+}
+let getFaucetRoop = 0
+
+const getFaucetFromSmartContract: (profile: profile) => Promise<boolean|any> = async (profile: profile) => {
+	const wallet = new ethers.Wallet (profile.privateKeyArmor, provideCONET)
+	const faucetSC = new ethers.Contract (CONET_Faucet_Smart_Contract_addr, faucet_ABI, wallet)
+	try {
+		const tx = await faucetSC.getFaucet()
+		const tr = await tx.wait()
+		return tr
+	} catch (ex: any) {
+		logger(`getFaucetFromSmartContract call smart contract Error!`, ex.message)
+		return false
+	}
+}
+
+const getFaucet: (profile: profile) => Promise<boolean|any> = async (profile) => new Promise(async (resolve) => {
+
+	if (profile.tokens.conet.balance > '0.001') {
+		return resolve (await getFaucetFromSmartContract(profile))
+	}
+
+	const health = await getCONET_api_health()
+	if (!health) {
+		return false
+	}
+
+    const url = `${apiv2_endpoint}conet-faucet`
+    let result
     try {
-        result = await postToEndpoint(url, true, { walletAddr: keyID });
+		
+        result = await postToEndpoint(url, true, { walletAddr: profile.keyID })
     }
+
     catch (ex) {
-        logger(`getFaucet postToEndpoint [${url}] error! `, ex);
-        return resolve(null);
+        logger(`getFaucet postToEndpoint [${url}] error! `, ex)
+        return resolve(false)
     }
-    getFaucetRoop = 0;
-    const txHash = result?.tx;
-    if (txHash) {
-        return resolve(true);
-    }
-    return resolve(null);
-});
+
+	return resolve (true)
+})
+
+
 const createKeyHDWallets = () => {
     let root;
     try {
@@ -1866,12 +1938,13 @@ const decryptSystemData = async () => new Promise((resolve, reject) => {
             return process(CoNET_Data);
         };
     }
-    return process(CoNET_Data);
-});
+    return process(CoNET_Data)
+})
+
 //*		scan assets
-const scanCONET_dWBNB = async (walletAddr, privideCONET) => {
-    return await scan_erc20_balance(walletAddr, privideCONET, conet_dWBNB);
-};
+const scanCONET_dWBNB = async (walletAddr) => {
+    return await scan_erc20_balance(walletAddr, conet_dWBNB, provideCONET)
+}
 const updateProfilesVersionToIPFS = () => new Promise(async (resolve) => {
     if (!CoNET_Data?.profiles || !passObj) {
         logger(`updateProfilesVersion !CoNET_Data[${!CoNET_Data}] || !passObj[${!passObj}] === true Error! Stop process.`);
@@ -1934,56 +2007,66 @@ const scanCONET_dWETH = async (walletAddr, privideCONET) => {
 };
 const scanCONETHolesky = async (walletAddr, privideCONET) => {
     return await scan_natureBalance(privideCONET, walletAddr)
-};
-const scanCNTPV1 = async (walletAddr, privide) => {
-    return await scan_erc20_balance(walletAddr, privide, CNTPV1);
-};
-const scanCCNTP = async (walletAddr, privide) => {
-    return await scan_erc20_balance(walletAddr, privide, cCNTP_new_Addr);
-};
-const scanCNTP = async (walletAddr, privide) => {
-    return await scan_erc20_balance(walletAddr, privide, blast_mainnet_CNTP);
-};
-const scanUSDT = async (walletAddr, provideETH) => {
-    return await scan_erc20_balance(walletAddr, provideETH, eth_usdt_contract);
-};
-const scanUSDB = async (walletAddr, provideBlast) => {
-    return await scan_erc20_balance(walletAddr, provideBlast, blast_usdb_contract);
-};
-const scanETH = async (walletAddr, provideETH) => {
-    return await scan_natureBalance(provideETH, walletAddr);
-};
-const scanBlastETH = async (walletAddr, provideBlast) => {
-    return await scan_natureBalance(provideBlast, walletAddr);
-};
-const scanWBNB = async (walletAddr, provideBNB) => {
-    return await scan_erc20_balance(walletAddr, provideBNB, bnb_wbnb_contract);
-};
-const scanWUSDT = async (walletAddr, provideBNB) => {
-    return await scan_erc20_balance(walletAddr, provideBNB, bnb_usdt_contract);
-};
-const scanBNB = async (walletAddr, provideBNB) => {
-    return await scan_natureBalance(provideBNB, walletAddr);
-};
-const scan_natureBalance = (provide, walletAddr, provideUrl = '') => new Promise(async (resolve) => {
+}
+
+const scanCNTPV1 = async (walletAddr) => {
+    return await scan_erc20_balance(walletAddr, CONET_CNTP_V1_Addr, provideCONET)
+}
+
+const scanCCNTP = async (walletAddr) => {
+    return await scan_erc20_balance(walletAddr, cCNTP_new_Addr, provideCONET)
+}
+
+const scanCNTP = async (walletAddr) => {
+    return await scan_erc20_balance(walletAddr, blast_mainnet_CNTP, provideCONET)
+}
+
+const scanUSDT = async (walletAddr) => {
+    return await scan_erc20_balance(walletAddr, eth_usdt_contract, provideETH)
+}
+
+const scanUSDB = async (walletAddr) => {
+    return await scan_erc20_balance(walletAddr,blast_usdb_contract, provideBlastMainChain)
+}
+const scanETH = async (walletAddr) => {
+    return await scan_natureBalance(provideETH, walletAddr)
+}
+
+const scanBlastETH = async (walletAddr) => {
+    return await scan_natureBalance(provideBlastMainChain, walletAddr)
+}
+
+const scanWBNB = async (walletAddr) => {
+    return await scan_erc20_balance(walletAddr, bnb_wbnb_contract, provideBNB)
+}
+
+const scanWUSDT = async (walletAddr) => {
+    return await scan_erc20_balance(walletAddr, bnb_usdt_contract, provideBNB)
+}
+
+const scanBNB = async (walletAddr) => {
+    return await scan_natureBalance(provideBNB, walletAddr)
+}
+
+const scan_natureBalance = (provide, walletAddr) => new Promise(async (resolve) => {
     try {
-        const result = await provide.getBalance(walletAddr);
-        return resolve(result);
+        const result = await provide.getBalance(walletAddr)
+        return resolve(result)
     }
     catch (ex) {
-        logger(`scan_natureBalance Error!`, ex);
-        return resolve(false);
-        // return setTimeout(async () => {
-        // 	return resolve(await scan_natureBalance(walletAddr, provide))
-        // }, 1000)
+        logger(`scan_natureBalance Error!`, ex)
+        return resolve(false)
     }
-});
-const scanCONET_Claimable_BNBUSDT = async (walletAddr, privideCONET) => {
-    return await scan_erc20_balance(walletAddr, privideCONET, Claimable_BNBUSDTv3);
-};
-const scanCONET_Claimable_BlastUSDB = async (walletAddr, privideCONET) => {
-    return await scan_erc20_balance(walletAddr, privideCONET, Claimable_BlastUSDBv3);
-};
+})
+
+const scanCONET_Claimable_BNBUSDT = async (walletAddr) => {
+    return await scan_erc20_balance(walletAddr, Claimable_BNBUSDTv3, provideCONET)
+}
+
+const scanCONET_Claimable_BlastUSDB = async (walletAddr) => {
+    return await scan_erc20_balance(walletAddr, Claimable_BlastUSDBv3, provideCONET)
+}
+
 // const scanCONET_Claimable_BlastETH = async (walletAddr: string, privideCONET: any) => {
 // 	return await scan_erc20_balance(walletAddr, privideCONET, Claimable_BlastETH)
 // }
@@ -1993,43 +2076,47 @@ const scanCONET_Claimable_BlastUSDB = async (walletAddr, privideCONET) => {
 // const scanCONET_Claimable_ETH = async (walletAddr: string, privideCONET: any) => {
 // 	return await scan_erc20_balance(walletAddr, privideCONET, Claimable_ETH)
 // }
-const scanCONET_Claimable_ETHUSDT = async (walletAddr, privideCONET) => {
-    return await scan_erc20_balance(walletAddr, privideCONET, Claimable_ETHUSDTv3);
-};
-const scan_erc20_balance = (walletAddr, rpcProdive, erc20Address) => new Promise(async (resolve) => {
-    const erc20 = new ethers.Contract(erc20Address, blast_CNTPAbi, rpcProdive);
+
+const scanCONET_Claimable_ETHUSDT = async (walletAddr) => {
+    return await scan_erc20_balance(walletAddr, Claimable_ETHUSDTv3, provideCONET)
+}
+
+
+const scan_erc20_balance = (walletAddr: string, erc20Address: string, provide: any) => new Promise(async (resolve) => {
+    const erc20 = new ethers.Contract(erc20Address, blast_CNTPAbi, provide)
     try {
-        const result = await erc20.balanceOf(walletAddr);
-        return resolve(result);
+        const result = await erc20.balanceOf(walletAddr)
+        return resolve(result)
     }
     catch (ex) {
-        logger(`scan_erc20_balance Error!`);
+        logger(`scan_erc20_balance Error!`)
         return resolve(false);
         // return setTimeout(async () => {
         // 	return resolve(await scan_erc20_balance(walletAddr, rpcProdive, erc20Address))
         // }, 1000)
     }
-});
+})
+
 const scan_Guardian_Nodes = async (walletAddr, rpcProdive) => {
-    return await scan_src1155_balance(walletAddr, rpcProdive, CONET_Guardian_PlanV7, 1);
-};
+    return await scan_src1155_balance(walletAddr, CONET_Guardian_PlanV7, 1)
+}
+
 const scan_Guardian_ReferralNodes = async (walletAddr, rpcProdive) => {
-    return await scan_src1155_balance(walletAddr, rpcProdive, CONET_Guardian_PlanV7, 2);
-};
-const scan_src1155_balance = (walletAddr, rpcProdive, erc1155Address, id) => new Promise(async (resolve) => {
-    const erc1155 = new ethers.Contract(erc1155Address, guardian_erc1155, rpcProdive);
+    return await scan_src1155_balance(walletAddr, CONET_Guardian_PlanV7, 2)
+}
+
+const scan_src1155_balance = (walletAddr, erc1155Address, id) => new Promise(async (resolve) => {
+    const erc1155 = new ethers.Contract(erc1155Address, guardian_erc1155, provideCONET)
     try {
-        const result = await erc1155.balanceOf(walletAddr, id);
-        return resolve(result);
+        const result = await erc1155.balanceOf(walletAddr, id)
+        return resolve(result)
     }
     catch (ex) {
-        logger(`scan_src1155_balance Error!`);
-        return resolve(false);
-        // return setTimeout(async () => {
-        // 	return resolve(await scan_src1155_balance(walletAddr, rpcProdive, erc1155Address, id))
-        // }, 1000)
+        logger(`scan_src1155_balance Error!`)
+        return resolve(false)
     }
-});
+})
+
 const getNetwork = (networkName) => {
     switch (networkName) {
         case 'usdb':
@@ -2583,3763 +2670,57 @@ const _startMining = async (profile: profile, cmd: worker_command|null = null) =
             cmd: 'miningStatus',
             data: [JSON.stringify(kk)]
         };
-        sendState('toFrontEnd', cmdd);
-    });
-};
+        sendState('toFrontEnd', cmdd)
+    })
+}
+
 const startMining = async (cmd) => {
-    const _authorization_key = cmd.data[0];
-    const _profile = cmd.data[1];
+    const _authorization_key = cmd.data[0]
+    const _profile = cmd.data[1]
     if (!CoNET_Data || !CoNET_Data?.profiles || authorization_key !== _authorization_key || !_profile) {
-        cmd.err = 'FAILURE';
-        return returnUUIDChannel(cmd);
+        cmd.err = 'FAILURE'
+        return returnUUIDChannel(cmd)
     }
-    const index = CoNET_Data.profiles.findIndex(n => n.keyID.toLowerCase() === _profile.keyID.toLowerCase());
+    const index = CoNET_Data.profiles.findIndex(n => n.keyID.toLowerCase() === _profile.keyID.toLowerCase())
     if (index < 0 || Stoping) {
-        cmd.err = 'FAILURE';
-        return returnUUIDChannel(cmd);
+        cmd.err = 'FAILURE'
+        return returnUUIDChannel(cmd)
     }
-    const profile = CoNET_Data.profiles[index];
+    const profile = CoNET_Data.profiles[index]
     if (miningStatus === 'STOP' && !miningConn) {
-        miningStatus = 'MINING';
-        return await _startMining(profile, cmd);
+        miningStatus = 'MINING'
+        return await _startMining(profile, cmd)
     }
-    cmd.data = ['success'];
-    return returnUUIDChannel(cmd);
-};
+    cmd.data = ['success']
+    return returnUUIDChannel(cmd)
+}
+
 const getAllReferrer = async () => {
+
     if (!CoNET_Data?.profiles) {
-        return null;
+        return null
     }
-    const provideNewCONET = new ethers.JsonRpcProvider(conet_rpc);
-    const CNTP_Referrals = new ethers.Contract(ReferralsAddressV3, CONET_ReferralsAbi, provideNewCONET);
+    const provideNewCONET = new ethers.JsonRpcProvider(conet_rpc)
+    const CNTP_Referrals = new ethers.Contract(ReferralsAddressV3, CONET_ReferralsAbi, provideNewCONET)
     for (let i of CoNET_Data?.profiles) {
         const kk = await getReferrer(i.keyID, CNTP_Referrals);
         if (!kk || kk === '0x0000000000000000000000000000000000000000') {
-            delete i.referrer;
-            continue;
+            delete i.referrer
+            continue
         }
-        i.referrer = kk;
+        i.referrer = kk
     }
-};
+}
+
 const getReferrer = async (wallet, CNTP_Referrals) => {
-    let result;
+    let result
     try {
-        result = await CNTP_Referrals.getReferrer(wallet);
+        result = await CNTP_Referrals.getReferrer(wallet)
     }
     catch (ex) {
-        logger(`getReferees [${wallet}] Error! try again!`);
-        return null;
+        logger(`getReferees [${wallet}] Error! try again!`)
+        return null
     }
-    return result;
+    return result
 }
-const CONET_ReferralsAbi = [
-    {
-        "inputs": [
-            {
-                "internalType": "address",
-                "name": "referrer",
-                "type": "address"
-            }
-        ],
-        "name": "addReferrer",
-        "outputs": [],
-        "stateMutability": "nonpayable",
-        "type": "function"
-    },
-    {
-        "inputs": [
-            {
-                "internalType": "address",
-                "name": "refere",
-                "type": "address"
-            },
-            {
-                "internalType": "address[]",
-                "name": "referees",
-                "type": "address[]"
-            }
-        ],
-        "name": "checkReferees",
-        "outputs": [
-            {
-                "internalType": "bool",
-                "name": "hasAddress",
-                "type": "bool"
-            }
-        ],
-        "stateMutability": "view",
-        "type": "function"
-    },
-    {
-        "inputs": [
-            {
-                "internalType": "address",
-                "name": "referrer",
-                "type": "address"
-            }
-        ],
-        "name": "getReferees",
-        "outputs": [
-            {
-                "internalType": "address[]",
-                "name": "referees",
-                "type": "address[]"
-            }
-        ],
-        "stateMutability": "view",
-        "type": "function"
-    },
-    {
-        "inputs": [
-            {
-                "internalType": "address",
-                "name": "referee",
-                "type": "address"
-            }
-        ],
-        "name": "getReferrer",
-        "outputs": [
-            {
-                "internalType": "address",
-                "name": "referrer",
-                "type": "address"
-            }
-        ],
-        "stateMutability": "view",
-        "type": "function"
-    }
-];
-const conet_storageAbi = [
-    {
-        "anonymous": false,
-        "inputs": [
-            {
-                "indexed": true,
-                "internalType": "address",
-                "name": "from",
-                "type": "address"
-            },
-            {
-                "indexed": true,
-                "internalType": "address",
-                "name": "to",
-                "type": "address"
-            },
-            {
-                "indexed": true,
-                "internalType": "uint256",
-                "name": "index",
-                "type": "uint256"
-            },
-            {
-                "indexed": false,
-                "internalType": "string",
-                "name": "data",
-                "type": "string"
-            }
-        ],
-        "name": "FragmentsStorage",
-        "type": "event"
-    },
-    {
-        "inputs": [
-            {
-                "internalType": "address",
-                "name": "",
-                "type": "address"
-            }
-        ],
-        "name": "count",
-        "outputs": [
-            {
-                "internalType": "uint256",
-                "name": "",
-                "type": "uint256"
-            }
-        ],
-        "stateMutability": "view",
-        "type": "function"
-    },
-    {
-        "inputs": [
-            {
-                "internalType": "string",
-                "name": "data",
-                "type": "string"
-            }
-        ],
-        "name": "versionUp",
-        "outputs": [
-            {
-                "internalType": "uint256",
-                "name": "ver",
-                "type": "uint256"
-            }
-        ],
-        "stateMutability": "nonpayable",
-        "type": "function"
-    }
-];
-const blast_CNTPAbi = [
-    {
-        "inputs": [],
-        "stateMutability": "nonpayable",
-        "type": "constructor"
-    },
-    {
-        "inputs": [
-            {
-                "internalType": "address",
-                "name": "spender",
-                "type": "address"
-            },
-            {
-                "internalType": "uint256",
-                "name": "allowance",
-                "type": "uint256"
-            },
-            {
-                "internalType": "uint256",
-                "name": "needed",
-                "type": "uint256"
-            }
-        ],
-        "name": "ERC20InsufficientAllowance",
-        "type": "error"
-    },
-    {
-        "inputs": [
-            {
-                "internalType": "address",
-                "name": "sender",
-                "type": "address"
-            },
-            {
-                "internalType": "uint256",
-                "name": "balance",
-                "type": "uint256"
-            },
-            {
-                "internalType": "uint256",
-                "name": "needed",
-                "type": "uint256"
-            }
-        ],
-        "name": "ERC20InsufficientBalance",
-        "type": "error"
-    },
-    {
-        "inputs": [
-            {
-                "internalType": "address",
-                "name": "approver",
-                "type": "address"
-            }
-        ],
-        "name": "ERC20InvalidApprover",
-        "type": "error"
-    },
-    {
-        "inputs": [
-            {
-                "internalType": "address",
-                "name": "receiver",
-                "type": "address"
-            }
-        ],
-        "name": "ERC20InvalidReceiver",
-        "type": "error"
-    },
-    {
-        "inputs": [
-            {
-                "internalType": "address",
-                "name": "sender",
-                "type": "address"
-            }
-        ],
-        "name": "ERC20InvalidSender",
-        "type": "error"
-    },
-    {
-        "inputs": [
-            {
-                "internalType": "address",
-                "name": "spender",
-                "type": "address"
-            }
-        ],
-        "name": "ERC20InvalidSpender",
-        "type": "error"
-    },
-    {
-        "anonymous": false,
-        "inputs": [
-            {
-                "indexed": true,
-                "internalType": "address",
-                "name": "owner",
-                "type": "address"
-            },
-            {
-                "indexed": true,
-                "internalType": "address",
-                "name": "spender",
-                "type": "address"
-            },
-            {
-                "indexed": false,
-                "internalType": "uint256",
-                "name": "value",
-                "type": "uint256"
-            }
-        ],
-        "name": "Approval",
-        "type": "event"
-    },
-    {
-        "anonymous": false,
-        "inputs": [
-            {
-                "indexed": true,
-                "internalType": "address",
-                "name": "from",
-                "type": "address"
-            },
-            {
-                "indexed": true,
-                "internalType": "address",
-                "name": "to",
-                "type": "address"
-            },
-            {
-                "indexed": false,
-                "internalType": "uint256",
-                "name": "value",
-                "type": "uint256"
-            }
-        ],
-        "name": "Transfer",
-        "type": "event"
-    },
-    {
-        "inputs": [
-            {
-                "internalType": "address",
-                "name": "owner",
-                "type": "address"
-            },
-            {
-                "internalType": "address",
-                "name": "spender",
-                "type": "address"
-            }
-        ],
-        "name": "allowance",
-        "outputs": [
-            {
-                "internalType": "uint256",
-                "name": "",
-                "type": "uint256"
-            }
-        ],
-        "stateMutability": "view",
-        "type": "function"
-    },
-    {
-        "inputs": [
-            {
-                "internalType": "address",
-                "name": "spender",
-                "type": "address"
-            },
-            {
-                "internalType": "uint256",
-                "name": "value",
-                "type": "uint256"
-            }
-        ],
-        "name": "approve",
-        "outputs": [
-            {
-                "internalType": "bool",
-                "name": "",
-                "type": "bool"
-            }
-        ],
-        "stateMutability": "nonpayable",
-        "type": "function"
-    },
-    {
-        "inputs": [
-            {
-                "internalType": "address",
-                "name": "account",
-                "type": "address"
-            }
-        ],
-        "name": "balanceOf",
-        "outputs": [
-            {
-                "internalType": "uint256",
-                "name": "",
-                "type": "uint256"
-            }
-        ],
-        "stateMutability": "view",
-        "type": "function"
-    },
-    {
-        "inputs": [
-            {
-                "internalType": "uint256",
-                "name": "value",
-                "type": "uint256"
-            }
-        ],
-        "name": "burn",
-        "outputs": [],
-        "stateMutability": "nonpayable",
-        "type": "function"
-    },
-    {
-        "inputs": [
-            {
-                "internalType": "address",
-                "name": "account",
-                "type": "address"
-            },
-            {
-                "internalType": "uint256",
-                "name": "value",
-                "type": "uint256"
-            }
-        ],
-        "name": "burnFrom",
-        "outputs": [],
-        "stateMutability": "nonpayable",
-        "type": "function"
-    },
-    {
-        "inputs": [
-            {
-                "internalType": "address",
-                "name": "addr",
-                "type": "address"
-            },
-            {
-                "internalType": "bool",
-                "name": "status",
-                "type": "bool"
-            }
-        ],
-        "name": "changeAddressInWhitelist",
-        "outputs": [],
-        "stateMutability": "nonpayable",
-        "type": "function"
-    },
-    {
-        "inputs": [
-            {
-                "internalType": "bool",
-                "name": "_rule",
-                "type": "bool"
-            }
-        ],
-        "name": "changeWhitelistRule",
-        "outputs": [],
-        "stateMutability": "nonpayable",
-        "type": "function"
-    },
-    {
-        "inputs": [],
-        "name": "decimals",
-        "outputs": [
-            {
-                "internalType": "uint8",
-                "name": "",
-                "type": "uint8"
-            }
-        ],
-        "stateMutability": "view",
-        "type": "function"
-    },
-    {
-        "inputs": [
-            {
-                "internalType": "address[]",
-                "name": "_addresses",
-                "type": "address[]"
-            },
-            {
-                "internalType": "uint256[]",
-                "name": "_amounts",
-                "type": "uint256[]"
-            }
-        ],
-        "name": "multiTransferToken",
-        "outputs": [],
-        "stateMutability": "nonpayable",
-        "type": "function"
-    },
-    {
-        "inputs": [],
-        "name": "name",
-        "outputs": [
-            {
-                "internalType": "string",
-                "name": "",
-                "type": "string"
-            }
-        ],
-        "stateMutability": "view",
-        "type": "function"
-    },
-    {
-        "inputs": [],
-        "name": "symbol",
-        "outputs": [
-            {
-                "internalType": "string",
-                "name": "",
-                "type": "string"
-            }
-        ],
-        "stateMutability": "view",
-        "type": "function"
-    },
-    {
-        "inputs": [],
-        "name": "totalSupply",
-        "outputs": [
-            {
-                "internalType": "uint256",
-                "name": "",
-                "type": "uint256"
-            }
-        ],
-        "stateMutability": "view",
-        "type": "function"
-    },
-    {
-        "inputs": [
-            {
-                "internalType": "address",
-                "name": "_to",
-                "type": "address"
-            },
-            {
-                "internalType": "uint256",
-                "name": "_value",
-                "type": "uint256"
-            }
-        ],
-        "name": "transfer",
-        "outputs": [
-            {
-                "internalType": "bool",
-                "name": "success",
-                "type": "bool"
-            }
-        ],
-        "stateMutability": "nonpayable",
-        "type": "function"
-    },
-    {
-        "inputs": [
-            {
-                "internalType": "address",
-                "name": "from",
-                "type": "address"
-            },
-            {
-                "internalType": "address",
-                "name": "to",
-                "type": "address"
-            },
-            {
-                "internalType": "uint256",
-                "name": "value",
-                "type": "uint256"
-            }
-        ],
-        "name": "transferFrom",
-        "outputs": [
-            {
-                "internalType": "bool",
-                "name": "",
-                "type": "bool"
-            }
-        ],
-        "stateMutability": "nonpayable",
-        "type": "function"
-    },
-    {
-        "inputs": [
-            {
-                "internalType": "address",
-                "name": "",
-                "type": "address"
-            }
-        ],
-        "name": "whiteList",
-        "outputs": [
-            {
-                "internalType": "bool",
-                "name": "",
-                "type": "bool"
-            }
-        ],
-        "stateMutability": "view",
-        "type": "function"
-    },
-    {
-        "inputs": [],
-        "name": "whitelistRule",
-        "outputs": [
-            {
-                "internalType": "bool",
-                "name": "",
-                "type": "bool"
-            }
-        ],
-        "stateMutability": "view",
-        "type": "function"
-    }
-];
-const blast_usdbAbi = [
-    {
-        "inputs": [{ "internalType": "address", "name": "_admin", "type": "address" }], "stateMutability": "nonpayable", "type": "constructor"
-    },
-    { "anonymous": false, "inputs": [{ "indexed": false, "internalType": "address", "name": "previousAdmin", "type": "address" },
-            { "indexed": false, "internalType": "address", "name": "newAdmin", "type": "address" }], "name": "AdminChanged", "type": "event" },
-    { "anonymous": false, "inputs": [{ "indexed": true, "internalType": "address", "name": "implementation", "type": "address" }], "name": "Upgraded", "type": "event" },
-    { "stateMutability": "payable", "type": "fallback" }, { "inputs": [], "name": "admin", "outputs": [{ "internalType": "address", "name": "", "type": "address" }], "stateMutability": "nonpayable", "type": "function" },
-    { "inputs": [{ "internalType": "address", "name": "_admin", "type": "address" }], "name": "changeAdmin", "outputs": [], "stateMutability": "nonpayable", "type": "function" },
-    { "inputs": [], "name": "implementation", "outputs": [{ "internalType": "address", "name": "", "type": "address" }], "stateMutability": "nonpayable", "type": "function" },
-    { "inputs": [{ "internalType": "address", "name": "_implementation", "type": "address" }], "name": "upgradeTo", "outputs": [], "stateMutability": "nonpayable", "type": "function" },
-    { "inputs": [{ "internalType": "address", "name": "_implementation", "type": "address" }, { "internalType": "bytes", "name": "_data", "type": "bytes" }], "name": "upgradeToAndCall", "outputs": [{ "internalType": "bytes", "name": "", "type": "bytes" }], "stateMutability": "payable", "type": "function" }, { "stateMutability": "payable", "type": "receive" }
-];
-const fx168_Order_Abi = [
-    {
-        "inputs": [],
-        "stateMutability": "nonpayable",
-        "type": "constructor"
-    },
-    {
-        "inputs": [
-            {
-                "internalType": "address",
-                "name": "sender",
-                "type": "address"
-            },
-            {
-                "internalType": "uint256",
-                "name": "balance",
-                "type": "uint256"
-            },
-            {
-                "internalType": "uint256",
-                "name": "needed",
-                "type": "uint256"
-            },
-            {
-                "internalType": "uint256",
-                "name": "tokenId",
-                "type": "uint256"
-            }
-        ],
-        "name": "ERC1155InsufficientBalance",
-        "type": "error"
-    },
-    {
-        "inputs": [
-            {
-                "internalType": "address",
-                "name": "approver",
-                "type": "address"
-            }
-        ],
-        "name": "ERC1155InvalidApprover",
-        "type": "error"
-    },
-    {
-        "inputs": [
-            {
-                "internalType": "uint256",
-                "name": "idsLength",
-                "type": "uint256"
-            },
-            {
-                "internalType": "uint256",
-                "name": "valuesLength",
-                "type": "uint256"
-            }
-        ],
-        "name": "ERC1155InvalidArrayLength",
-        "type": "error"
-    },
-    {
-        "inputs": [
-            {
-                "internalType": "address",
-                "name": "operator",
-                "type": "address"
-            }
-        ],
-        "name": "ERC1155InvalidOperator",
-        "type": "error"
-    },
-    {
-        "inputs": [
-            {
-                "internalType": "address",
-                "name": "receiver",
-                "type": "address"
-            }
-        ],
-        "name": "ERC1155InvalidReceiver",
-        "type": "error"
-    },
-    {
-        "inputs": [
-            {
-                "internalType": "address",
-                "name": "sender",
-                "type": "address"
-            }
-        ],
-        "name": "ERC1155InvalidSender",
-        "type": "error"
-    },
-    {
-        "inputs": [
-            {
-                "internalType": "address",
-                "name": "operator",
-                "type": "address"
-            },
-            {
-                "internalType": "address",
-                "name": "owner",
-                "type": "address"
-            }
-        ],
-        "name": "ERC1155MissingApprovalForAll",
-        "type": "error"
-    },
-    {
-        "anonymous": false,
-        "inputs": [
-            {
-                "indexed": true,
-                "internalType": "address",
-                "name": "account",
-                "type": "address"
-            },
-            {
-                "indexed": true,
-                "internalType": "address",
-                "name": "operator",
-                "type": "address"
-            },
-            {
-                "indexed": false,
-                "internalType": "bool",
-                "name": "approved",
-                "type": "bool"
-            }
-        ],
-        "name": "ApprovalForAll",
-        "type": "event"
-    },
-    {
-        "anonymous": false,
-        "inputs": [
-            {
-                "indexed": true,
-                "internalType": "address",
-                "name": "operator",
-                "type": "address"
-            },
-            {
-                "indexed": true,
-                "internalType": "address",
-                "name": "from",
-                "type": "address"
-            },
-            {
-                "indexed": true,
-                "internalType": "address",
-                "name": "to",
-                "type": "address"
-            },
-            {
-                "indexed": false,
-                "internalType": "uint256[]",
-                "name": "ids",
-                "type": "uint256[]"
-            },
-            {
-                "indexed": false,
-                "internalType": "uint256[]",
-                "name": "values",
-                "type": "uint256[]"
-            }
-        ],
-        "name": "TransferBatch",
-        "type": "event"
-    },
-    {
-        "anonymous": false,
-        "inputs": [
-            {
-                "indexed": true,
-                "internalType": "address",
-                "name": "operator",
-                "type": "address"
-            },
-            {
-                "indexed": true,
-                "internalType": "address",
-                "name": "from",
-                "type": "address"
-            },
-            {
-                "indexed": true,
-                "internalType": "address",
-                "name": "to",
-                "type": "address"
-            },
-            {
-                "indexed": false,
-                "internalType": "uint256",
-                "name": "id",
-                "type": "uint256"
-            },
-            {
-                "indexed": false,
-                "internalType": "uint256",
-                "name": "value",
-                "type": "uint256"
-            }
-        ],
-        "name": "TransferSingle",
-        "type": "event"
-    },
-    {
-        "anonymous": false,
-        "inputs": [
-            {
-                "indexed": false,
-                "internalType": "string",
-                "name": "value",
-                "type": "string"
-            },
-            {
-                "indexed": true,
-                "internalType": "uint256",
-                "name": "id",
-                "type": "uint256"
-            }
-        ],
-        "name": "URI",
-        "type": "event"
-    },
-    {
-        "inputs": [
-            {
-                "internalType": "uint256",
-                "name": "",
-                "type": "uint256"
-            },
-            {
-                "internalType": "uint256",
-                "name": "",
-                "type": "uint256"
-            }
-        ],
-        "name": "OrderNodes",
-        "outputs": [
-            {
-                "internalType": "address",
-                "name": "",
-                "type": "address"
-            }
-        ],
-        "stateMutability": "view",
-        "type": "function"
-    },
-    {
-        "inputs": [
-            {
-                "internalType": "uint256",
-                "name": "",
-                "type": "uint256"
-            }
-        ],
-        "name": "OrderStatus",
-        "outputs": [
-            {
-                "internalType": "uint256",
-                "name": "",
-                "type": "uint256"
-            }
-        ],
-        "stateMutability": "view",
-        "type": "function"
-    },
-    {
-        "inputs": [
-            {
-                "internalType": "address",
-                "name": "account",
-                "type": "address"
-            },
-            {
-                "internalType": "uint256",
-                "name": "id",
-                "type": "uint256"
-            }
-        ],
-        "name": "balanceOf",
-        "outputs": [
-            {
-                "internalType": "uint256",
-                "name": "",
-                "type": "uint256"
-            }
-        ],
-        "stateMutability": "view",
-        "type": "function"
-    },
-    {
-        "inputs": [
-            {
-                "internalType": "address[]",
-                "name": "accounts",
-                "type": "address[]"
-            },
-            {
-                "internalType": "uint256[]",
-                "name": "ids",
-                "type": "uint256[]"
-            }
-        ],
-        "name": "balanceOfBatch",
-        "outputs": [
-            {
-                "internalType": "uint256[]",
-                "name": "",
-                "type": "uint256[]"
-            }
-        ],
-        "stateMutability": "view",
-        "type": "function"
-    },
-    {
-        "inputs": [],
-        "name": "currentNodeID",
-        "outputs": [
-            {
-                "internalType": "uint256",
-                "name": "",
-                "type": "uint256"
-            }
-        ],
-        "stateMutability": "view",
-        "type": "function"
-    },
-    {
-        "inputs": [
-            {
-                "internalType": "uint256",
-                "name": "id",
-                "type": "uint256"
-            }
-        ],
-        "name": "exists",
-        "outputs": [
-            {
-                "internalType": "bool",
-                "name": "",
-                "type": "bool"
-            }
-        ],
-        "stateMutability": "view",
-        "type": "function"
-    },
-    {
-        "inputs": [
-            {
-                "internalType": "uint256",
-                "name": "id",
-                "type": "uint256"
-            },
-            {
-                "internalType": "uint256",
-                "name": "status",
-                "type": "uint256"
-            }
-        ],
-        "name": "fx168OrderStatus",
-        "outputs": [],
-        "stateMutability": "nonpayable",
-        "type": "function"
-    },
-    {
-        "inputs": [
-            {
-                "internalType": "uint256",
-                "name": "orderID",
-                "type": "uint256"
-            }
-        ],
-        "name": "getNodesAddress",
-        "outputs": [
-            {
-                "internalType": "address[]",
-                "name": "nodes",
-                "type": "address[]"
-            }
-        ],
-        "stateMutability": "view",
-        "type": "function"
-    },
-    {
-        "inputs": [
-            {
-                "internalType": "address",
-                "name": "_owner",
-                "type": "address"
-            }
-        ],
-        "name": "getOwnerOrders",
-        "outputs": [
-            {
-                "internalType": "uint256[]",
-                "name": "orders",
-                "type": "uint256[]"
-            }
-        ],
-        "stateMutability": "view",
-        "type": "function"
-    },
-    {
-        "inputs": [
-            {
-                "internalType": "address",
-                "name": "account",
-                "type": "address"
-            },
-            {
-                "internalType": "address",
-                "name": "operator",
-                "type": "address"
-            }
-        ],
-        "name": "isApprovedForAll",
-        "outputs": [
-            {
-                "internalType": "bool",
-                "name": "",
-                "type": "bool"
-            }
-        ],
-        "stateMutability": "view",
-        "type": "function"
-    },
-    {
-        "inputs": [],
-        "name": "name",
-        "outputs": [
-            {
-                "internalType": "string",
-                "name": "",
-                "type": "string"
-            }
-        ],
-        "stateMutability": "view",
-        "type": "function"
-    },
-    {
-        "inputs": [
-            {
-                "internalType": "address[]",
-                "name": "_nodes",
-                "type": "address[]"
-            }
-        ],
-        "name": "newOrder",
-        "outputs": [],
-        "stateMutability": "nonpayable",
-        "type": "function"
-    },
-    {
-        "inputs": [
-            {
-                "internalType": "address",
-                "name": "",
-                "type": "address"
-            },
-            {
-                "internalType": "uint256",
-                "name": "",
-                "type": "uint256"
-            }
-        ],
-        "name": "ownerOrders",
-        "outputs": [
-            {
-                "internalType": "uint256",
-                "name": "",
-                "type": "uint256"
-            }
-        ],
-        "stateMutability": "view",
-        "type": "function"
-    },
-    {
-        "inputs": [
-            {
-                "internalType": "address",
-                "name": "from",
-                "type": "address"
-            },
-            {
-                "internalType": "address",
-                "name": "to",
-                "type": "address"
-            },
-            {
-                "internalType": "uint256[]",
-                "name": "ids",
-                "type": "uint256[]"
-            },
-            {
-                "internalType": "uint256[]",
-                "name": "values",
-                "type": "uint256[]"
-            },
-            {
-                "internalType": "bytes",
-                "name": "data",
-                "type": "bytes"
-            }
-        ],
-        "name": "safeBatchTransferFrom",
-        "outputs": [],
-        "stateMutability": "nonpayable",
-        "type": "function"
-    },
-    {
-        "inputs": [
-            {
-                "internalType": "address",
-                "name": "from",
-                "type": "address"
-            },
-            {
-                "internalType": "address",
-                "name": "to",
-                "type": "address"
-            },
-            {
-                "internalType": "uint256",
-                "name": "id",
-                "type": "uint256"
-            },
-            {
-                "internalType": "uint256",
-                "name": "value",
-                "type": "uint256"
-            },
-            {
-                "internalType": "bytes",
-                "name": "data",
-                "type": "bytes"
-            }
-        ],
-        "name": "safeTransferFrom",
-        "outputs": [],
-        "stateMutability": "nonpayable",
-        "type": "function"
-    },
-    {
-        "inputs": [
-            {
-                "internalType": "address",
-                "name": "operator",
-                "type": "address"
-            },
-            {
-                "internalType": "bool",
-                "name": "approved",
-                "type": "bool"
-            }
-        ],
-        "name": "setApprovalForAll",
-        "outputs": [],
-        "stateMutability": "nonpayable",
-        "type": "function"
-    },
-    {
-        "inputs": [
-            {
-                "internalType": "bytes4",
-                "name": "interfaceId",
-                "type": "bytes4"
-            }
-        ],
-        "name": "supportsInterface",
-        "outputs": [
-            {
-                "internalType": "bool",
-                "name": "",
-                "type": "bool"
-            }
-        ],
-        "stateMutability": "view",
-        "type": "function"
-    },
-    {
-        "inputs": [],
-        "name": "symbol",
-        "outputs": [
-            {
-                "internalType": "string",
-                "name": "",
-                "type": "string"
-            }
-        ],
-        "stateMutability": "view",
-        "type": "function"
-    },
-    {
-        "inputs": [],
-        "name": "totalSupply",
-        "outputs": [
-            {
-                "internalType": "uint256",
-                "name": "",
-                "type": "uint256"
-            }
-        ],
-        "stateMutability": "view",
-        "type": "function"
-    },
-    {
-        "inputs": [
-            {
-                "internalType": "uint256",
-                "name": "id",
-                "type": "uint256"
-            }
-        ],
-        "name": "totalSupply",
-        "outputs": [
-            {
-                "internalType": "uint256",
-                "name": "",
-                "type": "uint256"
-            }
-        ],
-        "stateMutability": "view",
-        "type": "function"
-    },
-    {
-        "inputs": [
-            {
-                "internalType": "uint256",
-                "name": "",
-                "type": "uint256"
-            }
-        ],
-        "name": "uri",
-        "outputs": [
-            {
-                "internalType": "string",
-                "name": "",
-                "type": "string"
-            }
-        ],
-        "stateMutability": "view",
-        "type": "function"
-    }
-];
-const claimableContract = [
-    {
-        "inputs": [],
-        "stateMutability": "nonpayable",
-        "type": "constructor"
-    },
-    {
-        "inputs": [
-            {
-                "internalType": "address",
-                "name": "spender",
-                "type": "address"
-            },
-            {
-                "internalType": "uint256",
-                "name": "allowance",
-                "type": "uint256"
-            },
-            {
-                "internalType": "uint256",
-                "name": "needed",
-                "type": "uint256"
-            }
-        ],
-        "name": "ERC20InsufficientAllowance",
-        "type": "error"
-    },
-    {
-        "inputs": [
-            {
-                "internalType": "address",
-                "name": "sender",
-                "type": "address"
-            },
-            {
-                "internalType": "uint256",
-                "name": "balance",
-                "type": "uint256"
-            },
-            {
-                "internalType": "uint256",
-                "name": "needed",
-                "type": "uint256"
-            }
-        ],
-        "name": "ERC20InsufficientBalance",
-        "type": "error"
-    },
-    {
-        "inputs": [
-            {
-                "internalType": "address",
-                "name": "approver",
-                "type": "address"
-            }
-        ],
-        "name": "ERC20InvalidApprover",
-        "type": "error"
-    },
-    {
-        "inputs": [
-            {
-                "internalType": "address",
-                "name": "receiver",
-                "type": "address"
-            }
-        ],
-        "name": "ERC20InvalidReceiver",
-        "type": "error"
-    },
-    {
-        "inputs": [
-            {
-                "internalType": "address",
-                "name": "sender",
-                "type": "address"
-            }
-        ],
-        "name": "ERC20InvalidSender",
-        "type": "error"
-    },
-    {
-        "inputs": [
-            {
-                "internalType": "address",
-                "name": "spender",
-                "type": "address"
-            }
-        ],
-        "name": "ERC20InvalidSpender",
-        "type": "error"
-    },
-    {
-        "anonymous": false,
-        "inputs": [
-            {
-                "indexed": true,
-                "internalType": "address",
-                "name": "owner",
-                "type": "address"
-            },
-            {
-                "indexed": true,
-                "internalType": "address",
-                "name": "spender",
-                "type": "address"
-            },
-            {
-                "indexed": false,
-                "internalType": "uint256",
-                "name": "value",
-                "type": "uint256"
-            }
-        ],
-        "name": "Approval",
-        "type": "event"
-    },
-    {
-        "anonymous": false,
-        "inputs": [
-            {
-                "indexed": true,
-                "internalType": "address",
-                "name": "from",
-                "type": "address"
-            },
-            {
-                "indexed": true,
-                "internalType": "address",
-                "name": "to",
-                "type": "address"
-            },
-            {
-                "indexed": false,
-                "internalType": "uint256",
-                "name": "value",
-                "type": "uint256"
-            }
-        ],
-        "name": "Transfer",
-        "type": "event"
-    },
-    {
-        "inputs": [
-            {
-                "internalType": "address",
-                "name": "owner",
-                "type": "address"
-            },
-            {
-                "internalType": "address",
-                "name": "spender",
-                "type": "address"
-            }
-        ],
-        "name": "allowance",
-        "outputs": [
-            {
-                "internalType": "uint256",
-                "name": "",
-                "type": "uint256"
-            }
-        ],
-        "stateMutability": "view",
-        "type": "function"
-    },
-    {
-        "inputs": [
-            {
-                "internalType": "address",
-                "name": "spender",
-                "type": "address"
-            },
-            {
-                "internalType": "uint256",
-                "name": "value",
-                "type": "uint256"
-            }
-        ],
-        "name": "approve",
-        "outputs": [
-            {
-                "internalType": "bool",
-                "name": "",
-                "type": "bool"
-            }
-        ],
-        "stateMutability": "nonpayable",
-        "type": "function"
-    },
-    {
-        "inputs": [
-            {
-                "internalType": "address",
-                "name": "account",
-                "type": "address"
-            }
-        ],
-        "name": "balanceOf",
-        "outputs": [
-            {
-                "internalType": "uint256",
-                "name": "",
-                "type": "uint256"
-            }
-        ],
-        "stateMutability": "view",
-        "type": "function"
-    },
-    {
-        "inputs": [
-            {
-                "internalType": "uint256",
-                "name": "value",
-                "type": "uint256"
-            }
-        ],
-        "name": "burn",
-        "outputs": [],
-        "stateMutability": "nonpayable",
-        "type": "function"
-    },
-    {
-        "inputs": [
-            {
-                "internalType": "address",
-                "name": "account",
-                "type": "address"
-            },
-            {
-                "internalType": "uint256",
-                "name": "value",
-                "type": "uint256"
-            }
-        ],
-        "name": "burnFrom",
-        "outputs": [],
-        "stateMutability": "nonpayable",
-        "type": "function"
-    },
-    {
-        "inputs": [],
-        "name": "decimals",
-        "outputs": [
-            {
-                "internalType": "uint8",
-                "name": "",
-                "type": "uint8"
-            }
-        ],
-        "stateMutability": "view",
-        "type": "function"
-    },
-    {
-        "inputs": [
-            {
-                "internalType": "address",
-                "name": "sender",
-                "type": "address"
-            },
-            {
-                "internalType": "uint256",
-                "name": "value",
-                "type": "uint256"
-            }
-        ],
-        "name": "mint",
-        "outputs": [],
-        "stateMutability": "nonpayable",
-        "type": "function"
-    },
-    {
-        "inputs": [],
-        "name": "name",
-        "outputs": [
-            {
-                "internalType": "string",
-                "name": "",
-                "type": "string"
-            }
-        ],
-        "stateMutability": "view",
-        "type": "function"
-    },
-    {
-        "inputs": [],
-        "name": "symbol",
-        "outputs": [
-            {
-                "internalType": "string",
-                "name": "",
-                "type": "string"
-            }
-        ],
-        "stateMutability": "view",
-        "type": "function"
-    },
-    {
-        "inputs": [],
-        "name": "totalSupply",
-        "outputs": [
-            {
-                "internalType": "uint256",
-                "name": "",
-                "type": "uint256"
-            }
-        ],
-        "stateMutability": "view",
-        "type": "function"
-    },
-    {
-        "inputs": [
-            {
-                "internalType": "address",
-                "name": "to",
-                "type": "address"
-            },
-            {
-                "internalType": "uint256",
-                "name": "value",
-                "type": "uint256"
-            }
-        ],
-        "name": "transfer",
-        "outputs": [
-            {
-                "internalType": "bool",
-                "name": "",
-                "type": "bool"
-            }
-        ],
-        "stateMutability": "nonpayable",
-        "type": "function"
-    },
-    {
-        "inputs": [
-            {
-                "internalType": "address",
-                "name": "from",
-                "type": "address"
-            },
-            {
-                "internalType": "address",
-                "name": "to",
-                "type": "address"
-            },
-            {
-                "internalType": "uint256",
-                "name": "value",
-                "type": "uint256"
-            }
-        ],
-        "name": "transferFrom",
-        "outputs": [
-            {
-                "internalType": "bool",
-                "name": "",
-                "type": "bool"
-            }
-        ],
-        "stateMutability": "nonpayable",
-        "type": "function"
-    }
-];
-const guardian_erc1155 = [
-    {
-        "inputs": [],
-        "stateMutability": "nonpayable",
-        "type": "constructor"
-    },
-    {
-        "inputs": [
-            {
-                "internalType": "address",
-                "name": "sender",
-                "type": "address"
-            },
-            {
-                "internalType": "uint256",
-                "name": "balance",
-                "type": "uint256"
-            },
-            {
-                "internalType": "uint256",
-                "name": "needed",
-                "type": "uint256"
-            },
-            {
-                "internalType": "uint256",
-                "name": "tokenId",
-                "type": "uint256"
-            }
-        ],
-        "name": "ERC1155InsufficientBalance",
-        "type": "error"
-    },
-    {
-        "inputs": [
-            {
-                "internalType": "address",
-                "name": "approver",
-                "type": "address"
-            }
-        ],
-        "name": "ERC1155InvalidApprover",
-        "type": "error"
-    },
-    {
-        "inputs": [
-            {
-                "internalType": "uint256",
-                "name": "idsLength",
-                "type": "uint256"
-            },
-            {
-                "internalType": "uint256",
-                "name": "valuesLength",
-                "type": "uint256"
-            }
-        ],
-        "name": "ERC1155InvalidArrayLength",
-        "type": "error"
-    },
-    {
-        "inputs": [
-            {
-                "internalType": "address",
-                "name": "operator",
-                "type": "address"
-            }
-        ],
-        "name": "ERC1155InvalidOperator",
-        "type": "error"
-    },
-    {
-        "inputs": [
-            {
-                "internalType": "address",
-                "name": "receiver",
-                "type": "address"
-            }
-        ],
-        "name": "ERC1155InvalidReceiver",
-        "type": "error"
-    },
-    {
-        "inputs": [
-            {
-                "internalType": "address",
-                "name": "sender",
-                "type": "address"
-            }
-        ],
-        "name": "ERC1155InvalidSender",
-        "type": "error"
-    },
-    {
-        "inputs": [
-            {
-                "internalType": "address",
-                "name": "operator",
-                "type": "address"
-            },
-            {
-                "internalType": "address",
-                "name": "owner",
-                "type": "address"
-            }
-        ],
-        "name": "ERC1155MissingApprovalForAll",
-        "type": "error"
-    },
-    {
-        "anonymous": false,
-        "inputs": [
-            {
-                "indexed": true,
-                "internalType": "address",
-                "name": "account",
-                "type": "address"
-            },
-            {
-                "indexed": true,
-                "internalType": "address",
-                "name": "operator",
-                "type": "address"
-            },
-            {
-                "indexed": false,
-                "internalType": "bool",
-                "name": "approved",
-                "type": "bool"
-            }
-        ],
-        "name": "ApprovalForAll",
-        "type": "event"
-    },
-    {
-        "anonymous": false,
-        "inputs": [
-            {
-                "indexed": true,
-                "internalType": "address",
-                "name": "operator",
-                "type": "address"
-            },
-            {
-                "indexed": true,
-                "internalType": "address",
-                "name": "from",
-                "type": "address"
-            },
-            {
-                "indexed": true,
-                "internalType": "address",
-                "name": "to",
-                "type": "address"
-            },
-            {
-                "indexed": false,
-                "internalType": "uint256[]",
-                "name": "ids",
-                "type": "uint256[]"
-            },
-            {
-                "indexed": false,
-                "internalType": "uint256[]",
-                "name": "values",
-                "type": "uint256[]"
-            }
-        ],
-        "name": "TransferBatch",
-        "type": "event"
-    },
-    {
-        "anonymous": false,
-        "inputs": [
-            {
-                "indexed": true,
-                "internalType": "address",
-                "name": "operator",
-                "type": "address"
-            },
-            {
-                "indexed": true,
-                "internalType": "address",
-                "name": "from",
-                "type": "address"
-            },
-            {
-                "indexed": true,
-                "internalType": "address",
-                "name": "to",
-                "type": "address"
-            },
-            {
-                "indexed": false,
-                "internalType": "uint256",
-                "name": "id",
-                "type": "uint256"
-            },
-            {
-                "indexed": false,
-                "internalType": "uint256",
-                "name": "value",
-                "type": "uint256"
-            }
-        ],
-        "name": "TransferSingle",
-        "type": "event"
-    },
-    {
-        "anonymous": false,
-        "inputs": [
-            {
-                "indexed": false,
-                "internalType": "string",
-                "name": "value",
-                "type": "string"
-            },
-            {
-                "indexed": true,
-                "internalType": "uint256",
-                "name": "id",
-                "type": "uint256"
-            }
-        ],
-        "name": "URI",
-        "type": "event"
-    },
-    {
-        "inputs": [],
-        "name": "BUYER",
-        "outputs": [
-            {
-                "internalType": "uint256",
-                "name": "",
-                "type": "uint256"
-            }
-        ],
-        "stateMutability": "view",
-        "type": "function"
-    },
-    {
-        "inputs": [],
-        "name": "REFERRER",
-        "outputs": [
-            {
-                "internalType": "uint256",
-                "name": "",
-                "type": "uint256"
-            }
-        ],
-        "stateMutability": "view",
-        "type": "function"
-    },
-    {
-        "inputs": [
-            {
-                "internalType": "uint256",
-                "name": "nodeId",
-                "type": "uint256"
-            },
-            {
-                "internalType": "string",
-                "name": "_metadata",
-                "type": "string"
-            }
-        ],
-        "name": "_changeNodeMetadata",
-        "outputs": [],
-        "stateMutability": "nonpayable",
-        "type": "function"
-    },
-    {
-        "inputs": [
-            {
-                "internalType": "address",
-                "name": "account",
-                "type": "address"
-            },
-            {
-                "internalType": "uint256",
-                "name": "id",
-                "type": "uint256"
-            }
-        ],
-        "name": "balanceOf",
-        "outputs": [
-            {
-                "internalType": "uint256",
-                "name": "",
-                "type": "uint256"
-            }
-        ],
-        "stateMutability": "view",
-        "type": "function"
-    },
-    {
-        "inputs": [
-            {
-                "internalType": "address[]",
-                "name": "accounts",
-                "type": "address[]"
-            },
-            {
-                "internalType": "uint256[]",
-                "name": "ids",
-                "type": "uint256[]"
-            }
-        ],
-        "name": "balanceOfBatch",
-        "outputs": [
-            {
-                "internalType": "uint256[]",
-                "name": "",
-                "type": "uint256[]"
-            }
-        ],
-        "stateMutability": "view",
-        "type": "function"
-    },
-    {
-        "inputs": [
-            {
-                "internalType": "address",
-                "name": "account",
-                "type": "address"
-            },
-            {
-                "internalType": "uint256",
-                "name": "id",
-                "type": "uint256"
-            },
-            {
-                "internalType": "uint256",
-                "name": "value",
-                "type": "uint256"
-            }
-        ],
-        "name": "burn",
-        "outputs": [],
-        "stateMutability": "nonpayable",
-        "type": "function"
-    },
-    {
-        "inputs": [
-            {
-                "internalType": "address",
-                "name": "account",
-                "type": "address"
-            },
-            {
-                "internalType": "uint256[]",
-                "name": "ids",
-                "type": "uint256[]"
-            },
-            {
-                "internalType": "uint256[]",
-                "name": "values",
-                "type": "uint256[]"
-            }
-        ],
-        "name": "burnBatch",
-        "outputs": [],
-        "stateMutability": "nonpayable",
-        "type": "function"
-    },
-    {
-        "inputs": [],
-        "name": "canTransferRule",
-        "outputs": [
-            {
-                "internalType": "bool",
-                "name": "",
-                "type": "bool"
-            }
-        ],
-        "stateMutability": "view",
-        "type": "function"
-    },
-    {
-        "inputs": [],
-        "name": "currentNodeID",
-        "outputs": [
-            {
-                "internalType": "uint256",
-                "name": "",
-                "type": "uint256"
-            }
-        ],
-        "stateMutability": "view",
-        "type": "function"
-    },
-    {
-        "inputs": [
-            {
-                "internalType": "uint256",
-                "name": "id",
-                "type": "uint256"
-            }
-        ],
-        "name": "exists",
-        "outputs": [
-            {
-                "internalType": "bool",
-                "name": "",
-                "type": "bool"
-            }
-        ],
-        "stateMutability": "view",
-        "type": "function"
-    },
-    {
-        "inputs": [],
-        "name": "getAllIdOwnershipAndBooster",
-        "outputs": [
-            {
-                "internalType": "address[]",
-                "name": "nodeAddress",
-                "type": "address[]"
-            },
-            {
-                "internalType": "uint256[]",
-                "name": "boosters",
-                "type": "uint256[]"
-            },
-            {
-                "internalType": "address[]",
-                "name": "referrerAddress",
-                "type": "address[]"
-            },
-            {
-                "internalType": "uint256[]",
-                "name": "referrerNodes",
-                "type": "uint256[]"
-            }
-        ],
-        "stateMutability": "view",
-        "type": "function"
-    },
-    {
-        "inputs": [
-            {
-                "internalType": "uint256",
-                "name": "nodeId",
-                "type": "uint256"
-            }
-        ],
-        "name": "getNodeMetadata",
-        "outputs": [
-            {
-                "internalType": "string",
-                "name": "nodeMetadata",
-                "type": "string"
-            }
-        ],
-        "stateMutability": "view",
-        "type": "function"
-    },
-    {
-        "inputs": [
-            {
-                "internalType": "address",
-                "name": "_owner",
-                "type": "address"
-            }
-        ],
-        "name": "getOwnerNodesAddress",
-        "outputs": [
-            {
-                "internalType": "uint256[]",
-                "name": "nodesAddress",
-                "type": "uint256[]"
-            }
-        ],
-        "stateMutability": "view",
-        "type": "function"
-    },
-    {
-        "inputs": [
-            {
-                "internalType": "uint256",
-                "name": "nodeId",
-                "type": "uint256"
-            }
-        ],
-        "name": "getOwnership",
-        "outputs": [
-            {
-                "internalType": "address",
-                "name": "ownerWallet",
-                "type": "address"
-            }
-        ],
-        "stateMutability": "view",
-        "type": "function"
-    },
-    {
-        "inputs": [
-            {
-                "internalType": "address",
-                "name": "account",
-                "type": "address"
-            },
-            {
-                "internalType": "address",
-                "name": "operator",
-                "type": "address"
-            }
-        ],
-        "name": "isApprovedForAll",
-        "outputs": [
-            {
-                "internalType": "bool",
-                "name": "",
-                "type": "bool"
-            }
-        ],
-        "stateMutability": "view",
-        "type": "function"
-    },
-    {
-        "inputs": [
-            {
-                "internalType": "uint256",
-                "name": "",
-                "type": "uint256"
-            }
-        ],
-        "name": "metadata",
-        "outputs": [
-            {
-                "internalType": "string",
-                "name": "",
-                "type": "string"
-            }
-        ],
-        "stateMutability": "view",
-        "type": "function"
-    },
-    {
-        "inputs": [
-            {
-                "internalType": "address[]",
-                "name": "to",
-                "type": "address[]"
-            },
-            {
-                "internalType": "address",
-                "name": "paymentWallet",
-                "type": "address"
-            }
-        ],
-        "name": "mint",
-        "outputs": [],
-        "stateMutability": "nonpayable",
-        "type": "function"
-    },
-    {
-        "inputs": [],
-        "name": "name",
-        "outputs": [
-            {
-                "internalType": "string",
-                "name": "",
-                "type": "string"
-            }
-        ],
-        "stateMutability": "view",
-        "type": "function"
-    },
-    {
-        "inputs": [
-            {
-                "internalType": "uint256",
-                "name": "",
-                "type": "uint256"
-            }
-        ],
-        "name": "nodeIdBooster",
-        "outputs": [
-            {
-                "internalType": "uint256",
-                "name": "",
-                "type": "uint256"
-            }
-        ],
-        "stateMutability": "view",
-        "type": "function"
-    },
-    {
-        "inputs": [
-            {
-                "internalType": "uint256",
-                "name": "",
-                "type": "uint256"
-            }
-        ],
-        "name": "nodeOwnershipAddress",
-        "outputs": [
-            {
-                "internalType": "address",
-                "name": "",
-                "type": "address"
-            }
-        ],
-        "stateMutability": "view",
-        "type": "function"
-    },
-    {
-        "inputs": [
-            {
-                "internalType": "uint256",
-                "name": "",
-                "type": "uint256"
-            }
-        ],
-        "name": "nodeReferrerAddress",
-        "outputs": [
-            {
-                "internalType": "address",
-                "name": "",
-                "type": "address"
-            }
-        ],
-        "stateMutability": "view",
-        "type": "function"
-    },
-    {
-        "inputs": [
-            {
-                "internalType": "address",
-                "name": "",
-                "type": "address"
-            },
-            {
-                "internalType": "uint256",
-                "name": "",
-                "type": "uint256"
-            }
-        ],
-        "name": "ownershipForIDs",
-        "outputs": [
-            {
-                "internalType": "uint256",
-                "name": "",
-                "type": "uint256"
-            }
-        ],
-        "stateMutability": "view",
-        "type": "function"
-    },
-    {
-        "inputs": [
-            {
-                "internalType": "address",
-                "name": "",
-                "type": "address"
-            }
-        ],
-        "name": "ownershipForNodeID",
-        "outputs": [
-            {
-                "internalType": "uint256",
-                "name": "",
-                "type": "uint256"
-            }
-        ],
-        "stateMutability": "view",
-        "type": "function"
-    },
-    {
-        "inputs": [
-            {
-                "internalType": "address",
-                "name": "from",
-                "type": "address"
-            },
-            {
-                "internalType": "address",
-                "name": "to",
-                "type": "address"
-            },
-            {
-                "internalType": "uint256[]",
-                "name": "ids",
-                "type": "uint256[]"
-            },
-            {
-                "internalType": "uint256[]",
-                "name": "values",
-                "type": "uint256[]"
-            },
-            {
-                "internalType": "bytes",
-                "name": "data",
-                "type": "bytes"
-            }
-        ],
-        "name": "safeBatchTransferFrom",
-        "outputs": [],
-        "stateMutability": "nonpayable",
-        "type": "function"
-    },
-    {
-        "inputs": [
-            {
-                "internalType": "address",
-                "name": "from",
-                "type": "address"
-            },
-            {
-                "internalType": "address",
-                "name": "to",
-                "type": "address"
-            },
-            {
-                "internalType": "uint256",
-                "name": "id",
-                "type": "uint256"
-            },
-            {
-                "internalType": "uint256",
-                "name": "value",
-                "type": "uint256"
-            },
-            {
-                "internalType": "bytes",
-                "name": "data",
-                "type": "bytes"
-            }
-        ],
-        "name": "safeTransferFrom",
-        "outputs": [],
-        "stateMutability": "nonpayable",
-        "type": "function"
-    },
-    {
-        "inputs": [
-            {
-                "internalType": "address",
-                "name": "operator",
-                "type": "address"
-            },
-            {
-                "internalType": "bool",
-                "name": "approved",
-                "type": "bool"
-            }
-        ],
-        "name": "setApprovalForAll",
-        "outputs": [],
-        "stateMutability": "nonpayable",
-        "type": "function"
-    },
-    {
-        "inputs": [
-            {
-                "internalType": "bool",
-                "name": "status",
-                "type": "bool"
-            }
-        ],
-        "name": "setCanTransferRule",
-        "outputs": [],
-        "stateMutability": "nonpayable",
-        "type": "function"
-    },
-    {
-        "inputs": [
-            {
-                "internalType": "string",
-                "name": "url",
-                "type": "string"
-            }
-        ],
-        "name": "setNFTUrl",
-        "outputs": [],
-        "stateMutability": "nonpayable",
-        "type": "function"
-    },
-    {
-        "inputs": [
-            {
-                "internalType": "bytes4",
-                "name": "interfaceId",
-                "type": "bytes4"
-            }
-        ],
-        "name": "supportsInterface",
-        "outputs": [
-            {
-                "internalType": "bool",
-                "name": "",
-                "type": "bool"
-            }
-        ],
-        "stateMutability": "view",
-        "type": "function"
-    },
-    {
-        "inputs": [],
-        "name": "symbol",
-        "outputs": [
-            {
-                "internalType": "string",
-                "name": "",
-                "type": "string"
-            }
-        ],
-        "stateMutability": "view",
-        "type": "function"
-    },
-    {
-        "inputs": [],
-        "name": "totalSupply",
-        "outputs": [
-            {
-                "internalType": "uint256",
-                "name": "",
-                "type": "uint256"
-            }
-        ],
-        "stateMutability": "view",
-        "type": "function"
-    },
-    {
-        "inputs": [
-            {
-                "internalType": "uint256",
-                "name": "id",
-                "type": "uint256"
-            }
-        ],
-        "name": "totalSupply",
-        "outputs": [
-            {
-                "internalType": "uint256",
-                "name": "",
-                "type": "uint256"
-            }
-        ],
-        "stateMutability": "view",
-        "type": "function"
-    },
-    {
-        "inputs": [
-            {
-                "internalType": "uint256",
-                "name": "",
-                "type": "uint256"
-            }
-        ],
-        "name": "uri",
-        "outputs": [
-            {
-                "internalType": "string",
-                "name": "",
-                "type": "string"
-            }
-        ],
-        "stateMutability": "view",
-        "type": "function"
-    }
-];
-const CONET_Guardian_NodeInfo_ABI = [
-    {
-        "inputs": [],
-        "stateMutability": "nonpayable",
-        "type": "constructor"
-    },
-    {
-        "inputs": [],
-        "name": "getAllRegions",
-        "outputs": [
-            {
-                "internalType": "string[]",
-                "name": "allRegions",
-                "type": "string[]"
-            }
-        ],
-        "stateMutability": "view",
-        "type": "function"
-    },
-    {
-        "inputs": [
-            {
-                "internalType": "string",
-                "name": "ipaddress",
-                "type": "string"
-            }
-        ],
-        "name": "getIpAddressOwn",
-        "outputs": [
-            {
-                "internalType": "address",
-                "name": "ownership",
-                "type": "address"
-            }
-        ],
-        "stateMutability": "view",
-        "type": "function"
-    },
-    {
-        "inputs": [
-            {
-                "internalType": "string",
-                "name": "ipaddress",
-                "type": "string"
-            }
-        ],
-        "name": "getIpAddressReg",
-        "outputs": [
-            {
-                "internalType": "string",
-                "name": "regionName",
-                "type": "string"
-            }
-        ],
-        "stateMutability": "view",
-        "type": "function"
-    },
-    {
-        "inputs": [
-            {
-                "internalType": "uint256",
-                "name": "id",
-                "type": "uint256"
-            }
-        ],
-        "name": "getNodeInfoById",
-        "outputs": [
-            {
-                "internalType": "string",
-                "name": "ipaddress",
-                "type": "string"
-            },
-            {
-                "internalType": "string",
-                "name": "regionName",
-                "type": "string"
-            }
-        ],
-        "stateMutability": "view",
-        "type": "function"
-    },
-    {
-        "inputs": [
-            {
-                "internalType": "string",
-                "name": "ipaddress",
-                "type": "string"
-            }
-        ],
-        "name": "getNodePGP",
-        "outputs": [
-            {
-                "internalType": "string",
-                "name": "pgp",
-                "type": "string"
-            }
-        ],
-        "stateMutability": "view",
-        "type": "function"
-    },
-    {
-        "inputs": [
-            {
-                "internalType": "string",
-                "name": "regionName",
-                "type": "string"
-            }
-        ],
-        "name": "getReginNodes",
-        "outputs": [
-            {
-                "internalType": "string[]",
-                "name": "nodes",
-                "type": "string[]"
-            }
-        ],
-        "stateMutability": "view",
-        "type": "function"
-    },
-    {
-        "inputs": [
-            {
-                "internalType": "uint256",
-                "name": "",
-                "type": "uint256"
-            }
-        ],
-        "name": "id_region",
-        "outputs": [
-            {
-                "internalType": "bytes32",
-                "name": "",
-                "type": "bytes32"
-            }
-        ],
-        "stateMutability": "view",
-        "type": "function"
-    },
-    {
-        "inputs": [
-            {
-                "internalType": "bytes32",
-                "name": "",
-                "type": "bytes32"
-            }
-        ],
-        "name": "ipaddress_owner",
-        "outputs": [
-            {
-                "internalType": "address",
-                "name": "",
-                "type": "address"
-            }
-        ],
-        "stateMutability": "view",
-        "type": "function"
-    },
-    {
-        "inputs": [
-            {
-                "internalType": "bytes32",
-                "name": "",
-                "type": "bytes32"
-            }
-        ],
-        "name": "ipaddress_pgp",
-        "outputs": [
-            {
-                "internalType": "string",
-                "name": "",
-                "type": "string"
-            }
-        ],
-        "stateMutability": "view",
-        "type": "function"
-    },
-    {
-        "inputs": [
-            {
-                "internalType": "bytes32",
-                "name": "",
-                "type": "bytes32"
-            }
-        ],
-        "name": "ipaddress_reg",
-        "outputs": [
-            {
-                "internalType": "bytes32",
-                "name": "",
-                "type": "bytes32"
-            }
-        ],
-        "stateMutability": "view",
-        "type": "function"
-    },
-    {
-        "inputs": [
-            {
-                "internalType": "string",
-                "name": "regionName",
-                "type": "string"
-            }
-        ],
-        "name": "isRegionExisting",
-        "outputs": [
-            {
-                "internalType": "bool",
-                "name": "region_existing",
-                "type": "bool"
-            }
-        ],
-        "stateMutability": "view",
-        "type": "function"
-    },
-    {
-        "inputs": [
-            {
-                "internalType": "uint256",
-                "name": "id",
-                "type": "uint256"
-            },
-            {
-                "internalType": "string",
-                "name": "ipaddress",
-                "type": "string"
-            },
-            {
-                "internalType": "string",
-                "name": "regionName",
-                "type": "string"
-            },
-            {
-                "internalType": "string",
-                "name": "pgp",
-                "type": "string"
-            },
-            {
-                "internalType": "address",
-                "name": "_owner",
-                "type": "address"
-            }
-        ],
-        "name": "modify_nodes",
-        "outputs": [],
-        "stateMutability": "nonpayable",
-        "type": "function"
-    },
-    {
-        "inputs": [
-            {
-                "internalType": "address",
-                "name": "addAddress",
-                "type": "address"
-            },
-            {
-                "internalType": "bool",
-                "name": "setup",
-                "type": "bool"
-            }
-        ],
-        "name": "modify_whiteList",
-        "outputs": [],
-        "stateMutability": "nonpayable",
-        "type": "function"
-    },
-    {
-        "inputs": [
-            {
-                "internalType": "uint256",
-                "name": "",
-                "type": "uint256"
-            }
-        ],
-        "name": "nodeIpAddress",
-        "outputs": [
-            {
-                "internalType": "string",
-                "name": "",
-                "type": "string"
-            }
-        ],
-        "stateMutability": "view",
-        "type": "function"
-    },
-    {
-        "inputs": [
-            {
-                "internalType": "uint256",
-                "name": "",
-                "type": "uint256"
-            }
-        ],
-        "name": "pgp_public",
-        "outputs": [
-            {
-                "internalType": "string",
-                "name": "",
-                "type": "string"
-            }
-        ],
-        "stateMutability": "view",
-        "type": "function"
-    },
-    {
-        "inputs": [
-            {
-                "internalType": "uint256",
-                "name": "",
-                "type": "uint256"
-            }
-        ],
-        "name": "regionList",
-        "outputs": [
-            {
-                "internalType": "string",
-                "name": "",
-                "type": "string"
-            }
-        ],
-        "stateMutability": "view",
-        "type": "function"
-    },
-    {
-        "inputs": [
-            {
-                "internalType": "bytes32",
-                "name": "",
-                "type": "bytes32"
-            }
-        ],
-        "name": "region_hashs",
-        "outputs": [
-            {
-                "internalType": "string",
-                "name": "",
-                "type": "string"
-            }
-        ],
-        "stateMutability": "view",
-        "type": "function"
-    },
-    {
-        "inputs": [
-            {
-                "internalType": "bytes32",
-                "name": "",
-                "type": "bytes32"
-            },
-            {
-                "internalType": "uint256",
-                "name": "",
-                "type": "uint256"
-            }
-        ],
-        "name": "region_nodes",
-        "outputs": [
-            {
-                "internalType": "string",
-                "name": "",
-                "type": "string"
-            }
-        ],
-        "stateMutability": "view",
-        "type": "function"
-    },
-    {
-        "inputs": [
-            {
-                "internalType": "address",
-                "name": "",
-                "type": "address"
-            }
-        ],
-        "name": "whiteList",
-        "outputs": [
-            {
-                "internalType": "bool",
-                "name": "",
-                "type": "bool"
-            }
-        ],
-        "stateMutability": "view",
-        "type": "function"
-    }
-];
-const cCNTP_ABI = [
-    {
-        "inputs": [],
-        "stateMutability": "nonpayable",
-        "type": "constructor"
-    },
-    {
-        "inputs": [
-            {
-                "internalType": "address",
-                "name": "spender",
-                "type": "address"
-            },
-            {
-                "internalType": "uint256",
-                "name": "allowance",
-                "type": "uint256"
-            },
-            {
-                "internalType": "uint256",
-                "name": "needed",
-                "type": "uint256"
-            }
-        ],
-        "name": "ERC20InsufficientAllowance",
-        "type": "error"
-    },
-    {
-        "inputs": [
-            {
-                "internalType": "address",
-                "name": "sender",
-                "type": "address"
-            },
-            {
-                "internalType": "uint256",
-                "name": "balance",
-                "type": "uint256"
-            },
-            {
-                "internalType": "uint256",
-                "name": "needed",
-                "type": "uint256"
-            }
-        ],
-        "name": "ERC20InsufficientBalance",
-        "type": "error"
-    },
-    {
-        "inputs": [
-            {
-                "internalType": "address",
-                "name": "approver",
-                "type": "address"
-            }
-        ],
-        "name": "ERC20InvalidApprover",
-        "type": "error"
-    },
-    {
-        "inputs": [
-            {
-                "internalType": "address",
-                "name": "receiver",
-                "type": "address"
-            }
-        ],
-        "name": "ERC20InvalidReceiver",
-        "type": "error"
-    },
-    {
-        "inputs": [
-            {
-                "internalType": "address",
-                "name": "sender",
-                "type": "address"
-            }
-        ],
-        "name": "ERC20InvalidSender",
-        "type": "error"
-    },
-    {
-        "inputs": [
-            {
-                "internalType": "address",
-                "name": "spender",
-                "type": "address"
-            }
-        ],
-        "name": "ERC20InvalidSpender",
-        "type": "error"
-    },
-    {
-        "anonymous": false,
-        "inputs": [
-            {
-                "indexed": true,
-                "internalType": "address",
-                "name": "owner",
-                "type": "address"
-            },
-            {
-                "indexed": true,
-                "internalType": "address",
-                "name": "spender",
-                "type": "address"
-            },
-            {
-                "indexed": false,
-                "internalType": "uint256",
-                "name": "value",
-                "type": "uint256"
-            }
-        ],
-        "name": "Approval",
-        "type": "event"
-    },
-    {
-        "anonymous": false,
-        "inputs": [
-            {
-                "indexed": true,
-                "internalType": "address",
-                "name": "from",
-                "type": "address"
-            },
-            {
-                "indexed": true,
-                "internalType": "address",
-                "name": "to",
-                "type": "address"
-            },
-            {
-                "indexed": false,
-                "internalType": "uint256",
-                "name": "value",
-                "type": "uint256"
-            }
-        ],
-        "name": "Transfer",
-        "type": "event"
-    },
-    {
-        "inputs": [
-            {
-                "internalType": "address",
-                "name": "owner",
-                "type": "address"
-            },
-            {
-                "internalType": "address",
-                "name": "spender",
-                "type": "address"
-            }
-        ],
-        "name": "allowance",
-        "outputs": [
-            {
-                "internalType": "uint256",
-                "name": "",
-                "type": "uint256"
-            }
-        ],
-        "stateMutability": "view",
-        "type": "function"
-    },
-    {
-        "inputs": [
-            {
-                "internalType": "address",
-                "name": "spender",
-                "type": "address"
-            },
-            {
-                "internalType": "uint256",
-                "name": "value",
-                "type": "uint256"
-            }
-        ],
-        "name": "approve",
-        "outputs": [
-            {
-                "internalType": "bool",
-                "name": "",
-                "type": "bool"
-            }
-        ],
-        "stateMutability": "nonpayable",
-        "type": "function"
-    },
-    {
-        "inputs": [
-            {
-                "internalType": "address",
-                "name": "account",
-                "type": "address"
-            }
-        ],
-        "name": "balanceOf",
-        "outputs": [
-            {
-                "internalType": "uint256",
-                "name": "",
-                "type": "uint256"
-            }
-        ],
-        "stateMutability": "view",
-        "type": "function"
-    },
-    {
-        "inputs": [
-            {
-                "internalType": "uint256",
-                "name": "value",
-                "type": "uint256"
-            }
-        ],
-        "name": "burn",
-        "outputs": [],
-        "stateMutability": "nonpayable",
-        "type": "function"
-    },
-    {
-        "inputs": [
-            {
-                "internalType": "address",
-                "name": "account",
-                "type": "address"
-            },
-            {
-                "internalType": "uint256",
-                "name": "value",
-                "type": "uint256"
-            }
-        ],
-        "name": "burnFrom",
-        "outputs": [],
-        "stateMutability": "nonpayable",
-        "type": "function"
-    },
-    {
-        "inputs": [
-            {
-                "internalType": "address",
-                "name": "addr",
-                "type": "address"
-            },
-            {
-                "internalType": "bool",
-                "name": "status",
-                "type": "bool"
-            }
-        ],
-        "name": "changeAddressInWhitelist",
-        "outputs": [],
-        "stateMutability": "nonpayable",
-        "type": "function"
-    },
-    {
-        "inputs": [
-            {
-                "internalType": "bool",
-                "name": "_rule",
-                "type": "bool"
-            }
-        ],
-        "name": "changeWhitelistRule",
-        "outputs": [],
-        "stateMutability": "nonpayable",
-        "type": "function"
-    },
-    {
-        "inputs": [],
-        "name": "decimals",
-        "outputs": [
-            {
-                "internalType": "uint8",
-                "name": "",
-                "type": "uint8"
-            }
-        ],
-        "stateMutability": "view",
-        "type": "function"
-    },
-    {
-        "inputs": [
-            {
-                "internalType": "address[]",
-                "name": "_addresses",
-                "type": "address[]"
-            },
-            {
-                "internalType": "uint256[]",
-                "name": "_amounts",
-                "type": "uint256[]"
-            }
-        ],
-        "name": "multiTransferToken",
-        "outputs": [],
-        "stateMutability": "nonpayable",
-        "type": "function"
-    },
-    {
-        "inputs": [],
-        "name": "name",
-        "outputs": [
-            {
-                "internalType": "string",
-                "name": "",
-                "type": "string"
-            }
-        ],
-        "stateMutability": "view",
-        "type": "function"
-    },
-    {
-        "inputs": [],
-        "name": "symbol",
-        "outputs": [
-            {
-                "internalType": "string",
-                "name": "",
-                "type": "string"
-            }
-        ],
-        "stateMutability": "view",
-        "type": "function"
-    },
-    {
-        "inputs": [],
-        "name": "totalSupply",
-        "outputs": [
-            {
-                "internalType": "uint256",
-                "name": "",
-                "type": "uint256"
-            }
-        ],
-        "stateMutability": "view",
-        "type": "function"
-    },
-    {
-        "inputs": [
-            {
-                "internalType": "address",
-                "name": "_to",
-                "type": "address"
-            },
-            {
-                "internalType": "uint256",
-                "name": "_value",
-                "type": "uint256"
-            }
-        ],
-        "name": "transfer",
-        "outputs": [
-            {
-                "internalType": "bool",
-                "name": "success",
-                "type": "bool"
-            }
-        ],
-        "stateMutability": "nonpayable",
-        "type": "function"
-    },
-    {
-        "inputs": [
-            {
-                "internalType": "address",
-                "name": "from",
-                "type": "address"
-            },
-            {
-                "internalType": "address",
-                "name": "to",
-                "type": "address"
-            },
-            {
-                "internalType": "uint256",
-                "name": "value",
-                "type": "uint256"
-            }
-        ],
-        "name": "transferFrom",
-        "outputs": [
-            {
-                "internalType": "bool",
-                "name": "",
-                "type": "bool"
-            }
-        ],
-        "stateMutability": "nonpayable",
-        "type": "function"
-    },
-    {
-        "inputs": [
-            {
-                "internalType": "address",
-                "name": "",
-                "type": "address"
-            }
-        ],
-        "name": "whiteList",
-        "outputs": [
-            {
-                "internalType": "bool",
-                "name": "",
-                "type": "bool"
-            }
-        ],
-        "stateMutability": "view",
-        "type": "function"
-    },
-    {
-        "inputs": [],
-        "name": "whitelistRule",
-        "outputs": [
-            {
-                "internalType": "bool",
-                "name": "",
-                "type": "bool"
-            }
-        ],
-        "stateMutability": "view",
-        "type": "function"
-    }
-];
-const GuardianNodesInfoV3_ABI = [
-    {
-        "inputs": [],
-        "stateMutability": "nonpayable",
-        "type": "constructor"
-    },
-    {
-        "inputs": [],
-        "name": "getAllRegions",
-        "outputs": [
-            {
-                "internalType": "string[]",
-                "name": "allRegions",
-                "type": "string[]"
-            }
-        ],
-        "stateMutability": "view",
-        "type": "function"
-    },
-    {
-        "inputs": [
-            {
-                "internalType": "string",
-                "name": "ipaddress",
-                "type": "string"
-            }
-        ],
-        "name": "getIpAddressOwn",
-        "outputs": [
-            {
-                "internalType": "address",
-                "name": "ownership",
-                "type": "address"
-            }
-        ],
-        "stateMutability": "view",
-        "type": "function"
-    },
-    {
-        "inputs": [
-            {
-                "internalType": "string",
-                "name": "ipaddress",
-                "type": "string"
-            }
-        ],
-        "name": "getIpAddressReg",
-        "outputs": [
-            {
-                "internalType": "string",
-                "name": "regionName",
-                "type": "string"
-            }
-        ],
-        "stateMutability": "view",
-        "type": "function"
-    },
-    {
-        "inputs": [
-            {
-                "internalType": "uint256",
-                "name": "id",
-                "type": "uint256"
-            }
-        ],
-        "name": "getNodeInfoById",
-        "outputs": [
-            {
-                "internalType": "string",
-                "name": "ipaddress",
-                "type": "string"
-            },
-            {
-                "internalType": "string",
-                "name": "regionName",
-                "type": "string"
-            }
-        ],
-        "stateMutability": "view",
-        "type": "function"
-    },
-    {
-        "inputs": [
-            {
-                "internalType": "string",
-                "name": "ipaddress",
-                "type": "string"
-            }
-        ],
-        "name": "getNodePGP",
-        "outputs": [
-            {
-                "internalType": "string",
-                "name": "pgp",
-                "type": "string"
-            }
-        ],
-        "stateMutability": "view",
-        "type": "function"
-    },
-    {
-        "inputs": [
-            {
-                "internalType": "string",
-                "name": "regionName",
-                "type": "string"
-            }
-        ],
-        "name": "getReginNodes",
-        "outputs": [
-            {
-                "internalType": "string[]",
-                "name": "nodes",
-                "type": "string[]"
-            }
-        ],
-        "stateMutability": "view",
-        "type": "function"
-    },
-    {
-        "inputs": [
-            {
-                "internalType": "uint256",
-                "name": "",
-                "type": "uint256"
-            }
-        ],
-        "name": "id_region",
-        "outputs": [
-            {
-                "internalType": "bytes32",
-                "name": "",
-                "type": "bytes32"
-            }
-        ],
-        "stateMutability": "view",
-        "type": "function"
-    },
-    {
-        "inputs": [
-            {
-                "internalType": "bytes32",
-                "name": "",
-                "type": "bytes32"
-            }
-        ],
-        "name": "ipaddress_owner",
-        "outputs": [
-            {
-                "internalType": "address",
-                "name": "",
-                "type": "address"
-            }
-        ],
-        "stateMutability": "view",
-        "type": "function"
-    },
-    {
-        "inputs": [
-            {
-                "internalType": "bytes32",
-                "name": "",
-                "type": "bytes32"
-            }
-        ],
-        "name": "ipaddress_pgp",
-        "outputs": [
-            {
-                "internalType": "string",
-                "name": "",
-                "type": "string"
-            }
-        ],
-        "stateMutability": "view",
-        "type": "function"
-    },
-    {
-        "inputs": [
-            {
-                "internalType": "bytes32",
-                "name": "",
-                "type": "bytes32"
-            }
-        ],
-        "name": "ipaddress_reg",
-        "outputs": [
-            {
-                "internalType": "bytes32",
-                "name": "",
-                "type": "bytes32"
-            }
-        ],
-        "stateMutability": "view",
-        "type": "function"
-    },
-    {
-        "inputs": [
-            {
-                "internalType": "string",
-                "name": "regionName",
-                "type": "string"
-            }
-        ],
-        "name": "isRegionExisting",
-        "outputs": [
-            {
-                "internalType": "bool",
-                "name": "region_existing",
-                "type": "bool"
-            }
-        ],
-        "stateMutability": "view",
-        "type": "function"
-    },
-    {
-        "inputs": [
-            {
-                "internalType": "uint256",
-                "name": "id",
-                "type": "uint256"
-            },
-            {
-                "internalType": "string",
-                "name": "ipaddress",
-                "type": "string"
-            },
-            {
-                "internalType": "string",
-                "name": "regionName",
-                "type": "string"
-            },
-            {
-                "internalType": "string",
-                "name": "pgp",
-                "type": "string"
-            },
-            {
-                "internalType": "address",
-                "name": "_owner",
-                "type": "address"
-            }
-        ],
-        "name": "modify_nodes",
-        "outputs": [],
-        "stateMutability": "nonpayable",
-        "type": "function"
-    },
-    {
-        "inputs": [
-            {
-                "internalType": "address",
-                "name": "addAddress",
-                "type": "address"
-            },
-            {
-                "internalType": "bool",
-                "name": "setup",
-                "type": "bool"
-            }
-        ],
-        "name": "modify_whiteList",
-        "outputs": [],
-        "stateMutability": "nonpayable",
-        "type": "function"
-    },
-    {
-        "inputs": [
-            {
-                "internalType": "uint256",
-                "name": "",
-                "type": "uint256"
-            }
-        ],
-        "name": "nodeIpAddress",
-        "outputs": [
-            {
-                "internalType": "string",
-                "name": "",
-                "type": "string"
-            }
-        ],
-        "stateMutability": "view",
-        "type": "function"
-    },
-    {
-        "inputs": [
-            {
-                "internalType": "uint256",
-                "name": "",
-                "type": "uint256"
-            }
-        ],
-        "name": "pgp_public",
-        "outputs": [
-            {
-                "internalType": "string",
-                "name": "",
-                "type": "string"
-            }
-        ],
-        "stateMutability": "view",
-        "type": "function"
-    },
-    {
-        "inputs": [
-            {
-                "internalType": "uint256",
-                "name": "",
-                "type": "uint256"
-            }
-        ],
-        "name": "regionList",
-        "outputs": [
-            {
-                "internalType": "string",
-                "name": "",
-                "type": "string"
-            }
-        ],
-        "stateMutability": "view",
-        "type": "function"
-    },
-    {
-        "inputs": [
-            {
-                "internalType": "bytes32",
-                "name": "",
-                "type": "bytes32"
-            }
-        ],
-        "name": "region_hashs",
-        "outputs": [
-            {
-                "internalType": "string",
-                "name": "",
-                "type": "string"
-            }
-        ],
-        "stateMutability": "view",
-        "type": "function"
-    },
-    {
-        "inputs": [
-            {
-                "internalType": "bytes32",
-                "name": "",
-                "type": "bytes32"
-            },
-            {
-                "internalType": "uint256",
-                "name": "",
-                "type": "uint256"
-            }
-        ],
-        "name": "region_nodes",
-        "outputs": [
-            {
-                "internalType": "string",
-                "name": "",
-                "type": "string"
-            }
-        ],
-        "stateMutability": "view",
-        "type": "function"
-    },
-    {
-        "inputs": [
-            {
-                "internalType": "address",
-                "name": "",
-                "type": "address"
-            }
-        ],
-        "name": "whiteList",
-        "outputs": [
-            {
-                "internalType": "bool",
-                "name": "",
-                "type": "bool"
-            }
-        ],
-        "stateMutability": "view",
-        "type": "function"
-    }
-];
-const openPGPKeys_ABI = [
-    {
-        "inputs": [
-            {
-                "internalType": "bytes32",
-                "name": "keyHash",
-                "type": "bytes32"
-            }
-        ],
-        "name": "getRegiestWallet",
-        "outputs": [
-            {
-                "internalType": "address",
-                "name": "wallet",
-                "type": "address"
-            }
-        ],
-        "stateMutability": "view",
-        "type": "function"
-    },
-    {
-        "inputs": [
-            {
-                "internalType": "address",
-                "name": "wallet",
-                "type": "address"
-            }
-        ],
-        "name": "getWalletPGP",
-        "outputs": [
-            {
-                "internalType": "bytes32",
-                "name": "keyHash",
-                "type": "bytes32"
-            }
-        ],
-        "stateMutability": "view",
-        "type": "function"
-    },
-    {
-        "inputs": [
-            {
-                "internalType": "bytes32",
-                "name": "keyHash",
-                "type": "bytes32"
-            }
-        ],
-        "name": "regiestPGP",
-        "outputs": [],
-        "stateMutability": "nonpayable",
-        "type": "function"
-    }
-];
+
