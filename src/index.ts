@@ -1,5 +1,6 @@
 #!/usr/local/bin
 import {Daemon} from './localServer/localServer'
+import { proxyServer as proxyServer_class } from './localServer/proxyServer'
 const yargs = require('yargs')
 const argv = yargs(process.argv.slice(2))
     .usage('Usage: yarn run seguro-gateway --port [number] --path [string]')
@@ -35,6 +36,8 @@ export const launchDaemon = (port: number, path: string) => {
     new Daemon ( port, path )
 }
 
+export const proxyServer = (post: string, entryNode: nodes_info, _egressNode: nodes_info, profile: profile) => new proxyServer_class(post, [entryNode], [_egressNode], profile, false, '')
+
 if (argv.port || argv.path) {
     PATH = argv.path
     if (typeof argv.port === 'number') {
@@ -44,3 +47,4 @@ if (argv.port || argv.path) {
     }
     launchDaemon(PORT, PATH)
 }
+

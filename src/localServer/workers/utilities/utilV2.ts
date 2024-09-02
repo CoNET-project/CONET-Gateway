@@ -3,8 +3,9 @@
 const conet_rpc = 'https://rpc.conet.network';
 const api_endpoint = `https://api.conet.network/api/`;
 const apiv2_endpoint = `https://apiv2.conet.network/api/`;
-const ipfsEndpoint = `https://ipfs.conet.network/api/`;
+const ipfsEndpoint = `https://ipfs1.conet.network/api/`;
 const blast_sepoliaRpc = 'https://sepolia.blast.io';
+const Arbitrum_One_RPC = 'https://arb1.arbitrum.io/rpc'
 const _ethRpc = ['https://rpc.ankr.com/eth', 'https://eth.llamarpc.com', 'https://ethereum-rpc.publicnode.com'];
 const blast_mainnet1 = ['https://blast.din.dev/rpc', 'https://rpc.ankr.com/blast', 'https://blastl2-mainnet.public.blastapi.io', 'https://blast.blockpi.network/v1/rpc/public'];
 const bsc_mainchain = 'https://bsc-dataseed.binance.org/';
@@ -12,13 +13,11 @@ const ReferralsAddressV3 = '0x1b104BCBa6870D518bC57B5AF97904fBD1030681'.toLowerC
 const conet_storage_old_address = `0x7d9CF1dd164D6AF82C00514071990358805d8d80`.toLowerCase();
 const adminCNTP = '0x44d1FCCce6BAF388617ee972A6FB898b6b5629B1';
 const referrerCNTP = '0x63377154F972f6FC1319e382535EC9691754bd18';
-const CNTPV1 = '0xb182d2c2338775B0aC3e177351D638b23D3Da4Ea'.toLowerCase();
-const blast_mainnet_CNTP = '0x0f43685B2cB08b9FB8Ca1D981fF078C22Fec84c5';
+const CNTPV1 = '0xb182d2c2338775B0aC3e177351D638b23D3Da4Ea'.toLowerCase()
+const blast_mainnet_CNTP = '0x0f43685B2cB08b9FB8Ca1D981fF078C22Fec84c5'
 //const CNTPB_contract = '0x6056473ADD8bC89a95325845F6a431CCD7A849bb'
-const eth_usdt_contract = '0xdac17f958d2ee523a2206206994597c13d831ec7';
-const blast_usdb_contract = '0x4300000000000000000000000000000000000003';
-const bnb_wbnb_contract = '0xbb4CdB9CBd36B01bD1cBaEBF2De08d9173bc095c';
-const bnb_usdt_contract = '0x55d398326f99059fF775485246999027B3197955';
+const eth_usdt_contract = '0xdac17f958d2ee523a2206206994597c13d831ec7'
+
 const conet_dWETH = '0x84b6d6A6675F830c8385f022Aefc9e3846A89D3B';
 const conet_dUSDT = '0x0eD55798a8b9647f7908c72a0Ce844ad47274422';
 const conet_dWBNB = '0xd8b094E91c552c623bc054085871F6c1CA3E5cAd';
@@ -48,11 +47,16 @@ const initV2 = async (profile) => {
 
 const cCNTP_new_Addr = '0xa4b389994A591735332A67f3561D60ce96409347'.toLocaleLowerCase()
 const profile_ver_addr = '0xB56Dfa5154B0DF39639eF701202f6e04EAc8Dda4'.toLowerCase()
-const CONET_Guardian_NodeInfoV5 = '0x264ea87162463165101A500a6Bf8755b91220350'
+const CONET_Guardian_NodeInfoV6 = '0x9e213e8B155eF24B466eFC09Bcde706ED23C537a'
 const CONET_Guardian_PlanV7 = '0x35c6f84C5337e110C9190A5efbaC8B850E960384'.toLowerCase()
 const CONET_Faucet_Smart_Contract_addr = '0x04CD419cb93FD4f70059cAeEe34f175459Ae1b6a'
 const CONET_CNTP_V1_Addr = '0xb182d2c2338775B0aC3e177351D638b23D3Da4Ea'
 const CONET_ReferralsAddressV3 = '0x1b104BCBa6870D518bC57B5AF97904fBD1030681'
+const Arbitrum_USDT = '0xFd086bC7CD5C481DCC9C85ebE478A1C0b69FCbb9'
+const blast_usdb_contract = '0x4300000000000000000000000000000000000003'
+const bnb_wbnb_contract = '0xbb4CdB9CBd36B01bD1cBaEBF2De08d9173bc095c'
+const bnb_usdt_contract = '0x55d398326f99059fF775485246999027B3197955'
+
 //	******************************************************************
 const getAddress = (addr) => {
     let ret = '';
@@ -345,44 +349,9 @@ const prePurchase = async (cmd) => {
     cmd.data = [data.gasPrice, data.fee, true, 5000];
     return returnUUIDChannel(cmd);
 }
+
 const nodePrice = 1250
 
-// const getAmountOfNodes: (nodes: number, assetName: string) => Promise<number> = (nodes, assetName) => new Promise(async resolve => {
-// 	const assetPrice = await getAPIPrice ()
-// 	if (typeof assetPrice === 'boolean') {
-// 		return resolve(0)
-// 	}
-// 	const totalUsdt = nodes * nodePrice
-// 	const asssetSymbol = new RegExp (/usd/i.test(assetName) ? 'usd' : /bnb/i.test(assetName) ? 'bnb' : 'eth', 'i')
-// 	const index = assetPrice.findIndex(n => asssetSymbol.test(n.currency_name))
-// 	if (index < 0) {
-// 		return resolve(totalUsdt)
-// 	}
-// 	const rate = parseFloat(assetPrice[index].usd_price)
-// 	return resolve (totalUsdt/rate)
-// })
-/**
- * 				OldVersion
- */
-// const getAllNodesInfo: () => Promise<node|null> = () => new Promise(resolve=> {
-// 	return fetch('https://openpgp.online:4001/api/conet-nodes', {
-// 		method: 'GET',
-// 		headers: {
-// 			'Content-Type': 'application/json;charset=UTF-8',
-// 			'Connection': 'close',
-// 		},
-// 		cache: 'no-store',
-// 		referrerPolicy: 'no-referrer'
-// 	})
-// 	.then ( async res => {
-// 		return res.json()
-// 	}).then((data: node) => {
-// 		allNodes = data
-// 		resolve(data)
-// 	}).catch(ex=> {
-// 		resolve(null)
-// 	})
-// })
 const claimAdmin = '0x418833b70F882C833EF0F0Fcee3FB9d89C79d47C'
 const getClaimableAddress = (CONET_claimableName) => {
     switch (CONET_claimableName) {
@@ -402,13 +371,11 @@ const getClaimableAddress = (CONET_claimableName) => {
 }
 
 
-
 const getCONET_api_health = async () => {
 	const url = `${apiv2_endpoint}health`
 	const result: any = await postToEndpoint(url, false, null)
 	return result?.health
 }
-
 
 const claimToken = async (profile: profile, CoNET_Data: encrypt_keys_object, assetName: string, cmd: worker_command) => {
 	const asset: CryptoAsset = profile.tokens[assetName]
@@ -515,6 +482,103 @@ const fetchTest = () => {
 	})
 }
 
+const _startMiningV2 = async (profile: profile, nodeInfo: nodes_info, cmd: worker_command|null = null) => {
+
+    miningAddress = profile.keyID.toLowerCase()
+
+    const postData = await createConnectCmd(profile, nodeInfo)
+    let first = true
+    cCNTPcurrentTotal = parseFloat(profile.tokens.cCNTP.balance || '0')
+	if (!nodeInfo?.domain || !postData) {
+		if (cmd) {
+			cmd.err = 'FAILURE'
+        	return returnUUIDChannel(cmd)
+		}
+		return 
+	}
+
+	const url = `https://${nodeInfo.domain}/`
+
+    miningConn = postToEndpointSSE(url, false, postData.requestData[0], async (err, _data) => {
+        // switch (miningStatus) {
+        // 	case 'STOP': {
+        // 		await miningConn.abort()
+        // 		miningConn = null
+        // 		return
+        // 	}
+        // }
+        if (err) {
+            logger(err);
+            if (cmd) {
+                cmd.err = err;
+                return returnUUIDChannel(cmd);
+            }
+            return;
+        }
+        logger('success', _data);
+        const kk = JSON.parse(_data);
+        mining_epoch = epoch;
+        if (first) {
+            miningProfile = profile;
+            first = false;
+            if (cmd) {
+                cCNTPcurrentTotal = parseFloat(profile.tokens.cCNTP.balance || '0');
+                kk['currentCCNTP'] = '0';
+                cmd.data = ['success', JSON.stringify(kk)];
+                return returnUUIDChannel(cmd);
+            }
+            return;
+        }
+        kk.rate = typeof kk.rate === 'number' ? kk.rate.toFixed(10) : parseFloat(kk.rate).toFixed(10);
+        kk.currentCCNTP = (parseFloat(profile.tokens.cCNTP.balance || '0') - cCNTPcurrentTotal).toFixed(8);
+        if (kk.currentCCNTP < 0) {
+            cCNTPcurrentTotal = parseFloat(profile.tokens.cCNTP.balance);
+            kk.currentCCNTP = 0;
+        }
+        const cmdd = {
+            cmd: 'miningStatus',
+            data: [JSON.stringify(kk)]
+        };
+        sendState('toFrontEnd', cmdd)
+    })
+}
+
+const createConnectCmd = async (currentProfile: profile, node: nodes_info, requestData: any = null) => {
+	if (!currentProfile.pgpKey|| !node.armoredPublicKey ) {
+		logger (`currentProfile?.pgpKey[${currentProfile?.pgpKey}]|| !SaaSnode?.armoredPublicKey[${node?.armoredPublicKey}] Error`)
+		return null
+	}
+
+	const key = buffer.Buffer.from(self.crypto.getRandomValues(new Uint8Array(16))).toString('base64')
+	const command: SICommandObj = {
+		command: 'mining',
+		algorithm: 'aes-256-cbc',
+		Securitykey: key,
+		requestData,
+		walletAddress: currentProfile.keyID.toLowerCase()
+	}
+	
+	logger(`createSock5ConnectCmd`)
+	const message =JSON.stringify(command)
+	const messageHash = ethers.id(message)
+	const signMessage = CoNETModule.EthCrypto.sign(currentProfile.privateKeyArmor, messageHash)
+
+	let privateKeyObj = null
+
+	try {
+		privateKeyObj = await makePrivateKeyObj (currentProfile.pgpKey.privateKeyArmor)
+	} catch (ex){
+		logger (ex)
+	}
+
+
+	const encryptedCommand = await encrypt_Message( privateKeyObj, node.armoredPublicKey, {message, signMessage})
+	command.requestData = [encryptedCommand, '', key]
+	return (command)
+}
+
+
+const node_key = 'LS0tLS1CRUdJTiBQR1AgUFVCTElDIEtFWSBCTE9DSy0tLS0tCgp4ak1FWnRRQ0xoWUpLd1lCQkFIYVJ3OEJBUWRBc1lWSXQrdzB2WGlycGFPeXMvMVEyeHY4aVN0L2lkcUsKTUtxbVRtd1ZpeWJOS2pCNE16WkNNVGsxTlRBNFpESTVNVU5EWWpneE9UVTROelV4TmpSQ056VTROamhpCk9Ua3lOalEwUk1LTUJCQVdDZ0ErQllKbTFBSXVCQXNKQndnSmtBN3dnUCtsZkd2aUF4VUlDZ1FXQUFJQgpBaGtCQXBzREFoNEJGaUVFVEZwVDNyT1IzdmJvN1ZPNkR2Q0EvNlY4YStJQUFHRVBBUDkvdDlPYUJTS2QKQm5vb3F2cDBOYldoWEorRERKMFZnMDBzT1BDc2c1STQrZ0Q5R21WTGEwdkRMSWJxVXIyWXVuSkpCYzBZCjBKWDZJRWxwc1UvTHo2R29oZ0RPT0FSbTFBSXVFZ29yQmdFRUFaZFZBUVVCQVFkQTRwRC9lS2ZmU3dRTApGbXZJNzZwWlJwNkZSbmZROGdrSXR1a2p5V0x1eFRzREFRZ0h3bmdFR0JZS0FDb0ZnbWJVQWk0SmtBN3cKZ1ArbGZHdmlBcHNNRmlFRVRGcFQzck9SM3ZibzdWTzZEdkNBLzZWOGErSUFBS1ZMQVB3TXBWVnJjSEViCnROZ2tIZW90d2krMVBlaW9vUGpERE5LaWRZaHB1V01BUVFEK1AxTjgwbVM5b3pxanE5c0ZBSkFxaEZ1QQpGRUt3amRxQmpiYzhKMVdPandVPQo9aThtRwotLS0tLUVORCBQR1AgUFVCTElDIEtFWSBCTE9DSy0tLS0tCg=='
 const testFunction = async (cmd: worker_command) => {
 	
 	
@@ -522,6 +586,12 @@ const testFunction = async (cmd: worker_command) => {
 	if (!profiles) {
 		return
 	}
+
+	// await getAllOtherAssets()
+	// await CONET_guardian_purchase(profiles[0], 1, 0.5, 'usdt')
+
+	// _startMiningV2(profiles[0], node)
+
 
 	//getFaucetFromSmartContract(profiles[0])
 	//await fetchTest()
@@ -572,7 +642,6 @@ const testFunction = async (cmd: worker_command) => {
 }
 
 
-
 const getRegionAllNodes = async (region: string, profile: profile) => {
 	const regions: string[] = await getRegion()
 	if (!regions) {
@@ -580,7 +649,7 @@ const getRegionAllNodes = async (region: string, profile: profile) => {
 	}
 	const filter = new RegExp(`${region}$`, 'i')
 	const filterRegion: string[] = regions.filter(n => filter.test(n))
-	const GuardianNodesSC = new ethers.Contract(CONET_Guardian_NodeInfoV5, CONET_Guardian_NodeInfo_ABI, provideCONET)
+	const GuardianNodesSC = new ethers.Contract(CONET_Guardian_NodeInfoV6, CONET_Guardian_NodeInfo_ABI, provideCONET)
 	const nodes: nodes_info[] = []
 	await async.mapLimit(filterRegion, 5, async (n, next) => {
 		

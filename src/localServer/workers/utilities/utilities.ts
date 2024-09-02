@@ -112,7 +112,6 @@ const encrypt_Message = async (privatePgpObj: any, armoredPublicKey: string, mes
         encryptionKeys: await openpgp.readKey ({ armoredKey: armoredPublicKey }),
         signingKeys: privatePgpObj,
 		config: { preferredCompressionAlgorithm: openpgp.enums.compression.zlib } 		// compress the data with zlib
-		
     }
 	return await openpgp.encrypt(encryptObj)
 }

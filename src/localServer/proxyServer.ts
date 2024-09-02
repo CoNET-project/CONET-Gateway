@@ -147,6 +147,8 @@ const createSock5ConnectCmd = async (currentProfile: profile, SaaSnode: nodes_in
 	if  (!SaaSnode?.publicKeyObj) {
 		SaaSnode.publicKeyObj = await openpgp.readKey ({ armoredKey: SaaSnode.armoredPublicKey })
 	}
+
+	
 	const key = Buffer.from(getRandomValues(new Uint8Array(16))).toString('base64')
 	const command: SICommandObj = {
 		command: 'SaaS_Sock5',
@@ -155,6 +157,7 @@ const createSock5ConnectCmd = async (currentProfile: profile, SaaSnode: nodes_in
 		requestData,
 		walletAddress: currentProfile.keyID.toLowerCase()
 	}
+
 	logger(Colors.blue(`createSock5ConnectCmd`))
 	const message =JSON.stringify(command)
 	const messageHash = ethers.id(message)
@@ -383,12 +386,13 @@ export class proxyServer {
 
 	public requestGetWay = async (uuuu : VE_IPptpStream, socket: Net.Socket ) => {
 
-		const upChannel_SaaS_node: nodes_info|null  = getRandomSaaSNode(this._egressNodes)
+		const upChannel_SaaS_node  = getRandomSaaSNode(this._egressNodes)
 
 	
 		if (!upChannel_SaaS_node ) {
 			return logger (Colors.red(`proxyServer makeUpChannel upChannel_SaaS_node Null Error!`))
 		}
+		logger(inspect(upChannel_SaaS_node, false, 3, true))
 		
 		const cmd = await createSock5ConnectCmd (this.currentProfile, upChannel_SaaS_node, [uuuu])
 		if (!cmd) {
@@ -429,177 +433,13 @@ export class proxyServer {
 		this.startLocalProxy()
 	}
 
+	public end = new Promise(resolve=> {
+		if (this.server !== null) {
+			this.server.close(err => {
+				resolve (true)
+			})
+		}
+	})
 }
-const profile = {
-    "isPrimary": false,
-    "keyID": "0x28b2ae27e135e89d9bcb40595f859b411bf4846c",
-    "privateKeyArmor": "0xd1806500c9ef182f981069c2ebcdb21f30f75c2e2620aedf5fc5a88a1271991c",
-    "hdPath": "m/44'/60'/0'/0/0/1",
-    "index": 1,
-    "isNode": true,
-    "nodeID": "234",
-    "nodeIP_address": "",
-    "nodeRegion": "",
-    "pgpKey": {
-        "privateKeyArmor": "-----BEGIN PGP PRIVATE KEY BLOCK-----\n\nxVgEZndrMBYJKwYBBAHaRw8BAQdAIzhghYSoVOl8yaim5tay6GwqW4+h77NT\nkJgLrb2Z72cAAQDdVdo2fyw2GtFBF2Qpd3T6BAv/YLMpb2Y5aSDfdjZrug1q\nzQDCjAQQFgoAPgWCZndrMAQLCQcICZC4mOKIpJkMwAMVCAoEFgACAQIZAQKb\nAwIeARYhBEbhCEnJjFv6tkW3LbiY4oikmQzAAAAKegD/bxWzqs+3Nvt52e/S\naTXLLRICcHRKI1+pM5ub/9gkw+UA/1Exk3IczFFJzfkgg2Yf4GW5MV9rWfuV\n5wN/AHUj5CsPx10EZndrMBIKKwYBBAGXVQEFAQEHQLPI3FS/F+Uh2ys/dEOi\nlphsmA2Ns1b+EhYRAAkpmN1uAwEIBwAA/0eYFVkHK6jEor/7IN7PVvVFB4M/\nizd42jdvnSJgoRZ4D3TCeAQYFgoAKgWCZndrMAmQuJjiiKSZDMACmwwWIQRG\n4QhJyYxb+rZFty24mOKIpJkMwAAA/TcA/RHAFxB/1DLrdThvO4XlxdrV1upY\nfBfghfDV42WXoszeAQCaX/1ZKIqPurrWZ8mYmvVj1n+kpoL7K1zy/cZ/a+6X\nCQ==\n=buDA\n-----END PGP PRIVATE KEY BLOCK-----\n",
-        "publicKeyArmor": "-----BEGIN PGP PUBLIC KEY BLOCK-----\n\nxjMEZndrMBYJKwYBBAHaRw8BAQdAIzhghYSoVOl8yaim5tay6GwqW4+h77NT\nkJgLrb2Z72fNAMKMBBAWCgA+BYJmd2swBAsJBwgJkLiY4oikmQzAAxUICgQW\nAAIBAhkBApsDAh4BFiEERuEIScmMW/q2RbctuJjiiKSZDMAAAAp6AP9vFbOq\nz7c2+3nZ79JpNcstEgJwdEojX6kzm5v/2CTD5QD/UTGTchzMUUnN+SCDZh/g\nZbkxX2tZ+5XnA38AdSPkKw/OOARmd2swEgorBgEEAZdVAQUBAQdAs8jcVL8X\n5SHbKz90Q6KWmGyYDY2zVv4SFhEACSmY3W4DAQgHwngEGBYKACoFgmZ3azAJ\nkLiY4oikmQzAApsMFiEERuEIScmMW/q2RbctuJjiiKSZDMAAAP03AP0RwBcQ\nf9Qy63U4bzuF5cXa1dbqWHwX4IXw1eNll6LM3gEAml/9WSiKj7q61mfJmJr1\nY9Z/pKaC+ytc8v3Gf2vulwk=\n=irVj\n-----END PGP PUBLIC KEY BLOCK-----\n"
-    },
-    "tokens": {
-        "CGPNs": {
-            "balance": "0",
-            "history": [],
-            "network": "CONET Guardian Nodes (CGPNs)",
-            "decimal": 1,
-            "contract": "0x453701b80324c44366b34d167d40bce2d67d6047",
-            "name": "CGPNs"
-        },
-        "CGPN2s": {
-            "balance": "0",
-            "history": [],
-            "network": "CONET Guardian Nodes (CGPN2s)",
-            "decimal": 1,
-            "contract": "0x453701b80324c44366b34d167d40bce2d67d6047",
-            "name": "CGPN2s"
-        },
-        "cCNTP": {
-            "balance": "340112.74966555",
-            "history": [],
-            "network": "CONET Holesky",
-            "decimal": 18,
-            "contract": "0x530cf1b598d716ec79aa916dd2f05ae8a0ce8ee2",
-            "name": "cCNTP"
-        },
-        "cBNBUSDT": {
-            "balance": "0",
-            "history": [],
-            "network": "CONET Holesky",
-            "decimal": 18,
-            "contract": "0xae752b49385812af323240b26a49070bb839b10d",
-            "name": "cBNBUSDT"
-        },
-        "cUSDB": {
-            "balance": "0",
-            "history": [],
-            "network": "CONET Holesky",
-            "decimal": 18,
-            "contract": "0x3258e9631ca4992f6674b114bd17c83ca30f734b",
-            "name": "cUSDB"
-        },
-        "CNTP": {
-            "balance": "0",
-            "history": [],
-            "network": "Blast Mainnet",
-            "decimal": 18,
-            "contract": "0x0f43685B2cB08b9FB8Ca1D981fF078C22Fec84c5",
-            "name": "CNTP"
-        },
-        "cUSDT": {
-            "balance": "0",
-            "history": [],
-            "network": "CONET Holesky",
-            "decimal": 18,
-            "contract": "0xfe75074c273b5e33fe268b1d5ac700d5b715da2f",
-            "name": "cUSDT"
-        },
-        "dWETH": {
-            "balance": "0",
-            "history": [],
-            "network": "CONET Holesky",
-            "decimal": 18,
-            "contract": "0x84b6d6A6675F830c8385f022Aefc9e3846A89D3B",
-            "name": "dWETH"
-        },
-        "dUSDT": {
-            "balance": "0",
-            "history": [],
-            "network": "CONET Holesky",
-            "decimal": 18,
-            "contract": "0x0eD55798a8b9647f7908c72a0Ce844ad47274422",
-            "name": "dUSDT"
-        },
-        "dWBNB": {
-            "balance": "0",
-            "history": [],
-            "network": "CONET Holesky",
-            "decimal": 18,
-            "contract": "0xd8b094E91c552c623bc054085871F6c1CA3E5cAd",
-            "name": "dWBNB"
-        },
-        "conet": {
-            "balance": "0",
-            "history": [],
-            "network": "CONET Holesky",
-            "decimal": 18,
-            "contract": "",
-            "name": "conet"
-        },
-        "CNTPV1": {
-            "balance": "0",
-            "history": [],
-            "network": "CONET Holesky",
-            "decimal": 18,
-            "contract": "0x1a73e00ce25e5d56db1b5dd7b2dcdf8ec9f208d2",
-            "name": "CNTPV1"
-        },
-        "usdt": {
-            "balance": "0",
-            "history": [],
-            "network": "ETH",
-            "decimal": 6,
-            "contract": "0xdac17f958d2ee523a2206206994597c13d831ec7",
-            "name": "usdt"
-        },
-        "usdb": {
-            "balance": "0",
-            "history": [],
-            "network": "Blast Mainnet",
-            "decimal": 18,
-            "contract": "0xdac17f958d2ee523a2206206994597c13d831ec7",
-            "name": "usdb"
-        },
-        "eth": {
-            "balance": "0",
-            "history": [],
-            "network": "ETH",
-            "decimal": 18,
-            "contract": "",
-            "name": "eth"
-        },
-        "blastETH": {
-            "balance": "0",
-            "history": [],
-            "network": "Blast Mainnet",
-            "decimal": 18,
-            "contract": "",
-            "name": "blastETH"
-        },
-        "wbnb": {
-            "balance": "0",
-            "history": [],
-            "network": "BSC",
-            "decimal": 18,
-            "contract": "0xbb4CdB9CBd36B01bD1cBaEBF2De08d9173bc095c",
-            "name": "wbnb"
-        },
-        "bnb": {
-            "balance": "0",
-            "history": [],
-            "network": "BSC",
-            "decimal": 18,
-            "contract": "",
-            "name": "bnb"
-        },
-        "wusdt": {
-            "balance": "0",
-            "history": [],
-            "network": "BSC",
-            "decimal": 18,
-            "contract": "0x55d398326f99059fF775485246999027B3197955",
-            "name": "wusdt"
-        }
-    },
-    "data": null,
-	referrer: '',
 
-}
 
