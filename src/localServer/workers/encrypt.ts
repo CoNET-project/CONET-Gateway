@@ -35,8 +35,10 @@ const channel = new BroadcastChannel(channelWrokerListenName);
 /** */
 let platform = {
     passcode: 'NONE'
-};
-const LivenessListen = [];
+}
+
+const LivenessListen = []
+
 const CoNETModule: CoNET_Module = {
     EthCrypto: null,
     Web3Providers: null,
@@ -77,12 +79,14 @@ const CoNETModule: CoNET_Module = {
         }
     }
 }
-let ClientIDworker = '';
+
+let ClientIDworker = ''
 const backGroundPoolWorker: clientPoolWroker[]  = []
 self.onhashchange = () => {
-    channel.removeEventListener('message', channelWorkerDoCommand);
-    self.removeEventListener('message', encryptWorkerDoCommand);
-};
+    channel.removeEventListener('message', channelWorkerDoCommand)
+    self.removeEventListener('message', encryptWorkerDoCommand)
+}
+
 const initEncryptWorker = async () => {
 
 	
@@ -124,52 +128,57 @@ const initEncryptWorker = async () => {
     const cmd = {
         cmd: 'READY',
         data: [],
-    };
+    }
     responseChannel.postMessage(JSON.stringify(cmd))
     provideCONET = new ethers.JsonRpcProvider(conet_rpc)
     await checkStorage(channelPlatform)
     listenProfileVer()
-};
+}
+
 const gettPrimaryProfile = () => {
     if (!CoNET_Data || !CoNET_Data?.profiles) {
-        return '';
+        return ''
     }
     const index = CoNET_Data.profiles.findIndex(n => n.isPrimary);
     const profiles = CoNET_Data.profiles[index];
-    return profiles;
-};
+    return profiles
+}
+
 const returnUUIDChannel = (cmd) => {
     if (!cmd.uuid) {
         return logger(`getPrimaryBalance cmd uuid is null`, cmd);
     }
-    const sendChannel = new BroadcastChannel(cmd.uuid);
-    sendChannel.postMessage(JSON.stringify(cmd));
-    sendChannel.close();
-};
+    const sendChannel = new BroadcastChannel(cmd.uuid)
+    sendChannel.postMessage(JSON.stringify(cmd))
+    sendChannel.close()
+}
+
 const getRandomRegionNode = (nodes, count) => {
-    const uu = nodes.slice(0, count);
-    return uu;
-};
+    const uu = nodes.slice(0, count)
+    return uu
+}
+
 const filterNodes = (_nodes, key) => {
-    const u = new RegExp(key, 'i');
-    const ret = _nodes.filter(n => u.test(n.country));
-    return ret;
-};
+    const u = new RegExp(key, 'i')
+    const ret = _nodes.filter(n => u.test(n.country))
+    return ret
+}
 const channelWorkerDoCommand = (async (e) => {
-    const jsonData = buffer.Buffer.from(e.data).toString();
-    let cmd;
+    const jsonData = buffer.Buffer.from(e.data).toString()
+    let cmd
     try {
-        cmd = JSON.parse(jsonData);
+        cmd = JSON.parse(jsonData)
     }
     catch (ex) {
-        return console.dir(ex);
+        return console.dir(ex)
     }
     if (!workerReady) {
-        cmd.err = 'NOT_READY';
-        return returnCommand(cmd);
+        cmd.err = 'NOT_READY'
+        return returnCommand(cmd)
     }
-    processCmd(cmd);
-});
+    processCmd(cmd)
+})
+
 const responseLocalHost = async (cmd) => {
     const url = `http://localhost:3001/connectingResponse`;
     const connect = await fetch(url, {
@@ -189,8 +198,10 @@ const responseLocalHost = async (cmd) => {
         .catch(ex => {
         logger(`responseLocalHost Error`, ex);
     });
-};
-let getFaucetCount = 0;
+}
+
+let getFaucetCount = 0
+
 const processCmd = async (cmd: worker_command) => {
     switch (cmd.cmd) {
         case 'claimToken': {
@@ -211,10 +222,12 @@ const processCmd = async (cmd: worker_command) => {
         case 'startMining': {
             return startMining(cmd);
         }
+		
         case 'stopMining': {
             miningStatus = 'STOP';
             return returnUUIDChannel(cmd);
         }
+
         case 'unlock_cCNTP': {
             const [_profile] = cmd.data;
             if (!_profile) {
@@ -237,30 +250,32 @@ const processCmd = async (cmd: worker_command) => {
             needUpgradeVer = epoch + 25;
             return;
         }
+
         case 'guardianPurchase': {
-            const [nodes, amount, profile, payAssetName] = cmd.data;
+            const [nodes, amount, profile, payAssetName] = cmd.data
             if (!nodes || !amount || !profile || !payAssetName) {
-                cmd.err = 'INVALID_DATA';
-                return returnUUIDChannel(cmd);
+                cmd.err = 'INVALID_DATA'
+                return returnUUIDChannel(cmd)
             }
-            const profiles = CoNET_Data?.profiles;
+            const profiles = CoNET_Data?.profiles
             if (!profiles) {
-                cmd.err = 'NOT_READY';
-                return returnUUIDChannel(cmd);
+                cmd.err = 'NOT_READY'
+                return returnUUIDChannel(cmd)
             }
             const profileIndex = profiles.findIndex(n => n.keyID.toLowerCase() === profile.keyID.toLowerCase());
             if (profileIndex < 0) {
-                cmd.err = 'INVALID_DATA';
-                return returnUUIDChannel(cmd);
+                cmd.err = 'INVALID_DATA'
+                return returnUUIDChannel(cmd)
             }
-            const health = await getCONET_api_health();
+            const health = await getCONET_api_health()
             if (!health) {
-                cmd.err = 'Err_Server_Unreachable';
-                return returnUUIDChannel(cmd);
+                cmd.err = 'Err_Server_Unreachable'
+                return returnUUIDChannel(cmd)
             }
+
             sendState('beforeunload', true);
             const kk = await CONET_guardian_purchase(profile, nodes, amount, payAssetName);
-            sendState('beforeunload', false);
+            sendState('beforeunload', false)
             if (kk !== true) {
                 cmd.err = 'INVALID_DATA';
                 return returnUUIDChannel(cmd);
@@ -272,6 +287,7 @@ const processCmd = async (cmd: worker_command) => {
             sendState('toFrontEnd', cmd1);
             return returnUUIDChannel(cmd);
         }
+
         case 'transferToken': {
             const [amount, sourceProfileKeyID, assetName, toAddress] = cmd.data;
             if (!assetName || !toAddress || !amount || !sourceProfileKeyID) {
@@ -315,6 +331,7 @@ const processCmd = async (cmd: worker_command) => {
             sendState('toFrontEnd', cmd1);
             return returnUUIDChannel(cmd);
         }
+
         case 'estimateGas': {
             const [amount, sourceProfileKeyID, assetName, toAddress] = cmd.data;
             if (!assetName || !toAddress || !amount || !sourceProfileKeyID) {
@@ -342,12 +359,14 @@ const processCmd = async (cmd: worker_command) => {
             cmd.data = [data.gasPrice, data.fee, true, 5000];
             return returnUUIDChannel(cmd);
         }
+
         case 'isAddress': {
             const address = cmd.data[0];
             const ret = getAddress(address);
             cmd.data = [ret === '' ? false : true];
             return returnUUIDChannel(cmd);
         }
+
         case 'burnCCNTP': {
             const [_profile, total] = cmd.data;
             if (!_profile) {
@@ -381,6 +400,7 @@ const processCmd = async (cmd: worker_command) => {
             await storeSystemData();
             return;
         }
+
         case 'preBurnCCNTP': {
             const [_profile, total] = cmd.data;
             if (!_profile) {
@@ -484,7 +504,7 @@ const processCmd = async (cmd: worker_command) => {
 				cmd.err='FAILURE'
 				return returnUUIDChannel(cmd)
 			}
-			
+			await getAllProfileAssetsBalance()
 			return returnUUIDChannel(cmd)
 		}
 	
@@ -521,18 +541,6 @@ const processCmd = async (cmd: worker_command) => {
 			return createAccount(cmd)
 		}
 
-
-        case 'CONETFaucet': {
-            const health = await getCONET_api_health();
-            if (!health) {
-                cmd.err = 'Err_Server_Unreachable';
-                return returnUUIDChannel(cmd);
-            }
-            const keyID = cmd.data[0];
-            cmd.data = [await getFaucet(keyID)];
-            return returnUUIDChannel(cmd);
-        }
-
         case 'getDomain': {
             const id = cmd.data[0];
             if (id) {
@@ -552,38 +560,45 @@ const processCmd = async (cmd: worker_command) => {
             }
             return responseChannel.postMessage(JSON.stringify(cmd));
         }
+
         case 'showSRP': {
-            return showSRP(cmd);
+            return showSRP(cmd)
         }
         case 'getWorkerClientID': {
-            cmd.data = [ClientIDworker];
-            logger(`Worker encryptWorkerDoCommand got getWorkerClientID ClientIDworker = [${ClientIDworker}]`);
-            return responseChannel.postMessage(JSON.stringify(cmd));
+            cmd.data = [ClientIDworker]
+            logger(`Worker encryptWorkerDoCommand got getWorkerClientID ClientIDworker = [${ClientIDworker}]`)
+            return responseChannel.postMessage(JSON.stringify(cmd))
         }
+
         case 'createAccount': {
-            return createAccount(cmd);
+            return createAccount(cmd)
         }
+
         case 'getContainer': {
-            cmd.data = [platform];
-            return returnUUIDChannel(cmd);
+            cmd.data = [platform]
+            return returnUUIDChannel(cmd)
         }
+
         case 'testPasscode': {
-            return testPasscode(cmd);
+            return testPasscode(cmd)
         }
         case "showLeaderboard": {
-            cmd.data[0] = leaderboardData;
-            return returnUUIDChannel(cmd);
+            cmd.data[0] = leaderboardData
+            return returnUUIDChannel(cmd)
         }
+
         case 'importWallet': {
-            return importWallet(cmd);
+            return importWallet(cmd)
         }
+
         case 'SaaSRegister': {
-            return logger(`processCmd on SaaSRegister`);
+            return logger(`processCmd on SaaSRegister`)
         }
+
         case 'encrypt_deletePasscode': {
-            cmd.data = [initNullSystemInitialization()];
-            returnUUIDChannel(cmd);
-            return await deleteExistDB();
+            cmd.data = [initNullSystemInitialization()]
+            returnUUIDChannel(cmd)
+            return await deleteExistDB()
         }
 
 

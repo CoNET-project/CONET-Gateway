@@ -33,16 +33,17 @@ interface connectRequest {
 }
 
 type nodes_info = {
-	country: string
+	country?: string
 	customs_review_total?: number
 	ip_addr: string
-	last_online: boolean
+	last_online?: boolean
 	lat?: number
 	lon?: number
 	outbound_total?: number
 	region: string
 	armoredPublicKey: string
 	publicKeyObj?: any
+	domain?: string
 }
 
 interface connect_imap_reqponse {
@@ -236,6 +237,9 @@ interface conet_tokens {
 	blastETH: CryptoAsset
 	usdb: CryptoAsset
 
+	//	Arbitrum
+	arb_eth?: CryptoAsset
+	arb_usdt?: CryptoAsset
 	//	ETH
 	eth: CryptoAsset
 	usdt:CryptoAsset
@@ -392,7 +396,7 @@ interface CoNET_Module {
 	Web3Utils: any
 	forge: any
 	aesGcmEncrypt: (plaintext: string, password: string) => Promise<string> 
-	aesGcmDecrypt: (ciphertext: string, password: string) => Promise<string> 
+	aesGcmDecrypt: (ciphertext: string, password: string) => Promise<string>
 }
 
 type systemInitialization = {
@@ -405,7 +409,7 @@ type CoNETIndexDBInit = {
 	preferences: any
 }
 
-type SICommandObj_Command = 'getCoNETCashAccount'|'regiestRecipient'|'connecting'|'SaaS_Proxy'|'SaaS_Sock5'|'SaaS_Sock5_Data_Entry'
+type SICommandObj_Command = 'SaaS_Proxy'|'SaaS_Sock5'|'mining'
 
 interface SICommandObj {
 	command: SICommandObj_Command
