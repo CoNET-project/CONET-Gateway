@@ -338,53 +338,6 @@ const weiToEther = (wei: string, length: number) => {
 	}
 	return kkk.toFixed(length)
 }
-const getCNTPBalance: (Addr: string) => Promise<string> = (Addr: string) => {
-	const provider = new CoNETModule.Web3Eth(conet_rpc)
-	const eth = new CoNETModule.Web3Eth(provider)
-	const contract = new eth.eth.Contract(minERC20ABI, CNTP_Address)
-	
-	return new Promise (resolve => {
-		return contract.methods.balanceOf(Addr).call().then(result => {
-			const ss = weiToEther(eth.utils.fromWei(result,'ether'), 4)
-			return resolve (ss)
-		})
-	})
-	
-}
-
-// const getAllProfileUSDCBalance = () => {
-// 	const profiles = CoNET_Data?.profiles
-// 	if ( !profiles || !profiles.length ) {
-// 		return logger (`getAllProfileCoNETBalance error: have no CoNET_Data?.profiles!`)
-// 	}
-// 	const ret: any [] = []
-// 	profiles.forEach (async n => {
-// 		if ( n.keyID ) {
-// 			const newBalance = await getUSDCBalance (n.keyID)
-// 			if ( n.tokens.usdc.balance !== newBalance ) {
-// 				n.tokens.usdc.balance = newBalance
-// 				ret.push ({
-// 					keyID: n.keyID,
-// 					tokens: {
-// 						usdc: {
-// 							balance : n.tokens.usdc.balance
-// 						}
-// 					}
-// 				})
-// 				logger (`getAllProfileUSDCBalance USDC Balance changed!`)
-// 				logger (ret)
-// 			}
-// 		}
-		
-// 	})
-// 	if ( ret.length ) {
-// 		const cmd: worker_command = {
-// 			cmd: 'READY',
-// 			data: [ret]
-// 		}
-// 		returnCommand (cmd)
-// 	}
-// }
 
 
 const XMLHttpRequestTimeout = 30 * 1000
@@ -653,19 +606,6 @@ const getProfileFromKeyID = (keyID: string) => {
 // 	return storeProfile (cmd)
 	
 // }
-
-const getTxhashInfo = async (txhash: string, network: string) => {
-	const eth = new CoNETModule.Web3Eth ( new CoNETModule.Web3Eth.providers.HttpProvider(network))
-	let receipt
-	try {
-		receipt = await eth.eth.getTransaction(txhash)
-	} catch (ex) {
-		logger (`getTxhashInfo Error from [${ network }]`, ex )
-		return null
-	}
-	receipt.value = receipt.value.toString()/wei
-	return receipt
-}
 
 
 const getHtmlHeadersV2 = (rawHeaders: string|undefined, remoteSite: string ) => {
@@ -1479,13 +1419,6 @@ const fetchWithTimeout = async (resource, options: any) => {
 }
 
 
-const createKey = ( length: number ) => {
-
-	const eth = new CoNETModule.Web3Eth(conet_rpc)
-	const acc = eth.wallet.create(length)
-	return acc
-}
-
 const createGPGKey = async ( passwd: string, name: string, email: string ) => {
 	const userId = {
 		name: name,
@@ -1598,7 +1531,7 @@ const encryptWorkerDoCommand = async ( e: MessageEvent<any> ) => {
 
 		case 'isAddress' : {
 			const address = cmd.data[0]
-			const ret = CoNETModule.Web3Utils.isAddress (address)
+			const ret = ethers.isAddress (address)
 			cmd.data = [ret]
 			return returnCommand (cmd)
 		}

@@ -377,79 +377,6 @@ const getCONET_api_health = async () => {
 	return result?.health
 }
 
-const claimToken = async (profile: profile, CoNET_Data: encrypt_keys_object, assetName: string, cmd: worker_command) => {
-	const asset: CryptoAsset = profile.tokens[assetName]
-	let balance
-	if (!asset|| parseFloat(balance = asset.balance) < 0.0001) {
-		cmd.err = 'INVALID_DATA'
-		return returnUUIDChannel(cmd)
-	}
-
-	const health = await getCONET_api_health()
-	if (!health) {
-		cmd.err = 'Err_Server_Unreachable'
-		return returnUUIDChannel(cmd)
-	}
-
-	const rpc = getNetwork(assetName)
-	const contractAddr = getClaimableAddress(assetName)
-
-	if (!rpc|| !contractAddr) {
-		cmd.err = 'INVALID_DATA'
-		return returnUUIDChannel(cmd)
-	}
-
-	const conetProvider = new ethers.JsonRpcProvider(conet_rpc)
-	const wallet = new ethers.Wallet(profile.privateKeyArmor, conetProvider)
-
-	const contractObj = new ethers.Contract(contractAddr, claimableContract, wallet)
-
-	try {
-		const _balance = await contractObj.balanceOf(profile.keyID)
-		const tx = await contractObj.approve(claimAdmin, _balance)
-		await tx.wait()
-		logger(tx)
-	} catch (ex) {
-		cmd.err = 'Err_Existed'
-		return returnUUIDChannel(cmd)
-	}
-
-	const data = {
-		tokenName: assetName,
-		network: asset.network,
-		amount: balance
-	}
-
-	const message =JSON.stringify({ walletAddress: profile.keyID, data})
-	const messageHash = ethers.id(message)
-	const signMessage = CoNETModule.EthCrypto.sign(profile.privateKeyArmor, messageHash)
-
-	const sendData = {
-		message, signMessage
-	}
-	logger(sendData)
-	const url = `${ apiv2_endpoint }claimToken`
-	const result: any = await postToEndpoint(url, true, sendData)
-	if (!result) {
-		cmd.data = [false]
-		return returnUUIDChannel(cmd)
-	}
-	cmd.data = [true]
-	return returnUUIDChannel(cmd)
-}
-
-const unlock_cCNTP = async (profile: profile) => {
-	const message =JSON.stringify({ walletAddress: profile.keyID})
-	const messageHash = ethers.id(message)
-	const signMessage = CoNETModule.EthCrypto.sign(profile.privateKeyArmor, messageHash)
-	const sendData = {
-		message, signMessage
-	}
-	const url = `${ apiv2_endpoint }unlockCONET`
-	const result: any = await postToEndpoint(url, true, sendData)
-	return result
-}
-
 const getReferralsRate = async (wallet: string) => {
 	if (!wallet) {
 		return null
@@ -544,7 +471,7 @@ const _startMiningV2 = async (profile: profile, nodeInfo: nodes_info, cmd: worke
 }
 
 const createConnectCmd = async (currentProfile: profile, node: nodes_info, requestData: any = null) => {
-	if (!currentProfile.pgpKey|| !node.armoredPublicKey ) {
+	if (!currentProfile || !currentProfile.pgpKey|| !node.armoredPublicKey) {
 		logger (`currentProfile?.pgpKey[${currentProfile?.pgpKey}]|| !SaaSnode?.armoredPublicKey[${node?.armoredPublicKey}] Error`)
 		return null
 	}
@@ -560,15 +487,18 @@ const createConnectCmd = async (currentProfile: profile, node: nodes_info, reque
 	
 	logger(`createSock5ConnectCmd`)
 	const message =JSON.stringify(command)
-	const messageHash = ethers.id(message)
-	const signMessage = CoNETModule.EthCrypto.sign(currentProfile.privateKeyArmor, messageHash)
+	const wallet = new ethers.Wallet(currentProfile.privateKeyArmor)
+	// const messageHash = ethers.id(message)
+	//const signMessage = CoNETModule.EthCrypto.sign(currentProfile.privateKeyArmor, messageHash)
+	const signMessage = await wallet.signMessage(message)
+	
 
 	let privateKeyObj = null
 
 	try {
 		privateKeyObj = await makePrivateKeyObj (currentProfile.pgpKey.privateKeyArmor)
 	} catch (ex){
-		logger (ex)
+		return logger (ex)
 	}
 
 
@@ -587,8 +517,8 @@ const testFunction = async (cmd: worker_command) => {
 		return
 	}
 
-	// await getAllOtherAssets()
-	// await CONET_guardian_purchase(profiles[0], 1, 0.5, 'usdt')
+	await getAllOtherAssets()
+	await CONET_guardian_purchase(profiles[0], 1, 0.5, 'arb_usdt')
 
 	// _startMiningV2(profiles[0], node)
 

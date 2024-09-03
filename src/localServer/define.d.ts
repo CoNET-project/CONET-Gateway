@@ -389,12 +389,7 @@ interface webEndpointConnect {
 }
 
 interface CoNET_Module {
-	EthCrypto: any
-	Web3Providers: any
-	Web3EthAccounts: any
-	Web3Eth: any
-	Web3Utils: any
-	forge: any
+	// forge: any
 	aesGcmEncrypt: (plaintext: string, password: string) => Promise<string> 
 	aesGcmDecrypt: (ciphertext: string, password: string) => Promise<string>
 }
