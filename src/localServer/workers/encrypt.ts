@@ -40,12 +40,6 @@ let platform = {
 const LivenessListen = []
 
 const CoNETModule: CoNET_Module = {
-    EthCrypto: null,
-    Web3Providers: null,
-    Web3EthAccounts: null,
-    Web3Eth: null,
-    Web3Utils: null,
-    forge: null,
     aesGcmEncrypt: async (plaintext, password) => {
         const pwUtf8 = new TextEncoder().encode(password); // encode password as UTF-8
         const pwHash = await crypto.subtle.digest('SHA-256', pwUtf8); // hash the password
@@ -101,8 +95,9 @@ const initEncryptWorker = async () => {
 	self.importScripts ( 'https://cdnjs.cloudflare.com/ajax/libs/async/3.2.5/async.min.js' )
 	self.importScripts ( 'https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js' )
 	self.importScripts ( 'https://cdnjs.cloudflare.com/ajax/libs/jimp/0.22.12/jimp.min.js')
+
 	channelLoading.postMessage(30)
-	// self.importScripts ( 'https://cdnjs.cloudflare.com/ajax/libs/forge/1.3.1/forge.min.js' )
+	//self.importScripts ( 'https://cdn.jsdelivr.net/npm/eth-crypto@2.6.0/dist/lib/index.min.js' )
 
     //self.importScripts ( baseUrl + 'Pouchdb.js' )
     // self.importScripts (  baseUrl + 'PouchdbFind.js' )
@@ -119,7 +114,7 @@ const initEncryptWorker = async () => {
     channelLoading.postMessage(70)
     // self.importScripts ( baseUrl + 'seguroSetup.js' )
     self.importScripts(baseUrl + 'utilV2.js')
-    self.importScripts(baseUrl + 'CoNETModule.js')
+    //self.importScripts(baseUrl + 'CoNETModule.js')
     self.importScripts('https://cdnjs.cloudflare.com/ajax/libs/ethers/6.13.1/ethers.umd.min.js')
     workerReady = true
     channelLoading.postMessage(90)
@@ -204,20 +199,6 @@ let getFaucetCount = 0
 
 const processCmd = async (cmd: worker_command) => {
     switch (cmd.cmd) {
-        case 'claimToken': {
-            const _profile = cmd.data[0];
-            const assetName = cmd.data[1];
-            if (!_profile || !assetName || !CoNET_Data?.profiles) {
-                cmd.err = 'INVALID_DATA';
-                return returnUUIDChannel(cmd);
-            }
-            const index = CoNET_Data.profiles.findIndex(n => n.keyID.toLowerCase() === _profile.keyID.toLowerCase());
-            if (index < 0) {
-                cmd.err = 'INVALID_DATA';
-                return returnUUIDChannel(cmd);
-            }
-            return claimToken(CoNET_Data.profiles[index], CoNET_Data, assetName, cmd);
-        }
 
         case 'startMining': {
             return startMining(cmd);
@@ -625,12 +606,13 @@ const processCmd = async (cmd: worker_command) => {
 				cmd.err='FAILURE'
 				returnUUIDChannel(cmd)
 			}
-			const isAddr = CoNETModule.Web3Eth.utils.isAddress(referrer)
+			const isAddr = ethers.isAddress(referrer)
 
 			if (!isAddr) {
 				cmd.err='FAILURE'
 				return returnUUIDChannel(cmd)
 			}
+
 			const result = await registerReferrer(referrer)
 			if (result === false)  {
 				cmd.err='FAILURE'
@@ -765,26 +747,4 @@ let LivenessCurrentData = ['', '', null]
 //	Detect interruption of information from the server
 const listenServerTime = 6 * 1000
 const listenServerTimeCountMaximum = 4
-const stopLivenessUrl = 'https://api.openpgp.online:4001/api/livenessStop';
-const stopLiveness = async (cmd) => {
-    const profile = gettPrimaryProfile()
-    if (!profile) {
-        cmd.err = 'NOT_READY';
-        return returnUUIDChannel(cmd)
-    }
-    if (Liveness && typeof Liveness.abort === 'function') {
-        Liveness.abort()
-    }
-    Liveness = null
-    const message = JSON.stringify({ walletAddress: profile.keyID })
-    const messageHash = CoNETModule.EthCrypto.hash.keccak256(message)
-    const signMessage = CoNETModule.EthCrypto.sign(profile.privateKeyArmor, messageHash)
-    const data = {
-        message, signMessage
-    }
-    postToEndpoint(LivenessStopUrl, true, data).then(n => {
-        return returnUUIDChannel(cmd)
-    }).catch(ex => {
-        return returnUUIDChannel(cmd)
-    })
-}
+const stopLivenessUrl = 'https://api.openpgp.online:4001/api/livenessStop'
