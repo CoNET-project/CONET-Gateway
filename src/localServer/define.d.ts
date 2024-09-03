@@ -673,3 +673,11 @@ type ITypeTransferCount = {
 
 //
 //			git reset --soft HEAD~[number] to delete commit
+interface assetPrice {
+	name: string
+	price: number
+}
+interface assetOracle {
+	lastUpdate: number
+	assets: assetPrice[]
+}

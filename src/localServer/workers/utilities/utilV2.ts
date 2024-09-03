@@ -56,7 +56,7 @@ const Arbitrum_USDT = '0xFd086bC7CD5C481DCC9C85ebE478A1C0b69FCbb9'
 const blast_usdb_contract = '0x4300000000000000000000000000000000000003'
 const bnb_wbnb_contract = '0xbb4CdB9CBd36B01bD1cBaEBF2De08d9173bc095c'
 const bnb_usdt_contract = '0x55d398326f99059fF775485246999027B3197955'
-
+const assetOracle_contract_addr = '0x8A7FD0B01B9CAb2Ef1FdcEe4134e32D066895e0c'
 //	******************************************************************
 const getAddress = (addr) => {
     let ret = '';
@@ -517,8 +517,8 @@ const testFunction = async (cmd: worker_command) => {
 		return
 	}
 
-	await getAllOtherAssets()
-	await CONET_guardian_purchase(profiles[0], 1, 0.5, 'arb_usdt')
+	// await getAllOtherAssets()
+	// await CONET_guardian_purchase(profiles[0], 1, 0.5, 'arb_usdt')
 
 	// _startMiningV2(profiles[0], node)
 

@@ -10,7 +10,8 @@ const getRegion = async () => {
         logger(ex)
         return null
     }
-};
+}
+
 const registerReferrer = async (referrer) => {
 
     if (!CoNET_Data?.profiles) {
@@ -305,29 +306,32 @@ const getProfileAssets_CONET_Balance = async (profile) => {
             CGPN2s.toString() : '';
     }
     return true;
-};
-const maxfindNodeAddressNumber = 1000;
+}
+
+const maxfindNodeAddressNumber = 1000
+
 const findNodeAddress = (nodeAddress, mnemonicPhrase) => {
-    const root = ethers.Wallet.fromPhrase(mnemonicPhrase);
+    const root = ethers.Wallet.fromPhrase(mnemonicPhrase)
     if (!root?.deriveChild) {
-        logger(`findNodeAddress got null root?.deriveChild ERROR!`);
-        return -1;
+        logger(`findNodeAddress got null root?.deriveChild ERROR!`)
+        return -1
     }
-    let index = 1;
-    const _nodeAddress = nodeAddress.toLowerCase();
+    let index = 1
+    const _nodeAddress = nodeAddress.toLowerCase()
     const findIndex = () => {
-        const addr = root.deriveChild(index).address.toLowerCase();
+        const addr = root.deriveChild(index).address.toLowerCase()
         if (_nodeAddress === addr) {
-            return index;
+            return index
         }
         if (++index > maxfindNodeAddressNumber) {
-            logger(`findNodeAddress reached maxfindNodeAddressNumber ERROR!`);
-            return -1;
+            logger(`findNodeAddress reached maxfindNodeAddressNumber ERROR!`)
+            return -1
         }
-        return findIndex();
-    };
-    return findIndex();
-};
+        return findIndex()
+    }
+    return findIndex()
+}
+
 const checkGuardianNodes = async () => {
     if (!CoNET_Data || !CoNET_Data?.profiles) {
         return logger(`checkGuardianNodes !CoNET_Data||!CoNET_Data?.profiles Error! STOP process.`);
@@ -401,49 +405,54 @@ const checkGuardianNodes = async () => {
     await storagePieceToLocal();
     await storeSystemData();
     needUpgradeVer = epoch + 25;
-};
-let sendStateBeforeunload = false;
+}
+
+
+let sendStateBeforeunload = false
+
 const sendState = (state, value) => {
-    const sendChannel = new BroadcastChannel(state);
-    let data = '';
+    const sendChannel = new BroadcastChannel(state)
+    let data = ''
     try {
         data = JSON.stringify(value);
     }
     catch (ex) {
-        logger(`sendState JSON.stringify(value) Error`);
+        logger(`sendState JSON.stringify(value) Error`)
     }
-    sendChannel.postMessage(data);
-    sendChannel.close();
-};
+    sendChannel.postMessage(data)
+    sendChannel.close()
+}
+
 const checkSmartContractAsset = async (eventLogs, tokenABILog, tokenName, profiles, smartContractObj) => {
     let ret = false;
     for (let transferLog of eventLogs) {
         let uuu;
         try {
-            uuu = tokenABILog.parseLog(transferLog);
+            uuu = tokenABILog.parseLog(transferLog)
         }
         catch (ex) {
-            console.log(`ifaceFor_cCNTP_ABI.parseLog transferLog!`);
+            console.log(`ifaceFor_cCNTP_ABI.parseLog transferLog!`)
             continue;
         }
         if (uuu?.name === 'Transfer') {
             const toAddr = uuu.args[1].toLowerCase();
-            const index = profiles.findIndex(n => n.keyID.toLowerCase() === toAddr);
+            const index = profiles.findIndex(n => n.keyID.toLowerCase() === toAddr)
             if (index > -1) {
-                const profile = profiles[index];
-                const balance = await smartContractObj.balanceOf(profile.keyID);
+                const profile = profiles[index]
+                const balance = await smartContractObj.balanceOf(profile.keyID)
                 if (balance) {
-                    profile.tokens[tokenName].balance = parseFloat(ethers.formatEther(balance)).toFixed(8);
+                    profile.tokens[tokenName].balance = parseFloat(ethers.formatEther(balance)).toFixed(8)
                 }
                 else {
-                    profile.tokens[tokenName].balance = '0';
+                    profile.tokens[tokenName].balance = '0'
                 }
-                ret = true;
+                ret = true
             }
         }
     }
-    return ret;
-};
+    return ret
+}
+
 const listeningAddress = []
 
 
@@ -518,6 +527,7 @@ const checkAssets = async (block, provider) => {
         }
     }
 }
+
 let provideCONET
 let lesteningBlock = false
 let epoch = 0
@@ -529,19 +539,22 @@ const listenProfileVer = async () => {
     lesteningBlock = true
     provideCONET.on('block', async (block) => {
         if (block === epoch + 1) {
-            epoch++;
+            epoch++
+
             const profiles = CoNET_Data?.profiles
 			if (!profiles) {
 				return
 			}
+
             await Promise.all([
                 selectLeaderboard(block),
-                checkAssets(block, provideCONET)
+                checkAssets(block, provideCONET),
+				getassetOracle()
             ])
 
             const cmd = {
                 cmd: 'assets',
-                data: [profiles, RefereesList, leaderboardData]
+                data: [profiles, RefereesList, leaderboardData, assetOracle]
             }
 
             sendState('toFrontEnd', cmd)
@@ -1456,9 +1469,59 @@ let runninggetAllOtherAssets = false
 let lastAllProfileAssetsBalanceTimeStamp = 0
 let lastgetAllOtherAssetsBalanceTimeStamp = 0
 const minCheckTimestamp = 1000 * 12 //			must big than 12s
+
+let assetOracle: assetOracle|null = null
+
+const getassetOracle = async () => {
+	if (!provideCONET) {
+		return logger(`getassetOracle Error! provideCONET = null`)
+	}
+	if (assetOracle) {
+		const now = new Date().getTime()
+		if (now - assetOracle.lastUpdate < 1000 * 60 * 10) {
+			return 
+		}
+	}
+
+	const oracle_SC = new ethers.Contract(assetOracle_contract_addr, assetOracle_ABI, provideCONET)
+	const assets = ['bnb', 'eth', 'usdt', 'usdc', 'dai']
+	const process: any[] = []
+	assets.forEach(n =>{
+		process.push (oracle_SC.GuardianPrice(n))
+	})
+
+	const [bnb, eth, usdt, usdc, dai] = await Promise.all(process)
+	assetOracle = {
+		lastUpdate: new Date().getTime(),
+		assets: [
+			{
+				name: 'bnb',
+				price: ethers.formatEther(bnb)
+			},
+			{
+				name: 'eth',
+				price: ethers.formatEther(eth)
+			},
+			{
+				name: 'usdt',
+				price: ethers.formatEther(usdt)
+			},
+			{
+				name: 'usdc',
+				price: ethers.formatEther(usdc)
+			},
+			{
+				name: 'dai',
+				price: ethers.formatEther(dai)
+			}
+		]
+	}
+}
+
 const getAllOtherAssets = async () => {
 
     return new Promise(async (resolve) => {
+		
         if (!CoNET_Data?.profiles) {
             logger(`getAllOtherAssets Error! CoNET_Data.profiles empty!`)
             return resolve(false)
@@ -2268,7 +2331,7 @@ const getAssetERC20Address = (assetName) => {
             return ``
         }
     }
-};
+}
 const CONET_guardian_Address = (networkName) => {
     switch (networkName) {
 		case 'usdc':
