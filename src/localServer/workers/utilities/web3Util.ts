@@ -287,7 +287,7 @@ const getProfileAssets_allOthers_Balance = async (profile) => {
 		if (current.arb_eth) {
 			current.arb_eth.balance = arb_eth === false ? '': ethers.formatEther(arb_eth)
 		} else {
-			current.arb_usdt = {
+			current.arb_eth = {
 				balance: arb_eth === false ? '': ethers.formatEther(arb_eth),
 				history: [],
 				network: 'ARB',

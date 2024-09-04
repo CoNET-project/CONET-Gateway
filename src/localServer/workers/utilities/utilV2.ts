@@ -70,12 +70,12 @@ const eth_usdt_contract = '0xdac17f958d2ee523a2206206994597c13d831ec7'
 const assetOracle_contract_addr = '0x8A7FD0B01B9CAb2Ef1FdcEe4134e32D066895e0c'
 
 //		claimable
-const claimable_BNB_USDT = '0x519B1b9065D19Afa6A3c8665706F2Ed54f4c8E49'
-const claimable_USDT = '0xBa625663bC9ca1B96603bA5Eda06fc3494c622B2'
-const claimable_BNB = '0x814E40A046FcF5C08F33b08c6767c3e844F809D4'
-const claimable_ETH = '0x49C41D3d15bC38bBF7906284fc23410f2453943e'
-const claimable_Arb_ETH = '0xf3119FD54cc45d06080faae6cEb5567D5de90bA2'
-const claimable_Arb_USDT = '0xE66b5F1d7D0b199Aa9e9fd6cC16ac49AC3726A61'
+const claimable_BNB_USDT = '0x49d1E11A25E99015cAaE3e032a7ED23D4399F3f9'
+const claimable_USDT = '0x7D9F0564554325Cd114010fCDEc34Aee8ca7e22A'
+const claimable_BNB = '0xBE8184294613a6f2531A7EA996deD57cb8CAeB0B'
+const claimable_ETH = '0xAD7dEC79BC005F699Ef80EB53fF1a7E21E24A456'
+const claimable_Arb_ETH = '0xF406385E1A0389Ae35684D27c3Ef2799E88E2c4A'
+const claimable_Arb_USDT = '0xF40A8EFc8Dd47929ba8Ee9d5B3f1534239E930Fe'
 //	******************************************************************
 const getAddress = (addr) => {
     let ret = '';
@@ -391,15 +391,25 @@ const nodePrice = 1250
 const claimAdmin = '0x418833b70F882C833EF0F0Fcee3FB9d89C79d47C'
 const getClaimableAddress = (CONET_claimableName) => {
     switch (CONET_claimableName) {
-        case 'cUSDB': {
-            return '0x53Aee1f4c9b0ff76781eFAC6e20eAe4561e29E8A'
-        }
+        
         case 'cBNBUSDT': {
-            return '0xAE752B49385812AF323240b26A49070bB839b10D'
+            return claimable_BNB_USDT
         }
         case 'cUSDT': {
-            return '0x95A9d14fC824e037B29F1Fdae8EE3D9369B13915'
+            return claimable_USDT
         }
+		case 'cBNB': {
+			return claimable_BNB
+		}
+		case 'cArbETH': {
+			return claimable_Arb_ETH
+		}
+		case 'cArbUSDT': {
+			return claimable_Arb_USDT
+		}
+		case 'cETH': {
+			return claimable_ETH
+		}
         default: {
             return ''
         }
