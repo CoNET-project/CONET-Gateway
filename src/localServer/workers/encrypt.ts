@@ -2,36 +2,44 @@
 let passObj: passInit| null = null
 let workerReady = false
 let CoNET_Data: encrypt_keys_object | null = null
-let containerKeyObj:keyPair|null = null;
-let preferences: any = null;
-const CoNET_SI_Network_Domain = 'https://openpgp.online:4001';
-const conet_DL_endpoint = `${CoNET_SI_Network_Domain}/api/conet-faucet`;
-const conet_DL_getUSDCPrice_Endpoint = `${CoNET_SI_Network_Domain}/api/conet-price`;
+let containerKeyObj:keyPair|null = null
+let preferences: any = null
+
+const logger = (...argv: any ) => {
+    const date = new Date ()
+    const dateStrang = `%c [Seguro-worker INFO ${ date.getHours() }:${ date.getMinutes() }:${ date.getSeconds() }:${ date.getMilliseconds ()}]`
+	
+    return console.log ( dateStrang, 'color: #dcde56',  ...argv)
+}
+
+const CoNET_SI_Network_Domain = 'https://openpgp.online:4001'
+const conet_DL_endpoint = `${CoNET_SI_Network_Domain}/api/conet-faucet`
+const conet_DL_getUSDCPrice_Endpoint = `${CoNET_SI_Network_Domain}/api/conet-price`
 const conet_DL_getSINodes = `${CoNET_SI_Network_Domain}/api/conet-si-list`;
-const conet_DL_authorizeCoNETCashEndpoint = `${CoNET_SI_Network_Domain}/api/authorizeCoNETCash`;
-const conet_DL_regiestProfile = `${CoNET_SI_Network_Domain}/api/regiestProfileRoute`;
-const conet_DL_publishGPGKeyArmored = `${CoNET_SI_Network_Domain}/api/publishGPGKeyArmored`;
-const conet_DL_Liveness = `${CoNET_SI_Network_Domain}/api/livenessListening`;
-const gasFee = 30000;
-const wei = 10 ** 18;
-const gwei = 10 ** 9;
-const denominator = 1000000000000000000;
-const gasFeeEth = 0.000526;
-const GasToEth = 0.00000001;
-const mintCoNETCashEndpoint = `${CoNET_SI_Network_Domain}/api/mint_conetcash`;
-const openSourceEndpoint = 'https://s3.us-east-1.wasabisys.com/conet-mvp/router/';
-const databaseName = 'CoNET';
-let activeNodes = null;
-let Liveness:XMLHttpRequest|null = null;
+const conet_DL_authorizeCoNETCashEndpoint = `${CoNET_SI_Network_Domain}/api/authorizeCoNETCash`
+const conet_DL_regiestProfile = `${CoNET_SI_Network_Domain}/api/regiestProfileRoute`
+const conet_DL_publishGPGKeyArmored = `${CoNET_SI_Network_Domain}/api/publishGPGKeyArmored`
+const conet_DL_Liveness = `${CoNET_SI_Network_Domain}/api/livenessListening`
+const gasFee = 30000
+const wei = 10 ** 18
+const gwei = 10 ** 9
+const denominator = 1000000000000000000
+const gasFeeEth = 0.000526
+const GasToEth = 0.00000001
+const mintCoNETCashEndpoint = `${CoNET_SI_Network_Domain}/api/mint_conetcash`
+const openSourceEndpoint = 'https://s3.us-east-1.wasabisys.com/conet-mvp/router/'
+const databaseName = 'CoNET'
+let activeNodes = null
+let Liveness:XMLHttpRequest|null = null
 /**
  * 				CONET Platform
  *
  */
-const workerReadyChannel = 'conet-platform';
-const workerProcessChannel = 'workerLoader';
-const channelWrokerListenName = 'toMainWroker';
-const responseChannel = new BroadcastChannel('toServiceWroker');
-const channel = new BroadcastChannel(channelWrokerListenName);
+const workerReadyChannel = 'conet-platform'
+const workerProcessChannel = 'workerLoader'
+const channelWrokerListenName = 'toMainWroker'
+const responseChannel = new BroadcastChannel('toServiceWroker')
+const channel = new BroadcastChannel(channelWrokerListenName)
 /** */
 let platform = {
     passcode: 'NONE'
@@ -40,6 +48,7 @@ let platform = {
 const LivenessListen = []
 
 const CoNETModule: CoNET_Module = {
+	EthCrypto: null,
     aesGcmEncrypt: async (plaintext, password) => {
         const pwUtf8 = new TextEncoder().encode(password); // encode password as UTF-8
         const pwHash = await crypto.subtle.digest('SHA-256', pwUtf8); // hash the password
@@ -83,11 +92,11 @@ self.onhashchange = () => {
 
 const initEncryptWorker = async () => {
 
-	
     const baseUrl = self.name + '/utilities/'
 	const channelLoading = new BroadcastChannel(workerProcessChannel)
 	const channelPlatform = new BroadcastChannel(workerReadyChannel)
     self.importScripts ( baseUrl + 'Buffer.js' )
+	logger(`workerProcess: [10]`)
 	channelLoading.postMessage(10)
     self.importScripts ( 'https://cdn.jsdelivr.net/npm/openpgp@5.11.2/dist/openpgp.min.js' )
     self.importScripts ( 'https://cdnjs.cloudflare.com/ajax/libs/uuid/8.3.2/uuid.min.js' )
@@ -95,29 +104,33 @@ const initEncryptWorker = async () => {
 	self.importScripts ( 'https://cdnjs.cloudflare.com/ajax/libs/async/3.2.5/async.min.js' )
 	self.importScripts ( 'https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js' )
 	self.importScripts ( 'https://cdnjs.cloudflare.com/ajax/libs/jimp/0.22.12/jimp.min.js')
-
+	logger(`workerProcess: [30]`)
 	channelLoading.postMessage(30)
 	//self.importScripts ( 'https://cdn.jsdelivr.net/npm/eth-crypto@2.6.0/dist/lib/index.min.js' )
 
     //self.importScripts ( baseUrl + 'Pouchdb.js' )
     // self.importScripts (  baseUrl + 'PouchdbFind.js' )
     self.importScripts ( baseUrl + 'smartContractABI.js' )
+	self.importScripts(baseUrl + 'CoNETModule.js')
     self.importScripts(baseUrl + 'scrypt.js')
     // self.importScripts ( baseUrl + 'async.js' )
     self.importScripts(baseUrl + 'forge.all.min.js')
     channelLoading.postMessage(50)
+	logger(`workerProcess: [50]`)
     //self.importScripts ( baseUrl + 'openpgp.min.js' )
     self.importScripts(baseUrl + 'utilities.js')
     self.importScripts(baseUrl + 'web3Util.js')
     self.importScripts(baseUrl + 'generatePassword.js')
     self.importScripts(baseUrl + 'storage.js')
     channelLoading.postMessage(70)
+	logger(`workerProcess: [70]`)
     // self.importScripts ( baseUrl + 'seguroSetup.js' )
     self.importScripts(baseUrl + 'utilV2.js')
-    //self.importScripts(baseUrl + 'CoNETModule.js')
+    
     self.importScripts('https://cdnjs.cloudflare.com/ajax/libs/ethers/6.13.1/ethers.umd.min.js')
     workerReady = true
     channelLoading.postMessage(90)
+	logger(`workerProcess: [90]`)
     self.addEventListener('message', encryptWorkerDoCommand)
     channel.addEventListener('message', channelWorkerDoCommand)
     const cmd = {
@@ -201,35 +214,36 @@ const processCmd = async (cmd: worker_command) => {
     switch (cmd.cmd) {
 
         case 'startMining': {
-            return startMining(cmd);
+            return startMining(cmd)
         }
 		
         case 'stopMining': {
-            miningStatus = 'STOP';
-            return returnUUIDChannel(cmd);
+            miningStatus = 'STOP'
+            return returnUUIDChannel(cmd)
         }
 
         case 'unlock_cCNTP': {
-            const [_profile] = cmd.data;
+            const [_profile] = cmd.data
+
             if (!_profile) {
-                cmd.err = 'INVALID_DATA';
-                return returnUUIDChannel(cmd);
+                cmd.err = 'INVALID_DATA'
+                return returnUUIDChannel(cmd)
             }
-            const profiles = CoNET_Data?.profiles;
+            const profiles = CoNET_Data?.profiles
             if (!profiles) {
                 cmd.err = 'NOT_READY';
-                return returnUUIDChannel(cmd);
+                return returnUUIDChannel(cmd)
             }
-            const profileIndex = profiles.findIndex(n => n.keyID.toLowerCase() === _profile.keyID.toLowerCase());
+            const profileIndex = profiles.findIndex(n => n.keyID.toLowerCase() === _profile.keyID.toLowerCase())
             if (profileIndex < 0) {
-                cmd.err = 'INVALID_DATA';
-                return returnUUIDChannel(cmd);
+                cmd.err = 'INVALID_DATA'
+                return returnUUIDChannel(cmd)
             }
-            const profile = profiles[profileIndex];
-            profile.tokens.cCNTP.unlocked = true;
-            returnUUIDChannel(cmd);
-            needUpgradeVer = epoch + 25;
-            return;
+            const profile = profiles[profileIndex]
+
+            returnUUIDChannel(cmd)
+            needUpgradeVer = epoch + 25
+            return
         }
 
         case 'guardianPurchase': {
@@ -243,7 +257,50 @@ const processCmd = async (cmd: worker_command) => {
                 cmd.err = 'NOT_READY'
                 return returnUUIDChannel(cmd)
             }
-            const profileIndex = profiles.findIndex(n => n.keyID.toLowerCase() === profile.keyID.toLowerCase());
+
+            const profileIndex = profiles.findIndex(n => n.keyID.toLowerCase() === profile.keyID.toLowerCase())
+            if (profileIndex < 0) {
+                cmd.err = 'INVALID_DATA'
+                return returnUUIDChannel(cmd)
+            }
+			
+            const health = await getCONET_api_health()
+            if (!health) {
+                cmd.err = 'Err_Server_Unreachable'
+                return returnUUIDChannel(cmd)
+            }
+
+            sendState('beforeunload', true)
+            const kk = await CONET_guardian_purchase(profile, nodes, amount, payAssetName);
+            sendState('beforeunload', false)
+            if (kk !== true) {
+                cmd.err = 'INVALID_DATA'
+                return returnUUIDChannel(cmd)
+            }
+            const cmd1 = {
+                cmd: 'purchaseStatus',
+                data: [4]
+            };
+            sendState('toFrontEnd', cmd1)
+            return returnUUIDChannel(cmd)
+        }
+
+        case 'transferToken': {
+            const [amount, sourceProfileKeyID, assetName, toAddress] = cmd.data
+            if (!assetName || !toAddress || !amount || !sourceProfileKeyID) {
+                cmd.err = 'INVALID_DATA'
+                return returnUUIDChannel(cmd)
+            }
+            if (!getAddress(toAddress) && !getAddress(sourceProfileKeyID)) {
+                cmd.err = 'INVALID_DATA'
+                return returnUUIDChannel(cmd)
+            }
+            const profiles = CoNET_Data?.profiles
+            if (!profiles) {
+                cmd.err = 'NOT_READY'
+                return returnUUIDChannel(cmd)
+            }
+            const profileIndex = profiles.findIndex((n) => n.keyID.toLowerCase() === sourceProfileKeyID.toLowerCase())
             if (profileIndex < 0) {
                 cmd.err = 'INVALID_DATA'
                 return returnUUIDChannel(cmd)
@@ -253,92 +310,62 @@ const processCmd = async (cmd: worker_command) => {
                 cmd.err = 'Err_Server_Unreachable'
                 return returnUUIDChannel(cmd)
             }
-
-            sendState('beforeunload', true);
-            const kk = await CONET_guardian_purchase(profile, nodes, amount, payAssetName);
+            const sourceProfile = profiles[profileIndex]
+            sendState('beforeunload', true)
+            const kk = await CONET_transfer_token(sourceProfile, toAddress, amount, assetName)
             sendState('beforeunload', false)
-            if (kk !== true) {
-                cmd.err = 'INVALID_DATA';
-                return returnUUIDChannel(cmd);
-            }
-            const cmd1 = {
-                cmd: 'purchaseStatus',
-                data: [4]
-            };
-            sendState('toFrontEnd', cmd1);
-            return returnUUIDChannel(cmd);
-        }
 
-        case 'transferToken': {
-            const [amount, sourceProfileKeyID, assetName, toAddress] = cmd.data;
-            if (!assetName || !toAddress || !amount || !sourceProfileKeyID) {
-                cmd.err = 'INVALID_DATA';
-                return returnUUIDChannel(cmd);
-            }
-            if (!getAddress(toAddress) && !getAddress(sourceProfileKeyID)) {
-                cmd.err = 'INVALID_DATA';
-                return returnUUIDChannel(cmd);
-            }
-            const profiles = CoNET_Data?.profiles;
-            if (!profiles) {
-                cmd.err = 'NOT_READY';
-                return returnUUIDChannel(cmd);
-            }
-            const profileIndex = profiles.findIndex((n) => n.keyID.toLowerCase() === sourceProfileKeyID.toLowerCase());
-            if (profileIndex < 0) {
-                cmd.err = 'INVALID_DATA';
-                return returnUUIDChannel(cmd);
-            }
-            const health = await getCONET_api_health();
-            if (!health) {
-                cmd.err = 'Err_Server_Unreachable';
-                return returnUUIDChannel(cmd);
-            }
-            const sourceProfile = profiles[profileIndex];
-            sendState('beforeunload', true);
-            const kk = await CONET_transfer_token(sourceProfile, toAddress, amount, assetName);
-            sendState('beforeunload', false);
             if (!!kk !== true) {
-                cmd.err = 'INVALID_DATA';
-                return returnUUIDChannel(cmd);
+                cmd.err = 'INVALID_DATA'
+                return returnUUIDChannel(cmd)
             }
+
             if (sourceProfile.keyID.toLowerCase() == miningAddress) {
-                cCNTPcurrentTotal -= amount;
+                cCNTPcurrentTotal -= amount
             }
+
             const cmd1 = {
                 cmd: 'tokenTransferStatus',
                 data: [4, kk]
             };
-            sendState('toFrontEnd', cmd1);
-            return returnUUIDChannel(cmd);
+            sendState('toFrontEnd', cmd1)
+            return returnUUIDChannel(cmd)
         }
 
         case 'estimateGas': {
-            const [amount, sourceProfileKeyID, assetName, toAddress] = cmd.data;
+            const [amount, sourceProfileKeyID, assetName, toAddress] = cmd.data
+
             if (!assetName || !toAddress || !amount || !sourceProfileKeyID) {
-                cmd.err = 'INVALID_DATA';
-                return returnUUIDChannel(cmd);
+                cmd.err = 'INVALID_DATA'
+                return returnUUIDChannel(cmd)
             }
-            const profiles = CoNET_Data?.profiles;
+
+            const profiles = CoNET_Data?.profiles
+
             if (!profiles) {
-                cmd.err = 'FAILURE';
-                return returnUUIDChannel(cmd);
+                cmd.err = 'FAILURE'
+                return returnUUIDChannel(cmd)
             }
-            const profileIndex = profiles.findIndex((n) => n.keyID.toLowerCase() === sourceProfileKeyID.toLowerCase());
-            if (profileIndex < 0) {
+
+            const profile = getProfileFromKeyID(sourceProfileKeyID)
+			
+            if (!profile || !profile?.tokens) {
                 cmd.err = 'INVALID_DATA';
-                return returnUUIDChannel(cmd);
+                return returnUUIDChannel(cmd)
             }
-            const profile = profiles[profileIndex];
-            const asset = profile.tokens[assetName];
-            if (!profile.privateKeyArmor ||
-                !asset) {
-                cmd.err = 'INVALID_DATA';
-                return returnUUIDChannel(cmd);
+
+
+            const asset = profile.tokens[assetName]
+
+
+            if (!profile.privateKeyArmor || !asset) {
+                cmd.err = 'INVALID_DATA'
+                return returnUUIDChannel(cmd)
             }
-            const data: any = await getEstimateGasForTokenTransfer(profile.privateKeyArmor, assetName, amount, toAddress);
-            cmd.data = [data.gasPrice, data.fee, true, 5000];
-            return returnUUIDChannel(cmd);
+
+            const data: any = await getEstimateGasForTokenTransfer(profile.privateKeyArmor, assetName, amount, toAddress)
+            cmd.data = [data.gasPrice, data.fee, true, 5000]
+            return returnUUIDChannel(cmd)
         }
 
         case 'isAddress': {
@@ -349,67 +376,71 @@ const processCmd = async (cmd: worker_command) => {
         }
 
         case 'burnCCNTP': {
-            const [_profile, total] = cmd.data;
+            const [_profile, total] = cmd.data
             if (!_profile) {
-                cmd.err = 'INVALID_DATA';
-                return returnUUIDChannel(cmd);
+                cmd.err = 'INVALID_DATA'
+                return returnUUIDChannel(cmd)
             }
-            const profiles = CoNET_Data?.profiles;
+
+            const profiles = CoNET_Data?.profiles
             if (!profiles) {
-                cmd.err = 'NOT_READY';
-                return returnUUIDChannel(cmd);
+                cmd.err = 'NOT_READY'
+                return returnUUIDChannel(cmd)
             }
-            const profileIndex = profiles.findIndex(n => n.keyID.toLowerCase() === _profile.keyID.toLowerCase());
+
+            const profileIndex = profiles.findIndex(n => n.keyID.toLowerCase() === _profile.keyID.toLowerCase())
+
             if (profileIndex < 0) {
-                cmd.err = 'INVALID_DATA';
+                cmd.err = 'INVALID_DATA'
                 return returnUUIDChannel(cmd);
             }
-            const profile = profiles[profileIndex];
-            if (!profile.tokens.cCNTP?.unlocked || parseFloat(profile.tokens.cCNTP.balance) < parseFloat(total)) {
-                cmd.err = 'INVALID_DATA';
-                return returnUUIDChannel(cmd);
-            }
-            const tx = await burnCCNTP(profile, total);
+
+            const profile = profiles[profileIndex]
+
+			
+
+            const tx = await burnCCNTP(profile, total)
             if (!tx) {
-                cmd.err = 'INVALID_DATA';
-                return returnUUIDChannel(cmd);
+                cmd.err = 'INVALID_DATA'
+                return returnUUIDChannel(cmd)
             }
-            profiles[0].burnCCNTP = tx;
-            cmd.data = [tx];
-            returnUUIDChannel(cmd);
-            await storagePieceToLocal();
-            await storeSystemData();
-            return;
+
+            profiles[0].burnCCNTP = tx
+            cmd.data = [tx]
+            returnUUIDChannel(cmd)
+            await storagePieceToLocal()
+            await storeSystemData()
+            return
         }
 
         case 'preBurnCCNTP': {
-            const [_profile, total] = cmd.data;
+
+            const [_profile, total] = cmd.data
             if (!_profile) {
-                cmd.err = 'INVALID_DATA';
-                return returnUUIDChannel(cmd);
+                cmd.err = 'INVALID_DATA'
+                return returnUUIDChannel(cmd)
             }
-            const profiles = CoNET_Data?.profiles;
+
+            const profiles = CoNET_Data?.profiles
             if (!profiles) {
-                cmd.err = 'NOT_READY';
-                return returnUUIDChannel(cmd);
+                cmd.err = 'NOT_READY'
+                return returnUUIDChannel(cmd)
             }
-            const profileIndex = profiles.findIndex(n => n.keyID.toLowerCase() === _profile.keyID.toLowerCase());
+
+            const profileIndex = profiles.findIndex(n => n.keyID.toLowerCase() === _profile.keyID.toLowerCase())
             if (profileIndex < 0) {
-                cmd.err = 'INVALID_DATA';
-                return returnUUIDChannel(cmd);
+                cmd.err = 'INVALID_DATA'
+                return returnUUIDChannel(cmd)
             }
-            const profile = profiles[profileIndex];
-            if (!profile.tokens.cCNTP?.unlocked || parseFloat(profile.tokens.cCNTP.balance) < parseFloat(total)) {
-                cmd.err = 'INVALID_DATA';
-                return returnUUIDChannel(cmd);
-            }
-            const gasFee = await preBurnCCNTP(profile, total);
+            const profile = profiles[profileIndex]
+            await getFaucet(profile)
+            const gasFee = await preBurnCCNTP(profile, total)
             if (!gasFee) {
-                cmd.err = 'INVALID_DATA';
-                return returnUUIDChannel(cmd);
+                cmd.err = 'INVALID_DATA'
+                return returnUUIDChannel(cmd)
             }
-            cmd.data = [gasFee];
-            return returnUUIDChannel(cmd);
+            cmd.data = [gasFee]
+            return returnUUIDChannel(cmd)
         }
 
 		case 'startSilentPass': {
@@ -678,6 +709,7 @@ const processCmd = async (cmd: worker_command) => {
  *
  */
 initEncryptWorker()
+
 const fetchProxyData = async (url, data, callBack) => {
     const xhr = new XMLHttpRequest();
     let last_response_len = 0;
@@ -731,12 +763,14 @@ const fetchProxyData = async (url, data, callBack) => {
     // })
     // logger (`fetchProxyData [${url}]`)
 }
+
 const returnNullContainerUUIDChannel = async (cmd) => {
     delete cmd.err;
     initNullSystemInitialization();
     cmd.data = ['NoContainer'];
     returnUUIDChannel(cmd);
 }
+
 //	for production
 const LivenessURL1 = 'https://api.openpgp.online:4001/api/livenessListening'
 const LivenessStopUrl = `https://api.openpgp.online:4001/api/stop-liveness`

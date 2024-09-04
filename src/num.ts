@@ -14,9 +14,8 @@
 // const Web3 = require('web3')
 // CoNETModule.Web3Eth = Web3
 // CoNETModule.Web3Providers = require ('web3').providers
-//CoNETModule.EthCrypto = require('eth-crypto')
 
-
+CoNETModule.EthCrypto = require('eth-crypto')
 
 //  web3js:             ^4.1.2
 //  eth-crypto:         ^2.6.0
