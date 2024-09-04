@@ -16,17 +16,25 @@ const referrerCNTP = '0x63377154F972f6FC1319e382535EC9691754bd18';
 const CNTPV1 = '0xb182d2c2338775B0aC3e177351D638b23D3Da4Ea'.toLowerCase()
 const blast_mainnet_CNTP = '0x0f43685B2cB08b9FB8Ca1D981fF078C22Fec84c5'
 //const CNTPB_contract = '0x6056473ADD8bC89a95325845F6a431CCD7A849bb'
-const eth_usdt_contract = '0xdac17f958d2ee523a2206206994597c13d831ec7'
 
-const conet_dWETH = '0x84b6d6A6675F830c8385f022Aefc9e3846A89D3B';
-const conet_dUSDT = '0x0eD55798a8b9647f7908c72a0Ce844ad47274422';
-const conet_dWBNB = '0xd8b094E91c552c623bc054085871F6c1CA3E5cAd';
-const Claimable_ETHUSDTv3 = '0x79E2EdE2F479fA7E44C89Bbaa721EB1f0d529b7B'.toLowerCase();
-const Claimable_BNBUSDTv3 = '0xd008D56aa9A963FAD8FB1FbA1997C28dB85933e6'.toLowerCase();
-const Claimable_BlastUSDBv3 = '0x16cDB3C07Db1d58330FF0e930C3C58935CB6Cc97'.toLowerCase();
+
+const conet_dWETH = '0x84b6d6A6675F830c8385f022Aefc9e3846A89D3B'
+const conet_dUSDT = '0x0eD55798a8b9647f7908c72a0Ce844ad47274422'
+const conet_dWBNB = '0xd8b094E91c552c623bc054085871F6c1CA3E5cAd'
+// const Claimable_ETHUSDTv3 = '0x79E2EdE2F479fA7E44C89Bbaa721EB1f0d529b7B'.toLowerCase()
+// const Claimable_BNBUSDTv3 = '0xd008D56aa9A963FAD8FB1FbA1997C28dB85933e6'.toLowerCase()
+// const Claimable_BlastUSDBv3 = '0x16cDB3C07Db1d58330FF0e930C3C58935CB6Cc97'.toLowerCase()
 //const Claimable_BlastETH = '0x47A10d4BBF904BCd550200CcBB6266fB88EB9804'.toLowerCase()
 // const Claimable_BNB = '0x8E7B1D5f6DF4B0d7576B7430ECB1bEEE0b612382'.toLowerCase()
 // const Claimable_ETH = '0x6Eb683B666310cC4E08f32896ad620E5F204c8f8'.toLowerCase()
+
+
+
+
+
+
+
+
 const CONET_Guardian_Nodes1 = '0x5e4aE81285b86f35e3370B3EF72df1363DD05286';
 const fx168OrderContractAddress = '0x9aE6D3Bd3029C8B2A73817b9aFa1C029237E3e30';
 const FragmentNameDeriveChildIndex = 65536;
@@ -56,7 +64,18 @@ const Arbitrum_USDT = '0xFd086bC7CD5C481DCC9C85ebE478A1C0b69FCbb9'
 const blast_usdb_contract = '0x4300000000000000000000000000000000000003'
 const bnb_wbnb_contract = '0xbb4CdB9CBd36B01bD1cBaEBF2De08d9173bc095c'
 const bnb_usdt_contract = '0x55d398326f99059fF775485246999027B3197955'
+
+const eth_usdt_contract = '0xdac17f958d2ee523a2206206994597c13d831ec7'
+
 const assetOracle_contract_addr = '0x8A7FD0B01B9CAb2Ef1FdcEe4134e32D066895e0c'
+
+//		claimable
+const claimable_BNB_USDT = '0x519B1b9065D19Afa6A3c8665706F2Ed54f4c8E49'
+const claimable_USDT = '0xBa625663bC9ca1B96603bA5Eda06fc3494c622B2'
+const claimable_BNB = '0x814E40A046FcF5C08F33b08c6767c3e844F809D4'
+const claimable_ETH = '0x49C41D3d15bC38bBF7906284fc23410f2453943e'
+const claimable_Arb_ETH = '0xf3119FD54cc45d06080faae6cEb5567D5de90bA2'
+const claimable_Arb_USDT = '0xE66b5F1d7D0b199Aa9e9fd6cC16ac49AC3726A61'
 //	******************************************************************
 const getAddress = (addr) => {
     let ret = '';
@@ -126,12 +145,16 @@ const testPasscode = async (cmd) => {
 
     CoNET_Data.profiles.forEach(async (n) => {
         n.keyID = n.keyID.toLocaleLowerCase()
-        await initV2(n)
-        n.tokens.cCNTP.unlocked = true
+		await Promise.all([
+			initV2(n),
+			getFaucet(n)
+		])
+       
     })
 
     authorization_key = cmd.data[0] = uuid.v4()
     returnUUIDChannel(cmd)
+	await getFaucet(CoNET_Data.profiles[0])
     await getAllProfileAssetsBalance()
     await getAllReferrer()
     await testFunction(cmd)
@@ -203,15 +226,19 @@ const importWallet = async (cmd) => {
             publicKeyArmor: key.publicKey
         },
         referrer: null,
-        tokens: initProfileTokens(),
+        tokens: null,
         data
-    };
-    CoNET_Data.profiles.push(profile);
-    cmd.data[0] = CoNET_Data.profiles;
-    returnUUIDChannel(cmd);
-    await storagePieceToLocal();
-    await storeSystemData();
-    needUpgradeVer = epoch + 25;
+    }
+
+    CoNET_Data.profiles.push(profile)
+    cmd.data[0] = CoNET_Data.profiles
+    returnUUIDChannel(cmd)
+	await initV2(profile)
+	await getFaucet(profile)
+
+    await storagePieceToLocal()
+    await storeSystemData()
+    needUpgradeVer = epoch + 25
 }
 
 const updateProfile = async (cmd) => {
@@ -269,7 +296,7 @@ const addProfile = async (cmd) => {
         },
         isNode: false,
         referrer: null,
-        tokens: initProfileTokens(),
+        tokens: null,
         data: UIData
     };
     CoNET_Data.profiles.push(profile);
@@ -324,30 +351,39 @@ const recoverAccount = async (cmd) => {
 }
 
 const prePurchase = async (cmd) => {
-    const [nodes, amount, purchaseProfile, payAssetName] = cmd.data;
+    const [nodes, amount, purchaseProfile, payAssetName] = cmd.data
     if (!nodes || !amount || !purchaseProfile || !payAssetName) {
-        cmd.err = 'INVALID_DATA';
-        return returnUUIDChannel(cmd);
+        cmd.err = 'INVALID_DATA'
+        return returnUUIDChannel(cmd)
     }
-    const profiles = CoNET_Data?.profiles;
+    const profiles = CoNET_Data?.profiles
     if (!profiles) {
-        cmd.err = 'FAILURE';
-        return returnUUIDChannel(cmd);
+        cmd.err = 'FAILURE'
+        return returnUUIDChannel(cmd)
     }
     const profileIndex = profiles.findIndex(n => n.keyID.toLowerCase() === purchaseProfile.keyID.toLowerCase());
     if (profileIndex < 0) {
-        cmd.err = 'INVALID_DATA';
-        return returnUUIDChannel(cmd);
+        cmd.err = 'INVALID_DATA'
+        return returnUUIDChannel(cmd)
     }
-    const profile = profiles[profileIndex];
-    const asset = profile.tokens[payAssetName];
-    if (!profile.privateKeyArmor || !asset || !CONET_guardian_Address(payAssetName)) {
-        cmd.err = 'INVALID_DATA';
-        return returnUUIDChannel(cmd);
+
+    const profile = profiles[profileIndex]
+
+	if (!profile.tokens) {
+		cmd.err = 'INVALID_DATA'
+        return returnUUIDChannel(cmd)
+	}
+
+    const asset = profile.tokens[payAssetName]
+
+    if (!profile.privateKeyArmor || !asset) {
+        cmd.err = 'INVALID_DATA'
+        return returnUUIDChannel(cmd)
     }
-    const data: any = await getEstimateGas(profile.privateKeyArmor, payAssetName, amount, profile.keyID);
-    cmd.data = [data.gasPrice, data.fee, true, 5000];
-    return returnUUIDChannel(cmd);
+
+    const data: any = await getEstimateGas(profile.privateKeyArmor, payAssetName, amount)
+    cmd.data = [data.gasPrice, data.fee, true, 5000]
+    return returnUUIDChannel(cmd)
 }
 
 const nodePrice = 1250
@@ -415,7 +451,10 @@ const _startMiningV2 = async (profile: profile, nodeInfo: nodes_info, cmd: worke
 
     const postData = await createConnectCmd(profile, nodeInfo)
     let first = true
-    cCNTPcurrentTotal = parseFloat(profile.tokens.cCNTP.balance || '0')
+
+	const balance = profile?.tokens?.cCNTP?.balance
+	cCNTPcurrentTotal = !balance ? 0 : parseFloat(balance)
+
 	if (!nodeInfo?.domain || !postData) {
 		if (cmd) {
 			cmd.err = 'FAILURE'
@@ -438,26 +477,50 @@ const _startMiningV2 = async (profile: profile, nodeInfo: nodes_info, cmd: worke
             logger(err);
             if (cmd) {
                 cmd.err = err;
-                return returnUUIDChannel(cmd);
+                return returnUUIDChannel(cmd)
             }
-            return;
+            return
         }
-        logger('success', _data);
-        const kk = JSON.parse(_data);
-        mining_epoch = epoch;
+
+        logger('_startMiningV2 success', _data)
+        const kk = JSON.parse(_data)
+        mining_epoch = epoch
+
+		if (!profile?.tokens) {
+			profile.tokens = {}
+		}
+
+		if (!profile.tokens?.cCNTP) {
+			profile.tokens.cCNTP = {
+				balance: '0',
+				history: [],
+				network: 'CONET Holesky',
+				decimal: 18,
+				contract: cCNTP_new_Addr,
+				name: 'cCNTP'
+			}
+			
+		}
+
+		const cCNTP = profile.tokens.cCNTP
+
         if (first) {
-            miningProfile = profile;
-            first = false;
+            miningProfile = profile
+            first = false
+
             if (cmd) {
-                cCNTPcurrentTotal = parseFloat(profile.tokens.cCNTP.balance || '0');
-                kk['currentCCNTP'] = '0';
-                cmd.data = ['success', JSON.stringify(kk)];
-                return returnUUIDChannel(cmd);
+
+                cCNTPcurrentTotal = parseFloat(cCNTP.balance || '0');
+                kk['currentCCNTP'] = '0'
+                cmd.data = ['success', JSON.stringify(kk)]
+                return returnUUIDChannel(cmd)
             }
-            return;
+
+            return
         }
-        kk.rate = typeof kk.rate === 'number' ? kk.rate.toFixed(10) : parseFloat(kk.rate).toFixed(10);
-        kk.currentCCNTP = (parseFloat(profile.tokens.cCNTP.balance || '0') - cCNTPcurrentTotal).toFixed(8);
+
+        kk.rate = typeof kk.rate === 'number' ? kk.rate.toFixed(10) : parseFloat(kk.rate).toFixed(10)
+        kk.currentCCNTP = (parseFloat(profile.tokens.cCNTP.balance || '0') - cCNTPcurrentTotal).toFixed(8)
         if (kk.currentCCNTP < 0) {
             cCNTPcurrentTotal = parseFloat(profile.tokens.cCNTP.balance);
             kk.currentCCNTP = 0;
@@ -465,7 +528,7 @@ const _startMiningV2 = async (profile: profile, nodeInfo: nodes_info, cmd: worke
         const cmdd = {
             cmd: 'miningStatus',
             data: [JSON.stringify(kk)]
-        };
+        }
         sendState('toFrontEnd', cmdd)
     })
 }
@@ -518,7 +581,7 @@ const testFunction = async (cmd: worker_command) => {
 	}
 
 	// await getAllOtherAssets()
-	// await CONET_guardian_purchase(profiles[0], 1, 0.5, 'arb_usdt')
+	// await CONET_guardian_purchase(profiles[0], 1, 0.01, 'wusdt')
 
 	// _startMiningV2(profiles[0], node)
 

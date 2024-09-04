@@ -214,40 +214,41 @@ type regionType = {
 
 interface conet_tokens {
 	//	CONET Holesky
-	conet:CryptoAsset
-	CNTP: CryptoAsset
-	CNTPV1: CryptoAsset
-	cCNTP: CryptoAsset
-
-	dWBNB: CryptoAsset
-	dWETH: CryptoAsset
-	dUSDT: CryptoAsset
+	conet?:CryptoAsset
+	CNTP?: CryptoAsset
+	CNTPV1?: CryptoAsset
+	cCNTP?: CryptoAsset
 
 	//	CONET Holesky Claimable
-	cUSDB: CryptoAsset
-	cBNBUSDT: CryptoAsset
+	cUSDB?: CryptoAsset
+	cBNBUSDT?: CryptoAsset
 	// cBlastETH: CryptoAsset
-	// cBNB: CryptoAsset
-	// cETH: CryptoAsset
-	cUSDT: CryptoAsset
-	CGPNs: CryptoAsset
-	CGPN2s: CryptoAsset
+	cBNB?: CryptoAsset
+	cETH?: CryptoAsset
+	cArbETH?:CryptoAsset
+	cArbUSDT?:CryptoAsset
+
+
+	cUSDT?: CryptoAsset
+	CGPNs?: CryptoAsset
+	CGPN2s?: CryptoAsset
+
 	//	blast mainchain
 
-	blastETH: CryptoAsset
-	usdb: CryptoAsset
+	// blastETH?: CryptoAsset
+	// usdb?: CryptoAsset
 
 	//	Arbitrum
 	arb_eth?: CryptoAsset
 	arb_usdt?: CryptoAsset
 	//	ETH
-	eth: CryptoAsset
-	usdt:CryptoAsset
+	eth?: CryptoAsset
+	usdt?:CryptoAsset
 
 	//	BSC
-	bnb: CryptoAsset
-	wbnb: CryptoAsset
-	wusdt: CryptoAsset
+	bnb?: CryptoAsset
+	wbnb?: CryptoAsset
+	wusdt?: CryptoAsset
 }
 
 interface profile extends keyPair {
@@ -257,7 +258,7 @@ interface profile extends keyPair {
 	emailAddr?: string
 	hdPath: string
 	index: number
-	tokens: conet_tokens
+	tokens: conet_tokens|null
 	isNode: boolean
 	referrer: string|null|undefined
 	data?: any
@@ -392,6 +393,7 @@ interface CoNET_Module {
 	// forge: any
 	aesGcmEncrypt: (plaintext: string, password: string) => Promise<string> 
 	aesGcmDecrypt: (ciphertext: string, password: string) => Promise<string>
+	EthCrypto: any
 }
 
 type systemInitialization = {
@@ -502,6 +504,7 @@ interface requestObj {
     uuid: string|undefined
     socks?: string
 }
+
 interface VE_IPptpStream {
     type?: string
     buffer: string

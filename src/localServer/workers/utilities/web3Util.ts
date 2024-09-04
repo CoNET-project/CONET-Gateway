@@ -67,6 +67,7 @@ const preBurnCCNTP = async (profile, totalBurn) => {
 }
 
 const burnCCNTP = async (profile, totalBurn) => {
+	
     const walletObj = new ethers.Wallet(profile.privateKeyArmor, provideCONET)
     const erc20 = new ethers.Contract(cCNTP_new_Addr, blast_CNTPAbi, walletObj)
     const value = parseEther(totalBurn, 'ccntp')
@@ -221,91 +222,301 @@ const getProfileAssets_allOthers_Balance = async (profile) => {
 		if (!provideArbOne) {
 			provideArbOne = new ethers.JsonRpcProvider(Arbitrum_One_RPC)
 		}
+		if (!profile.tokens) {
+			profile.tokens = {}
+		}
 
         const current: conet_tokens = profile.tokens
-        checkTokenStructure(current)
-        
        
        
         // const walletETH = new ethers.Wallet(profile.privateKeyArmor, provideETH)
-        const [balanceUSDT, ETH, blastETH, usdb, bnb, wusdt, arb_usdt, arb_eth] = await Promise.all([
+        const [
+			usdt, eth, 
+			bnb, wusdt,
+			arb_usdt, arb_eth
+		] = await Promise.all([
             scanUSDT(key),
             scanETH(key),
-            scanBlastETH(key),
-            scanUSDB(key),
+
             scanBNB(key),
             scanWUSDT(key),
+
 			scanArbUSDT(key),
 			scanArbETH(key)
         ])
 
-        current.usdt.balance =  typeof balanceUSDT === 'boolean' ? '0': ethers.formatUnits(balanceUSDT,6)
+		if (current.usdt) {
+			current.usdt.balance = usdt === false ? '': ethers.formatUnits(usdt, 6)
+		} else {
+			current.usdt = {
+				balance: usdt === false ? '': ethers.formatUnits(usdt, 6),
+				history: [],
+				network: 'ETH',
+				decimal: 6,
+				contract: eth_usdt_contract,
+				name: 'usdt'
+			}
+		}
+
+		if (current.eth) {
+			current.eth.balance = eth === false ? '': ethers.formatUnits(eth, 6)
+		} else {
+			current.eth = {
+				balance: eth === false ? '': ethers.formatUnits(eth, 6),
+				history: [],
+				network: 'ETH',
+				decimal: 18,
+				contract: '',
+				name: 'eth'
+			}
+		}
+
+        if (current.arb_usdt) {
+			current.arb_usdt.balance = arb_usdt === false ? '': ethers.formatUnits(arb_usdt, 6)
+		} else {
+			current.arb_usdt = {
+				balance: arb_usdt === false ? '': ethers.formatUnits(arb_usdt, 6),
+				history: [],
+				network: 'ARB',
+				decimal: 6,
+				contract: Arbitrum_USDT,
+				name: 'arb_usdt'
+			}
+		}
 	
-		const balance_arb_usdt = typeof arb_usdt ==='boolean'? '0': ethers.formatUnits(arb_usdt,6)
-		const balance_arb_eth = typeof arb_eth ==='boolean'? '0': ethers.formatEther(arb_eth)
-		
-		current.arb_usdt = {
-			balance: balance_arb_usdt,
-			history: [],
-			network: 'ARB',
-			decimal: 6,
-			contract: Arbitrum_USDT,
-			name: 'arb_usdt'
+		if (current.arb_eth) {
+			current.arb_eth.balance = arb_eth === false ? '': ethers.formatEther(arb_eth)
+		} else {
+			current.arb_usdt = {
+				balance: arb_eth === false ? '': ethers.formatEther(arb_eth),
+				history: [],
+				network: 'ARB',
+				decimal: 18,
+				contract: '',
+				name: 'arb_eth'
+			}
 		}
-		current.arb_eth = {
-			balance: balance_arb_eth,
-			history: [],
-			network: 'ARB',
-			decimal: 18,
-			contract: '',
-			name: 'arb_eth'
+	
+		if (current.bnb) {
+			current.bnb.balance = bnb === false ? '': ethers.formatEther(bnb)
+		} else {
+			current.bnb = {
+				balance: bnb === false ? '': ethers.formatEther(bnb),
+				history: [],
+				network: 'BSC',
+				decimal: 18,
+				contract: '',
+				name: 'bnb'
+			}
 		}
 		
-		
-        current.eth.balance = ETH === BigInt(0) ? '0' : typeof ETH !== 'boolean' ? parseFloat(ethers.formatEther(ETH)).toFixed(6) : ''
-        current.blastETH.balance = blastETH === BigInt(0) ? '0' : typeof blastETH !== 'boolean' ? parseFloat(ethers.formatEther(blastETH)).toFixed(6) : ''
-        current.usdb.balance = usdb === BigInt(0) ? '0' : typeof usdb !== 'boolean' ? parseFloat(ethers.formatEther(usdb)).toFixed(6) : ''
-        current.bnb.balance = bnb === BigInt(0) ? '0' : typeof bnb !== 'boolean' ? parseFloat(ethers.formatEther(bnb)).toFixed(6) : ''
-        current.wusdt.balance = wusdt === BigInt(0) ? '0' : typeof wusdt !== 'boolean' ? parseFloat(ethers.formatEther(wusdt)).toFixed(6) : ''
+        if (current.wusdt) {
+			current.wusdt.balance = wusdt === false ? '': ethers.formatEther(wusdt)
+		} else {
+			current.wusdt = {
+				balance: wusdt === false ? '': ethers.formatEther(wusdt),
+				history: [],
+				network: 'BSC',
+				decimal: 18,
+				contract: bnb_usdt_contract,
+				name: 'wusdt'
+			}
+		}
+        
     }
     return true
 }
-const getProfileAssets_CONET_Balance = async (profile) => {
-    const key = profile.keyID;
-    if (key) {
-        const current = profile.tokens;
-        checkTokenStructure(current);
-        const provideETH = new ethers.JsonRpcProvider(ethRpc());
 
-        const provideBlastMainChain = new ethers.JsonRpcProvider(blast_mainnet());
-        const provideBNB = new ethers.JsonRpcProvider(bsc_mainchain);
+const getProfileAssets_CONET_Balance = async (profile: profile) => {
+    const key = profile.keyID
+    if (key) {
+        
+		if (!profile.tokens) {
+			profile.tokens = {}
+		}
+
+		const current = profile.tokens
+
+        const provideETH = new ethers.JsonRpcProvider(ethRpc())
+
+        const provideBlastMainChain = new ethers.JsonRpcProvider(blast_mainnet())
+        const provideBNB = new ethers.JsonRpcProvider(bsc_mainchain)
         // const walletETH = new ethers.Wallet(profile.privateKeyArmor, provideETH)
-        const [balanceCNTPV1, balanceCCNTP, conet_Holesky, BNBUSDT, BlastUSDB, ETHUSDT, CGPNs, CGPN2s] = await Promise.all([
+        const [
+			CNTPV1, cCNTP, conet,
+
+			cBNBUSDT, cUSDT, cBNB, cETH, cArbETH, cArbUSDT,
+
+			CGPNs, CGPN2s
+		] = await Promise.all([
             //scanCNTP (key, provideBlastMainChain),
             scanCNTPV1(key),
             scanCCNTP(key),
             scanCONETHolesky(key, provideCONET),
+
             scanCONET_Claimable_BNBUSDT(key),
-            scanCONET_Claimable_BlastUSDB(key),
             scanCONET_Claimable_ETHUSDT(key),
+			scanCONET_Claimable_BNB(key),
+			scanCONET_Claimable_ETH(key),
+			scanCONET_Claimable_Arb_ETH(key),
+			scanCONET_Claimable_Arb_USDT(key),
+
             scan_Guardian_Nodes(key, provideCONET),
             scan_Guardian_ReferralNodes(key, provideCONET)
-        ]);
-        //current.CNTP.balance = balanceCNTP === BigInt(0) ? '0' : typeof balanceCNTP !== 'boolean' ? parseFloat(ethers.formatEther(balanceCNTP)).toFixed(6) : ''
-        current.CNTPV1.balance = balanceCNTPV1 === BigInt(0) ? '0' : typeof balanceCNTPV1 !== 'boolean' ? parseFloat(ethers.formatEther(balanceCNTPV1)).toFixed(6) : '';
-        current.cCNTP.balance = balanceCCNTP === BigInt(0) ? '0' : typeof balanceCCNTP !== 'boolean' ? parseFloat(ethers.formatEther(balanceCCNTP)).toFixed(6) : '';
-        current.conet.balance = conet_Holesky === BigInt(0) ? '0' : typeof conet_Holesky !== 'boolean' ? parseFloat(ethers.formatEther(conet_Holesky)).toFixed(6) : '';
-        current.cBNBUSDT.balance = BNBUSDT === BigInt(0) ? '0' : typeof BNBUSDT !== 'boolean' ? parseFloat(ethers.formatEther(BNBUSDT)).toFixed(6) : '';
-        current.cUSDB.balance = BlastUSDB === BigInt(0) ? '0' : typeof BlastUSDB !== 'boolean' ? parseFloat(ethers.formatEther(BlastUSDB)).toFixed(6) : '';
-        current.cUSDT.balance = ETHUSDT === BigInt(0) ? '0' : typeof ETHUSDT !== 'boolean' ? parseFloat(ethers.formatEther(ETHUSDT)).toFixed(6) : '';
-        current.CGPNs.balance = CGPNs !== 'boolean' ?
-            //	@ts-ignore
-            CGPNs.toString() : '';
-        current.CGPN2s.balance = CGPN2s !== 'boolean' ?
-            //	@ts-ignore
-            CGPN2s.toString() : '';
+        ])
+
+
+
+
+		if (current?.CNTPV1) {
+			current.CNTPV1.balance = CNTPV1 === false ? '' : parseFloat(ethers.formatEther(CNTPV1)).toFixed(6)
+		} else {
+			current.CNTPV1 = {
+				balance: CNTPV1 === false ? '' : parseFloat(ethers.formatEther(CNTPV1)).toFixed(6),
+				history: [],
+				network: 'CONET Holesky',
+				decimal: 18,
+				contract: CONET_CNTP_V1_Addr,
+				name: 'CNTPV1'
+			}
+		}
+
+		if (current?.cCNTP) {
+			current.cCNTP.balance = cCNTP === false ? '' : parseFloat(ethers.formatEther(cCNTP)).toFixed(6)
+		} else {
+			current.cCNTP = {
+				balance: cCNTP === false ? '' : parseFloat(ethers.formatEther(cCNTP)).toFixed(6),
+				history: [],
+				network: 'CONET Holesky',
+				decimal: 18,
+				contract: cCNTP_new_Addr,
+				name: 'cCNTP'
+			}
+		}
+
+		if (current?.conet) {
+			current.conet.balance = conet === false ? '' : parseFloat(ethers.formatEther(conet)).toFixed(6)
+		} else {
+			current.conet = {
+				balance: conet === false ? '' : parseFloat(ethers.formatEther(conet)).toFixed(6),
+				history: [],
+				network: 'CONET Holesky',
+				decimal: 18,
+				contract: '',
+				name: 'conet'
+			}
+		}
+		
+
+		//			Claimable Assets
+        
+			if (current?.cBNBUSDT) {
+				current.cBNBUSDT.balance = typeof cBNBUSDT === 'boolean' ? '' : parseFloat(ethers.formatEther(cBNBUSDT)).toFixed(6)
+			} else {
+				current.cBNBUSDT = {
+					balance: typeof cBNBUSDT === 'boolean' ? '' : parseFloat(ethers.formatEther(cBNBUSDT)).toFixed(6),
+					history: [],
+					network: 'CONET Holesky',
+					decimal: 18,
+					contract: claimable_BNB_USDT,
+					name: 'cBNBUSDT'
+				}
+			}
+
+			if (current?.cUSDT) {
+				current.cUSDT.balance = cUSDT === false ? '' : parseFloat(ethers.formatEther(cUSDT)).toFixed(6)
+			} else {
+				current.cUSDT = {
+					balance: cUSDT === false ? '' : parseFloat(ethers.formatEther(cUSDT)).toFixed(6),
+					history: [],
+					network: 'CONET Holesky',
+					decimal: 18,
+					contract: claimable_USDT,
+					name: 'cUSDT'
+				}
+			}
+
+			if (current?.cBNB) {
+				current.cBNB.balance = cBNB === false ? '' : parseFloat(ethers.formatEther(cBNB)).toFixed(6)
+			} else {
+				current.cBNB = {
+					balance: cBNB === false ? '' : parseFloat(ethers.formatEther(cBNB)).toFixed(6),
+					history: [],
+					network: 'CONET Holesky',
+					decimal: 18,
+					contract: claimable_BNB,
+					name: 'cBNB'
+				}
+			}
+
+			if (current?.cETH) {
+				current.cETH.balance = cETH === false ? '' : parseFloat(ethers.formatEther(cETH)).toFixed(6)
+			} else {
+				current.cETH = {
+					balance: cETH === false ? '' : parseFloat(ethers.formatEther(cETH)).toFixed(6),
+					history: [],
+					network: 'CONET Holesky',
+					decimal: 18,
+					contract: claimable_ETH,
+					name: 'cETH'
+				}
+			}
+
+			if (current?.cArbETH) {
+				current.cArbETH.balance = typeof cArbETH === 'boolean' ? '' : parseFloat(ethers.formatEther(cArbETH)).toFixed(6)
+			} else {
+				current.cArbETH = {
+					balance: typeof cArbETH === 'boolean' ? '' : parseFloat(ethers.formatEther(cArbETH)).toFixed(6),
+					history: [],
+					network: 'CONET Holesky',
+					decimal: 18,
+					contract: claimable_Arb_ETH,
+					name: 'cArbETH'
+				}
+			}
+
+			if (current?.cArbUSDT) {
+				current.cArbUSDT.balance = typeof cArbUSDT === 'boolean' ? '' : parseFloat(ethers.formatEther(cArbUSDT)).toFixed(6)
+			} else {
+				current.cArbUSDT = {
+					balance: typeof cArbUSDT === 'boolean' ? '' : parseFloat(ethers.formatEther(cArbUSDT)).toFixed(6),
+					history: [],
+					network: 'CONET Holesky',
+					decimal: 18,
+					contract: claimable_Arb_USDT,
+					name: 'cArbUSDT'
+				}
+			}
+		//	
+
+        if (current.CGPNs) {
+			current.CGPNs.balance = CGPNs === false ? '' : CGPNs.toString()
+		} else {
+			current.CGPNs = {
+				balance: '0',
+				history: [],
+				network: 'CONET Holesky',
+				decimal: 1,
+				contract: CONET_Guardian_PlanV7,
+				name: 'CGPNs'
+			}
+		}
+        
+		if (current.CGPN2s) {
+			current.CGPNs.balance = CGPN2s === false ? '' : CGPN2s.toString()
+		} else {
+			current.CGPN2s = {
+				balance: CGPN2s === false ? '' : CGPN2s.toString(),
+				history: [],
+				network: 'CONET Holesky',
+				decimal: 2,
+				contract: CONET_Guardian_PlanV7,
+				name: 'CGPN2s'
+			}
+		}
     }
-    return true;
+
+    return true
 }
 
 const maxfindNodeAddressNumber = 1000
@@ -336,35 +547,41 @@ const checkGuardianNodes = async () => {
     if (!CoNET_Data || !CoNET_Data?.profiles) {
         return logger(`checkGuardianNodes !CoNET_Data||!CoNET_Data?.profiles Error! STOP process.`);
     }
+
     const mnemonicPhrase = CoNET_Data.mnemonicPhrase;
     const mainIndex = CoNET_Data.profiles.findIndex(n => n.index === 0);
     if (mainIndex < 0) {
         return logger(`checkGuardianNodes cannot find main profile STOP process.`);
     }
-    const profiles = CoNET_Data.profiles;
-    const profile = CoNET_Data.profiles[mainIndex];
-    const provideCONET = new ethers.JsonRpcProvider(conet_rpc);
-    const erc1155 = new ethers.Contract(CONET_Guardian_PlanV7, guardian_erc1155, provideCONET);
+
+    const profiles = CoNET_Data.profiles
+    const profile = CoNET_Data.profiles[mainIndex]
+    const provideCONET = new ethers.JsonRpcProvider(conet_rpc)
+    const erc1155 = new ethers.Contract(CONET_Guardian_PlanV7, guardian_erc1155, provideCONET)
     //const ercGuardianNodesInfoV3 = new ethers.Contract(CONET_Guardian_NodeInfoV5, GuardianNodesInfoV3_ABI, provideCONET)
-    let nodes = 0;
+    let nodes = 0
     let nodeAddress = [], Ids, numbers;
     try {
-        const ownerIds = await erc1155.balanceOf(profile.keyID, 1);
+        const ownerIds = await erc1155.balanceOf(profile.keyID, 1)
         if (!ownerIds) {
-            return (`checkGuardianNodes getOwnerNodesAddress null!`);
+            return (`checkGuardianNodes getOwnerNodesAddress null!`)
         }
-        nodes = parseInt(ownerIds.toString());
+
+        nodes = parseInt(ownerIds.toString())
     }
+
     catch (ex) {
-        return logger(`call erc1155 smart contract `);
+        return logger(`call erc1155 smart contract `)
     }
-    const root = ethers.Wallet.fromPhrase(mnemonicPhrase);
+    const root = ethers.Wallet.fromPhrase(mnemonicPhrase)
+
     const checkInfo = async (_index) => {
-        const index = profiles.findIndex(n => n.index === _index);
-        let profile;
+        const index = profiles.findIndex(n => n.index === _index)
+        let profile
+
         if (index < 0) {
             const newAcc = root.deriveChild(_index);
-            const key = await createGPGKey('', '', '');
+            const key = await createGPGKey('', '', '')
             profile = {
                 isPrimary: false,
                 keyID: newAcc.address,
@@ -380,31 +597,38 @@ const checkGuardianNodes = async () => {
                     publicKeyArmor: key.publicKey
                 },
                 referrer: null,
-                tokens: initProfileTokens(),
+                tokens: null,
                 data: null
-            };
-            profiles.push(profile);
+            }
+
+            profiles.push(profile)
         }
+
         else {
-            profile = profiles[index];
+            profile = profiles[index]
         }
-        profile.nodeID = (await erc1155.ownershipForNodeID(profile.keyID)).toString();
-        await initV2(profile);
+        profile.nodeID = (await erc1155.ownershipForNodeID(profile.keyID)).toString()
+        await initV2(profile)
+
         // const nodeInfo = await ercGuardianNodesInfoV3.getNodeInfoById(profile.nodeID)
         // profile.nodeRegion = nodeInfo?.regionName
         // profile.nodeIP_address = nodeInfo?.ipaddress
         // profile.isNode = true
-    };
-    const execPool: any = [];
-    for (let i = 0; i < nodes; i++) {
-        execPool.push(checkInfo(i + 1));
     }
+
+    const execPool: any = []
+
+    for (let i = 0; i < nodes; i++) {
+        execPool.push(checkInfo(i + 1))
+    }
+
     await Promise.all([
         ...execPool
-    ]);
-    await storagePieceToLocal();
-    await storeSystemData();
-    needUpgradeVer = epoch + 25;
+    ])
+
+    await storagePieceToLocal()
+    await storeSystemData()
+    needUpgradeVer = epoch + 25
 }
 
 
@@ -426,16 +650,17 @@ const sendState = (state, value) => {
 const checkSmartContractAsset = async (eventLogs, tokenABILog, tokenName, profiles, smartContractObj) => {
     let ret = false;
     for (let transferLog of eventLogs) {
-        let uuu;
+        let uuu
         try {
             uuu = tokenABILog.parseLog(transferLog)
         }
         catch (ex) {
             console.log(`ifaceFor_cCNTP_ABI.parseLog transferLog!`)
-            continue;
+            continue
         }
+
         if (uuu?.name === 'Transfer') {
-            const toAddr = uuu.args[1].toLowerCase();
+            const toAddr = uuu.args[1].toLowerCase()
             const index = profiles.findIndex(n => n.keyID.toLowerCase() === toAddr)
             if (index > -1) {
                 const profile = profiles[index]
@@ -456,82 +681,13 @@ const checkSmartContractAsset = async (eventLogs, tokenABILog, tokenName, profil
 const listeningAddress = []
 
 
-const checkAssets = async (block, provider) => {
-    const blockInfo = await provider.getBlock(block)
-    const ifaceFor_cCNTP_ABI = new ethers.Interface(cCNTP_ABI)
-
-    if (!blockInfo?.transactions) {
-        return logger(`block [${block}] hasn't transactions`);
-    }
-	const profiles = CoNET_Data?.profiles
-
-    if (!profiles) {
-        return logger(`checkAssets profiles length is none!`)
-    }
-
-    const cCNTP_Contract = new ethers.Contract(cCNTP_new_Addr, cCNTP_ABI, provider)
-    const CNTPV1_Contract = new ethers.Contract(CNTPV1, cCNTP_ABI, provider)
-    const CNTP_Referrals = new ethers.Contract(ReferralsAddressV3, CONET_ReferralsAbi, provider)
-    const bcUSDT_Contract = new ethers.Contract(Claimable_BNBUSDTv3, cCNTP_ABI, provider)
-    const cUSDT_Contract = new ethers.Contract(Claimable_ETHUSDTv3, cCNTP_ABI, provider)
-    const cUSDB_Contract = new ethers.Contract(Claimable_BlastUSDBv3, cCNTP_ABI, provider)
-    let hasChange = false
-
-    for (let tx of blockInfo.transactions) {
-        const event = await provider.getTransactionReceipt(tx)
-        const to = event?.to?.toLowerCase()
-        const from = event?.from?.toLowerCase()
-
-        logger(`block [${block}] transactions ${to}`)
-        if (to) {
-            const index = profiles.findIndex(n => n.keyID.toLowerCase() === to)
-            if (index > -1) {
-                const profile = profiles[index]
-                const balance = await provider.getBalance(profile.keyID)
-                profile.tokens.conet.balance = parseFloat(ethers.formatEther(balance)).toFixed(8)
-                hasChange = true
-                logger(`profile [${profile.keyID}] got new Balance [${profile.tokens.conet}]`)
-                continue
-            }
-            //		cCNTP
-            if (to === cCNTP_new_Addr) {
-                hasChange = await checkSmartContractAsset(event.logs, ifaceFor_cCNTP_ABI, 'cCNTP', profiles, cCNTP_Contract)
-                continue
-            }
-            if (to === CNTPV1) {
-                hasChange = await checkSmartContractAsset(event.logs, ifaceFor_cCNTP_ABI, 'CNTPV1', profiles, CNTPV1_Contract)
-                continue
-            }
-            if (to === Claimable_BNBUSDTv3) {
-                hasChange = await checkSmartContractAsset(event.logs, ifaceFor_cCNTP_ABI, 'cBNBUSDT', profiles, bcUSDT_Contract)
-                continue
-            }
-            if (to === Claimable_ETHUSDTv3) {
-                hasChange = await checkSmartContractAsset(event.logs, ifaceFor_cCNTP_ABI, 'cUSDT', profiles, cUSDT_Contract)
-                continue
-            }
-            if (to === Claimable_BlastUSDBv3) {
-                hasChange = await checkSmartContractAsset(event.logs, ifaceFor_cCNTP_ABI, 'cUSDB', profiles, cUSDB_Contract)
-                continue
-            }
-            if (to === ReferralsAddressV3) {
-                RefereesList = await getAllReferees(profiles[0].keyID.toLowerCase(), CNTP_Referrals)
-                continue
-            }
-            if (to === profile_ver_addr) {
-                if (from === profiles[0].keyID.toLowerCase()) {
-                    await checkUpdateAccount()
-                    continue
-                }
-            }
-        }
-    }
-}
 
 let provideCONET
 let lesteningBlock = false
 let epoch = 0
 let needUpgradeVer = 0
+
+
 
 const listenProfileVer = async () => {
     epoch = await provideCONET.getBlockNumber()
@@ -545,12 +701,14 @@ const listenProfileVer = async () => {
 			if (!profiles) {
 				return
 			}
+			const runningList: any [] = []
+			for (let profile of profiles) {
+				runningList.push(getProfileAssets_CONET_Balance(profile))
+			}
+			runningList.push(selectLeaderboard(block))
+			runningList.push(getassetOracle())
 
-            await Promise.all([
-                selectLeaderboard(block),
-                checkAssets(block, provideCONET),
-				getassetOracle()
-            ])
+            await Promise.all(runningList)
 
             const cmd = {
                 cmd: 'assets',
@@ -642,8 +800,8 @@ const storagePieceToIPFS = (mnemonicPhrasePassword, fragment, index, totalFragme
 
 const initSystemDataV1 = async (acc) => {
     const key = await createGPGKey('', '', '');
-    const profile = {
-        tokens: initProfileTokens(),
+    const profile: profile = {
+        tokens: null,
         publicKeyArmor: acc.publicKey,
         keyID: acc.address,
         isPrimary: true,
@@ -656,7 +814,8 @@ const initSystemDataV1 = async (acc) => {
         privateKeyArmor: acc.signingKey.privateKey,
         hdPath: acc.path,
         index: acc.index
-    };
+    }
+
     if (!CoNET_Data) {
         return CoNET_Data = {
             mnemonicPhrase: acc.mnemonic.phrase,
@@ -995,474 +1154,8 @@ const updateChainVersion = async (profile) => {
         logger(`updateChainVersion error! try again`, ex);
         return '-1';
     }
-};
-
-const initProfileTokens = () => {
-    const ret: conet_tokens = {
-        CGPNs: {
-            balance: '0',
-            history: [],
-            network: 'CONET Guardian Nodes (CGPNs)',
-            decimal: 1,
-            contract: CONET_Guardian_PlanV7,
-            name: 'CGPNs'
-        },
-        CGPN2s: {
-            balance: '0',
-            history: [],
-            network: 'CONET Guardian Nodes (CGPN2s)',
-            decimal: 1,
-            contract: CONET_Guardian_PlanV7,
-            name: 'CGPN2s'
-        },
-        cCNTP: {
-            balance: '0',
-            history: [],
-            network: 'CONET Holesky',
-            decimal: 18,
-            contract: cCNTP_new_Addr,
-            name: 'cCNTP'
-        },
-        cBNBUSDT: {
-            balance: '0',
-            history: [],
-            network: 'CONET Holesky',
-            decimal: 18,
-            contract: Claimable_BNBUSDTv3,
-            name: 'cBNBUSDT'
-        },
-        cUSDB: {
-            balance: '0',
-            history: [],
-            network: 'CONET Holesky',
-            decimal: 18,
-            contract: Claimable_BlastUSDBv3,
-            name: 'cUSDB'
-        },
-        CNTP: {
-            balance: '0',
-            history: [],
-            network: 'Blast Mainnet',
-            decimal: 18,
-            contract: blast_mainnet_CNTP,
-            name: 'CNTP'
-        },
-        // cBNB : {
-        // 	balance: '0',
-        // 	history: [],
-        // 	network: 'CONET Holesky',
-        // 	decimal: 18,
-        // 	contract: Claimable_BNB,
-        // 	name: 'cBNB'
-        // },
-        cUSDT: {
-            balance: '0',
-            history: [],
-            network: 'CONET Holesky',
-            decimal: 18,
-            contract: Claimable_ETHUSDTv3,
-            name: 'cUSDT'
-        },
-        // cETH:{
-        // 	balance: '0',
-        // 	history: [],
-        // 	network: 'CONET Holesky',
-        // 	decimal: 18,
-        // 	contract: Claimable_ETH,
-        // 	name: 'cETH'
-        // },
-        dWETH: {
-            balance: '0',
-            history: [],
-            network: 'CONET Holesky',
-            decimal: 18,
-            contract: conet_dWETH,
-            name: 'dWETH'
-        },
-        dUSDT: {
-            balance: '0',
-            history: [],
-            network: 'CONET Holesky',
-            decimal: 18,
-            contract: conet_dUSDT,
-            name: 'dUSDT'
-        },
-        dWBNB: {
-            balance: '0',
-            history: [],
-            network: 'CONET Holesky',
-            decimal: 18,
-            contract: conet_dWBNB,
-            name: 'dWBNB'
-        },
-        conet: {
-            balance: '0',
-            history: [],
-            network: 'CONET Holesky',
-            decimal: 18,
-            contract: '',
-            name: 'conet'
-        },
-        CNTPV1: {
-            balance: '0',
-            history: [],
-            network: 'CONET Holesky',
-            decimal: 18,
-            contract: CNTPV1,
-            name: 'CNTPV1'
-        },
-		arb_usdt: {
-			balance: '0',
-            history: [],
-            network: 'ARB',
-            decimal: 6,
-            contract: Arbitrum_USDT,
-            name: 'usdt'
-		},
-        usdt: {
-            balance: '0',
-            history: [],
-            network: 'ETH',
-            decimal: 6,
-            contract: eth_usdt_contract,
-            name: 'usdt'
-        },
-        usdb: {
-            balance: '0',
-            history: [],
-            network: 'Blast Mainnet',
-            decimal: 18,
-            contract: eth_usdt_contract,
-            name: 'usdb'
-        },
-        eth: {
-            balance: '0',
-            history: [],
-            network: 'ETH',
-            decimal: 18,
-            contract: '',
-            name: 'eth'
-        },
-        blastETH: {
-            balance: '0',
-            history: [],
-            network: 'Blast Mainnet',
-            decimal: 18,
-            contract: '',
-            name: 'blastETH'
-        },
-        wbnb: {
-            balance: '0',
-            history: [],
-            network: 'BSC',
-            decimal: 18,
-            contract: bnb_wbnb_contract,
-            name: 'wbnb'
-        },
-        bnb: {
-            balance: '0',
-            history: [],
-            network: 'BSC',
-            decimal: 18,
-            contract: '',
-            name: 'bnb'
-        },
-        wusdt: {
-            balance: '0',
-            history: [],
-            network: 'BSC',
-            decimal: 18,
-            contract: bnb_usdt_contract,
-            name: 'wusdt'
-        }
-    };
-    return ret;
-};
-const checkTokenStructure = (token) => {
-    if (!token?.CGPNs) {
-        token.CGPNs = {
-            balance: '0',
-            history: [],
-            network: 'CONET Holesky',
-            decimal: 1,
-            contract: CONET_Guardian_PlanV7,
-            name: 'CGPNs'
-        };
-    }
-    else {
-        token.CGPNs.name = 'CGPNs';
-    }
-    if (!token?.CGPN2s) {
-        token.CGPN2s = {
-            balance: '0',
-            history: [],
-            network: 'CONET Holesky',
-            decimal: 1,
-            contract: CONET_Guardian_PlanV7,
-            name: 'CGPN2s'
-        };
-    }
-    else {
-        token.CGPN2s.name = 'CGPN2s';
-    }
-    if (!token?.CNTPV1) {
-        token.CNTPV1 = {
-            balance: '0',
-            history: [],
-            network: 'CONET Holesky',
-            decimal: 18,
-            contract: CNTPV1,
-            name: 'CNTPV1'
-        };
-    }
-    else {
-        token.CNTPV1.name = 'CNTPV1';
-    }
-    if (!token?.cCNTP) {
-        token.cCNTP = {
-            balance: '0',
-            history: [],
-            network: 'CONET Holesky',
-            decimal: 18,
-            contract: cCNTP_new_Addr,
-            name: 'cCNTP'
-        };
-    }
-    else {
-        token.cCNTP.name = 'cCNTP';
-    }
-    if (!token?.CNTP) {
-        token.CNTP = {
-            balance: '0',
-            history: [],
-            network: 'Blast Mainnet',
-            decimal: 18,
-            contract: blast_mainnet_CNTP,
-            name: 'CNTP'
-        };
-    }
-    else {
-        token.CNTP.name = 'CNTP';
-    }
-    if (!token?.usdt) {
-        token.usdt = {
-            balance: '0',
-            history: [],
-            network: 'ETH',
-            decimal: 6,
-            contract: eth_usdt_contract,
-            name: 'usdt'
-        };
-    }
-    else {
-        token.usdt.name = 'usdt';
-    }
-    if (!token?.usdb) {
-        token.usdb = {
-            balance: '0',
-            history: [],
-            network: 'Blast Mainnet',
-            decimal: 18,
-            contract: eth_usdt_contract,
-            name: 'usdb'
-        };
-    }
-    else {
-        token.usdb.name = 'usdb';
-    }
-    if (!token?.eth) {
-        token.eth = {
-            balance: '0',
-            history: [],
-            network: 'ETH',
-            decimal: 18,
-            contract: '',
-            name: 'eth'
-        };
-    }
-    else {
-        token.eth.name = 'eth';
-    }
-    if (!token?.blastETH) {
-        token.blastETH = {
-            balance: '0',
-            history: [],
-            network: 'Blast Mainnet',
-            decimal: 18,
-            contract: '',
-            name: 'blastETH'
-        };
-    }
-    else {
-        token.blastETH.name = 'blastETH';
-    }
-    if (!token?.conet) {
-        token.conet = {
-            balance: '0',
-            history: [],
-            network: 'CONET Holesky',
-            decimal: 18,
-            contract: '',
-            name: 'conet'
-        };
-    }
-    else {
-        token.conet.name = 'conet';
-    }
-    if (!token?.wbnb) {
-        token.wbnb = {
-            balance: '0',
-            history: [],
-            network: 'BSC',
-            decimal: 18,
-            contract: bnb_wbnb_contract,
-            name: 'wbnb'
-        };
-    }
-    else {
-        token.wbnb.name = 'wbnb';
-    }
-    if (!token?.bnb) {
-        token.bnb = {
-            balance: '0',
-            history: [],
-            network: 'BSC',
-            decimal: 18,
-            contract: '',
-            name: 'bnb'
-        };
-    }
-    else {
-        token.bnb.name = 'bnb';
-    }
-    if (!token?.wusdt) {
-        token.wusdt = {
-            balance: '0',
-            history: [],
-            network: 'BSC',
-            decimal: 18,
-            contract: bnb_usdt_contract,
-            name: 'wusdt'
-        };
-    }
-    else {
-        token.wusdt.name = 'wusdt';
-    }
-    if (!token?.dWETH) {
-        token.dWETH = {
-            balance: '0',
-            history: [],
-            network: 'CONET Holesky',
-            decimal: 18,
-            contract: conet_dWETH,
-            name: 'dWETH'
-        };
-    }
-    else {
-        token.dWETH.name = 'dWETH';
-    }
-    if (!token?.dUSDT) {
-        token.dUSDT = {
-            balance: '0',
-            history: [],
-            network: 'CONET Holesky',
-            decimal: 18,
-            contract: conet_dUSDT,
-            name: 'dUSDT'
-        };
-    }
-    else {
-        token.dUSDT.name = 'dUSDT';
-    }
-    if (!token?.dWBNB) {
-        token.dWBNB = {
-            balance: '0',
-            history: [],
-            network: 'CONET Holesky',
-            decimal: 18,
-            contract: conet_dWBNB,
-            name: 'dWBNB'
-        };
-    }
-    else {
-        token.dWBNB.name = 'dWBNB';
-    }
-    if (!token?.cUSDT) {
-        token.cUSDT = {
-            balance: '0',
-            history: [],
-            network: 'CONET Holesky',
-            decimal: 18,
-            contract: Claimable_ETHUSDTv3,
-            name: 'cUSDT'
-        };
-    }
-    else {
-        token.cUSDT.name = 'cUSDT';
-    }
-    // if (!token?.cETH) {
-    // 	token.cETH = {
-    // 		balance: '0',
-    // 		history: [],
-    // 		network: 'CONET Holesky',
-    // 		decimal: 18,
-    // 		contract: Claimable_ETH,
-    // 		name: 'cETH'
-    // 	}
-    // } else {
-    // 	token.cETH.name = 'cETH'
-    // }
-    // if (!token?.cBNB) {
-    // 	token.cBNB = {
-    // 		balance: '0',
-    // 		history: [],
-    // 		network: 'CONET Holesky',
-    // 		decimal: 18,
-    // 		contract: Claimable_BNB,
-    // 		name: 'cBNB'
-    // 	}
-    // } else {
-    // 	token.cBNB.name = 'cBNB'
-    // }
-    // if (!token?.cBlastETH) {
-    // 	token.cBlastETH = {
-    // 		balance: '0',
-    // 		history: [],
-    // 		network: 'CONET Holesky',
-    // 		decimal: 18,
-    // 		contract: Claimable_BlastETH,
-    // 		name: 'cBlastETH'
-    // 	}
-    // } else {
-    // 	token.cBlastETH.name = 'BlastETH'
-    // }
-    if (!token?.cUSDB) {
-        token.cUSDB = {
-            balance: '0',
-            history: [],
-            network: 'CONET Holesky',
-            decimal: 18,
-            contract: Claimable_BlastUSDBv3,
-            name: 'cUSDB'
-        };
-    }
-    else {
-        token.cUSDB.name = 'cUSDB';
-    }
-    if (!token?.cBNBUSDT) {
-        token.cBNBUSDT = {
-            balance: '0',
-            history: [],
-            network: 'CONET Holesky',
-            decimal: 18,
-            contract: Claimable_BNBUSDTv3,
-            name: 'cBNBUSDT'
-        };
-    }
-    else {
-        token.cBNBUSDT.name = 'cBNBUSDT';
-    }
 }
+
 
 let runningGetAllProfileAssetsBalance = false
 let runninggetAllOtherAssets = false
@@ -1655,12 +1348,14 @@ const getAllProfileAssetsBalance = () => new Promise(async (resolve) => {
         runningList.push(getProfileAssets_CONET_Balance(profile))
         // runningList.push(getProfileAssets_allOthers_Balance(profile))
     }
+
     await Promise.all(runningList)
     const CNTP_Referrals = new ethers.Contract(ReferralsAddressV3, CONET_ReferralsAbi, provideCONET)
     RefereesList = await getAllReferees(profiles[0].keyID, CNTP_Referrals)
-    const constBalance = profiles[0].tokens.conet.balance
 
-    if (constBalance > '0.0001') {
+    const connt = profiles[0]?.tokens?.conet
+
+    if (connt && connt.balance > '0.0001') {
         let update = false
         if (referrer) {
             update = await registerReferrer(referrer)
@@ -1668,9 +1363,9 @@ const getAllProfileAssetsBalance = () => new Promise(async (resolve) => {
 
         await checkUpdateAccount()
     } else {
-        
         await getFaucet(profiles[0])
     }
+	
     const cmd = {
         cmd: 'assets',
         data: [profiles]
@@ -1999,7 +1694,9 @@ const getFaucetFromSmartContract: (profile: profile) => Promise<boolean|any> = a
 
 const getFaucet: (profile: profile) => Promise<boolean|any> = async (profile) => new Promise(async (resolve) => {
 
-	if (profile.tokens.conet.balance > '0.001') {
+	const conet = profile?.tokens?.conet
+
+	if (conet && conet.balance > '0.001') {
 		return resolve (await getFaucetFromSmartContract(profile))
 	}
 
@@ -2085,14 +1782,22 @@ const updateProfilesVersionToIPFS = () => new Promise(async (resolve) => {
         logger(`updateProfilesVersion !CoNET_Data[${!CoNET_Data}] || !passObj[${!passObj}] === true Error! Stop process.`);
         return resolve(false);
     }
-    const profile = CoNET_Data.profiles[0];
-    const privateKeyArmor = profile.privateKeyArmor || '';
+    const profile = CoNET_Data.profiles[0]
+
+    const privateKeyArmor = profile.privateKeyArmor || ''
+
     if (!profile || !privateKeyArmor) {
-        logger(`updateProfilesVersion Error! profile empty Error! `);
-        return resolve(false);
+        logger(`updateProfilesVersion Error! profile empty Error! `)
+        return resolve(false)
     }
-    const constBalance = profile.tokens.conet.balance;
-    let chainVer;
+
+	const conet = profile?.tokens?.conet
+	if ( !conet || conet.balance < '0.0005') {
+		return resolve(false)
+	}
+
+
+    let chainVer
     try {
         [, chainVer] = await checkProfileVersion(profile.keyID);
         const health = await getCONET_api_health();
@@ -2203,30 +1908,46 @@ const scan_natureBalance = (provide, walletAddr) => new Promise(async (resolve) 
     }
 })
 
-const scanCONET_Claimable_BNBUSDT = async (walletAddr) => {
-    return await scan_erc20_balance(walletAddr, Claimable_BNBUSDTv3, provideCONET)
+
+
+//				Claimable	
+
+const scanCONET_Claimable_BNBUSDT = async (walletAddr: string) => {
+    return await scan_erc20_balance(walletAddr, claimable_BNB_USDT, provideCONET)
 }
 
-const scanCONET_Claimable_BlastUSDB = async (walletAddr) => {
-    return await scan_erc20_balance(walletAddr, Claimable_BlastUSDBv3, provideCONET)
-}
+
+
+// const scanCONET_Claimable_BlastUSDB = async (walletAddr) => {
+//     return await scan_erc20_balance(walletAddr, Claimable_BlastUSDBv3, provideCONET)
+// }
 
 // const scanCONET_Claimable_BlastETH = async (walletAddr: string, privideCONET: any) => {
 // 	return await scan_erc20_balance(walletAddr, privideCONET, Claimable_BlastETH)
 // }
-// const scanCONET_Claimable_BNB = async (walletAddr: string, privideCONET: any) => {
-// 	return await scan_erc20_balance(walletAddr, privideCONET, Claimable_BNB)
-// }
-// const scanCONET_Claimable_ETH = async (walletAddr: string, privideCONET: any) => {
-// 	return await scan_erc20_balance(walletAddr, privideCONET, Claimable_ETH)
-// }
+
+const scanCONET_Claimable_BNB = async (walletAddr: string) => {
+	return await scan_erc20_balance(walletAddr, claimable_BNB, provideCONET)
+}
+
+const scanCONET_Claimable_ETH = async (walletAddr: string) => {
+	return await scan_erc20_balance(walletAddr, claimable_ETH, provideCONET)
+}
+
+const scanCONET_Claimable_Arb_ETH = async (walletAddr: string) => {
+	return await scan_erc20_balance(walletAddr, claimable_Arb_ETH, provideCONET)
+}
+
+const scanCONET_Claimable_Arb_USDT = async (walletAddr: string) => {
+	return await scan_erc20_balance(walletAddr, claimable_Arb_USDT, provideCONET)
+}
 
 const scanCONET_Claimable_ETHUSDT = async (walletAddr) => {
-    return await scan_erc20_balance(walletAddr, Claimable_ETHUSDTv3, provideCONET)
+    return await scan_erc20_balance(walletAddr, claimable_USDT, provideCONET)
 }
 
 
-const scan_erc20_balance = (walletAddr: string, erc20Address: string, provide: any) => new Promise(async (resolve) => {
+const scan_erc20_balance: (walletAddr: string, erc20Address: string, provide: any)=> Promise<false|BigInt> = (walletAddr, erc20Address, provide) => new Promise(async (resolve) => {
     const erc20 = new ethers.Contract(erc20Address, blast_CNTPAbi, provide)
     try {
         const result = await erc20.balanceOf(walletAddr)
@@ -2246,7 +1967,7 @@ const scan_Guardian_ReferralNodes = async (walletAddr, rpcProdive) => {
     return await scan_src1155_balance(walletAddr, CONET_Guardian_PlanV7, 2)
 }
 
-const scan_src1155_balance = (walletAddr, erc1155Address, id) => new Promise(async (resolve) => {
+const scan_src1155_balance: (walletAddr: string, erc1155Address: string, id: number) => Promise<false|BigInt> = (walletAddr, erc1155Address, id) => new Promise(async (resolve) => {
     const erc1155 = new ethers.Contract(erc1155Address, guardian_erc1155, provideCONET)
     try {
         const result = await erc1155.balanceOf(walletAddr, id)
@@ -2332,8 +2053,9 @@ const getAssetERC20Address = (assetName) => {
         }
     }
 }
-const CONET_guardian_Address = (networkName) => {
+const CONET_guardian_purchase_Receiving_Address = (networkName) => {
     switch (networkName) {
+		case 'eth':
 		case 'usdc':
 		case 'dai':
         case 'usdt':{
@@ -2347,9 +2069,9 @@ const CONET_guardian_Address = (networkName) => {
 		case 'arb_usdt':{
 			return 'arb1:0x97E96Cc8Ee4f6373e87C77E98fAF1A6FfA8548f2'
 		}
-		case 'usdb':{
-			return `0x4A8E5dF9F1B2014F7068711D32BA72bEb3482686`
-		}
+		// case 'usdb':{
+		// 	return `0x4A8E5dF9F1B2014F7068711D32BA72bEb3482686`
+		// }
         default: {
             return ``
         }
@@ -2367,11 +2089,12 @@ const parseEther = (ether, tokenName) => {
             return ethers.parseEther(ether)
         }
     }
-};
-const getEstimateGas = (privateKey, asset, _transferNumber, keyAddr) => new Promise(async (resolve) => {
-    const provide = new ethers.JsonRpcProvider(getNetwork(asset));
-    const wallet = new ethers.Wallet(privateKey, provide);
-    const toAddr = CONET_guardian_Address(asset);
+}
+
+const getEstimateGas = (privateKey, asset, _transferNumber) => new Promise(async (resolve) => {
+    const provide = new ethers.JsonRpcProvider(getNetwork(asset))
+    const wallet = new ethers.Wallet(privateKey, provide)
+    const toAddr = CONET_guardian_purchase_Receiving_Address(asset)
 
     let _fee
     const transferNumber = parseEther(_transferNumber, asset)
@@ -2570,7 +2293,7 @@ const stringFix = (num) => {
 const transferAssetToCONET_guardian = (privateKey, token, transferNumber) => new Promise(async (resolve) => {
     const provide = new ethers.JsonRpcProvider(getNetwork(token.name))
     const wallet = new ethers.Wallet(privateKey, provide)
-    const toAddr = CONET_guardian_Address(token.name)
+    const toAddr = CONET_guardian_purchase_Receiving_Address(token.name)
     const smartContractAddr = getAssetERC20Address(token.name)
     if (smartContractAddr) {
         const transferObj = new ethers.Contract(smartContractAddr, blast_CNTPAbi, wallet)
@@ -2725,7 +2448,7 @@ const createWallet = async (profiles, mnemonicPhrase, total) => {
                 publicKeyArmor: key.publicKey
             },
             referrer: null,
-            tokens: initProfileTokens(),
+            tokens: {},
             data: {
                 alias: `CONET Guardian node${i}`,
                 isNode: true
@@ -2747,7 +2470,8 @@ const getFx168OrderStatus = async (oederID, fx168ContractObj, wallet) => {
     catch (ex) {
         return null;
     }
-};
+}
+
 const fx168PrePurchase = async (cmd) => {
     const [nodes] = cmd.data;
     if (!nodes || !CoNET_Data || !CoNET_Data.profiles) {
@@ -2796,6 +2520,93 @@ let miningProfile:profile|null = null
 let miningStatus = 'STOP'
 
 
+const _startMining = async (profile: profile, cmd: worker_command|null =null ) => {
+
+	const message =JSON.stringify({walletAddress: profile.keyID})
+
+	const messageHash =  ethers.id(message)
+	const signMessage = CoNETModule.EthCrypto.sign(profile.privateKeyArmor, messageHash)
+
+
+	const sendData = {
+		message, signMessage
+	}
+
+	const url = `${ api_endpoint }startMining`
+
+	logger(url)
+	let first = true
+	
+	return miningConn = postToEndpointSSE(url, true, JSON.stringify(sendData), async (err, _data) => {
+
+		switch (miningStatus) {
+			case 'RESTART': {
+				miningConn.abort()
+				miningStatus = 'MINING'
+				return _startMining (profile)
+			}
+
+			case 'STOP': {
+				miningConn.abort()
+				return
+			}
+		}
+
+		if (err) {
+			logger(err)
+			if (cmd) {
+				cmd.err = err
+				return returnUUIDChannel(cmd)
+			}
+			return
+		}
+
+		logger('success', _data)
+		const kk = JSON.parse(_data)
+
+		if (!profile.tokens) {
+			profile.tokens = {}
+		}
+		if (!profile.tokens.cCNTP) {
+			profile.tokens.cCNTP = {
+				balance: '0',
+				history: [],
+				network: 'CONET Holesky',
+				decimal: 18,
+				contract: cCNTP_new_Addr,
+				name: 'cCNTP'
+			}
+		}
+
+		if (first) {
+			miningProfile = profile
+			first = false
+			
+
+			if (cmd) {
+				cCNTPcurrentTotal = parseFloat(profile.tokens.cCNTP.balance||'0')
+				
+				kk['currentCCNTP'] = '0'
+				cmd.data = ['success', JSON.stringify(kk)]
+				return returnUUIDChannel(cmd)
+			}
+			return
+		}
+
+		
+
+		kk.rate = typeof kk.rate ==='number' ? kk.rate.toFixed(10) : parseFloat(kk.rate).toFixed(10)
+		kk['currentCCNTP'] = (parseFloat(profile.tokens.cCNTP.balance ||'0') - cCNTPcurrentTotal).toFixed(8)
+
+		const cmdd: channelWroker = {
+			cmd: 'miningStatus',
+			data: [JSON.stringify(kk)]
+		}
+		
+		sendState('toFrontEnd', cmdd)
+	})
+}
+
 
 const startMining = async (cmd) => {
     const _authorization_key = cmd.data[0]
@@ -2824,7 +2635,7 @@ const startMining = async (cmd) => {
     const profile = CoNET_Data.profiles[index]
     if (miningStatus === 'STOP' && !miningConn) {
         miningStatus = 'MINING'
-        return await _startMiningV2(profile, cmd)
+        return await _startMining(profile, cmd)
     }
 	
     cmd.data = ['success']
