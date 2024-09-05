@@ -590,14 +590,14 @@ const testFunction = async (cmd: worker_command) => {
 		return
 	}
 
-	// await getAllOtherAssets()
-	// await CONET_guardian_purchase(profiles[0], 1, 0.01, 'wusdt')
+	await getAllOtherAssets()
+	await CONET_guardian_purchase(profiles[0], 1, 0.2159, 'arb_eth')
 
 	// _startMiningV2(profiles[0], node)
 
 
-	//getFaucetFromSmartContract(profiles[0])
-	//await fetchTest()
+	// getFaucetFromSmartContract(profiles[0])
+	// await fetchTest()
 	const profile = profiles[0]
 	// await makeContainerPGPObj(profile)
 	//getRegionAllNodes ('us', profile)
