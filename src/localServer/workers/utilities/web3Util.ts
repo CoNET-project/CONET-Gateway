@@ -259,10 +259,10 @@ const getProfileAssets_allOthers_Balance = async (profile) => {
 		}
 
 		if (current.eth) {
-			current.eth.balance = eth === false ? '': ethers.formatUnits(eth, 6)
+			current.eth.balance = eth === false ? '': ethers.formatEther(eth)
 		} else {
 			current.eth = {
-				balance: eth === false ? '': ethers.formatUnits(eth, 6),
+				balance: eth === false ? '': ethers.formatEther(eth),
 				history: [],
 				network: 'ETH',
 				decimal: 18,
@@ -1981,24 +1981,24 @@ const scan_src1155_balance: (walletAddr: string, erc1155Address: string, id: num
 
 const getNetwork = (networkName) => {
     switch (networkName) {
-        case 'usdb':
-        case 'blastETH':
-            {
-                return blast_mainnet()
-            }
+        // case 'usdb':
+        // case 'blastETH':
+        //     {
+        //         return blast_mainnet()
+        //     }
         // case 'dUSDT':
         // case 'dWBNB':
         // case 'dWETH':
-        case 'cCNTP':
-        case 'cUSDB':
-        case 'cCNTP':
-        case 'cUSDT':
-        case 'cBNBUSDT':
-        case 'conet':
-        case 'cntpb':
-            {
-                return conet_rpc
-            }
+        // case 'cCNTP':
+        // case 'cUSDB':
+        // case 'cCNTP':
+        // case 'cUSDT':
+        // case 'cBNBUSDT':
+        // case 'conet':
+        // case 'cntpb':
+        //     {
+        //         return conet_rpc
+        //     }
         case 'usdt':
         case 'eth':
             {
@@ -2009,13 +2009,14 @@ const getNetwork = (networkName) => {
             {
                 return bsc_mainchain
             }
+		case 'arb_eth':
 		case 'arb_usdt': {
 			return Arbitrum_One_RPC
 		}
-        case 'cntp':
-            {
-                return blast_sepoliaRpc
-            }
+        // case 'cntp':
+        //     {
+        //         return blast_sepoliaRpc
+        //     }
         default: {
             return ''
         }
@@ -2067,7 +2068,7 @@ const CONET_guardian_purchase_Receiving_Address = (networkName) => {
 		}
         case 'arb_eth':
 		case 'arb_usdt':{
-			return 'arb1:0x97E96Cc8Ee4f6373e87C77E98fAF1A6FfA8548f2'
+			return '0x97E96Cc8Ee4f6373e87C77E98fAF1A6FfA8548f2'
 		}
 		// case 'usdb':{
 		// 	return `0x4A8E5dF9F1B2014F7068711D32BA72bEb3482686`
