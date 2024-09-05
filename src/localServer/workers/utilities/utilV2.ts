@@ -143,18 +143,9 @@ const testPasscode = async (cmd) => {
         return logger(`testPasscode CoNET_Data?.profiles Empty error!`)
     }
 
-    CoNET_Data.profiles.forEach(async (n) => {
-        n.keyID = n.keyID.toLocaleLowerCase()
-		await Promise.all([
-			initV2(n),
-			getFaucet(n)
-		])
-       
-    })
-
     authorization_key = cmd.data[0] = uuid.v4()
     returnUUIDChannel(cmd)
-	await getFaucet(CoNET_Data.profiles[0])
+
     await getAllProfileAssetsBalance()
     await getAllReferrer()
     await testFunction(cmd)
@@ -590,8 +581,8 @@ const testFunction = async (cmd: worker_command) => {
 		return
 	}
 
-	await getAllOtherAssets()
-	await CONET_guardian_purchase(profiles[0], 1, 0.2159, 'arb_eth')
+	// await getAllOtherAssets()
+	// await CONET_guardian_purchase(profiles[0], 1, 0.2159, 'arb_eth')
 
 	// _startMiningV2(profiles[0], node)
 
