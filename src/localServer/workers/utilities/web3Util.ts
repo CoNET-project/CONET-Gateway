@@ -1696,7 +1696,7 @@ const getFaucet: (profile: profile) => Promise<boolean|any> = async (profile) =>
 
 	const conet = profile?.tokens?.conet
 
-	if (conet && conet.balance > '0.001') {
+	if (conet && conet?.balance > '0.0001') {
 		return resolve (await getFaucetFromSmartContract(profile))
 	}
 
@@ -2231,6 +2231,9 @@ const CONET_guardian_purchase = async (profile, nodes, _total, tokenName) => {
     cryptoAsset.history.push(kk1)
     const profiles = CoNET_Data.profiles
     const publikPool = await createWallet(profiles, CoNET_Data.mnemonicPhrase, nodes)
+	
+	getProfileAssets_allOthers_Balance(profile)
+
     const data = {
         receiptTx: tx.hash,
         publishKeys: publikPool,
@@ -2270,6 +2273,7 @@ const CONET_guardian_purchase = async (profile, nodes, _total, tokenName) => {
         sendState('toFrontEnd', cmd3);
         return false
     }
+
     if (!result) {
         const cmd3 = {
             cmd: 'purchaseStatus',
@@ -2290,7 +2294,7 @@ const stringFix = (num) => {
         return num
     }
     return num.substring(0, index + 12)
-};
+}
 const transferAssetToCONET_guardian = (privateKey, token, transferNumber) => new Promise(async (resolve) => {
     const provide = new ethers.JsonRpcProvider(getNetwork(token.name))
     const wallet = new ethers.Wallet(privateKey, provide)

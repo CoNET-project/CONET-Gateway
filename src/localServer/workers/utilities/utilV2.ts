@@ -2,7 +2,7 @@
 
 const conet_rpc = 'https://rpc.conet.network';
 const api_endpoint = `https://api.conet.network/api/`;
-const apiv2_endpoint = `https://apiv2.conet.network/api/`;
+const apiv2_endpoint = `https://apiv3.conet.network/api/`;
 const ipfsEndpoint = `https://ipfs1.conet.network/api/`;
 const blast_sepoliaRpc = 'https://sepolia.blast.io';
 const Arbitrum_One_RPC = 'https://arb1.arbitrum.io/rpc'
@@ -46,9 +46,6 @@ let authorization_key = ''
 const initV2 = async (profile) => {
     const url = `${apiv2_endpoint}initV3`
     const result = await postToEndpoint(url, true, { walletAddress: profile.keyID })
-    setTimeout(async () => {
-        await checkGuardianNodes()
-    }, 2000)
 }
 
 //	******************************************************************
@@ -148,6 +145,7 @@ const testPasscode = async (cmd) => {
 
     await getAllProfileAssetsBalance()
     await getAllReferrer()
+	await checkGuardianNodes()
     await testFunction(cmd)
 }
 
@@ -580,7 +578,7 @@ const testFunction = async (cmd: worker_command) => {
 	if (!profiles) {
 		return
 	}
-
+	// await getFaucet(profiles[0])
 	// await getAllOtherAssets()
 	// await CONET_guardian_purchase(profiles[0], 1, 0.2159, 'arb_eth')
 
@@ -590,6 +588,7 @@ const testFunction = async (cmd: worker_command) => {
 	// getFaucetFromSmartContract(profiles[0])
 	// await fetchTest()
 	const profile = profiles[0]
+
 	// await makeContainerPGPObj(profile)
 	//getRegionAllNodes ('us', profile)
 	//await checkProfileVersion (profile.keyID)
