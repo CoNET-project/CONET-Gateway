@@ -30,11 +30,6 @@ const conet_dWBNB = '0xd8b094E91c552c623bc054085871F6c1CA3E5cAd'
 
 
 
-
-
-
-
-
 const CONET_Guardian_Nodes1 = '0x5e4aE81285b86f35e3370B3EF72df1363DD05286';
 const fx168OrderContractAddress = '0x9aE6D3Bd3029C8B2A73817b9aFa1C029237E3e30';
 const FragmentNameDeriveChildIndex = 65536;
@@ -569,8 +564,49 @@ const createConnectCmd = async (currentProfile: profile, node: nodes_info, reque
 	return (command)
 }
 
+const getTicket = async (profile: profile) => {
+	const message = JSON.stringify({ walletAddress: profile.keyID })
+    // const messageHash = ethers.id(message)
+    // const signMessage = CoNETModule.EthCrypto.sign(profile.privateKeyArmor, messageHash)
 
-const node_key = 'LS0tLS1CRUdJTiBQR1AgUFVCTElDIEtFWSBCTE9DSy0tLS0tCgp4ak1FWnRRQ0xoWUpLd1lCQkFIYVJ3OEJBUWRBc1lWSXQrdzB2WGlycGFPeXMvMVEyeHY4aVN0L2lkcUsKTUtxbVRtd1ZpeWJOS2pCNE16WkNNVGsxTlRBNFpESTVNVU5EWWpneE9UVTROelV4TmpSQ056VTROamhpCk9Ua3lOalEwUk1LTUJCQVdDZ0ErQllKbTFBSXVCQXNKQndnSmtBN3dnUCtsZkd2aUF4VUlDZ1FXQUFJQgpBaGtCQXBzREFoNEJGaUVFVEZwVDNyT1IzdmJvN1ZPNkR2Q0EvNlY4YStJQUFHRVBBUDkvdDlPYUJTS2QKQm5vb3F2cDBOYldoWEorRERKMFZnMDBzT1BDc2c1STQrZ0Q5R21WTGEwdkRMSWJxVXIyWXVuSkpCYzBZCjBKWDZJRWxwc1UvTHo2R29oZ0RPT0FSbTFBSXVFZ29yQmdFRUFaZFZBUVVCQVFkQTRwRC9lS2ZmU3dRTApGbXZJNzZwWlJwNkZSbmZROGdrSXR1a2p5V0x1eFRzREFRZ0h3bmdFR0JZS0FDb0ZnbWJVQWk0SmtBN3cKZ1ArbGZHdmlBcHNNRmlFRVRGcFQzck9SM3ZibzdWTzZEdkNBLzZWOGErSUFBS1ZMQVB3TXBWVnJjSEViCnROZ2tIZW90d2krMVBlaW9vUGpERE5LaWRZaHB1V01BUVFEK1AxTjgwbVM5b3pxanE5c0ZBSkFxaEZ1QQpGRUt3amRxQmpiYzhKMVdPandVPQo9aThtRwotLS0tLUVORCBQR1AgUFVCTElDIEtFWSBCTE9DSy0tLS0tCg=='
+	const wallet = new ethers.Wallet(profile.privateKeyArmor)
+	const signMessage = await wallet.signMessage(message)
+
+    const sendData = {
+        message, signMessage
+    }
+
+    const cmd3 = {
+        cmd: 'purchaseStatus',
+        data: [3]
+    }
+    sendState('toFrontEnd', cmd3)
+    const url = `${apiv2_endpoint}ticket-lottery`
+	// const url = `${apiv2_endpoint}ticket`
+    let result = await postToEndpoint(url, true, sendData)
+
+    
+        return true
+    
+}
+
+const transferNFT = async () => {
+	const profiles = CoNET_Data?.profiles
+	if (!profiles || profiles.length < 3) {
+		return 
+	}
+	const profile = profiles[1]
+	const toProfile = profiles[2]
+	const wallet = new ethers.Wallet(profile.privateKeyArmor, provideCONET)
+	const GuardianNodes = new ethers.Contract(CONET_Guardian_PlanV7, guardian_erc1155, wallet)
+	try{
+		const tx = await GuardianNodes.safeTransferFrom(wallet.address, toProfile.keyID, 965, 1, '0x00')
+	} catch (ex) {
+		return logger(ex)
+	}
+	logger(`transferNFT success!`)
+}
+
 const testFunction = async (cmd: worker_command) => {
 	
 	
@@ -588,7 +624,7 @@ const testFunction = async (cmd: worker_command) => {
 	// getFaucetFromSmartContract(profiles[0])
 	// await fetchTest()
 	const profile = profiles[0]
-
+	// await transferNFT ()
 	// await makeContainerPGPObj(profile)
 	//getRegionAllNodes ('us', profile)
 	//await checkProfileVersion (profile.keyID)
