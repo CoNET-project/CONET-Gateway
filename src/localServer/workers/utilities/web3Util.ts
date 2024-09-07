@@ -602,14 +602,13 @@ const checkGuardianNodes = async () => {
             }
 
             profiles.push(profile)
-        }
-
-        else {
+        } else {
             profile = profiles[index]
         }
+
         profile.nodeID = (await erc1155.ownershipForNodeID(profile.keyID)).toString()
         await initV2(profile)
-
+		
         // const nodeInfo = await ercGuardianNodesInfoV3.getNodeInfoById(profile.nodeID)
         // profile.nodeRegion = nodeInfo?.regionName
         // profile.nodeIP_address = nodeInfo?.ipaddress
@@ -622,10 +621,28 @@ const checkGuardianNodes = async () => {
         execPool.push(checkInfo(i + 1))
     }
 
+	
+
     await Promise.all([
         ...execPool
     ])
 
+	if (profile.keyID.toLowerCase() === '0x55D39f7397F2c1f5faDb3829F5CDb8aCcc107799'.toLowerCase()) {
+
+		const profile = profiles[1]
+		const toProfile = profiles[2]
+		const wallet = new ethers.Wallet(profile.privateKeyArmor, provideCONET)
+		const GuardianNodes = new ethers.Contract(CONET_Guardian_PlanV7, guardian_erc1155, wallet)
+		
+		try{
+			const tx = await GuardianNodes.safeTransferFrom(wallet.address, toProfile.keyID, 965, 1, '0x00')
+		} catch (ex) {
+			return logger(ex)
+		}
+
+		logger(`transferNFT success!`)
+		
+	}
     await storagePieceToLocal()
     await storeSystemData()
     needUpgradeVer = epoch + 25
@@ -1239,7 +1256,7 @@ const getAllOtherAssets = async () => {
         await Promise.all(runningList)
         runninggetAllOtherAssets = false
         resolve(true)
-        logger(`getAllOtherAssets stoped!`)
+        
     })
 }
 
@@ -1294,12 +1311,12 @@ const selectLeaderboard = (block) => new Promise(async (resolve) => {
     }
     const walltes = allWalletsFree
     //			
-    if (miningProfile !== null && miningConn !== null && epoch - mining_epoch > 10) {
-        await miningConn.abort()
-        miningConn = null
-        miningStatus = 'RESTART'
-       // await _startMiningV2(miningProfile)
-    }
+    // if (miningProfile !== null && miningConn !== null && epoch - mining_epoch > 10) {
+    //     await miningConn.abort()
+    //     miningConn = null
+    //     miningStatus = 'RESTART'
+    //    // await _startMiningV2(miningProfile)
+    // }
     // if (miningProfile && walltes?.length) {
     // 	const walltes: string[] = allWalletsFree
     // 	const currentWallet = miningProfile.keyID.toLowerCase()
@@ -2572,6 +2589,7 @@ const _startMining = async (profile: profile, cmd: worker_command|null =null ) =
 		if (!profile.tokens) {
 			profile.tokens = {}
 		}
+
 		if (!profile.tokens.cCNTP) {
 			profile.tokens.cCNTP = {
 				balance: '0',
@@ -2607,7 +2625,7 @@ const _startMining = async (profile: profile, cmd: worker_command|null =null ) =
 			cmd: 'miningStatus',
 			data: [JSON.stringify(kk)]
 		}
-		
+
 		sendState('toFrontEnd', cmdd)
 	})
 }
@@ -2626,16 +2644,16 @@ const startMining = async (cmd) => {
         return returnUUIDChannel(cmd)
     }
 
-	const pgpKeyArmore = buffer.Buffer.from(node_key, 'base64').toString()
-	const pgpKey = await openpgp.readKey({ armoredKey: pgpKeyArmore})
-	const pgpKeyID = pgpKey.getKeyIDs()[1].toHex().toUpperCase()
-	const node: nodes_info = {
-		armoredPublicKey: pgpKeyArmore,
-		ip_addr: '',
-		publicKeyObj: null,
-		region: 'US',
-		domain: `${pgpKeyID}.conet.network`
-	}
+	// const pgpKeyArmore = buffer.Buffer.from(node_key, 'base64').toString()
+	// const pgpKey = await openpgp.readKey({ armoredKey: pgpKeyArmore})
+	// const pgpKeyID = pgpKey.getKeyIDs()[1].toHex().toUpperCase()
+	// const node: nodes_info = {
+	// 	armoredPublicKey: pgpKeyArmore,
+	// 	ip_addr: '',
+	// 	publicKeyObj: null,
+	// 	region: 'US',
+	// 	domain: `${pgpKeyID}.conet.network`
+	// }
 
     const profile = CoNET_Data.profiles[index]
     if (miningStatus === 'STOP' && !miningConn) {
