@@ -406,7 +406,7 @@ type CoNETIndexDBInit = {
 	preferences: any
 }
 
-type SICommandObj_Command = 'SaaS_Proxy'|'SaaS_Sock5'|'mining'
+type SICommandObj_Command = 'SaaS_Proxy'|'SaaS_Sock5'|'mining'|'mining_validator'
 
 interface SICommandObj {
 	command: SICommandObj_Command

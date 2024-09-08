@@ -439,27 +439,37 @@ const fetchTest = () => {
 	})
 }
 
-const _startMiningV2 = async (profile: profile, nodeInfo: nodes_info, cmd: worker_command|null = null) => {
+interface nodeResponse {
+	status: number
+	epoch: number
+	hash: string
+	rate: string
+	nodeWallet:string
+	currentCCNTP?: string
+	minerResponseHash?: string
+}
+
+const _startMiningV2 = async (profile: profile, connectNode: nodes_info,  entryNode: nodes_info, cmd: worker_command|null = null) => {
 
     miningAddress = profile.keyID.toLowerCase()
 
-    const postData = await createConnectCmd(profile, nodeInfo)
+    const postData = await createConnectCmd(profile, connectNode)
     let first = true
 
 	const balance = profile?.tokens?.cCNTP?.balance
 	cCNTPcurrentTotal = !balance ? 0 : parseFloat(balance)
 
-	if (!nodeInfo?.domain || !postData) {
+	if (!connectNode?.domain || !postData) {
 		if (cmd) {
 			cmd.err = 'FAILURE'
         	return returnUUIDChannel(cmd)
 		}
-		return 
+		return
 	}
 
-	const url = `https://${nodeInfo.domain}/`
+	const url = `https://${connectNode.domain}/post`
 
-    miningConn = postToEndpointSSE(url, false, postData.requestData[0], async (err, _data) => {
+    miningConn = postToEndpointSSE(url, true, {data:postData.requestData[0]}, async (err, _data) => {
         // switch (miningStatus) {
         // 	case 'STOP': {
         // 		await miningConn.abort()
@@ -477,7 +487,7 @@ const _startMiningV2 = async (profile: profile, nodeInfo: nodes_info, cmd: worke
         }
 
         logger('_startMiningV2 success', _data)
-        const kk = JSON.parse(_data)
+        const response: nodeResponse = JSON.parse(_data)
         mining_epoch = epoch
 
 		if (!profile?.tokens) {
@@ -505,26 +515,51 @@ const _startMiningV2 = async (profile: profile, nodeInfo: nodes_info, cmd: worke
             if (cmd) {
 
                 cCNTPcurrentTotal = parseFloat(cCNTP.balance || '0');
-                kk['currentCCNTP'] = '0'
-                cmd.data = ['success', JSON.stringify(kk)]
+                response.currentCCNTP = '0'
+                cmd.data = ['success', JSON.stringify(response)]
                 return returnUUIDChannel(cmd)
             }
 
             return
         }
 
-        kk.rate = typeof kk.rate === 'number' ? kk.rate.toFixed(10) : parseFloat(kk.rate).toFixed(10)
-        kk.currentCCNTP = (parseFloat(profile.tokens.cCNTP.balance || '0') - cCNTPcurrentTotal).toFixed(8)
-        if (kk.currentCCNTP < 0) {
-            cCNTPcurrentTotal = parseFloat(profile.tokens.cCNTP.balance);
-            kk.currentCCNTP = 0;
+        response.rate = parseFloat(response.rate).toFixed(10)
+        response.currentCCNTP = (parseFloat(profile.tokens.cCNTP.balance || '0') - cCNTPcurrentTotal).toFixed(8)
+        if (response.currentCCNTP < '0') {
+            cCNTPcurrentTotal = parseFloat(profile.tokens.cCNTP.balance)
+            response.currentCCNTP = '0'
         }
+
         const cmdd = {
             cmd: 'miningStatus',
-            data: [JSON.stringify(kk)]
+            data: [JSON.stringify(response)]
         }
         sendState('toFrontEnd', cmdd)
+		validator(response, profile, entryNode)
     })
+}
+
+const validator = async (response: nodeResponse, profile: profile, sentryNode: nodes_info) => {
+	if (!response.hash) {
+		logger(response)
+		return logger(`checkMiningHash got NULL response.hash ERROR!`)
+	}
+	const message = JSON.stringify({epoch: response.epoch, wallet: profile.keyID.toLowerCase()})
+	const va = ethers.verifyMessage(message, response.hash)
+	if (va.toLowerCase() !== response.nodeWallet.toLowerCase()) {
+		return logger(`validator va${va.toLowerCase()} !== response.nodeWallet ${response.nodeWallet.toLowerCase()}`)
+	}
+	const wallet = new ethers.Wallet (profile.privateKeyArmor)
+	response.minerResponseHash = await wallet.signMessage(response.hash)
+	const request = await ceateMininngValidator(profile, sentryNode, response)
+	if (!request) {
+		return logger(`ceateMininngValidator got null Error!`)
+	}
+	const url = `https://${sentryNode.domain}/post`
+	const req = await postToEndpoint(url, true, {data: request.requestData[0]}).catch(ex => {
+		logger(ex)
+	})
+	logger(req)
 }
 
 const createConnectCmd = async (currentProfile: profile, node: nodes_info, requestData: any = null) => {
@@ -542,11 +577,9 @@ const createConnectCmd = async (currentProfile: profile, node: nodes_info, reque
 		walletAddress: currentProfile.keyID.toLowerCase()
 	}
 	
-	logger(`createSock5ConnectCmd`)
+	logger(`mining`)
 	const message =JSON.stringify(command)
 	const wallet = new ethers.Wallet(currentProfile.privateKeyArmor)
-	// const messageHash = ethers.id(message)
-	//const signMessage = CoNETModule.EthCrypto.sign(currentProfile.privateKeyArmor, messageHash)
 	const signMessage = await wallet.signMessage(message)
 	
 
@@ -558,6 +591,37 @@ const createConnectCmd = async (currentProfile: profile, node: nodes_info, reque
 		return logger (ex)
 	}
 
+
+	const encryptedCommand = await encrypt_Message( privateKeyObj, node.armoredPublicKey, {message, signMessage})
+	command.requestData = [encryptedCommand, '', key]
+	return (command)
+}
+
+const ceateMininngValidator = async (currentProfile: profile, node: nodes_info, requestData: any = null) => {
+	if (!currentProfile || !currentProfile.pgpKey|| !node.armoredPublicKey) {
+		logger (`currentProfile?.pgpKey[${currentProfile?.pgpKey}]|| !SaaSnode?.armoredPublicKey[${node?.armoredPublicKey}] Error`)
+		return null
+	}
+	const key = buffer.Buffer.from(self.crypto.getRandomValues(new Uint8Array(16))).toString('base64')
+	const command: SICommandObj = {
+		command: 'mining_validator',
+		algorithm: 'aes-256-cbc',
+		Securitykey: key,
+		requestData,
+		walletAddress: currentProfile.keyID.toLowerCase()
+	}
+
+
+	const message =JSON.stringify(command)
+	const wallet = new ethers.Wallet(currentProfile.privateKeyArmor)
+	const signMessage = await wallet.signMessage(message)
+	let privateKeyObj = null
+
+	try {
+		privateKeyObj = await makePrivateKeyObj (currentProfile.pgpKey.privateKeyArmor)
+	} catch (ex){
+		return logger (ex)
+	}
 
 	const encryptedCommand = await encrypt_Message( privateKeyObj, node.armoredPublicKey, {message, signMessage})
 	command.requestData = [encryptedCommand, '', key]
@@ -711,4 +775,3 @@ const getRegionAllNodes = async (region: string, profile: profile) => {
 	//		curl -v -4 -x socks5h://localhost:3004 "https://www.google.com"
 	//		curl -v -4 -x socks4://localhost:3003 "https://www.google.com"
 }
-
