@@ -336,25 +336,24 @@ const postToEndpoint = ( url: string, post: boolean, jsonData ) => new Promise (
 		xhr.onload = () => {
 			clearTimeout (timeCount)
 			//const status = parseInt(xhr.responseText.split (' ')[1])
-
+			
 			if (xhr.status === 200) {
 				// parse JSON
-				
+				xhr.abort()
 				if ( !xhr.responseText.length ) {
+					
 					return resolve ('')
 				}
 				let ret
 				try {
 					ret = JSON.parse(xhr.responseText)
 				} catch (ex) {
-					if ( post ) {
-						return resolve ('')
-					}
+					
 					return resolve(xhr.responseText)
 				}
 				return resolve (ret)
 			}
-
+			xhr.abort()
 			logger(`postToEndpoint [${url}] xhr.status [${xhr.status === 200}] !== 200 Error`)
 			return resolve (false)
 		}
@@ -365,6 +364,7 @@ const postToEndpoint = ( url: string, post: boolean, jsonData ) => new Promise (
 		xhr.send(jsonData? JSON.stringify(jsonData): '')
 
 		const timeCount = setTimeout (() => {
+			xhr.abort()
 			const Err = `Timeout!`
 			logger (`postToEndpoint ${url} Timeout Error`, Err )
 			reject (new Error ( Err ))
