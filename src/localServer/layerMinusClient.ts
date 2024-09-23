@@ -87,6 +87,21 @@ const startGossip = (node: nodeInfo, POST: string, callback: (err?: string, data
 
 }
 
+let wallet: ethers.HDNodeWallet
+
+interface listenClient {
+	status: number
+	epoch: number
+	rate: string
+	hash: string
+	nodeWallet: string
+	totalMiners: number
+	connetingNodes: number
+	nodeDomain: string
+	nodeIpAddr: string
+	nodeWallets: string []
+}
+
 interface IGossipStatus {
 	totalConnectNode: number
 	epoch: number
@@ -104,11 +119,10 @@ let gossipStatus: IGossipStatus = {
 }
 
 let previousGossipStatus = gossipStatus
-let managerWallet: ethers.HDNodeWallet
 
 const connectToGossipNode = async (node: nodeInfo ) => {
 	
-	const wallet = managerWallet
+	
 	const key = Buffer.from(getRandomValues(new Uint8Array(16))).toString('base64')
 	const command = {
 		command: 'mining',
@@ -131,10 +145,22 @@ const connectToGossipNode = async (node: nodeInfo ) => {
 		if (!_data) {
 			return logger(Colors.magenta(`connectToGossipNode ${node.ip_addr} push ${_data} is null!`))
 		}
+
 		try {
-			const data = JSON.parse(_data)
+			const data: listenClient = JSON.parse(_data)
 			const wallets = data.nodeWallets||[]
-			gossipStatus.nodesWallets.set(node.ip_addr, wallets)	
+
+			const epochNode = listenPool.get(data.epoch)
+			if (!epochNode) {
+				if (data.epoch > currentEpoch) {
+					const obj = new Map()
+					obj.set(node.ip_addr, wallets)
+					return listenPool.set (data.epoch, obj)
+				}
+				return logger(Colors.red(`${node.ip_addr} send unknow EPOCH ${data.epoch} data!`))
+				
+			}
+			epochNode.set(node.ip_addr, wallets)
 		} catch (ex) {
 			logger(Colors.blue(`${node.ip_addr} => \n${_data}`))
 			logger(Colors.red(`connectToGossipNode JSON.parse(_data) Error!`))
@@ -142,41 +168,43 @@ const connectToGossipNode = async (node: nodeInfo ) => {
 	})
 }
 
-
-
-const moveData = (block: number) => {
-
-	logger(Colors.magenta(`moveData doing ${block} validatorPool.get (${block-1})`))
+const moveData = () => {
+	const block = currentEpoch - 1
+	logger(Colors.magenta(`move data at epoch ${block}`))
 	let _wallets: string[] = []
-	gossipStatus.nodesWallets.forEach((v, keys) => {
+	const obj = listenPool.get (block)
+	if (!obj) {
+		return logger(Colors.red(`moveData Error! listenPool hasn't Epoch ${block} data! `))
+	}
+
+	obj.forEach((v, keys) => {
 		_wallets = [..._wallets, ...v]
 	})
 
 	
 	logger(inspect(_wallets, false, 3, true))
+
 	let totalMiners = _wallets.length
 	previousGossipStatus.nodeWallets = _wallets
-	previousGossipStatus.totalConnectNode = previousGossipStatus.nodesWallets.size
+	previousGossipStatus.totalConnectNode = obj.size
 	previousGossipStatus.totalMiners = totalMiners
-
-	gossipStatus = {
-		epoch: block,
-		totalConnectNode: 0,
-		nodesWallets: new Map(),
-		totalMiners: 0,
-		nodeWallets: []
-	}
 
 	logger(Colors.magenta(`gossipStart sendEpoch ${block-1} totalConnectNode ${previousGossipStatus.totalConnectNode} totalMiners ${totalMiners}`))
 }
-
+const listenPool: Map<number, Map<string, string[]>> = new Map()
 let currentEpoch = 0
 const listenEpoch = async () => {
 	currentEpoch = await provoder.getBlockNumber()
-
+	gossipStatus.epoch = currentEpoch
 	provoder.on('block', block => {
 		currentEpoch = block
-		moveData(block)
+		moveData()
+		listenPool.delete(currentEpoch - 3)
+		const obj = listenPool.get (currentEpoch)
+		if (!obj) {
+			listenPool.set(currentEpoch, new Map())
+		}
+		
 		logger(Colors.blue(`listenEpoch on [${currentEpoch}]`))
 	})
 
@@ -253,7 +281,7 @@ const startGossipListening = () => {
 
 
 const start = async () => {
-	managerWallet = ethers.Wallet.createRandom()
+	wallet = ethers.Wallet.createRandom()
 	await getAllNodes()
 	startGossipListening()
 	listenEpoch()
