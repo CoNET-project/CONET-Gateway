@@ -99,13 +99,13 @@ const createAccount = async (cmd) => {
 
     const mainProfile = CoNET_Data.profiles[0]
     CoNET_Data.preferences = cmd.data[2] || null
-    await getFaucet(mainProfile)
 
     await storagePieceToLocal()
     await storeSystemData()
     cmd.data[0] = CoNET_Data.mnemonicPhrase
     return returnUUIDChannel(cmd)
 }
+
 let referrer
 let RefereesList
 
@@ -134,10 +134,10 @@ const testPasscode = async (cmd) => {
         returnUUIDChannel(cmd)
         return logger(`testPasscode CoNET_Data?.profiles Empty error!`)
     }
-
+	const profile = CoNET_Data.profiles[0]
     authorization_key = cmd.data[0] = uuid.v4()
     returnUUIDChannel(cmd)
-
+	await initV2(profile)
     await getAllProfileAssetsBalance()
     await getAllReferrer()
 	await checkGuardianNodes()
@@ -403,8 +403,11 @@ const getClaimableAddress = (CONET_claimableName) => {
 
 const getCONET_api_health = async () => {
 	const url = `${apiv2_endpoint}health`
-	const result: any = await postToEndpoint(url, false, null)
-	return result?.health
+	const result = await postToEndpoint(url, false, null)
+	if (result === true) {
+		return true
+	}
+	return false
 }
 
 const getReferralsRate = async (wallet: string) => {
@@ -449,184 +452,8 @@ interface nodeResponse {
 	minerResponseHash?: string
 }
 
-const _startMiningV2 = async (profile: profile, connectNode: nodes_info,  entryNode: nodes_info, cmd: worker_command|null = null) => {
-
-    miningAddress = profile.keyID.toLowerCase()
-
-    const postData = await createConnectCmd(profile, connectNode)
-    let first = true
-
-	const balance = profile?.tokens?.cCNTP?.balance
-	cCNTPcurrentTotal = !balance ? 0 : parseFloat(balance)
-
-	if (!connectNode?.domain || !postData) {
-		if (cmd) {
-			cmd.err = 'FAILURE'
-        	return returnUUIDChannel(cmd)
-		}
-		return
-	}
-
-	const url = `https://${connectNode.domain}/post`
-
-    miningConn = postToEndpointSSE(url, true, {data:postData.requestData[0]}, async (err, _data) => {
-        // switch (miningStatus) {
-        // 	case 'STOP': {
-        // 		await miningConn.abort()
-        // 		miningConn = null
-        // 		return
-        // 	}
-        // }
-        if (err) {
-            logger(err);
-            if (cmd) {
-                cmd.err = err;
-                return returnUUIDChannel(cmd)
-            }
-            return
-        }
-
-        logger('_startMiningV2 success', _data)
-        const response: nodeResponse = JSON.parse(_data)
-        mining_epoch = epoch
-
-		if (!profile?.tokens) {
-			profile.tokens = {}
-		}
-
-		if (!profile.tokens?.cCNTP) {
-			profile.tokens.cCNTP = {
-				balance: '0',
-				history: [],
-				network: 'CONET Holesky',
-				decimal: 18,
-				contract: cCNTP_new_Addr,
-				name: 'cCNTP'
-			}
-			
-		}
-
-		const cCNTP = profile.tokens.cCNTP
-
-        if (first) {
-            miningProfile = profile
-            first = false
-
-            if (cmd) {
-
-                cCNTPcurrentTotal = parseFloat(cCNTP.balance || '0');
-                response.currentCCNTP = '0'
-                cmd.data = ['success', JSON.stringify(response)]
-                return returnUUIDChannel(cmd)
-            }
-
-            return
-        }
-
-        response.rate = parseFloat(response.rate).toFixed(10)
-        response.currentCCNTP = (parseFloat(profile.tokens.cCNTP.balance || '0') - cCNTPcurrentTotal).toFixed(8)
-        if (response.currentCCNTP < '0') {
-            cCNTPcurrentTotal = parseFloat(profile.tokens.cCNTP.balance)
-            response.currentCCNTP = '0'
-        }
-
-        const cmdd = {
-            cmd: 'miningStatus',
-            data: [JSON.stringify(response)]
-        }
-        sendState('toFrontEnd', cmdd)
-		validator(response, profile, entryNode)
-    })
-}
-
-const validator = async (response: nodeResponse, profile: profile, sentryNode: nodes_info) => {
-	if (!response.hash) {
-		logger(response)
-		return logger(`checkMiningHash got NULL response.hash ERROR!`)
-	}
-	const message = JSON.stringify({epoch: response.epoch, wallet: profile.keyID.toLowerCase()})
-	const va = ethers.verifyMessage(message, response.hash)
-	if (va.toLowerCase() !== response.nodeWallet.toLowerCase()) {
-		return logger(`validator va${va.toLowerCase()} !== response.nodeWallet ${response.nodeWallet.toLowerCase()}`)
-	}
-	const wallet = new ethers.Wallet (profile.privateKeyArmor)
-	response.minerResponseHash = await wallet.signMessage(response.hash)
-	const request = await ceateMininngValidator(profile, sentryNode, response)
-	if (!request) {
-		return logger(`ceateMininngValidator got null Error!`)
-	}
-	const url = `https://${sentryNode.domain}/post`
-	const req = await postToEndpoint(url, true, {data: request.requestData[0]}).catch(ex => {
-		logger(ex)
-	})
-	logger(req)
-}
-
-const createConnectCmd = async (currentProfile: profile, node: nodes_info, requestData: any = null) => {
-	if (!currentProfile || !currentProfile.pgpKey|| !node.armoredPublicKey) {
-		logger (`currentProfile?.pgpKey[${currentProfile?.pgpKey}]|| !SaaSnode?.armoredPublicKey[${node?.armoredPublicKey}] Error`)
-		return null
-	}
-
-	const key = buffer.Buffer.from(self.crypto.getRandomValues(new Uint8Array(16))).toString('base64')
-	const command: SICommandObj = {
-		command: 'mining',
-		algorithm: 'aes-256-cbc',
-		Securitykey: key,
-		requestData,
-		walletAddress: currentProfile.keyID.toLowerCase()
-	}
-	
-	logger(`mining`)
-	const message =JSON.stringify(command)
-	const wallet = new ethers.Wallet(currentProfile.privateKeyArmor)
-	const signMessage = await wallet.signMessage(message)
-	
-
-	let privateKeyObj = null
-
-	try {
-		privateKeyObj = await makePrivateKeyObj (currentProfile.pgpKey.privateKeyArmor)
-	} catch (ex){
-		return logger (ex)
-	}
 
 
-	const encryptedCommand = await encrypt_Message( privateKeyObj, node.armoredPublicKey, {message, signMessage})
-	command.requestData = [encryptedCommand, '', key]
-	return (command)
-}
-
-const ceateMininngValidator = async (currentProfile: profile, node: nodes_info, requestData: any = null) => {
-	if (!currentProfile || !currentProfile.pgpKey|| !node.armoredPublicKey) {
-		logger (`currentProfile?.pgpKey[${currentProfile?.pgpKey}]|| !SaaSnode?.armoredPublicKey[${node?.armoredPublicKey}] Error`)
-		return null
-	}
-	const key = buffer.Buffer.from(self.crypto.getRandomValues(new Uint8Array(16))).toString('base64')
-	const command: SICommandObj = {
-		command: 'mining_validator',
-		algorithm: 'aes-256-cbc',
-		Securitykey: key,
-		requestData,
-		walletAddress: currentProfile.keyID.toLowerCase()
-	}
-
-
-	const message =JSON.stringify(command)
-	const wallet = new ethers.Wallet(currentProfile.privateKeyArmor)
-	const signMessage = await wallet.signMessage(message)
-	let privateKeyObj = null
-
-	try {
-		privateKeyObj = await makePrivateKeyObj (currentProfile.pgpKey.privateKeyArmor)
-	} catch (ex){
-		return logger (ex)
-	}
-
-	const encryptedCommand = await encrypt_Message( privateKeyObj, node.armoredPublicKey, {message, signMessage})
-	command.requestData = [encryptedCommand, '', key]
-	return (command)
-}
 
 const getTicket = async (profile: profile) => {
 	const message = JSON.stringify({ walletAddress: profile.keyID })
@@ -678,6 +505,8 @@ const testFunction = async (cmd: worker_command) => {
 	if (!profiles) {
 		return
 	}
+
+	// await getAllNodes ()
 	// await getFaucet(profiles[0])
 	// await getAllOtherAssets()
 	// await CONET_guardian_purchase(profiles[0], 1, 0.2159, 'arb_eth')
@@ -688,9 +517,10 @@ const testFunction = async (cmd: worker_command) => {
 	// getFaucetFromSmartContract(profiles[0])
 	// await fetchTest()
 	const profile = profiles[0]
+	const kk = profile.keyID
 	// await transferNFT ()
 	// await makeContainerPGPObj(profile)
-	//getRegionAllNodes ('us', profile)
+	// getAllNodes ()
 	//await checkProfileVersion (profile.keyID)
 	// const wallet = await unlock_cCNTP(profile)
 	const wallet1 = '0x23033811Ae9A29d01BC6a8368449f74d18c2Ce18'
@@ -744,6 +574,7 @@ const getRegionAllNodes = async (region: string, profile: profile) => {
 	const filterRegion: string[] = regions.filter(n => filter.test(n))
 	const GuardianNodesSC = new ethers.Contract(CONET_Guardian_NodeInfoV6, CONET_Guardian_NodeInfo_ABI, provideCONET)
 	const nodes: nodes_info[] = []
+
 	await async.mapLimit(filterRegion, 5, async (n, next) => {
 		
 		const ipaddress: string[] = await GuardianNodesSC.getReginNodes(n)
@@ -753,7 +584,8 @@ const getRegionAllNodes = async (region: string, profile: profile) => {
 				country: region,
 				ip_addr: nn,
 				armoredPublicKey: '',
-				last_online: true
+				last_online: true,
+				nftNumber: 1
 			}
 			nodes.push (node)
 		})
@@ -775,3 +607,4 @@ const getRegionAllNodes = async (region: string, profile: profile) => {
 	//		curl -v -4 -x socks5h://localhost:3004 "https://www.google.com"
 	//		curl -v -4 -x socks4://localhost:3003 "https://www.google.com"
 }
+
