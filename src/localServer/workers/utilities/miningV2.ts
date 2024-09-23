@@ -65,6 +65,7 @@ const _startMiningV2 = async (profile: profile, cmd: worker_command|null = null)
 
     miningAddress = profile.keyID.toLowerCase()
 	const connectNode = getRandomNodeV2()
+	
 	if (!connectNode) {
 		if (cmd) {
 			cmd.err = 'FAILURE'
@@ -72,7 +73,9 @@ const _startMiningV2 = async (profile: profile, cmd: worker_command|null = null)
 		}
 		return 
 	}
-
+	const index = Guardian_Nodes.findIndex(n => n.ip_addr === connectNode.ip_addr)
+	Guardian_Nodes.splice(index, 1)
+	
     const postData = await createConnectCmd(profile, connectNode)
     let first = true
 
@@ -155,7 +158,8 @@ const _startMiningV2 = async (profile: profile, cmd: worker_command|null = null)
 			logger(`_startMiningV2 Error! getRandomNodeV2 return null!`)
 			return
 		}
-		validator(response, profile, entryNode)
+
+		validator(response, profile, Guardian_Nodes[1])
     })
 }
 
