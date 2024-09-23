@@ -44,6 +44,7 @@ type nodes_info = {
 	armoredPublicKey: string
 	publicKeyObj?: any
 	domain?: string
+	nftNumber: number
 }
 
 interface connect_imap_reqponse {

@@ -47,24 +47,7 @@ const makePublicKeyOBJ = async ( publickeyArmor: string ) => {
 		return (await openpgp.readKey ({ armoredKey: publickeyArmor }))
 }
 
-const makePrivateKeyObj = async ( privateArmor: string, password = '' ) => {
 
-	if  (!privateArmor) {
-		const msg = `makePrivateKeyObj have no privateArmor Error!`
-		return logger (msg)
-	}
-
-	let privateKey = await openpgp.readPrivateKey ({armoredKey: privateArmor})
-
-	if (!privateKey.isDecrypted()) {
-		privateKey = await openpgp.decryptKey({
-			privateKey,
-			passphrase: password
-		})
-	}
-
-	return privateKey
-}
 
 // const loadWalletAddress = ( keypair: keyPair, password ) => {
 // 	const account = new CoNETModule.Web3EthAccounts ()
@@ -95,15 +78,6 @@ const decryptWithContainerKey = ( encryptedMessage: string, CallBack: (err: Erro
 }
 
 
-const encrypt_Message = async (privatePgpObj: any, armoredPublicKey: string, message: any) => {
-	const encryptObj = {
-        message: await openpgp.createMessage({text: buffer.Buffer.from(JSON.stringify (message)).toString('base64')}),
-        encryptionKeys: await openpgp.readKey ({ armoredKey: armoredPublicKey }),
-        signingKeys: privatePgpObj,
-		config: { preferredCompressionAlgorithm: openpgp.enums.compression.zlib } 		// compress the data with zlib
-    }
-	return await openpgp.encrypt(encryptObj)
-}
 
 // const encryptCoNET_Data_WithContainerKey = async () => {
 
@@ -332,44 +306,43 @@ const weiToEther = (wei: string, length: number) => {
 const XMLHttpRequestTimeout = 30 * 1000
 
 const postToEndpoint = ( url: string, post: boolean, jsonData ) => new Promise ((resolve, reject) => {
-		const xhr = new XMLHttpRequest()
-		xhr.onload = () => {
-			clearTimeout (timeCount)
-			//const status = parseInt(xhr.responseText.split (' ')[1])
-			
-			if (xhr.status === 200) {
-				// parse JSON
-				xhr.abort()
-				if ( !xhr.responseText.length ) {
-					
-					return resolve ('')
-				}
-				let ret
-				try {
-					ret = JSON.parse(xhr.responseText)
-				} catch (ex) {
-					
-					return resolve(xhr.responseText)
-				}
-				return resolve (ret)
+	const xhr = new XMLHttpRequest()
+	xhr.onload = () => {
+		clearTimeout (timeCount)
+		//const status = parseInt(xhr.responseText.split (' ')[1])
+		
+		if (xhr.status === 200) {
+			// parse JSON
+			xhr.abort()
+			if ( !xhr.responseText.length ) {
+				
+				return resolve (true)
 			}
-			xhr.abort()
-			logger(`postToEndpoint [${url}] xhr.status [${xhr.status === 200}] !== 200 Error`)
-			return resolve (false)
+			let ret
+			try {
+				ret = JSON.parse(xhr.responseText)
+			} catch (ex) {
+				return resolve(true)
+			}
+			return resolve (ret)
 		}
+		xhr.abort()
+		logger(`postToEndpoint [${url}] xhr.status [${xhr.status === 200}] !== 200 Error`)
+		return resolve (false)
+	}
 
-		xhr.open( post? 'POST': 'GET', url, true )
-		xhr.setRequestHeader('Content-Type', 'application/json;charset=UTF-8')
+	xhr.open( post? 'POST': 'GET', url, true )
+	xhr.setRequestHeader('Content-Type', 'application/json;charset=UTF-8')
 
-		xhr.send(jsonData? JSON.stringify(jsonData): '')
+	xhr.send(jsonData? JSON.stringify(jsonData): '')
 
-		const timeCount = setTimeout (() => {
-			xhr.abort()
-			const Err = `Timeout!`
-			logger (`postToEndpoint ${url} Timeout Error`, Err )
-			reject (new Error ( Err ))
-		}, XMLHttpRequestTimeout )
-	})
+	const timeCount = setTimeout (() => {
+		xhr.abort()
+		const Err = `Timeout!`
+		logger (`postToEndpoint ${url} Timeout Error`, Err )
+		reject (new Error ( Err ))
+	}, XMLHttpRequestTimeout )
+})
 	
 
 

@@ -74,6 +74,7 @@ const getRandomNode = (activeNodes: nodes_info[], saasNode: nodes_info) => {
 	logger (Colors.grey(`getRandomNode ${ret.ip_addr} saasNode ${saasNode?.ip_addr}`))
 	return ret
 }
+
 const CoNET_SI_Network_Domain = 'openpgp.online'
 const conet_DL_getSINodes = `https://${ CoNET_SI_Network_Domain }:4001/api/conet-si-list`
 

@@ -2473,6 +2473,101 @@ const CONET_Guardian_NodeInfo_ABI = [
         "type": "constructor"
     },
     {
+        "anonymous": false,
+        "inputs": [
+            {
+                "indexed": true,
+                "internalType": "bytes32",
+                "name": "ipAddr",
+                "type": "bytes32"
+            },
+            {
+                "indexed": true,
+                "internalType": "bytes32",
+                "name": "regin",
+                "type": "bytes32"
+            }
+        ],
+        "name": "deleteIPAddr",
+        "type": "event"
+    },
+    {
+        "inputs": [
+            {
+                "internalType": "string",
+                "name": "regionName",
+                "type": "string"
+            }
+        ],
+        "name": "addRegion",
+        "outputs": [],
+        "stateMutability": "nonpayable",
+        "type": "function"
+    },
+    {
+        "inputs": [
+            {
+                "internalType": "address",
+                "name": "",
+                "type": "address"
+            }
+        ],
+        "name": "adminList",
+        "outputs": [
+            {
+                "internalType": "bool",
+                "name": "",
+                "type": "bool"
+            }
+        ],
+        "stateMutability": "view",
+        "type": "function"
+    },
+    {
+        "inputs": [
+            {
+                "internalType": "address",
+                "name": "addr",
+                "type": "address"
+            },
+            {
+                "internalType": "bool",
+                "name": "status",
+                "type": "bool"
+            }
+        ],
+        "name": "changeAddressInAdminlist",
+        "outputs": [],
+        "stateMutability": "nonpayable",
+        "type": "function"
+    },
+    {
+        "inputs": [
+            {
+                "internalType": "bytes32",
+                "name": "ipaddressHash",
+                "type": "bytes32"
+            }
+        ],
+        "name": "deleteIpAddress",
+        "outputs": [],
+        "stateMutability": "nonpayable",
+        "type": "function"
+    },
+    {
+        "inputs": [
+            {
+                "internalType": "string",
+                "name": "regionName",
+                "type": "string"
+            }
+        ],
+        "name": "deleteRegion",
+        "outputs": [],
+        "stateMutability": "nonpayable",
+        "type": "function"
+    },
+    {
         "inputs": [],
         "name": "getAllRegions",
         "outputs": [
@@ -2483,6 +2578,25 @@ const CONET_Guardian_NodeInfo_ABI = [
             }
         ],
         "stateMutability": "view",
+        "type": "function"
+    },
+    {
+        "inputs": [
+            {
+                "internalType": "string",
+                "name": "ipAddr",
+                "type": "string"
+            }
+        ],
+        "name": "getIPAddressHash",
+        "outputs": [
+            {
+                "internalType": "bytes32",
+                "name": "ipAddrHash",
+                "type": "bytes32"
+            }
+        ],
+        "stateMutability": "pure",
         "type": "function"
     },
     {
@@ -2542,6 +2656,11 @@ const CONET_Guardian_NodeInfo_ABI = [
                 "internalType": "string",
                 "name": "regionName",
                 "type": "string"
+            },
+            {
+                "internalType": "string",
+                "name": "pgp",
+                "type": "string"
             }
         ],
         "stateMutability": "view",
@@ -2588,77 +2707,20 @@ const CONET_Guardian_NodeInfo_ABI = [
     {
         "inputs": [
             {
-                "internalType": "uint256",
-                "name": "",
-                "type": "uint256"
-            }
-        ],
-        "name": "id_region",
-        "outputs": [
-            {
-                "internalType": "bytes32",
-                "name": "",
-                "type": "bytes32"
-            }
-        ],
-        "stateMutability": "view",
-        "type": "function"
-    },
-    {
-        "inputs": [
-            {
-                "internalType": "bytes32",
-                "name": "",
-                "type": "bytes32"
-            }
-        ],
-        "name": "ipaddress_owner",
-        "outputs": [
-            {
-                "internalType": "address",
-                "name": "",
-                "type": "address"
-            }
-        ],
-        "stateMutability": "view",
-        "type": "function"
-    },
-    {
-        "inputs": [
-            {
-                "internalType": "bytes32",
-                "name": "",
-                "type": "bytes32"
-            }
-        ],
-        "name": "ipaddress_pgp",
-        "outputs": [
-            {
                 "internalType": "string",
-                "name": "",
+                "name": "regionName",
                 "type": "string"
             }
         ],
-        "stateMutability": "view",
-        "type": "function"
-    },
-    {
-        "inputs": [
-            {
-                "internalType": "bytes32",
-                "name": "",
-                "type": "bytes32"
-            }
-        ],
-        "name": "ipaddress_reg",
+        "name": "getRegionHash",
         "outputs": [
             {
                 "internalType": "bytes32",
-                "name": "",
+                "name": "regionHash",
                 "type": "bytes32"
             }
         ],
-        "stateMutability": "view",
+        "stateMutability": "pure",
         "type": "function"
     },
     {
@@ -2683,6 +2745,24 @@ const CONET_Guardian_NodeInfo_ABI = [
     {
         "inputs": [
             {
+                "internalType": "string",
+                "name": "ipaddress",
+                "type": "string"
+            },
+            {
+                "internalType": "string",
+                "name": "pgp",
+                "type": "string"
+            }
+        ],
+        "name": "modify_node_pgp",
+        "outputs": [],
+        "stateMutability": "nonpayable",
+        "type": "function"
+    },
+    {
+        "inputs": [
+            {
                 "internalType": "uint256",
                 "name": "id",
                 "type": "uint256"
@@ -2701,153 +2781,11 @@ const CONET_Guardian_NodeInfo_ABI = [
                 "internalType": "string",
                 "name": "pgp",
                 "type": "string"
-            },
-            {
-                "internalType": "address",
-                "name": "_owner",
-                "type": "address"
             }
         ],
         "name": "modify_nodes",
         "outputs": [],
         "stateMutability": "nonpayable",
-        "type": "function"
-    },
-    {
-        "inputs": [
-            {
-                "internalType": "address",
-                "name": "addAddress",
-                "type": "address"
-            },
-            {
-                "internalType": "bool",
-                "name": "setup",
-                "type": "bool"
-            }
-        ],
-        "name": "modify_whiteList",
-        "outputs": [],
-        "stateMutability": "nonpayable",
-        "type": "function"
-    },
-    {
-        "inputs": [
-            {
-                "internalType": "uint256",
-                "name": "",
-                "type": "uint256"
-            }
-        ],
-        "name": "nodeIpAddress",
-        "outputs": [
-            {
-                "internalType": "string",
-                "name": "",
-                "type": "string"
-            }
-        ],
-        "stateMutability": "view",
-        "type": "function"
-    },
-    {
-        "inputs": [
-            {
-                "internalType": "uint256",
-                "name": "",
-                "type": "uint256"
-            }
-        ],
-        "name": "pgp_public",
-        "outputs": [
-            {
-                "internalType": "string",
-                "name": "",
-                "type": "string"
-            }
-        ],
-        "stateMutability": "view",
-        "type": "function"
-    },
-    {
-        "inputs": [
-            {
-                "internalType": "uint256",
-                "name": "",
-                "type": "uint256"
-            }
-        ],
-        "name": "regionList",
-        "outputs": [
-            {
-                "internalType": "string",
-                "name": "",
-                "type": "string"
-            }
-        ],
-        "stateMutability": "view",
-        "type": "function"
-    },
-    {
-        "inputs": [
-            {
-                "internalType": "bytes32",
-                "name": "",
-                "type": "bytes32"
-            }
-        ],
-        "name": "region_hashs",
-        "outputs": [
-            {
-                "internalType": "string",
-                "name": "",
-                "type": "string"
-            }
-        ],
-        "stateMutability": "view",
-        "type": "function"
-    },
-    {
-        "inputs": [
-            {
-                "internalType": "bytes32",
-                "name": "",
-                "type": "bytes32"
-            },
-            {
-                "internalType": "uint256",
-                "name": "",
-                "type": "uint256"
-            }
-        ],
-        "name": "region_nodes",
-        "outputs": [
-            {
-                "internalType": "string",
-                "name": "",
-                "type": "string"
-            }
-        ],
-        "stateMutability": "view",
-        "type": "function"
-    },
-    {
-        "inputs": [
-            {
-                "internalType": "address",
-                "name": "",
-                "type": "address"
-            }
-        ],
-        "name": "whiteList",
-        "outputs": [
-            {
-                "internalType": "bool",
-                "name": "",
-                "type": "bool"
-            }
-        ],
-        "stateMutability": "view",
         "type": "function"
     }
 ]

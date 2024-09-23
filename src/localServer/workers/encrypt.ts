@@ -126,8 +126,9 @@ const initEncryptWorker = async () => {
 	logger(`workerProcess: [70]`)
     // self.importScripts ( baseUrl + 'seguroSetup.js' )
     self.importScripts(baseUrl + 'utilV2.js')
+	self.importScripts(baseUrl + 'miningV2.js')
     
-    self.importScripts('https://cdnjs.cloudflare.com/ajax/libs/ethers/6.13.1/ethers.umd.min.js')
+    self.importScripts('https://cdnjs.cloudflare.com/ajax/libs/ethers/6.13.2/ethers.umd.min.js')
     workerReady = true
     channelLoading.postMessage(90)
 	logger(`workerProcess: [90]`)
@@ -305,11 +306,7 @@ const processCmd = async (cmd: worker_command) => {
                 cmd.err = 'INVALID_DATA'
                 return returnUUIDChannel(cmd)
             }
-            const health = await getCONET_api_health()
-            if (!health) {
-                cmd.err = 'Err_Server_Unreachable'
-                return returnUUIDChannel(cmd)
-            }
+
             const sourceProfile = profiles[profileIndex]
             sendState('beforeunload', true)
             const kk = await CONET_transfer_token(sourceProfile, toAddress, amount, assetName)
@@ -553,39 +550,6 @@ const processCmd = async (cmd: worker_command) => {
 			return createAccount(cmd)
 		}
 
-        case 'getDomain': {
-            const id = cmd.data[0];
-            if (id) {
-                const index = backGroundPoolWorker.findIndex(n => n.id === id);
-                if (index > -1) {
-                    cmd.data[1] = backGroundPoolWorker[index];
-                }
-                else {
-                    cmd.err = 'UNKNOW_ERROR';
-                }
-            }
-            else {
-                cmd.data[1] = backGroundPoolWorker[backGroundPoolWorker.length - 1];
-                if (!cmd.data[1]) {
-                    cmd.err = 'INVALID_DATA';
-                }
-            }
-            return responseChannel.postMessage(JSON.stringify(cmd));
-        }
-
-        case 'showSRP': {
-            return showSRP(cmd)
-        }
-        case 'getWorkerClientID': {
-            cmd.data = [ClientIDworker]
-            logger(`Worker encryptWorkerDoCommand got getWorkerClientID ClientIDworker = [${ClientIDworker}]`)
-            return responseChannel.postMessage(JSON.stringify(cmd))
-        }
-
-        case 'createAccount': {
-            return createAccount(cmd)
-        }
-
         case 'getContainer': {
             cmd.data = [platform]
             return returnUUIDChannel(cmd)
@@ -703,7 +667,6 @@ const processCmd = async (cmd: worker_command) => {
 		}
 	}
 }
-
 
 /**
  *
