@@ -104,7 +104,7 @@ let gossipStatus: IGossipStatus = {
 }
 
 let previousGossipStatus = gossipStatus
-let managerWallet: ethers.Wallet
+let managerWallet: ethers.HDNodeWallet
 
 const connectToGossipNode = async (node: nodeInfo ) => {
 	
@@ -253,7 +253,7 @@ const startGossipListening = () => {
 
 
 const start = async () => {
-	const wallet = ethers.Wallet.createRandom()
+	managerWallet = ethers.Wallet.createRandom()
 	await getAllNodes()
 	startGossipListening()
 	listenEpoch()
