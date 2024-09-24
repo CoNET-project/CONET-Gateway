@@ -62,7 +62,7 @@ const getRandomNodeV2 = () => {
 }
 
 const _startMiningV2 = async (profile: profile, cmd: worker_command|null = null) => {
-
+	await getAllNodes()
     miningAddress = profile.keyID.toLowerCase()
 	const connectNode = getRandomNodeV2()
 	
@@ -73,6 +73,7 @@ const _startMiningV2 = async (profile: profile, cmd: worker_command|null = null)
 		}
 		return 
 	}
+
 	const index = Guardian_Nodes.findIndex(n => n.ip_addr === connectNode.ip_addr)
 	Guardian_Nodes.splice(index, 1)
 	
@@ -139,8 +140,8 @@ const _startMiningV2 = async (profile: profile, cmd: worker_command|null = null)
 
             return
         }
-
-        response.rate = parseFloat(response.rate).toFixed(10)
+		const kk = parseFloat(response.rate)
+        response.rate = isNaN(kk) ? '' : kk.toFixed(8)
         response.currentCCNTP = (parseFloat(profile.tokens.cCNTP.balance || '0') - cCNTPcurrentTotal).toFixed(8)
         if (response.currentCCNTP < '0') {
             cCNTPcurrentTotal = parseFloat(profile.tokens.cCNTP.balance)
@@ -159,7 +160,7 @@ const _startMiningV2 = async (profile: profile, cmd: worker_command|null = null)
 			return
 		}
 
-		validator(response, profile, Guardian_Nodes[1])
+		validator(response, profile, entryNode)
     })
 }
 

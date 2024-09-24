@@ -219,7 +219,11 @@ const processCmd = async (cmd: worker_command) => {
         }
 		
         case 'stopMining': {
-            miningStatus = 'STOP'
+			if (miningConn && typeof miningConn?.abort === 'function') {
+				miningConn.abort()
+				miningConn = null
+			}
+			
             return returnUUIDChannel(cmd)
         }
 

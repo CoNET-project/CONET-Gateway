@@ -713,7 +713,7 @@ let needUpgradeVer = 0
 
 const listenProfileVer = async () => {
     epoch = await provideCONET.getBlockNumber()
-	getAllNodes()
+
     lesteningBlock = true
     provideCONET.on('block', async (block) => {
         if (block === epoch + 1) {
