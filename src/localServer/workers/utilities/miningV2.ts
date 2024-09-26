@@ -61,6 +61,23 @@ const getRandomNodeV2 = () => {
 	return node
 }
 
+const createGPGKey = async ( passwd: string, name: string, email: string ) => {
+	const userId = {
+		name: name,
+		email: email
+	}
+	const option = {
+        type: 'ecc',
+		passphrase: passwd,
+		userIDs: [userId],
+		curve: 'curve25519',
+        format: 'armored'
+	}
+
+	return await openpgp.generateKey ( option )
+}
+
+
 const _startMiningV2 = async (profile: profile, cmd: worker_command|null = null) => {
 	await getAllNodes()
     miningAddress = profile.keyID.toLowerCase()
@@ -72,6 +89,10 @@ const _startMiningV2 = async (profile: profile, cmd: worker_command|null = null)
         	return returnUUIDChannel(cmd)
 		}
 		return 
+	}
+	
+	if (!profile?.pgpKey) {
+		profile.pgpKey = await createGPGKey('', '', '')
 	}
 
 	const index = Guardian_Nodes.findIndex(n => n.ip_addr === connectNode.ip_addr)
