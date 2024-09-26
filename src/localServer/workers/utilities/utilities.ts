@@ -1380,24 +1380,6 @@ const fetchWithTimeout = async (resource, options: any) => {
 	return response
 }
 
-
-const createGPGKey = async ( passwd: string, name: string, email: string ) => {
-	const userId = {
-		name: name,
-		email: email
-	}
-	const option = {
-        type: 'ecc',
-		passphrase: passwd,
-		userIDs: [userId],
-		curve: 'curve25519',
-        format: 'armored'
-	}
-
-	return await openpgp.generateKey ( option )
-}
-
-
 const encryptWorkerDoCommand = async ( e: MessageEvent<any> ) => {
 	const jsonData = buffer.Buffer.from ( e.data ).toString()
 	let cmd: worker_command
