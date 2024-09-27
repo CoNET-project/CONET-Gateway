@@ -69,14 +69,22 @@ const claimable_ETH = '0xAD7dEC79BC005F699Ef80EB53fF1a7E21E24A456'
 const claimable_Arb_ETH = '0xF406385E1A0389Ae35684D27c3Ef2799E88E2c4A'
 const claimable_Arb_USDT = '0xF40A8EFc8Dd47929ba8Ee9d5B3f1534239E930Fe'
 const CONETianPlanAddr = '0x27B9043873dE8684822DEC12F90bAE08f6a06657'
+
 const Guardian = 0
 const Sentinel = 1
 const Conetian = 2
 const Pioneer = 3
+
+const maxGuardian = 250
+const maxSentinel = 1000
+const maxConetian = 2000
+const maxPioneer = 5000
+
 const Guardian_referrer = 100
 const Sentinel_referrer = 101
 const Conetian_referrer = 102
 const Pioneer_referrer = 103
+
 //	******************************************************************
 const getAddress = (addr) => {
     let ret = '';
