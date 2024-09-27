@@ -127,6 +127,8 @@ interface CryptoAsset {
 	contract: string
 	name: string
 	unlocked?: boolean
+	supplyMaximum?: string
+	totalSupply?: string
 }
 
 
