@@ -278,6 +278,7 @@ const processCmd = async (cmd: worker_command) => {
             sendState('beforeunload', true)
             const kk = await CONET_guardian_purchase(profile, nodes, amount, payAssetName);
             sendState('beforeunload', false)
+
             if (kk !== true) {
                 cmd.err = 'INVALID_DATA'
                 return returnUUIDChannel(cmd)
@@ -285,10 +286,52 @@ const processCmd = async (cmd: worker_command) => {
             const cmd1 = {
                 cmd: 'purchaseStatus',
                 data: [4]
-            };
+            }
             sendState('toFrontEnd', cmd1)
             return returnUUIDChannel(cmd)
         }
+
+		case 'CONETianPlanPurchase': {
+			const [referrer, amount,  profile, payAssetName] = cmd.data
+
+            if (!referrer || amount?.length !== 4 || !profile || !payAssetName) {
+                cmd.err = 'INVALID_DATA'
+                return returnUUIDChannel(cmd)
+            }
+
+            const profiles = CoNET_Data?.profiles
+            if (!profiles) {
+                cmd.err = 'NOT_READY'
+                return returnUUIDChannel(cmd)
+            }
+
+            const profileIndex = profiles.findIndex(n => n.keyID.toLowerCase() === profile.keyID.toLowerCase())
+            if (profileIndex < 0) {
+                cmd.err = 'INVALID_DATA'
+                return returnUUIDChannel(cmd)
+            }
+			
+            const health = await getCONET_api_health()
+            if (!health) {
+                cmd.err = 'Err_Server_Unreachable'
+                return returnUUIDChannel(cmd)
+            }
+
+            sendState('beforeunload', true)
+            const kk = await CONETianPlan_purchase(referrer, profile, amount, payAssetName)
+            sendState('beforeunload', false)
+
+            if (kk !== true) {
+                cmd.err = 'INVALID_DATA'
+                return returnUUIDChannel(cmd)
+            }
+            const cmd1 = {
+                cmd: 'purchaseStatus',
+                data: [4]
+            }
+            sendState('toFrontEnd', cmd1)
+            return returnUUIDChannel(cmd)
+		}
 
         case 'transferToken': {
             const [amount, sourceProfileKeyID, assetName, toAddress] = cmd.data

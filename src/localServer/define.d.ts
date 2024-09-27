@@ -165,7 +165,7 @@ declare type WorkerCommand = 'READY'|'getRegiestNodes'|'beforeunload'|'createAcc
 	'storePreferences'|'newProfile'|'storeProfile'|'urlProxy'|'saveDomain'|'getDomain'|'setRegion'|'getGuardianRegion'|
 	'getFaucet'|'isAddress'|'syncAssetV1'|'sendAsset'|'getUSDCPrice'|'buyUSDC'|'getWorkerClientID'|'getAllOtherAssets'|
 	'mintCoNETCash'|'getSINodes'|'getRecipientCoNETCashAddress'|'getUserProfile'|'burnCCNTP'|'showLeaderboard'|
-	'sendMessage'|'incomeData'|'WORKER_MESSAGE'|'getCONETBalance'|'startProxy'|'registerReferrer'|
+	'sendMessage'|'incomeData'|'WORKER_MESSAGE'|'getCONETBalance'|'startProxy'|'registerReferrer'|'CONETianPlanPurchase'|
     'SaaSRegister'|'getContainer'|'ipaddress'|'startLiveness'|'stopLiveness'|'isLivenessRunning'|'importWallet'|'startMining'|'stopMining'|
 	//		from service worker
 	'urlProxy'|'saveDomain'|'getDomain'|'getWorkerClientID'|'getRefereesList'|'getAllNodes'|'getAllProfiles'|'updateProfile'|'addProfile'|'resetPasscode'|
@@ -250,6 +250,17 @@ interface conet_tokens {
 	bnb?: CryptoAsset
 	wbnb?: CryptoAsset
 	wusdt?: CryptoAsset
+
+	CONETianPlan?: {
+		Guardian: CryptoAsset
+		Sentinel: CryptoAsset
+		Conetian: CryptoAsset
+		Pioneer: CryptoAsset
+		Pioneer_referrer: CryptoAsset
+		Conetian_referrer: CryptoAsset
+		Sentinel_referrer: CryptoAsset
+		Guardian_referrer: CryptoAsset
+	}
 }
 
 interface profile extends keyPair {
