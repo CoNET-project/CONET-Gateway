@@ -304,3 +304,8 @@ const encrypt_Message = async (privatePgpObj: any, armoredPublicKey: string, mes
     }
 	return await openpgp.encrypt(encryptObj)
 }
+
+
+const CONETianPlan_purchase = (referrer: string, profile: profile, payAssetName: string, amount: number[]) => new Promise(resolve=> {
+	return resolve(true)
+})

@@ -338,18 +338,13 @@ const getProfileAssets_CONET_Balance = async (profile: profile) => {
 		}
 
 		const current = profile.tokens
-
-        const provideETH = new ethers.JsonRpcProvider(ethRpc())
-
-        const provideBlastMainChain = new ethers.JsonRpcProvider(blast_mainnet())
-        const provideBNB = new ethers.JsonRpcProvider(bsc_mainchain)
-        // const walletETH = new ethers.Wallet(profile.privateKeyArmor, provideETH)
         const [
 			CNTPV1, cCNTP, conet,
 
 			cBNBUSDT, cUSDT, cBNB, cETH, cArbETH, cArbUSDT,
 
-			CGPNs, CGPN2s
+			CGPNs, CGPN2s,
+			CONETianPlan
 		] = await Promise.all([
             //scanCNTP (key, provideBlastMainChain),
             scanCNTPV1(key),
@@ -363,8 +358,9 @@ const getProfileAssets_CONET_Balance = async (profile: profile) => {
 			scanCONET_Claimable_Arb_ETH(key),
 			scanCONET_Claimable_Arb_USDT(key),
 
-            scan_Guardian_Nodes(key, provideCONET),
-            scan_Guardian_ReferralNodes(key, provideCONET)
+            scan_Guardian_Nodes(key),
+            scan_Guardian_ReferralNodes(key),
+			scan_CONETianPlanAddr(key)
         ])
 
 
@@ -516,6 +512,90 @@ const getProfileAssets_CONET_Balance = async (profile: profile) => {
 				name: 'CGPN2s'
 			}
 		}
+		// @ts-ignore
+		const CONETianData: BigInt[][] = CONETianPlan
+
+		if (CONETianPlan !== false) {
+			if (current.CONETianPlan) {
+				current.CONETianPlan.Guardian.balance = CONETianData[0][Guardian].toString()
+				current.CONETianPlan.Sentinel.balance = CONETianData[0][Sentinel].toString()
+				current.CONETianPlan.Conetian.balance = CONETianData[0][Conetian].toString()
+				current.CONETianPlan.Conetian.balance = CONETianData[0][Pioneer].toString()
+				current.CONETianPlan.Guardian_referrer.balance = CONETianData[1][Guardian].toString()
+				current.CONETianPlan.Sentinel_referrer.balance = CONETianData[2][Sentinel].toString()
+				current.CONETianPlan.Conetian_referrer.balance = CONETianData[3][Conetian].toString()
+				current.CONETianPlan.Conetian_referrer.balance = CONETianData[4][Pioneer].toString()
+			} else {
+				current.CONETianPlan = {
+					Guardian: {
+						balance: CONETianData[0][Guardian].toString(),
+						history: [],
+						network: 'CONET Holesky',
+						decimal: Guardian,
+						contract: CONETianPlanAddr,
+						name: 'Guardian'
+					},
+					Sentinel: {
+						balance: CONETianData[0][Sentinel].toString(),
+						history: [],
+						network: 'CONET Holesky',
+						decimal: Sentinel,
+						contract: CONETianPlanAddr,
+						name: 'Sentinel'
+					},
+					Conetian: {
+						balance: CONETianData[0][Conetian].toString(),
+						history: [],
+						network: 'CONET Holesky',
+						decimal: Conetian,
+						contract: CONETianPlanAddr,
+						name: 'Conetian'
+					},
+					Pioneer: {
+						balance: CONETianData[0][Pioneer].toString(),
+						history: [],
+						network: 'CONET Holesky',
+						decimal: Pioneer,
+						contract: CONETianPlanAddr,
+						name: 'Pioneer'
+					},
+					Guardian_referrer: {
+						balance: CONETianData[1][Guardian].toString(),
+						history: [],
+						network: 'CONET Holesky',
+						decimal: Guardian_referrer,
+						contract: CONETianPlanAddr,
+						name: 'Guardian_referrer'
+					},
+					Sentinel_referrer: {
+						balance: CONETianData[1][Sentinel].toString(),
+						history: [],
+						network: 'CONET Holesky',
+						decimal: Sentinel_referrer,
+						contract: CONETianPlanAddr,
+						name: 'Sentinel_referrer'
+					},
+					Conetian_referrer: {
+						balance: CONETianData[1][Conetian].toString(),
+						history: [],
+						network: 'CONET Holesky',
+						decimal: Conetian_referrer,
+						contract: CONETianPlanAddr,
+						name: 'Conetian_referrer'
+					},
+					Pioneer_referrer: {
+						balance: CONETianData[1][Pioneer].toString(),
+						history: [],
+						network: 'CONET Holesky',
+						decimal: Pioneer_referrer,
+						contract: CONETianPlanAddr,
+						name: 'Pioneer_referrer'
+					}
+				}
+				
+			}
+		}
+		
     }
 
     return true
@@ -1981,13 +2061,23 @@ const scan_erc20_balance: (walletAddr: string, erc20Address: string, provide: an
     }
 })
 
-const scan_Guardian_Nodes = async (walletAddr, rpcProdive) => {
+const scan_Guardian_Nodes = async (walletAddr) => {
     return await scan_src1155_balance(walletAddr, CONET_Guardian_PlanV7, 1)
 }
 
-const scan_Guardian_ReferralNodes = async (walletAddr, rpcProdive) => {
+const scan_Guardian_ReferralNodes = async (walletAddr) => {
     return await scan_src1155_balance(walletAddr, CONET_Guardian_PlanV7, 2)
 }
+
+const scan_CONETianPlanAddr = async (walletAddr) => new Promise(async resolve => {
+	const CONETianPlanContract = new ethers.Contract(CONETianPlanAddr, CONETianPlan_ABI, provideCONET)
+	try {
+		const result = await CONETianPlanContract.getAssets(walletAddr)
+		return resolve(result)
+	}catch (ex) {
+		resolve (false)
+	}
+})
 
 const scan_src1155_balance: (walletAddr: string, erc1155Address: string, id: number) => Promise<false|BigInt> = (walletAddr, erc1155Address, id) => new Promise(async (resolve) => {
     const erc1155 = new ethers.Contract(erc1155Address, guardian_erc1155, provideCONET)
