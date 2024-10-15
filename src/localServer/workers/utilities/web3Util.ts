@@ -248,10 +248,10 @@ const getProfileAssets_allOthers_Balance = async (profile) => {
         ])
 
 		if (current.usdt) {
-			current.usdt.balance = usdt === false ? '': ethers.formatUnits(usdt, 6)
+			current.usdt.balance = '2000'// usdt === false ? '': ethers.formatUnits(usdt, 6)
 		} else {
 			current.usdt = {
-				balance: usdt === false ? '': ethers.formatUnits(usdt, 6),
+				balance: '2000',//usdt === false ? '': ethers.formatUnits(usdt, 6),
 				history: [],
 				network: 'ETH',
 				decimal: 6,
@@ -261,10 +261,10 @@ const getProfileAssets_allOthers_Balance = async (profile) => {
 		}
 
 		if (current.eth) {
-			current.eth.balance = eth === false ? '': ethers.formatEther(eth)
+			current.eth.balance = '3000'// eth === false ? '': ethers.formatEther(eth)
 		} else {
 			current.eth = {
-				balance: eth === false ? '': ethers.formatEther(eth),
+				balance: '3000',//eth === false ? '': ethers.formatEther(eth),
 				history: [],
 				network: 'ETH',
 				decimal: 18,
@@ -274,10 +274,10 @@ const getProfileAssets_allOthers_Balance = async (profile) => {
 		}
 
         if (current.arb_usdt) {
-			current.arb_usdt.balance = arb_usdt === false ? '': ethers.formatUnits(arb_usdt, 6)
+			current.arb_usdt.balance = '4000'// arb_usdt === false ? '': ethers.formatUnits(arb_usdt, 6)
 		} else {
 			current.arb_usdt = {
-				balance: arb_usdt === false ? '': ethers.formatUnits(arb_usdt, 6),
+				balance: '4000',//arb_usdt === false ? '': ethers.formatUnits(arb_usdt, 6),
 				history: [],
 				network: 'ARB',
 				decimal: 6,
@@ -287,10 +287,10 @@ const getProfileAssets_allOthers_Balance = async (profile) => {
 		}
 	
 		if (current.arb_eth) {
-			current.arb_eth.balance = arb_eth === false ? '': ethers.formatEther(arb_eth)
+			current.arb_eth.balance = '5000'//arb_eth === false ? '': ethers.formatEther(arb_eth)
 		} else {
 			current.arb_eth = {
-				balance: arb_eth === false ? '': ethers.formatEther(arb_eth),
+				balance: '5000',//arb_eth === false ? '': ethers.formatEther(arb_eth),
 				history: [],
 				network: 'ARB',
 				decimal: 18,
@@ -300,10 +300,10 @@ const getProfileAssets_allOthers_Balance = async (profile) => {
 		}
 	
 		if (current.bnb) {
-			current.bnb.balance = bnb === false ? '': ethers.formatEther(bnb)
+			current.bnb.balance = '6000'//bnb === false ? '': ethers.formatEther(bnb)
 		} else {
 			current.bnb = {
-				balance: bnb === false ? '': ethers.formatEther(bnb),
+				balance: '6000',//bnb === false ? '': ethers.formatEther(bnb),
 				history: [],
 				network: 'BSC',
 				decimal: 18,
@@ -313,10 +313,10 @@ const getProfileAssets_allOthers_Balance = async (profile) => {
 		}
 		
         if (current.wusdt) {
-			current.wusdt.balance = wusdt === false ? '': ethers.formatEther(wusdt)
+			current.wusdt.balance = '1000'//wusdt === false ? '': ethers.formatEther(wusdt)
 		} else {
 			current.wusdt = {
-				balance: wusdt === false ? '': ethers.formatEther(wusdt),
+				balance: '1000',//wusdt === false ? '': ethers.formatEther(wusdt),
 				history: [],
 				network: 'BSC',
 				decimal: 18,
@@ -340,9 +340,7 @@ const getProfileAssets_CONET_Balance = async (profile: profile) => {
 		const current = profile.tokens
         const [
 			CNTPV1, cCNTP, conet,
-
 			cBNBUSDT, cUSDT, cBNB, cETH, cArbETH, cArbUSDT,
-
 			CGPNs, CGPN2s,
 			CONETianPlan
 		] = await Promise.all([
@@ -527,9 +525,9 @@ const getProfileAssets_CONET_Balance = async (profile: profile) => {
 				current.CONETianPlan.Conetian.totalSupply = (maxConetian - parseInt(CONETianDataBalance[Conetian].toString())).toFixed(0)
 				current.CONETianPlan.Pioneer.totalSupply = (maxPioneer - parseInt(CONETianDataBalance[Pioneer].toString())).toFixed(0)
 				current.CONETianPlan.Guardian_referrer.balance = CONETianData[1][Guardian].toString()
-				current.CONETianPlan.Sentinel_referrer.balance = CONETianData[2][Sentinel].toString()
-				current.CONETianPlan.Conetian_referrer.balance = CONETianData[3][Conetian].toString()
-				current.CONETianPlan.Pioneer_referrer.balance = CONETianData[4][Pioneer].toString()
+				current.CONETianPlan.Sentinel_referrer.balance = CONETianData[1][Sentinel].toString()
+				current.CONETianPlan.Conetian_referrer.balance = CONETianData[1][Conetian].toString()
+				current.CONETianPlan.Pioneer_referrer.balance = CONETianData[1][Pioneer].toString()
 
 			} else {
 				current.CONETianPlan = {
@@ -542,7 +540,6 @@ const getProfileAssets_CONET_Balance = async (profile: profile) => {
 						name: 'Guardian',
 						supplyMaximum: maxGuardian.toString(),
 						totalSupply: (maxGuardian - parseInt(CONETianDataBalance[Guardian].toString())).toFixed(0),
-						
 					},
 					Sentinel: {
 						balance: CONETianData[0][Sentinel].toString(),
@@ -799,8 +796,6 @@ const checkSmartContractAsset = async (eventLogs, tokenABILog, tokenName, profil
 
 const listeningAddress = []
 
-
-
 let provideCONET
 let lesteningBlock = false
 let epoch = 0
@@ -915,7 +910,7 @@ const storagePieceToIPFS = (mnemonicPhrasePassword, fragment, index, totalFragme
 });
 
 const initSystemDataV1 = async (acc) => {
-    const key = await createGPGKey('', '', '');
+    const key = await createGPGKey('', '', '')
     const profile: profile = {
         tokens: null,
         publicKeyArmor: acc.publicKey,
@@ -946,7 +941,8 @@ const initSystemDataV1 = async (acc) => {
     CoNET_Data.isReady = true;
     CoNET_Data.mnemonicPhrase = acc.mnemonic.phrase;
     CoNET_Data.upgradev2 = true;
-};
+}
+
 const initCoNET_Data = async (passcode = '') => {
     //const acc = createKey (1)
     const acc = createKeyHDWallets()
@@ -954,7 +950,8 @@ const initCoNET_Data = async (passcode = '') => {
         return
     }
     await initSystemDataV1(acc)
-};
+}
+
 const storeSystemData = async () => {
 
     if (!CoNET_Data || !passObj?.passcode) {
@@ -995,7 +992,8 @@ const storeSystemData = async () => {
     }
     sendStateBeforeunload = false;
     sendState('beforeunload', false);
-};
+}
+
 const resizeImage = (mediaData, imageMaxWidth, imageMaxHeight) => {
     return new Promise(resolve => {
         const media = mediaData.split(',');
@@ -1084,8 +1082,10 @@ const checkUpdateAccount = () => new Promise(async (resolve) => {
     await getDetermineVersionProfile(_ver, CoNET_Data);
     checkcheckUpdateLock = false;
     return resolve(true);
-});
-let assetPrice = [];
+})
+
+let assetPrice = []
+
 const CoNET_initData_save = async (database, systemInitialization_uuid) => {
     if (!CoNET_Data || !passObj) {
         const msg = `storeUUID_Fragments Error: encrypted === null`;
@@ -1120,7 +1120,8 @@ const CoNET_initData_save = async (database, systemInitialization_uuid) => {
     const uu = await database.put(putData);
     logger(`storeCoNET_initData database.put return [${uu}]`);
     sendState('beforeunload', false);
-};
+}
+
 const storagePieceToLocal = (newVer = '-1') => {
     return new Promise(resolve => {
         if (!CoNET_Data || !CoNET_Data.profiles) {
@@ -1157,7 +1158,8 @@ const storagePieceToLocal = (newVer = '-1') => {
             resolve(true);
         });
     });
-};
+}
+
 const recoverProfileFromSRP = () => {
     return new Promise(async (resolve, reject) => {
         if (!CoNET_Data || !CoNET_Data?.mnemonicPhrase) {
@@ -1177,10 +1179,11 @@ const recoverProfileFromSRP = () => {
         await getLocalProfile(CoNET_Data.ver);
         return resolve(true);
     });
-};
+}
 const createFragmentFileName = (ver, password, part) => {
     return ethers.id(ethers.id(ethers.id(ethers.id(ver.toString()) + ethers.id(password) + ethers.id(part.toString()))));
-};
+}
+
 const getNextFragmentIPFS = async (ver, passObjPassword, i) => {
     const nextEncryptPassword = encryptPasswordIssue(ver, passObjPassword, i);
     const nextFragmentHash = createFragmentFileName(ver, passObjPassword, i);
@@ -1199,7 +1202,8 @@ const getNextFragmentIPFS = async (ver, passObjPassword, i) => {
         logger(`getNextFragmentIPFS aesGcmDecrypt [${nextFragmentText}] error!`, ex);
         return '';
     }
-};
+}
+
 const getFragmentsFromPublic: (hash: string) => Promise<string> = (hash) => {
     const fileUrl = `${ipfsEndpoint}getFragment/${hash}`;
     return new Promise(resolve => {
@@ -1221,7 +1225,8 @@ const getFragmentsFromPublic: (hash: string) => Promise<string> = (hash) => {
             return resolve(text);
         });
     });
-};
+}
+
 const encryptPasswordIssue = (ver, passcode, part) => {
     const password = ethers.id('0x' + (BigInt(ethers.id(ver.toString())) + BigInt(ethers.id(passcode))).toString(16))
     let _pass = ethers.id(password)
@@ -1821,7 +1826,7 @@ const getFaucet: (profile: profile) => Promise<boolean|any> = async (profile) =>
 		return resolve(false)
 	}
 
-    const url = `${apiv2_endpoint}conet-faucet`
+    const url = `${apiv4_endpoint}conet-faucet`
     let result
     try {
         result = await postToEndpoint(url, true, { walletAddr: profile.keyID })
@@ -2204,7 +2209,8 @@ const CONET_guardian_purchase_Receiving_Address = (networkName) => {
     }
 }
 
-const parseEther = (ether, tokenName) => {
+const parseEther = (_ether, tokenName) => {
+	const ether = typeof (_ether) === 'number' ? _ether.toFixed(8) : _ether
     switch (tokenName) {
 		case 'arb_usdt':
         case 'usdt': {
@@ -2297,10 +2303,11 @@ const getEstimateGasForTokenTransfer = (privateKey, asset, _transferNumber, toAd
     }
 })
 
-const CONET_guardian_purchase = async (profile, nodes, _total, tokenName) => {
-    const cryptoAsset = profile.tokens[tokenName]
+const CONET_guardian_purchase = async (profile: profile, nodes, _total, tokenName) => {
+
+    let cryptoAsset: CryptoAsset
     // const total = await getAmountOfNodes(nodes, tokenName)
-    if (!cryptoAsset || !CoNET_Data?.profiles) {
+    if (!tokenName || !CoNET_Data?.profiles || !profile?.tokens||! (cryptoAsset = profile.tokens[tokenName])) {
         const cmd1 = {
             cmd: 'purchaseStatus',
             data: [-1]
@@ -2308,6 +2315,8 @@ const CONET_guardian_purchase = async (profile, nodes, _total, tokenName) => {
         sendState('toFrontEnd', cmd1)
         return false
     }
+
+	
 
     if (parseFloat(cryptoAsset.balance) - _total < 0 || !profile.privateKeyArmor) {
         const cmd1 = {
@@ -2324,7 +2333,7 @@ const CONET_guardian_purchase = async (profile, nodes, _total, tokenName) => {
     }
     sendState('toFrontEnd', cmd1)
 
-    const tx: any = await transferAssetToCONET_guardian(profile.privateKeyArmor, cryptoAsset, _total.toString())
+    const tx: any = await transferAssetToCONET_guardian(profile.privateKeyArmor, cryptoAsset.name, _total.toString())
     if (typeof tx === 'boolean') {
         const cmd1 = {
             cmd: 'purchaseStatus',
@@ -2341,7 +2350,7 @@ const CONET_guardian_purchase = async (profile, nodes, _total, tokenName) => {
 
     sendState('toFrontEnd', cmd2)
 
-    const kk1 = {
+    const kk1: CryptoAssetHistory = {
         status: 'Confirmed',
         Nonce: tx.nonce,
         to: tx.to,
@@ -2354,6 +2363,7 @@ const CONET_guardian_purchase = async (profile, nodes, _total, tokenName) => {
     }
 
     cryptoAsset.history.push(kk1)
+
     const profiles = CoNET_Data.profiles
     const publikPool = await createWallet(profiles, CoNET_Data.mnemonicPhrase, nodes)
 	
@@ -2384,7 +2394,7 @@ const CONET_guardian_purchase = async (profile, nodes, _total, tokenName) => {
         data: [3]
     }
     sendState('toFrontEnd', cmd3)
-    const url = `${apiv2_endpoint}Purchase-Guardian`
+    const url = `${apiv4_endpoint}Purchase-Guardian`
     let result
 
     try {
@@ -2420,14 +2430,17 @@ const stringFix = (num) => {
     }
     return num.substring(0, index + 12)
 }
-const transferAssetToCONET_guardian = (privateKey, token, transferNumber) => new Promise(async (resolve) => {
-    const provide = new ethers.JsonRpcProvider(getNetwork(token.name))
+
+
+const transferAssetToCONET_guardian = (privateKey: string, token: string , transferNumber: number) => new Promise(async (resolve) => {
+    const provide = new ethers.JsonRpcProvider(getNetwork(token))
     const wallet = new ethers.Wallet(privateKey, provide)
-    const toAddr = CONET_guardian_purchase_Receiving_Address(token.name)
-    const smartContractAddr = getAssetERC20Address(token.name)
+    const toAddr = CONET_guardian_purchase_Receiving_Address(token)
+    const smartContractAddr = getAssetERC20Address(token)
+
     if (smartContractAddr) {
         const transferObj = new ethers.Contract(smartContractAddr, blast_CNTPAbi, wallet)
-        const amount = parseEther(transferNumber, token.name);
+        const amount = parseEther(transferNumber, token)
         try {
             // const k1 = await transferObj.approve(toAddr, amount)
             const k2 = await transferObj.transfer(toAddr, amount)
@@ -2441,7 +2454,7 @@ const transferAssetToCONET_guardian = (privateKey, token, transferNumber) => new
     else {
         const tx = {
             to: toAddr,
-            value: ethers.parseEther(transferNumber)
+            value: ethers.parseEther(transferNumber.toFixed(8))
         }
         try {
 			const kk = await wallet.sendTransaction(tx)
@@ -2554,7 +2567,8 @@ const getProfileByWallet = (wallet) => {
         return null;
     }
     return CoNET_Data.profiles[index];
-};
+}
+
 const createWallet = async (profiles, mnemonicPhrase, total) => {
 
     const pIndex = profiles.map(n => n.index)
@@ -2776,6 +2790,8 @@ const getAllReferrer = async () => {
         i.referrer = kk
     }
 }
+
+
 
 const getReferrer = async (wallet, CNTP_Referrals) => {
     let result

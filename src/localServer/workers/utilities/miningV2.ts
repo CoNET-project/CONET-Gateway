@@ -1,5 +1,5 @@
 
-const maxScanNodesNumber = 20
+const maxScanNodesNumber = 80
 let Guardian_Nodes:nodes_info[]  = []
 
 let getAllNodesProcess = false
@@ -197,6 +197,8 @@ const validator = async (response: nodeResponse, profile: profile, sentryNode: n
 	}
 	const wallet = new ethers.Wallet (profile.privateKeyArmor)
 	response.minerResponseHash = await wallet.signMessage(response.hash)
+	//	clean data
+	response.userWallets = response.nodeWallets = []
 	const request = await ceateMininngValidator(profile, sentryNode, response)
 	if (!request) {
 		return logger(`ceateMininngValidator got null Error!`)
@@ -305,7 +307,159 @@ const encrypt_Message = async (privatePgpObj: any, armoredPublicKey: string, mes
 	return await openpgp.encrypt(encryptObj)
 }
 
+const getGuardianPrice = (nftNumber: number) => {
+	switch(nftNumber) {
+		case 0 : {
+			return 1200
+		}
+		case 1: {
+			return 700
+		}
+		case 2: {
+			return 500
+		}
+		case 3: {
+			return 100
+		}
+		default: {
+			return 0
+		}
+	}
+}
 
-const CONETianPlan_purchase = (referrer: string, profile: profile, payAssetName: string, amount: number[]) => new Promise(resolve=> {
+const getOracleAssets = (tokenName: string) => {
+	if (!assetOracle) {
+		return 0
+	}
+	const index = assetOracle.assets.findIndex(n => n.name == 'bnb')
+	if (index < 0) {
+		return 0
+	}
+	const rate = parseFloat(assetOracle.assets[index].price.toString())
+	return rate
+}
+
+const convertUSDTToCurrency = (currencyName: string, usdtAmount: number) => {
+	if (/usdt/.test(currencyName)) {
+		return usdtAmount
+	}
+	const rate = /bnb/.test(currencyName) ? getOracleAssets('bnb') : getOracleAssets('eth')
+	if (!rate) {
+		return 0
+	}
+
+	return usdtAmount/rate
+}
+
+const CONETianPlan_purchase = async (referrer: string, profile: profile, amount: number[], tokenName: string) => new Promise(async resolve=> {
+
+	let totalUSDT = 0
+	let i = 0
+	let cryptoAsset: CryptoAsset
+
+	if (amount.length !== 4 || !profile?.tokens||! (cryptoAsset = profile.tokens[tokenName])) {
+        const cmd1 = {
+            cmd: 'purchaseStatus',
+            data: [-1]
+        }
+        sendState('toFrontEnd', cmd1)
+        return false
+    }
+
+	const nfts: {
+		nft: number
+		total: number
+	}[] = []
+
+	amount.forEach(n => {
+		nfts.push({
+			nft: i,
+			total: n
+		})
+		totalUSDT += n * getGuardianPrice(i++)
+
+	})
+
+	const total = convertUSDTToCurrency(tokenName, totalUSDT)
+	if (total < 0.00001) {
+		return resolve(false)
+	}
+
+	if (parseFloat(cryptoAsset.balance) - total < 0 || !profile.privateKeyArmor) {
+        const cmd1 = {
+            cmd: 'purchaseStatus',
+            data: [-1]
+        }
+        sendState('toFrontEnd', cmd1)
+        return false
+    }
+
+	let receiptTx: any = await transferAssetToCONET_guardian(profile.privateKeyArmor, cryptoAsset.name, total)
+
+	if (typeof receiptTx === 'boolean') {
+        const cmd1 = {
+            cmd: 'purchaseStatus',
+            data: [-1]
+        }
+        sendState('toFrontEnd', cmd1)
+        return false
+    }
+
+	const cmd2 = {
+        cmd: 'purchaseStatus',
+        data: [2]
+    }
+
+    sendState('toFrontEnd', cmd2)
+
+
+    const kk1: CryptoAssetHistory = {
+        status: 'Confirmed',
+        Nonce: receiptTx.nonce,
+        to: receiptTx.to,
+        transactionFee: stringFix(ethers.formatEther(parseFloat(receiptTx.gasUsed)*parseFloat(receiptTx.gasPrice))),
+        gasUsed: receiptTx.gasUsed.toString(),
+        isSend: true,
+        value: parseEther(total.toString(), cryptoAsset.name).toString(),
+        time: new Date().toISOString(),
+        transactionHash: receiptTx.hash,
+    }
+
+    cryptoAsset.history.push(kk1)
+
+	getProfileAssets_allOthers_Balance(profile)
+
+    const data = {
+		receiptTx : receiptTx.hash,
+        tokenName,
+        amount: parseEther(total.toString(), cryptoAsset.name).toString(),
+        nfts,
+		referrer
+    }
+
+	const message = JSON.stringify({ walletAddress: profile.keyID, data })
+	const wallet = new ethers.Wallet(profile.privateKeyArmor)
+	const signMessage = await wallet.signMessage(message)
+
+	const sendData = {
+        message, signMessage
+    }
+
+    const cmd3 = {
+        cmd: 'purchaseStatus',
+        data: [3]
+    }
+	sendState('toFrontEnd', cmd3)
+
+	const url = `${apiv4_endpoint}PurchaseCONETianPlan`
+    let result
+
+    try {
+        result = await postToEndpoint(url, true, sendData)
+    }
+    catch (ex) {
+
+        return resolve(false)
+    }
 	return resolve(true)
 })

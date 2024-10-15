@@ -46,3 +46,4 @@ interface proxy {
 export declare const launchDaemon : (port: number, path: string) => void
 
 export declare const proxyServer: (post: string, entryNode: nodes_info, _egressNode: nodes_info, profile: profile) => proxy
+
