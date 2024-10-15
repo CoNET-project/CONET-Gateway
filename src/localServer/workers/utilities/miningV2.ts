@@ -47,17 +47,20 @@ const getAllNodes = async () => {
 	getAllNodesProcess = false
 }
 
-const getRandomNodeV2 = () => { 
+const getRandomNodeV2: (index: number) => null|nodes_info = (index = -1) => { 
 	const totalNodes = Guardian_Nodes.length - 1
 	if (!totalNodes ) {
 		return null
 	}
+
 	const nodoNumber = Math.floor(Math.random() * totalNodes)
-	const node = Guardian_Nodes[nodoNumber]
-	if (!node.ip_addr) {
-		return getRandomNodeV2 ()
+	if (index > -1 && nodoNumber === index) {
+		logger(`getRandomNodeV2 nodoNumber ${nodoNumber} == index ${index} REUNING AGAIN!`)
+		return getRandomNodeV2(index)
 	}
-	
+
+	const node = Guardian_Nodes[nodoNumber]
+	logger(`getRandomNodeV2 Guardian_Nodes length =${Guardian_Nodes.length} nodoNumber = ${nodoNumber} `)
 	return node
 }
 
@@ -81,7 +84,16 @@ const createGPGKey = async ( passwd: string, name: string, email: string ) => {
 const _startMiningV2 = async (profile: profile, cmd: worker_command|null = null) => {
 	await getAllNodes()
     miningAddress = profile.keyID.toLowerCase()
-	const connectNode = getRandomNodeV2()
+	const totalNodes = Guardian_Nodes.length - 1
+	if (!totalNodes ) {
+		if (cmd) {
+			cmd.err = 'FAILURE'
+        	return returnUUIDChannel(cmd)
+		}
+		return 
+	}
+	const nodoNumber = Math.floor(Math.random() * totalNodes)
+	const connectNode = Guardian_Nodes[nodoNumber]
 	
 	if (!connectNode) {
 		if (cmd) {
@@ -175,7 +187,7 @@ const _startMiningV2 = async (profile: profile, cmd: worker_command|null = null)
         }
 
         sendState('toFrontEnd', cmdd)
-		const entryNode = getRandomNodeV2()
+		const entryNode = getRandomNodeV2(nodoNumber)
 		if (!entryNode) {
 			logger(`_startMiningV2 Error! getRandomNodeV2 return null!`)
 			return
