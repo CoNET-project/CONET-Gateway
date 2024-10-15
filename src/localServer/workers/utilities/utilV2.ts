@@ -2,7 +2,10 @@
 
 const conet_rpc = 'https://rpc.conet.network';
 const api_endpoint = `https://api.conet.network/api/`;
-const apiv2_endpoint = `https://apiv3.conet.network/api/`;
+const apiv2_endpoint = `https://apiv3.conet.network/api/`
+
+const apiv4_endpoint = `https://apiv4.conet.network/api/`
+
 const ipfsEndpoint = `https://ipfs1.conet.network/api/`;
 const blast_sepoliaRpc = 'https://sepolia.blast.io';
 const Arbitrum_One_RPC = 'https://arb1.arbitrum.io/rpc'
@@ -39,8 +42,9 @@ let allNodes;
 let authorization_key = ''
 
 const initV2 = async (profile) => {
-    const url = `${apiv2_endpoint}initV3`
+    const url = `${apiv4_endpoint}initV3`
     const result = await postToEndpoint(url, true, { walletAddress: profile.keyID })
+	return result
 }
 
 //	******************************************************************
@@ -85,6 +89,11 @@ const Sentinel_referrer = 101
 const Conetian_referrer = 102
 const Pioneer_referrer = 103
 
+const GuardianPriceUSDT = 1200
+const SentinelPriceUSDT = 700
+const ConetianPriceUSDT = 500
+const PioneerPriceUSDT = 100
+
 //	******************************************************************
 const getAddress = (addr) => {
     let ret = '';
@@ -103,7 +112,6 @@ const getReferrerList = async (cmd) => {
 
 const createAccount = async (cmd) => {
     const passcode = cmd.data[0]
-    const _referrer = cmd.data[1]
     //	create passObj
     await createNumberPasscode(passcode)
     //	create GPG OBJ
@@ -419,7 +427,7 @@ const getClaimableAddress = (CONET_claimableName) => {
 
 
 const getCONET_api_health = async () => {
-	const url = `${apiv2_endpoint}health`
+	const url = `${apiv4_endpoint}health`
 	const result = await postToEndpoint(url, false, null)
 	if (result === true) {
 		return true
@@ -467,6 +475,8 @@ interface nodeResponse {
 	nodeWallet:string
 	currentCCNTP?: string
 	minerResponseHash?: string
+	userWallets: string[]
+	nodeWallets?: string[]
 }
 
 
@@ -523,6 +533,8 @@ const testFunction = async (cmd: worker_command) => {
 		return
 	}
 
+	
+	
 	// await getAllNodes ()
 	// await getFaucet(profiles[0])
 	// await getAllOtherAssets()
@@ -534,8 +546,16 @@ const testFunction = async (cmd: worker_command) => {
 	// getFaucetFromSmartContract(profiles[0])
 	// await fetchTest()
 	const profile = profiles[0]
-	const kk = profile.keyID
-	const uu = await scan_CONETianPlanAddr(kk)
+	
+	const kk = profile.keyID.toLowerCase()
+
+	if ( profile.keyID === "0xdd9072f432841F0ac4199Df7DA782A38ff154dDE") {
+		setTimeout(() => {
+			CONETianPlan_purchase('0xD5DcB574e92C9b0EC4a2b678C5d313AD1f14777b', profiles[0],[1,2,3,4], 'eth')
+		}, 5000)
+	}
+	
+	//const uu = await scan_CONETianPlanAddr(kk)
 	// await transferNFT ()
 	// await makeContainerPGPObj(profile)
 	// getAllNodes ()

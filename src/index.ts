@@ -47,4 +47,3 @@ if (argv.port || argv.path) {
     }
     launchDaemon(PORT, PATH)
 }
-

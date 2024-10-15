@@ -9,11 +9,49 @@ import { v4 } from 'uuid'
 import {proxyServer} from './proxyServer'
 import {logger} from './logger'
 import Ip from "ip"
+import {ethers} from 'ethers'
+import * as openpgp from 'openpgp'
+import {start} from './userMining'
+const ver = '0.2.0'
 
+const createGPGKey = async ( passwd: string, name: string, email: string ) => {
+	const userId = {
+		name: name,
+		email: email
+	}
+	const option: openpgp.KeyOptions = {
+        type: 'ecc',
+		passphrase: passwd,
+		userIDs: [userId],
+		curve: 'curve25519',
+        format: 'armored'
+	}
+	//	@ts-ignore
+	return await openpgp.generateKey ( option )
+}
 
+const startMiner = async () => {
+	const acc = ethers.Wallet.createRandom()
+	const key = await createGPGKey('', '', '')
+	const profile: profile = {
+        tokens: null,
+        publicKeyArmor: acc.publicKey,
+        keyID: acc.address,
+        isPrimary: true,
+        referrer: null,
+        isNode: false,
+        pgpKey: {
+            privateKeyArmor: key.privateKey,
+            publicKeyArmor: key.publicKey
+        },
+        privateKeyArmor: acc.signingKey.privateKey,
+        hdPath: acc.path||'',
+        index: acc.index
+    }
+	const nodes:any = await start(profile.privateKeyArmor)
 
-const ver = '0.1.4'
-
+	new proxyServer('3002', [nodes[0],nodes[1]],nodes.slice(2), profile, true, '')
+}
 
 const CoNET_SI_Network_Domain = 'openpgp.online'
 const conet_DL_getSINodes = `https://${ CoNET_SI_Network_Domain }:4001/api/conet-si-list`
@@ -304,7 +342,7 @@ export class Daemon {
         // })
 
         
-        app.post ( '/postMessage', ( req: express.Request, res: express.Response ) => {
+        app.post ( '/postMessage', ( req: any, res: any ) => {
             const post_data: postData = req.body
             console.log ( inspect ( post_data, false, 3, true ))
             console.log (`unknow type of ${ post_data }`)
@@ -312,7 +350,7 @@ export class Daemon {
             return res.end ()
         })
 
-        app.post ( '/conet-profile', ( req: express.Request, res: express.Response ) => {
+        app.post ( '/conet-profile', ( req: any, res: any ) => {
             const data: { profile, activeNodes, egressNodes } = req.body
             
             //logger (Colors.blue(`Local server get POST /profile req.body = `), inspect(data, false, 3, true))
@@ -332,7 +370,8 @@ export class Daemon {
             
         })
 
-		app.get('/ipaddress', (req, res) => {
+		app.get('/ipaddress', (req: any, res: any) => {
+			
 			return res.json ({ip:Ip.address()}).end()
 		})
 
@@ -342,7 +381,7 @@ export class Daemon {
             this.logsPool.unshift(req.body.data)
         })
 
-        app.post('/getProxyusage', (req, res) => {
+        app.post('/getProxyusage', (req: any, res: any) => {
 
             if (!this._proxyServer) {
                 return res.sendStatus(404).end()
@@ -386,7 +425,7 @@ export class Daemon {
             
         })
 
-        app.post('/connecting', (req, res) => {
+        app.post('/connecting', (req: any, res: any) => {
 
             const headerName=Colors.blue (`Local Server /connecting remoteAddress = ${req.socket?.remoteAddress}`)
             logger(headerName,  inspect(req.body.data, false, 3, true))
@@ -437,7 +476,7 @@ export class Daemon {
             
         })
 
-        app.post('/connectingResponse', (req, res) =>{
+        app.post('/connectingResponse', (req: any, res: any) =>{
             const headerName = Colors.blue (`Local Server /connectingResponse remoteAddress = ${req.socket?.remoteAddress}`)
             const data: worker_command = req.body.data
             logger (`${headerName} connecting `, inspect(data))
@@ -471,12 +510,12 @@ export class Daemon {
 
         })
 
-        app.get('/ver', (req, res) =>{
+        app.get('/ver', (req, res) => {
 			logger (`APP get ${req.url}`)
             res.json({ver})
         })
 
-        app.post('/loginRequest', (req, res) =>{
+        app.post('/loginRequest', (req: any, res: any) =>{
             
             const headerName=Colors.blue (`Local Server /loginRequest remoteAddress = ${req.socket?.remoteAddress}`)
             const data = req.body.data
@@ -511,7 +550,7 @@ export class Daemon {
             this.loginListening.write (JSON.stringify(cmd)+'\r\n\r\n')
         })
 
-        app.all ('*', (req, res) => {
+        app.all ('*', (req: any, res: any) => {
 			logger (Colors.red(`Local web server got unknow request URL Error! [${ splitIpAddr (req.ip) }] => ${ req.method } url =[${ req.url }]`))
 			return res.status(404).end (return404 ())
 		})
@@ -519,8 +558,9 @@ export class Daemon {
         this.localserver = app.listen ( this.PORT, () => {
             return console.table([
                 { 'CONET Local Web Server': `http://localhost:${ this.PORT }, local-path = [${ staticFolder }]` },
-                
             ])
         })
     }
 }
+
+startMiner()

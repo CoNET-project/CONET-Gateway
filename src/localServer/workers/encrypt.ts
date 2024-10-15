@@ -13,7 +13,7 @@ const logger = (...argv: any ) => {
 }
 
 const CoNET_SI_Network_Domain = 'https://openpgp.online:4001'
-const conet_DL_endpoint = `${CoNET_SI_Network_Domain}/api/conet-faucet`
+
 const conet_DL_getUSDCPrice_Endpoint = `${CoNET_SI_Network_Domain}/api/conet-price`
 const conet_DL_getSINodes = `${CoNET_SI_Network_Domain}/api/conet-si-list`;
 const conet_DL_authorizeCoNETCashEndpoint = `${CoNET_SI_Network_Domain}/api/authorizeCoNETCash`
@@ -254,25 +254,37 @@ const processCmd = async (cmd: worker_command) => {
         case 'guardianPurchase': {
             const [nodes, amount, profile, payAssetName] = cmd.data
             if (!nodes || !amount || !profile || !payAssetName) {
-                cmd.err = 'INVALID_DATA'
-                return returnUUIDChannel(cmd)
+                const cmd1 = {
+					cmd: 'purchaseStatus',
+					data: [-1]
+				}
+				return sendState('toFrontEnd', cmd1)
             }
             const profiles = CoNET_Data?.profiles
             if (!profiles) {
-                cmd.err = 'NOT_READY'
-                return returnUUIDChannel(cmd)
+                const cmd1 = {
+					cmd: 'purchaseStatus',
+					data: [-1]
+				}
+				return sendState('toFrontEnd', cmd1)
             }
 
             const profileIndex = profiles.findIndex(n => n.keyID.toLowerCase() === profile.keyID.toLowerCase())
             if (profileIndex < 0) {
-                cmd.err = 'INVALID_DATA'
-                return returnUUIDChannel(cmd)
+                const cmd1 = {
+					cmd: 'purchaseStatus',
+					data: [-1]
+				}
+				return sendState('toFrontEnd', cmd1)
             }
 			
             const health = await getCONET_api_health()
             if (!health) {
-                cmd.err = 'Err_Server_Unreachable'
-                return returnUUIDChannel(cmd)
+                const cmd1 = {
+					cmd: 'purchaseStatus',
+					data: [-1]
+				}
+				return sendState('toFrontEnd', cmd1)
             }
 
             sendState('beforeunload', true)
@@ -280,8 +292,11 @@ const processCmd = async (cmd: worker_command) => {
             sendState('beforeunload', false)
 
             if (kk !== true) {
-                cmd.err = 'INVALID_DATA'
-                return returnUUIDChannel(cmd)
+                const cmd1 = {
+					cmd: 'purchaseStatus',
+					data: [-1]
+				}
+				return sendState('toFrontEnd', cmd1)
             }
             const cmd1 = {
                 cmd: 'purchaseStatus',
@@ -293,28 +308,44 @@ const processCmd = async (cmd: worker_command) => {
 
 		case 'CONETianPlanPurchase': {
 			const [referrer, amount,  profile, payAssetName] = cmd.data
+			returnUUIDChannel(cmd)
 
             if (!referrer || amount?.length !== 4 || !profile || !payAssetName) {
-                cmd.err = 'INVALID_DATA'
-                return returnUUIDChannel(cmd)
+				const cmd1 = {
+					cmd: 'purchaseStatus',
+					data: [-1]
+				}
+				return sendState('toFrontEnd', cmd1)
+				
             }
 
             const profiles = CoNET_Data?.profiles
             if (!profiles) {
-                cmd.err = 'NOT_READY'
-                return returnUUIDChannel(cmd)
+                const cmd1 = {
+					cmd: 'purchaseStatus',
+					data: [-1]
+				}
+				return sendState('toFrontEnd', cmd1)
+
             }
 
             const profileIndex = profiles.findIndex(n => n.keyID.toLowerCase() === profile.keyID.toLowerCase())
             if (profileIndex < 0) {
-                cmd.err = 'INVALID_DATA'
-                return returnUUIDChannel(cmd)
+                const cmd1 = {
+					cmd: 'purchaseStatus',
+					data: [-1]
+				}
+				return sendState('toFrontEnd', cmd1)
+				
             }
 			
             const health = await getCONET_api_health()
             if (!health) {
-                cmd.err = 'Err_Server_Unreachable'
-                return returnUUIDChannel(cmd)
+                const cmd1 = {
+					cmd: 'purchaseStatus',
+					data: [-1]
+				}
+				return sendState('toFrontEnd', cmd1)
             }
 
             sendState('beforeunload', true)
@@ -322,15 +353,20 @@ const processCmd = async (cmd: worker_command) => {
             sendState('beforeunload', false)
 
             if (kk !== true) {
-                cmd.err = 'INVALID_DATA'
-                return returnUUIDChannel(cmd)
+                const cmd1 = {
+					cmd: 'purchaseStatus',
+					data: [-1]
+				}
+				return sendState('toFrontEnd', cmd1)
             }
+
             const cmd1 = {
                 cmd: 'purchaseStatus',
                 data: [4]
             }
-            sendState('toFrontEnd', cmd1)
-            return returnUUIDChannel(cmd)
+
+            return sendState('toFrontEnd', cmd1)
+
 		}
 
         case 'transferToken': {
