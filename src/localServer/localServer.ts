@@ -453,7 +453,9 @@ export class Daemon {
 
 
      app.post('/startSilentPass', async (req: any, res: any) => {
+            const selectedCountry = req.body.selectedCountry;
 
+            console.log('selectedCountry', selectedCountry)
 
 			if (!selectedCountry) {
 				return res.status(400).send({ error: "No country selected" })
