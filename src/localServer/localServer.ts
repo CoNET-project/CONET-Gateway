@@ -12,7 +12,7 @@ import Ip from "ip"
 import {ethers} from 'ethers'
 import * as openpgp from 'openpgp'
 
-import {miningV2_Class} from './userMining'
+import {miningV2_Class, Guardian_Nodes} from './userMining'
 
 const ver = '0.1.4'
 
@@ -138,7 +138,7 @@ const postToEndpointJSON = ( url: string, jsonData: string ) => {
         connect.end(jsonData)
 
 	})
-	
+
 }
 
 export const splitIpAddr = (ipaddress: string | undefined) => {
@@ -172,7 +172,7 @@ const joinMetadata = (metadata: any ) => {
     Object.keys (metadata).forEach (n => {
         _metadata += metadata[n]
     })
-    
+
     metadata['text']= _metadata
 }
 
@@ -294,14 +294,14 @@ export class Daemon {
         //                 keyid = ''
         //             })
         //         }
-                
+
         //     }
         //     const getUpdate = () => {
-                
+
         //         return Stripe.customers.retrieve (keyid)
         //         .then ((customer: any ) => {
         //             logger (`check update from Stripe [${ count }]`)
-                    
+
         //             const meta = customer.metadata
         //             logger (inspect(meta, false, 3, true ))
         //             const err = meta.error
@@ -310,9 +310,9 @@ export class Daemon {
         //                 res.end()
         //                 return Promise.reject (new Error('end'))
         //             }
-                    
+
         //             if ( meta.response ) {
-                        
+
         //                 joinMetadata(meta)
         //                 res.json (customer.metadata.text).end()
         //                 return Promise.reject (new Error('end'))
@@ -328,19 +328,19 @@ export class Daemon {
         //                 getUpdate ()
         //             }, 2000 )
         //             return Promise.reject (new Error('loop'))
-                    
+
         //         })
         //         .catch ((ex: Error ) => {
 
         //             if ( /^end$/i.test (ex.message )) {
-                        
+
         //                 delCustoms ()
-                        
+
         //                 return logger (`catch end reject!`)
         //             }
         //             if ( /^loop$/i.test (ex.message )) {
-                        
-                        
+
+
         //                 return logger (`catch loop reject!`)
         //             }
         //             logger (`Stripe response ERROR! [${ keyid }]`)
@@ -365,10 +365,10 @@ export class Daemon {
         //         res.statusCode = 405
         //         res.end()
         //     })
-            
+
         // })
 
-        
+
         app.post ( '/postMessage', ( req: any, res: any ) => {
             const post_data: postData = req.body
             console.log ( inspect ( post_data, false, 3, true ))
@@ -379,10 +379,10 @@ export class Daemon {
 
         app.post ( '/conet-profile', ( req: any, res: any ) => {
             const data: { profile, activeNodes, egressNodes } = req.body
-            
+
             //logger (Colors.blue(`Local server get POST /profile req.body = `), inspect(data, false, 3, true))
             if (data.activeNodes.length > 0 && data.egressNodes.length > 0 && data.profile ) {
-                
+
 				if (this._proxyServer) {
 					this._proxyServer.restart(data.profile, data.activeNodes, data.egressNodes)
 				} else {
@@ -394,11 +394,11 @@ export class Daemon {
             }
 			logger (`/conet-profile Error data.activeNodes [${data.activeNodes.length}] data.activeNodes.length > 0[${data.activeNodes.length > 0}]`, inspect(data.profile, false, 3, true))
 			res.sendStatus(404).end()
-            
+
         })
 
 		app.get('/ipaddress', (req: any, res: any) => {
-			
+
 			return res.json ({ip:Ip.address()}).end()
 		})
 
@@ -434,7 +434,7 @@ export class Daemon {
                         {data:`/getProxyusage ${req.body.data}`}
                     )
                 }
-                
+
                 res.write(`${JSON.stringify({data: this.logsPool})}\r\n\r\n`, () => {
                     this.logsPool = []
                     return roop = setTimeout(() => {
@@ -449,7 +449,7 @@ export class Daemon {
                 clearTimeout(roop)
             })
             interValID()
-            
+
         })
 
         app.post('/connecting', (req: any, res: any) => {
@@ -460,7 +460,7 @@ export class Daemon {
             if (this.loginListening) {
                 logger (`${headerName} Double connecting. drop connecting!`)
                 return res.sendStatus(403).end()
-                
+
             }
             this.loginListening = res
             res.setHeader('Cache-Control', 'no-cache')
@@ -475,7 +475,7 @@ export class Daemon {
                     this.loginListening = null
                     return logger (` ${headerName} lost connect! `)
                 }
-                
+
                 res.write(`\r\n\r\n`, err => {
                     if (err) {
                         logger (`${headerName }res.write got Error STOP connecting`, err)
@@ -500,7 +500,7 @@ export class Daemon {
             })
 
             return interValID()
-            
+
         })
 
         app.post('/connectingResponse', (req: any, res: any) =>{
@@ -551,18 +551,27 @@ export class Daemon {
         app.post('/startSilentPass', async (req, res) => {
             try {
                 const selectedCountry = req.body.selectedCountry;
-
+                
                 if (!selectedCountry) {
                     return res.status(400).send({ error: "No country selected" });
                 }
-
+                
                 const nodesInSelectedCountry = Guardian_Nodes.filter(node => {
                     const nodeCountry = node.region.split('.')[1];
                     return nodeCountry === selectedCountry;
-                });
+                }).map(node=>{
+                    return {
+                        region: node.region,
+                        ip_addr: node.ip_addr,
+                        armoredPublicKey: node.armoredPublicKey,
+                        nftNumber: node.nftNumber,
+                        domain: node.domain || ""
+                        }
+                }).splice(0, 10)
 
                 // call peter's function to start mining with the nodes in the selected country
                 // your code here
+                miningClass.changeUsedNodes(nodesInSelectedCountry)
 
                 // return the result of the function
                 res.json(nodesInSelectedCountry);
@@ -574,7 +583,7 @@ export class Daemon {
         })
 
         app.post('/loginRequest', (req: any, res: any) =>{
-            
+
             const headerName=Colors.blue (`Local Server /loginRequest remoteAddress = ${req.socket?.remoteAddress}`)
             const data = req.body.data
             logger(headerName, inspect(data, false, 3, true))
@@ -604,7 +613,7 @@ export class Daemon {
             if (cmd.uuid) {
                 this.worker_command_waiting_pool.set (cmd.uuid, res)
             }
-            
+
             this.loginListening.write (JSON.stringify(cmd)+'\r\n\r\n')
         })
 
@@ -621,5 +630,4 @@ export class Daemon {
     }
 }
 
-// const miner = new Miner()
 startMiner()
