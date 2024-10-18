@@ -11,15 +11,15 @@ import {logger} from './logger'
 import Ip from "ip"
 import {ethers} from 'ethers'
 import * as openpgp from 'openpgp'
-
+import CONET_Guardian_NodeInfo_ABI from './CONET_Guardian_NodeInfo_ABI.json'
 import {miningV2_Class} from './userMining'
 
 const ver = '0.1.4'
 
 
-const CONET_Guardian_NodeInfoV6 = "0x9e213e8B155eF24B466eFC09Bcde706ED23C537a";
-const conet_rpc = 'https://rpc.conet.network';
-const provideCONET = new ethers.JsonRpcProvider(conet_rpc);
+const CONET_Guardian_NodeInfoV6 = "0x9e213e8B155eF24B466eFC09Bcde706ED23C537a"
+const conet_rpc = 'https://rpc.conet.network'
+const provideCONET = new ethers.JsonRpcProvider(conet_rpc)
 
 const getAllRegions = async () => {
     const regionContract = new ethers.Contract(
@@ -76,8 +76,6 @@ const startMiner = async () => {
         index: acc.index
     }
 	miningClass = new miningV2_Class (profile.privateKeyArmor)
-
-	// new proxyServer('3003', [nodes[0],nodes[1]],nodes.slice(2), profile, true, '')
 }
 
 const CoNET_SI_Network_Domain = 'openpgp.online'
@@ -176,6 +174,26 @@ const joinMetadata = (metadata: any ) => {
     metadata['text']= _metadata
 }
 
+let _proxyServer: proxyServer
+
+const changeRegion = (selectedCountry: string) => {
+	const result = miningClass.changeUsedNodes (selectedCountry)
+	if (!result || !result.length) {
+		return false
+	}
+
+	const activeNodes = result.slice(0, result.length/2)
+	const egressNodes = result.slice(result.length/2)
+
+	if (_proxyServer) {
+		_proxyServer.restart(profile, activeNodes, egressNodes)
+	} else {
+		_proxyServer = new proxyServer((3002).toString(), activeNodes, egressNodes, profile, true, '')
+	}
+
+	return result
+}
+
 
 const otherRespon = ( body: string| Buffer, _status: number ) => {
 	const Ranges = ( _status === 200 ) ? 'Accept-Ranges: bytes\r\n' : ''
@@ -232,6 +250,7 @@ export class Daemon {
     }
 
     private initialize = () => {
+		startMiner()
         const staticFolder = join ( this.appsPath, 'workers' )
         //const launcherFolder = join ( this.appsPath, '../launcher' )
 		//console.dir ({ staticFolder: staticFolder, launcherFolder: launcherFolder })
@@ -250,123 +269,6 @@ export class Daemon {
             return this.initialize ()
         })
 
-        // app.get ('/', async ( req: express.Request, res: express.Response) => {
-
-        //     const launcherHTMLPath = join (
-        //         this.appsPath  + '../launcher/index.html'
-        //     )
-        //     const hasLauncher = await fse.pathExists(launcherHTMLPath);
-        //     if (hasLauncher) {
-        //         return res.status(200).sendFile(launcherHTMLPath);
-        //     }
-        //     return res.status(200).send("<p style='font-family: Arial, Helvetica, sans-serif;'>Oh no! You don't have the Kloak Platform Launcher!</p>")
-        // })
-
-        /**
-         * Test network online
-         *
-         * Test results Array for imap.gmail.com, imap.mail.yahoo.com, imap.mail.me.com, outlook.office365.com,imap.zoho.com
-         * test connecting with tls 993 port
-         * {
-         * 		name: server name
-         * 		err: Error | null if have not error
-         * 		time: connected time | null if have error
-         * }
-         */
-
-        // app.post ('/sendToStripe', ( req: express.Request, res: express.Response ) => {
-        //     logger (`app.post /sendToStripe ${ req.socket.remoteAddress }:${ req.socket.remotePort } `)
-        //     const postData = req.body.postData
-        //     const uuid = v4()
-        //     const kk = JSON.parse(makeMetadata (Buffer.from(postData).toString ('base64')))
-        //     const postChunk = {
-        //         metadata: kk,
-        //         description: uuid
-        //     }
-        //     let count = 0
-        //     let keyid = ''
-        //     const Stripe = require('stripe')(stripeAuth)
-        //     const delCustoms = () => {
-        //         if ( keyid.length ) {
-        //             return Stripe.customers.del(keyid)
-        //             .then (() => {
-        //                 logger (`Deleted Stripe.customer [${ keyid }]`)
-        //                 keyid = ''
-        //             })
-        //         }
-                
-        //     }
-        //     const getUpdate = () => {
-                
-        //         return Stripe.customers.retrieve (keyid)
-        //         .then ((customer: any ) => {
-        //             logger (`check update from Stripe [${ count }]`)
-                    
-        //             const meta = customer.metadata
-        //             logger (inspect(meta, false, 3, true ))
-        //             const err = meta.error
-        //             if ( err ) {
-        //                 res.statusCode = /INVITATION/i.test (err) ? 402 : 406
-        //                 res.end()
-        //                 return Promise.reject (new Error('end'))
-        //             }
-                    
-        //             if ( meta.response ) {
-                        
-        //                 joinMetadata(meta)
-        //                 res.json (customer.metadata.text).end()
-        //                 return Promise.reject (new Error('end'))
-        //             }
-
-        //             if ( ++count > 3 ) {
-        //                 res.statusCode = 452
-        //                 res.end()
-        //                 return Promise.reject (new Error('end'))
-        //             }
-        //             setTimeout (() => {
-        //                 logger (`getUpdate with getUpdate!`)
-        //                 getUpdate ()
-        //             }, 2000 )
-        //             return Promise.reject (new Error('loop'))
-                    
-        //         })
-        //         .catch ((ex: Error ) => {
-
-        //             if ( /^end$/i.test (ex.message )) {
-                        
-        //                 delCustoms ()
-                        
-        //                 return logger (`catch end reject!`)
-        //             }
-        //             if ( /^loop$/i.test (ex.message )) {
-                        
-                        
-        //                 return logger (`catch loop reject!`)
-        //             }
-        //             logger (`Stripe response ERROR! [${ keyid }]`)
-        //             logger (ex)
-        //             res.statusCode = 405
-        //             res.end()
-        //         })
-        //     }
-
-        //     return Stripe.customers.create(postChunk)
-        //     .then ((n: any ) => {
-        //         keyid = n.id
-        //         logger (inspect(n, false, 3, true))
-        //         setTimeout (()=> {
-        //             logger (`getUpdate with main!`)
-        //             getUpdate()
-        //         }, 3000 )
-        //     })
-        //     .catch ((ex: any ) => {
-        //         logger (ex)
-        //         logger (`Seguro response ERROR! Deleted Stripe.customer [${ keyid }]`)
-        //         res.statusCode = 405
-        //         res.end()
-        //     })
-            
-        // })
 
         
         app.post ( '/postMessage', ( req: any, res: any ) => {
@@ -544,33 +446,23 @@ export class Daemon {
 
         app.get('/getAllRegions',async (req, res) => {
             let regions = await getAllRegions()
-
             res.json(regions?? [])
         })
 
-        app.post('/startSilentPass', async (req, res) => {
-            try {
-                const selectedCountry = req.body.selectedCountry;
+        app.post('/startSilentPass', async (req: any, res: any) => {
+            
+			const selectedCountry = req.body?.selectedCountry
 
-                if (!selectedCountry) {
-                    return res.status(400).send({ error: "No country selected" });
-                }
+			if (!selectedCountry) {
+				return res.status(400).send({ error: "No country selected" })
+			}
+			const ret = changeRegion (selectedCountry)
+			if (!ret) {
+				res.status(400).send({ error: `No nodes find in region ${selectedCountry}` })
+			}
 
-                const nodesInSelectedCountry = Guardian_Nodes.filter(node => {
-                    const nodeCountry = node.region.split('.')[1];
-                    return nodeCountry === selectedCountry;
-                });
-
-                // call peter's function to start mining with the nodes in the selected country
-                // your code here
-
-                // return the result of the function
-                res.json(nodesInSelectedCountry);
-
-            } catch (error) {
-                // Handle errors
-                res.status(500).send({ error: "Something went wrong" });
-            }
+			res.json(ret).end()
+            
         })
 
         app.post('/loginRequest', (req: any, res: any) =>{
@@ -621,5 +513,11 @@ export class Daemon {
     }
 }
 
-// const miner = new Miner()
-startMiner()
+// new Daemon(3001, '')
+
+
+//		test 
+//		curl -v localhost:3001/getAllRegions
+//		curl -X POST -H "Content-Type: application/json" --data '{"selectedCountry": "US"}' "http://localhost:3001/startSilentPass"
+//		Proxy server test 
+//		curl -v -4 -x socks5h://localhost:3002 "https://www.google.com"

@@ -43,8 +43,7 @@ interface listenClient {
 
 const maxScanNodesNumber = 121
 let getAllNodesProcess = false
-export let Guardian_Nodes: nodeInfo[] = []
-let miningNode: nodeInfo 
+let Guardian_Nodes: nodeInfo[] = []
 
 const getAllNodes = async () => {
 	if (getAllNodesProcess) {
@@ -331,6 +330,7 @@ const start = (privateKeyArmor: string) => new Promise(async resolve => {
 	if (!miningNode) {
 		return logger(`start has Error!`)
 	}
+	Guardian_Nodes.splice(miningNode.nodoNumber, 1)
 	connectToGossipNode(wallet, miningNode.node, miningNode.nodoNumber)
 })
 
@@ -370,15 +370,38 @@ const postToUrl = (node: nodeInfo, POST: string) => {
 
 export class miningV2_Class {
 
-	constructor(privateKeyArmor: string) {
+	private init = (privateKeyArmor: string) => {
 		start (privateKeyArmor)
 	}
 
-	public changeUsedNodes (nodes: nodeInfo[]) {
+	constructor(privateKeyArmor: string) {
+		this.init(privateKeyArmor)
+	}
+
+	public changeUsedNodes (region: string) {
 		SaaSNodes = new Map()
-		nodes.forEach(n => {
+		const nodes = Guardian_Nodes.filter(n => n.region.split('.')[1] === region)
+
+		if (!nodes.length) {
+			return null
+		}
+
+		const exportNodes: nodeInfo[] = []
+
+		do {
+			const index = Math.floor(Math.random() * nodes.length)
+			const node = nodes[index]
+			const isExisting = exportNodes.findIndex(n => n.ip_addr === node.ip_addr)
+			if (node && isExisting < 0) {
+				exportNodes.push(node)
+			}
+		} while (exportNodes.length < 10 && exportNodes.length < nodes.length)
+
+		exportNodes.forEach(n => {
 			SaaSNodes.set(n.ip_addr, n)
 		})
+
+		return exportNodes
 	}
 }
 
