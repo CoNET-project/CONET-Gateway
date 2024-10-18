@@ -11,6 +11,7 @@ import {logger} from './logger'
 import Ip from "ip"
 import {ethers} from 'ethers'
 import * as openpgp from 'openpgp'
+import CONET_Guardian_NodeInfo_ABI from './CONET_Guardian_NodeInfo_ABI.json'
 
 import {miningV2_Class, Guardian_Nodes} from './userMining'
 
