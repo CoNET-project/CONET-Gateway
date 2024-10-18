@@ -540,7 +540,8 @@ export class Daemon {
 
         app.get('/getAllRegions',async (req, res) => {
             let regions = await getAllRegions()
-            res.json({regions})
+
+            res.json(regions?? [])
         })
 
         app.post('/loginRequest', (req: any, res: any) =>{
