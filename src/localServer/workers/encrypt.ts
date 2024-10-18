@@ -128,7 +128,7 @@ const initEncryptWorker = async () => {
     self.importScripts(baseUrl + 'utilV2.js')
 	self.importScripts(baseUrl + 'miningV2.js')
     
-    self.importScripts('https://cdnjs.cloudflare.com/ajax/libs/ethers/6.13.2/ethers.umd.min.js')
+    self.importScripts('https://cdnjs.cloudflare.com/ajax/libs/ethers/6.13.4/ethers.umd.min.js')
     workerReady = true
     channelLoading.postMessage(90)
 	logger(`workerProcess: [90]`)

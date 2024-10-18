@@ -115,11 +115,28 @@ const getWallet = async (SRP: string, max: number, __start: number) => {
 
 }
 
+let startGossipProcess = false
+
 const startGossip = (node: nodeInfo, POST: string, callback?: (err?: string, data?: string) => void) => {
-	
+
+	if (startGossipProcess) {
+		return
+	}
+	startGossipProcess = true
+
+	const relaunch = () => setTimeout(() => {
+		
+		startGossip(node, POST, callback)
+		
+	}, 1000)
+
+	const waitingTimeout = setTimeout(() => {
+		logger(Colors.red(`startGossip on('Timeout') [${node.ip_addr}:${node.nftNumber}]!`))
+		relaunch()
+	}, 5 * 1000)
 
 	const option: RequestOptions = {
-		hostname: node.domain,
+		host: node.ip_addr,
 		port: 80,
 		method: 'POST',
 		protocol: 'http:',
@@ -132,27 +149,30 @@ const startGossip = (node: nodeInfo, POST: string, callback?: (err?: string, dat
 	let first = true
 
 	const kkk = request(option, res => {
-
-		if (res.statusCode !==200) {
-			return logger(`startTestMiner got res.statusCode = [${res.statusCode}] != 200 error! restart`)
-		}
+		clearTimeout(waitingTimeout)
 
 		let data = ''
 		let _Time: NodeJS.Timeout
 
+		startGossipProcess = false
+
+		if (res.statusCode !==200) {
+			relaunch()
+			return logger(`startGossip ${node.ip_addr} got statusCode = [${res.statusCode}] != 200 error! relaunch !!!`)
+		}
+		
 		res.on ('data', _data => {
 			clearTimeout(_Time)
 			data += _data.toString()
 			
-
 			if (/\r\n\r\n/.test(data)) {
 				
 				if (first) {
 					first = false
-					logger(Colors.magenta(`first`))
+					
 					try{
 						const uu = JSON.parse(data)
-						logger(inspect(uu, false, 3, true))
+						// logger(inspect(uu, false, 3, true))
 					} catch(ex) {
 						logger(Colors.red(`first JSON.parse Error`), data)
 					}
@@ -175,7 +195,7 @@ const startGossip = (node: nodeInfo, POST: string, callback?: (err?: string, dat
 		})
 
 		res.once('error', err => {
-			startGossip (node, POST, callback)
+			relaunch()
 			logger(Colors.red(`startGossip [${node.ip_addr}] res on ERROR! Try to restart! `), err.message)
 		})
 
@@ -184,10 +204,7 @@ const startGossip = (node: nodeInfo, POST: string, callback?: (err?: string, dat
 			kkk.destroy()
 			if (typeof callback === 'function') {
 				logger(Colors.red(`startGossip [${node.ip_addr}] res on END! Try to restart! `))
-				setTimeout(() => {
-					logger(Colors.red(`startGossip [${node.ip_addr}] requestHttps on Error! Try to restart! `))
-					startGossip (node, POST, callback)
-				}, 1000)
+				relaunch()
 			}
 			
 		})
@@ -195,19 +212,14 @@ const startGossip = (node: nodeInfo, POST: string, callback?: (err?: string, dat
 	})
 
 	kkk.on('error', err => {
-		
-		setTimeout(() => {
-			logger(Colors.red(`startGossip [${node.ip_addr}] requestHttps on Error! Try to restart! `), err.message)
-			startGossip (node, POST, callback)
-		}, 1000)
-		
+		logger(Colors.red(`startGossip on('error') [${node.ip_addr}] requestHttps on Error! no call relaunch`), err.message)
 	})
 
 	kkk.end(POST)
 
 }
 
-const getRandomNodeV2: (index: number) => null|nodeInfo = (index = -1) => { 
+const getRandomNodeV2 = (index = -1) => { 
 	const totalNodes = Guardian_Nodes.length - 1
 	if (!totalNodes ) {
 		return null
@@ -220,11 +232,14 @@ const getRandomNodeV2: (index: number) => null|nodeInfo = (index = -1) => {
 	}
 
 	const node = Guardian_Nodes[nodoNumber]
-	logger(Colors.blue(`getRandomNodeV2 Guardian_Nodes length =${Guardian_Nodes.length} nodoNumber = ${nodoNumber} `))
-	return node
+	if (!node) {
+		logger(Colors.blue(`getRandomNodeV2 index ${nodoNumber} has no data try again`))
+		return getRandomNodeV2 (index)
+	}
+	return {node, nodoNumber}
 }
 
-const sendTousedNode = async ( wallet: ethers.Wallet, data: listenClient, validatorNode: nodeInfo) => {
+const sendToUsedNode = async ( wallet: ethers.Wallet, data: listenClient, validatorNode: nodeInfo) => {
 
 	const key = Buffer.from(getRandomValues(new Uint8Array(16))).toString('base64')
 	const command = {
@@ -246,10 +261,11 @@ const sendTousedNode = async ( wallet: ethers.Wallet, data: listenClient, valida
 
 	const _postData = await encrypt (encryptObj)
 	logger(Colors.grey(`validator [${wallet.address.toLowerCase()}] post to ${validatorNode.ip_addr} epoch ${data.epoch} total miner [${data.online}]`))
-	startGossip(validatorNode, JSON.stringify({data: _postData}))
+	postToUrl(validatorNode, JSON.stringify({data: _postData}))
+
 }
 
-const connectToGossipNode = async ( wallet: ethers.Wallet, useNodes: nodeInfo[] ) => {
+const connectToGossipNode = async ( wallet: ethers.Wallet, miningNode: nodeInfo, index: number) => {
 	
 	const key = Buffer.from(getRandomValues(new Uint8Array(16))).toString('base64')
 	
@@ -279,6 +295,10 @@ const connectToGossipNode = async ( wallet: ethers.Wallet, useNodes: nodeInfo[] 
 			return logger(Colors.magenta(`connectToGossipNode ${miningNode.ip_addr} push ${_data} is null!`))
 		}
 
+		if (!SaaSNodes.size) {
+			return
+		}
+
 		let data: listenClient
 		try {
 			data = JSON.parse(_data)
@@ -292,37 +312,73 @@ const connectToGossipNode = async ( wallet: ethers.Wallet, useNodes: nodeInfo[] 
 		data.isUser = true
 		data.userWallets = data.nodeWallets = []
 
-		useNodes.forEach(n => {
-			sendTousedNode(wallet, data, n)
+		SaaSNodes.forEach(async (v, key) => {
+			await sendToUsedNode(wallet, data, v)
 		})
+		
 
 	})
 }
 
-const SaaSNodes: Map<string, nodeInfo> = new Map()
-export const start = (privateKeyArmor: string) => new Promise(async resolve => {
+
+let SaaSNodes: Map<string, nodeInfo> = new Map()
+
+const start = (privateKeyArmor: string) => new Promise(async resolve => {
 	await getAllNodes()
 	const wallet = new ethers.Wallet(privateKeyArmor)
 	
-	Guardian_Nodes = Guardian_Nodes.filter(n => /\.us/i.test(n.region))
-	const index = Math.floor(Math.random() * Guardian_Nodes.length - 1)
-	miningNode = Guardian_Nodes[index]
-	do {
-		const node = getRandomNodeV2(index)
-		if (node) {
-			SaaSNodes.set(node.ip_addr, node)
-		}
-		
-	} while (SaaSNodes.size < 5)
+	const miningNode = getRandomNodeV2()
+	if (!miningNode) {
+		return logger(`start has Error!`)
+	}
+	connectToGossipNode(wallet, miningNode.node, miningNode.nodoNumber)
+})
 
+const postToUrl = (node: nodeInfo, POST: string) => {
+	const option: RequestOptions = {
+		host: node.ip_addr,
+		port: 80,
+		method: 'POST',
+		protocol: 'http:',
+		headers: {
+			'Content-Type': 'application/json;charset=UTF-8'
+		},
+		path: "/post",
+	}
 
+	const waitingTimeout = setTimeout(() => {
+		logger(Colors.red(`postToUrl on('Timeout') [${node.ip_addr}:${node.nftNumber}]!`))
+	}, 5 * 1000)
 
-	const ret: nodeInfo[] = []
-	SaaSNodes.forEach((v,key) => {
-		ret.push(v)
+	const kkk = request(option, res => {
+		clearTimeout(waitingTimeout)
+
+		res.once('end', () => {
+			if (res.statusCode !==200) {
+				return logger(`postToUrl ${node.ip_addr} statusCode = [${res.statusCode}] != 200 error!`)
+			}
+		})
 		
 	})
-	resolve(ret)
-	connectToGossipNode(wallet, ret)
-})
+
+	kkk.once('error', err => {
+		logger(Colors.red(`startGossip on('error') [${node.ip_addr}] requestHttps on Error! no call relaunch`), err.message)
+	})
+
+	kkk.end(POST)
+}
+
+export class miningV2_Class {
+
+	constructor(privateKeyArmor: string) {
+		start (privateKeyArmor)
+	}
+
+	public changeUsedNodes (nodes: nodeInfo[]) {
+		SaaSNodes = new Map()
+		nodes.forEach(n => {
+			SaaSNodes.set(n.ip_addr, n)
+		})
+	}
+}
 
