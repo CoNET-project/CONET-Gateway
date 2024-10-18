@@ -55,11 +55,12 @@ const createGPGKey = async ( passwd: string, name: string, email: string ) => {
 }
 
 let miningClass: miningV2_Class
+let profile: profile
 
 const startMiner = async () => {
 	const acc = ethers.Wallet.createRandom()
 	const key = await createGPGKey('', '', '')
-	const profile: profile = {
+	profile = {
         tokens: null,
         publicKeyArmor: acc.publicKey,
         keyID: acc.address,
