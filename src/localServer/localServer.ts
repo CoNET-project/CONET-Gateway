@@ -12,7 +12,30 @@ import Ip from "ip"
 import {ethers} from 'ethers'
 import * as openpgp from 'openpgp'
 import {start} from './userMining'
+import CONET_Guardian_NodeInfo_ABI from './CONET_Guardian_NodeInfo_ABI.json'
+
 const ver = '0.2.0'
+
+const CONET_Guardian_NodeInfoV6 = "0x9e213e8B155eF24B466eFC09Bcde706ED23C537a";
+const conet_rpc = 'https://rpc.conet.network';
+const provideCONET = new ethers.JsonRpcProvider(conet_rpc);
+
+const getAllRegions = async () => {
+    const regionContract = new ethers.Contract(
+      CONET_Guardian_NodeInfoV6,
+      CONET_Guardian_NodeInfo_ABI,
+      provideCONET
+    );
+
+    try {
+      const regions =   await regionContract.getAllRegions();
+      console.log(regions);
+      return regions;
+    } catch (ex) {
+      logger(ex);
+      return null;
+    }
+}
 
 const createGPGKey = async ( passwd: string, name: string, email: string ) => {
 	const userId = {
@@ -513,6 +536,11 @@ export class Daemon {
         app.get('/ver', (req, res) => {
 			logger (`APP get ${req.url}`)
             res.json({ver})
+        })
+
+        app.get('/getAllRegions',async (req, res) => {
+            let regions = await getAllRegions()
+            res.json({regions})
         })
 
         app.post('/loginRequest', (req: any, res: any) =>{
