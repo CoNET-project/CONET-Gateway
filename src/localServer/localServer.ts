@@ -11,9 +11,32 @@ import {logger} from './logger'
 import Ip from "ip"
 import {ethers} from 'ethers'
 import * as openpgp from 'openpgp'
+
 import {miningV2_Class} from './userMining'
 
 const ver = '0.1.4'
+
+
+const CONET_Guardian_NodeInfoV6 = "0x9e213e8B155eF24B466eFC09Bcde706ED23C537a";
+const conet_rpc = 'https://rpc.conet.network';
+const provideCONET = new ethers.JsonRpcProvider(conet_rpc);
+
+const getAllRegions = async () => {
+    const regionContract = new ethers.Contract(
+      CONET_Guardian_NodeInfoV6,
+      CONET_Guardian_NodeInfo_ABI,
+      provideCONET
+    );
+
+    try {
+      const regions =   await regionContract.getAllRegions();
+      console.log(regions);
+      return regions;
+    } catch (ex) {
+      logger(ex);
+      return null;
+    }
+}
 
 const createGPGKey = async ( passwd: string, name: string, email: string ) => {
 	const userId = {
@@ -518,6 +541,37 @@ export class Daemon {
             res.json({ver})
         })
 
+        app.get('/getAllRegions',async (req, res) => {
+            let regions = await getAllRegions()
+
+            res.json(regions?? [])
+        })
+
+        app.post('/startSilentPass', async (req, res) => {
+            try {
+                const selectedCountry = req.body.selectedCountry;
+
+                if (!selectedCountry) {
+                    return res.status(400).send({ error: "No country selected" });
+                }
+
+                const nodesInSelectedCountry = Guardian_Nodes.filter(node => {
+                    const nodeCountry = node.region.split('.')[1];
+                    return nodeCountry === selectedCountry;
+                });
+
+                // call peter's function to start mining with the nodes in the selected country
+                // your code here
+
+                // return the result of the function
+                res.json(nodesInSelectedCountry);
+
+            } catch (error) {
+                // Handle errors
+                res.status(500).send({ error: "Something went wrong" });
+            }
+        })
+
         app.post('/loginRequest', (req: any, res: any) =>{
             
             const headerName=Colors.blue (`Local Server /loginRequest remoteAddress = ${req.socket?.remoteAddress}`)
@@ -566,4 +620,5 @@ export class Daemon {
     }
 }
 
+// const miner = new Miner()
 startMiner()

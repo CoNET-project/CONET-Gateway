@@ -1,5 +1,5 @@
 
-const maxScanNodesNumber = 80
+const maxScanNodesNumber = 121
 let Guardian_Nodes:nodes_info[]  = []
 
 let getAllNodesProcess = false
