@@ -41,9 +41,9 @@ interface listenClient {
 	isUser: boolean
 }
 
-const maxScanNodesNumber = 80
+const maxScanNodesNumber = 121
 let getAllNodesProcess = false
-let Guardian_Nodes: nodeInfo[] = []
+export let Guardian_Nodes: nodeInfo[] = []
 let miningNode: nodeInfo 
 
 const getAllNodes = async () => {
