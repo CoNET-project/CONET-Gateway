@@ -11,8 +11,9 @@ import {logger} from './logger'
 import Ip from "ip"
 import {ethers} from 'ethers'
 import * as openpgp from 'openpgp'
-import {start} from './userMining'
-const ver = '0.2.0'
+import {miningV2_Class} from './userMining'
+
+const ver = '0.1.4'
 
 const createGPGKey = async ( passwd: string, name: string, email: string ) => {
 	const userId = {
@@ -29,6 +30,8 @@ const createGPGKey = async ( passwd: string, name: string, email: string ) => {
 	//	@ts-ignore
 	return await openpgp.generateKey ( option )
 }
+
+let miningClass: miningV2_Class
 
 const startMiner = async () => {
 	const acc = ethers.Wallet.createRandom()
@@ -48,9 +51,9 @@ const startMiner = async () => {
         hdPath: acc.path||'',
         index: acc.index
     }
-	const nodes:any = await start(profile.privateKeyArmor)
+	miningClass = new miningV2_Class (profile.privateKeyArmor)
 
-	new proxyServer('3002', [nodes[0],nodes[1]],nodes.slice(2), profile, true, '')
+	// new proxyServer('3003', [nodes[0],nodes[1]],nodes.slice(2), profile, true, '')
 }
 
 const CoNET_SI_Network_Domain = 'openpgp.online'
