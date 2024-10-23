@@ -1,6 +1,6 @@
 {
-  "short_name": "React App",
-  "name": "Create React App Sample",
+  "short_name": "Silent Pass Daemon",
+  "name": "Silent Pass Daemon",
   "icons": [
     {
       "src": "favicon.ico",
