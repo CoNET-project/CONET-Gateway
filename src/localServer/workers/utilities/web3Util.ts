@@ -248,10 +248,10 @@ const getProfileAssets_allOthers_Balance = async (profile) => {
         ])
 
 		if (current.usdt) {
-			current.usdt.balance = '2000'// usdt === false ? '': ethers.formatUnits(usdt, 6)
+			current.usdt.balance = usdt === false ? '': ethers.formatUnits(usdt, 6)
 		} else {
 			current.usdt = {
-				balance: '2000',//usdt === false ? '': ethers.formatUnits(usdt, 6),
+				balance: usdt === false ? '': ethers.formatUnits(usdt, 6),
 				history: [],
 				network: 'ETH',
 				decimal: 6,
@@ -261,10 +261,10 @@ const getProfileAssets_allOthers_Balance = async (profile) => {
 		}
 
 		if (current.eth) {
-			current.eth.balance = '3000'// eth === false ? '': ethers.formatEther(eth)
+			current.eth.balance = eth === false ? '': ethers.formatEther(eth)
 		} else {
 			current.eth = {
-				balance: '3000',//eth === false ? '': ethers.formatEther(eth),
+				balance: eth === false ? '': ethers.formatEther(eth),
 				history: [],
 				network: 'ETH',
 				decimal: 18,
@@ -274,10 +274,10 @@ const getProfileAssets_allOthers_Balance = async (profile) => {
 		}
 
         if (current.arb_usdt) {
-			current.arb_usdt.balance = '4000'// arb_usdt === false ? '': ethers.formatUnits(arb_usdt, 6)
+			current.arb_usdt.balance = arb_usdt === false ? '': ethers.formatUnits(arb_usdt, 6)
 		} else {
 			current.arb_usdt = {
-				balance: '4000',//arb_usdt === false ? '': ethers.formatUnits(arb_usdt, 6),
+				balance: arb_usdt === false ? '': ethers.formatUnits(arb_usdt, 6),
 				history: [],
 				network: 'ARB',
 				decimal: 6,
@@ -287,10 +287,10 @@ const getProfileAssets_allOthers_Balance = async (profile) => {
 		}
 	
 		if (current.arb_eth) {
-			current.arb_eth.balance = '5000'//arb_eth === false ? '': ethers.formatEther(arb_eth)
+			current.arb_eth.balance = arb_eth === false ? '': ethers.formatEther(arb_eth)
 		} else {
 			current.arb_eth = {
-				balance: '5000',//arb_eth === false ? '': ethers.formatEther(arb_eth),
+				balance: arb_eth === false ? '': ethers.formatEther(arb_eth),
 				history: [],
 				network: 'ARB',
 				decimal: 18,
@@ -300,10 +300,10 @@ const getProfileAssets_allOthers_Balance = async (profile) => {
 		}
 	
 		if (current.bnb) {
-			current.bnb.balance = '6000'//bnb === false ? '': ethers.formatEther(bnb)
+			current.bnb.balance = bnb === false ? '': ethers.formatEther(bnb)
 		} else {
 			current.bnb = {
-				balance: '6000',//bnb === false ? '': ethers.formatEther(bnb),
+				balance: bnb === false ? '': ethers.formatEther(bnb),
 				history: [],
 				network: 'BSC',
 				decimal: 18,
@@ -313,10 +313,10 @@ const getProfileAssets_allOthers_Balance = async (profile) => {
 		}
 		
         if (current.wusdt) {
-			current.wusdt.balance = '1000'//wusdt === false ? '': ethers.formatEther(wusdt)
+			current.wusdt.balance = wusdt === false ? '': ethers.formatEther(wusdt)
 		} else {
 			current.wusdt = {
-				balance: '1000',//wusdt === false ? '': ethers.formatEther(wusdt),
+				balance: wusdt === false ? '': ethers.formatEther(wusdt),
 				history: [],
 				network: 'BSC',
 				decimal: 18,
@@ -1204,9 +1204,8 @@ const getNextFragmentIPFS = async (ver, passObjPassword, i) => {
     }
 }
 
-const getFragmentsFromPublic: (hash: string) => Promise<string> = (hash) => {
-    const fileUrl = `${ipfsEndpoint}getFragment/${hash}`;
-    return new Promise(resolve => {
+const getFragmentsFromPublic: (hash: string) => Promise<string> = (hash) => new Promise(resolve => {
+		const fileUrl = `${ipfsEndpoint}getFragment/${hash}`
         fetchWithTimeout(fileUrl, {
             method: 'GET',
             headers: {
@@ -1218,14 +1217,15 @@ const getFragmentsFromPublic: (hash: string) => Promise<string> = (hash) => {
         }).then(res => {
             if (res.status !== 200) {
                 logger(`getFragmentsFromPublic can't get hash ${hash} Error!`);
-                return '';
+                return ''
             }
-            return res.text();
+            return res.text()
         }).then(async (text) => {
-            return resolve(text);
-        });
-    });
-}
+            return resolve(text)
+        }).catch(ex=> {
+			return resolve('')
+		})
+    })
 
 const encryptPasswordIssue = (ver, passcode, part) => {
     const password = ethers.id('0x' + (BigInt(ethers.id(ver.toString())) + BigInt(ethers.id(passcode))).toString(16))
@@ -1243,9 +1243,6 @@ const updateFragmentsToIPFS = (encryptData: string, hash: string, keyID: string,
     const message = JSON.stringify({ walletAddress: keyID, data: encryptData, hash })
 	const wallet = new ethers.Wallet(privateKeyArmor)
 	const signMessage = await wallet.signMessage(message)
-
-    // const messageHash = ethers.id(message)
-    // const signMessage = CoNETModule.EthCrypto.sign(privateKeyArmor, messageHash)
 
     const sendData = {
         message, signMessage
@@ -2379,8 +2376,6 @@ const CONET_guardian_purchase = async (profile: profile, nodes, _total, tokenNam
     }
 
     const message = JSON.stringify({ walletAddress: profile.keyID, data })
-    // const messageHash = ethers.id(message)
-    // const signMessage = CoNETModule.EthCrypto.sign(profile.privateKeyArmor, messageHash)
 
 	const wallet = new ethers.Wallet(profile.privateKeyArmor)
 	const signMessage = await wallet.signMessage(message)
@@ -2664,94 +2659,6 @@ let miningAddress = ''
 let miningProfile:profile|null = null
 let miningStatus = 'STOP'
 
-
-const _startMining = async (profile: profile, cmd: worker_command|null =null ) => {
-
-	const message =JSON.stringify({walletAddress: profile.keyID})
-
-	const messageHash =  ethers.id(message)
-	const signMessage = CoNETModule.EthCrypto.sign(profile.privateKeyArmor, messageHash)
-
-
-	const sendData = {
-		message, signMessage
-	}
-
-	const url = `${ api_endpoint }startMining`
-
-	logger(url)
-	let first = true
-	
-	return miningConn = postToEndpointSSE(url, true, JSON.stringify(sendData), async (err, _data) => {
-
-		switch (miningStatus) {
-			case 'RESTART': {
-				miningConn.abort()
-				miningStatus = 'MINING'
-				return _startMining (profile)
-			}
-
-			case 'STOP': {
-				miningConn.abort()
-				return
-			}
-		}
-
-		if (err) {
-			logger(err)
-			if (cmd) {
-				cmd.err = err
-				return returnUUIDChannel(cmd)
-			}
-			return
-		}
-
-		logger('success', _data)
-		const kk = JSON.parse(_data)
-
-		if (!profile.tokens) {
-			profile.tokens = {}
-		}
-
-		if (!profile.tokens.cCNTP) {
-			profile.tokens.cCNTP = {
-				balance: '0',
-				history: [],
-				network: 'CONET Holesky',
-				decimal: 18,
-				contract: cCNTP_new_Addr,
-				name: 'cCNTP'
-			}
-		}
-
-		if (first) {
-			miningProfile = profile
-			first = false
-			
-
-			if (cmd) {
-				cCNTPcurrentTotal = parseFloat(profile.tokens.cCNTP.balance||'0')
-				
-				kk['currentCCNTP'] = '0'
-				cmd.data = ['success', JSON.stringify(kk)]
-				return returnUUIDChannel(cmd)
-			}
-			return
-		}
-
-		
-
-		kk.rate = typeof kk.rate ==='number' ? kk.rate.toFixed(10) : parseFloat(kk.rate).toFixed(10)
-		kk['currentCCNTP'] = (parseFloat(profile.tokens.cCNTP.balance ||'0') - cCNTPcurrentTotal).toFixed(8)
-
-		const cmdd: channelWroker = {
-			cmd: 'miningStatus',
-			data: [JSON.stringify(kk)]
-		}
-
-		sendState('toFrontEnd', cmdd)
-	})
-}
 
 
 const startMining = async (cmd) => {

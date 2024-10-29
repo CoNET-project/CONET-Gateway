@@ -484,8 +484,6 @@ interface nodeResponse {
 
 const getTicket = async (profile: profile) => {
 	const message = JSON.stringify({ walletAddress: profile.keyID })
-    // const messageHash = ethers.id(message)
-    // const signMessage = CoNETModule.EthCrypto.sign(profile.privateKeyArmor, messageHash)
 
 	const wallet = new ethers.Wallet(profile.privateKeyArmor)
 	const signMessage = await wallet.signMessage(message)

@@ -111,10 +111,12 @@ const initEncryptWorker = async () => {
     //self.importScripts ( baseUrl + 'Pouchdb.js' )
     // self.importScripts (  baseUrl + 'PouchdbFind.js' )
     self.importScripts ( baseUrl + 'smartContractABI.js' )
-	self.importScripts(baseUrl + 'CoNETModule.js')
+	//self.importScripts(baseUrl + 'CoNETModule.js')
     self.importScripts(baseUrl + 'scrypt.js')
     // self.importScripts ( baseUrl + 'async.js' )
-    self.importScripts(baseUrl + 'forge.all.min.js')
+
+    //self.importScripts(baseUrl + 'forge.all.min.js')
+
     channelLoading.postMessage(50)
 	logger(`workerProcess: [50]`)
     //self.importScripts ( baseUrl + 'openpgp.min.js' )
