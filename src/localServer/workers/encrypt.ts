@@ -742,6 +742,10 @@ const processCmd = async (cmd: worker_command) => {
 			return resetPasscode (cmd)
 		}
 
+		case 'isWalletAgent': {
+			return isWalletAgent (cmd)
+		}
+
 		default: {
 			cmd.err = 'INVALID_COMMAND'
 			responseChannel.postMessage(JSON.stringify(cmd))

@@ -1841,8 +1841,7 @@ const getFaucet: (profile: profile) => Promise<boolean|any> = async (profile) =>
 })
 
 
-const createKeyHDWallets = () => {
-    
+const createKeyHDWallets = () => {    
     try {
         const root = ethers.Wallet.createRandom()
 		return root
@@ -1850,7 +1849,29 @@ const createKeyHDWallets = () => {
     catch (ex) {
         return null
     }
+}
+
+const isWalletAgent = async (cmd) => {
+	const [walletKeyId] = cmd.data
+
+    if (!walletKeyId) {
+      cmd.err = "INVALID DATA";
+      return returnUUIDChannel(cmd);
+    }
+
+    const provideNewCONET = new ethers.JsonRpcProvider(conet_rpc);
     
+    const ConetianContract = new ethers.Contract(
+        conetianAddress,
+        conetianAbi,
+        provideNewCONET
+    );
+
+    const isWalletAgent = await ConetianContract.isReferrer(walletKeyId);
+
+    cmd.data = [isWalletAgent];
+    
+    return returnUUIDChannel(cmd)
 }
 
 const decryptSystemData = async () => new Promise((resolve, reject) => {
