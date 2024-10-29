@@ -1855,10 +1855,10 @@ const isWalletAgent = async (cmd) => {
 	const [walletKeyId] = cmd.data
 
     if (!walletKeyId) {
-      cmd.err = "INVALID DATA";
-      return returnUUIDChannel(cmd);
+        cmd.err = "INVALID DATA";
+        return returnUUIDChannel(cmd);
     }
-
+    
     const provideNewCONET = new ethers.JsonRpcProvider(conet_rpc);
     
     const ConetianContract = new ethers.Contract(
@@ -1866,11 +1866,15 @@ const isWalletAgent = async (cmd) => {
         conetianAbi,
         provideNewCONET
     );
-
-    const isWalletAgent = await ConetianContract.isReferrer(walletKeyId);
-
-    cmd.data = [isWalletAgent];
     
+    try {
+        const isWalletAgent = await ConetianContract.isReferrer(walletKeyId);
+        cmd.data = [isWalletAgent];
+    } catch (err) {
+        logger(`isWalletAgent error`, err);
+        cmd.err = "FAILURE";
+    }
+
     return returnUUIDChannel(cmd)
 }
 
