@@ -747,7 +747,6 @@ const checkGuardianNodes = async () => {
     needUpgradeVer = epoch + 25
 }
 
-
 let sendStateBeforeunload = false
 
 const sendState = (state, value) => {
@@ -2452,7 +2451,7 @@ const stringFix = (num) => {
 }
 
 
-const transferAssetToCONET_guardian = (privateKey: string, token: string , transferNumber: number) => new Promise(async (resolve) => {
+const transferAssetToCONET_guardian = (privateKey: string, token: string , transferNumber: string) => new Promise(async (resolve) => {
     const provide = new ethers.JsonRpcProvider(getNetwork(token))
     const wallet = new ethers.Wallet(privateKey, provide)
     const toAddr = CONET_guardian_purchase_Receiving_Address(token)
@@ -2474,7 +2473,7 @@ const transferAssetToCONET_guardian = (privateKey: string, token: string , trans
     else {
         const tx = {
             to: toAddr,
-            value: ethers.parseEther(transferNumber.toFixed(8))
+            value: ethers.parseEther(transferNumber)
         }
         try {
 			const kk = await wallet.sendTransaction(tx)

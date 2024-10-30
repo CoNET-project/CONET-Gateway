@@ -406,7 +406,7 @@ const CONETianPlan_purchase = async (referrer: string, profile: profile, amount:
         return false
     }
 
-	let receiptTx: any = await transferAssetToCONET_guardian(profile.privateKeyArmor, cryptoAsset.name, total)
+	let receiptTx: any = await transferAssetToCONET_guardian(profile.privateKeyArmor, cryptoAsset.name, total.toFixed(8))
 
 	if (typeof receiptTx === 'boolean') {
         const cmd1 = {

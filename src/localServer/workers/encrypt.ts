@@ -309,7 +309,7 @@ const processCmd = async (cmd: worker_command) => {
         }
 
 		case 'CONETianPlanPurchase': {
-			const [referrer, amount,  profile, payAssetName] = cmd.data
+			const [referrer, amount, profile, payAssetName] = cmd.data
 			returnUUIDChannel(cmd)
 
             if (!referrer || amount?.length !== 4 || !profile || !payAssetName) {
