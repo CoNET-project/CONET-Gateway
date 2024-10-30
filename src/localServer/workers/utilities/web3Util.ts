@@ -1851,7 +1851,7 @@ const createKeyHDWallets = () => {
 const isWalletAgent = async (cmd) => {
 	const [walletKeyId] = cmd.data
 
-    if (!walletKeyId) {
+    if (!walletKeyId || !ethers.isAddress(walletKeyId)) {
         cmd.err = "INVALID DATA";
         return returnUUIDChannel(cmd);
     }
