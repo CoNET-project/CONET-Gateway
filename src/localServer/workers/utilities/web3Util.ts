@@ -1859,8 +1859,8 @@ const isWalletAgent = async (cmd) => {
     const provideNewCONET = new ethers.JsonRpcProvider(conet_rpc);
     
     const ConetianContract = new ethers.Contract(
-        conetianAddress,
-        conetianAbi,
+        nftContract,
+        nftAbi,
         provideNewCONET
     );
     

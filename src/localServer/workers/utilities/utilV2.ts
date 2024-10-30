@@ -20,6 +20,7 @@ const CNTPV1 = '0xb182d2c2338775B0aC3e177351D638b23D3Da4Ea'.toLowerCase()
 const blast_mainnet_CNTP = '0x0f43685B2cB08b9FB8Ca1D981fF078C22Fec84c5'
 const conetianAddress =
   "0x27B9043873dE8684822DEC12F90bAE08f6a06657".toLowerCase();
+const nftContract = "0x33aAE28a02Fa2953219B7BDe03Cb94aA5cA6F00F".toLowerCase()
 //const CNTPB_contract = '0x6056473ADD8bC89a95325845F6a431CCD7A849bb'
 
 
