@@ -342,7 +342,7 @@ const getProfileAssets_CONET_Balance = async (profile: profile) => {
 			CNTPV1, cCNTP, conet,
 			cBNBUSDT, cUSDT, cBNB, cETH, cArbETH, cArbUSDT,
 			CGPNs, CGPN2s,
-			CONETianPlan
+			_CONETianPlan
 		] = await Promise.all([
             //scanCNTP (key, provideBlastMainChain),
             scanCNTPV1(key),
@@ -510,98 +510,34 @@ const getProfileAssets_CONET_Balance = async (profile: profile) => {
 				name: 'CGPN2s'
 			}
 		}
-		// @ts-ignore
-		const CONETianData: BigInt[][] = CONETianPlan.result
-		// @ts-ignore
-		const CONETianDataBalance = CONETianPlan.total
-		if (CONETianPlan !== false) {
+		//@ts-ignore
+		const CONETianData:{balanceGuardian: BigInt, balanceReferrer: BigInt, availableBalance: BigInt}|false = _CONETianPlan
+		
+		//	{balanceGuardian, balanceReferrer, availableBalance}
+		if (CONETianData !== false) {
 			if (current.CONETianPlan) {
-				current.CONETianPlan.Guardian.balance = CONETianData[0][Guardian].toString()
-				current.CONETianPlan.Sentinel.balance = CONETianData[0][Sentinel].toString()
-				current.CONETianPlan.Conetian.balance = CONETianData[0][Conetian].toString()
-				current.CONETianPlan.Pioneer.balance = CONETianData[0][Pioneer].toString()
-				current.CONETianPlan.Guardian.totalSupply = (maxGuardian - parseInt(CONETianDataBalance[Guardian].toString())).toFixed(0)
-				current.CONETianPlan.Sentinel.totalSupply = (maxSentinel - parseInt(CONETianDataBalance[Sentinel].toString())).toFixed(0)
-				current.CONETianPlan.Conetian.totalSupply = (maxConetian - parseInt(CONETianDataBalance[Conetian].toString())).toFixed(0)
-				current.CONETianPlan.Pioneer.totalSupply = (maxPioneer - parseInt(CONETianDataBalance[Pioneer].toString())).toFixed(0)
-				current.CONETianPlan.Guardian_referrer.balance = CONETianData[1][Guardian].toString()
-				current.CONETianPlan.Sentinel_referrer.balance = CONETianData[1][Sentinel].toString()
-				current.CONETianPlan.Conetian_referrer.balance = CONETianData[1][Conetian].toString()
-				current.CONETianPlan.Pioneer_referrer.balance = CONETianData[1][Pioneer].toString()
-
+				current.CONETianPlan.Guardian.balance = CONETianData.balanceGuardian.toString()
+				current.CONETianPlan.Guardian.totalSupply = (maxGuardian - parseInt(CONETianData.availableBalance.toString())).toFixed(0)
+				current.CONETianPlan.Guardian_referrer.balance = CONETianData.balanceReferrer.toString()
 			} else {
 				current.CONETianPlan = {
 					Guardian: {
-						balance: CONETianData[0][Guardian].toString(),
+						balance: CONETianData.balanceGuardian.toString(),
 						history: [],
 						network: 'CONET Holesky',
 						decimal: Guardian,
 						contract: CONETianPlanAddr,
 						name: 'Guardian',
 						supplyMaximum: maxGuardian.toString(),
-						totalSupply: (maxGuardian - parseInt(CONETianDataBalance[Guardian].toString())).toFixed(0),
-					},
-					Sentinel: {
-						balance: CONETianData[0][Sentinel].toString(),
-						history: [],
-						network: 'CONET Holesky',
-						decimal: Sentinel,
-						contract: CONETianPlanAddr,
-						name: 'Sentinel',
-						supplyMaximum: maxSentinel.toString(),
-						totalSupply: (maxSentinel - parseInt(CONETianDataBalance[Sentinel].toString())).toFixed(0)
-					},
-					Conetian: {
-						balance: CONETianData[0][Conetian].toString(),
-						history: [],
-						network: 'CONET Holesky',
-						decimal: Conetian,
-						contract: CONETianPlanAddr,
-						name: 'Conetian',
-						supplyMaximum: maxConetian.toString(),
-						totalSupply: (maxConetian - parseInt(CONETianDataBalance[Conetian].toString())).toFixed(0)
-					},
-					Pioneer: {
-						balance: CONETianData[0][Pioneer].toString(),
-						history: [],
-						network: 'CONET Holesky',
-						decimal: Pioneer,
-						contract: CONETianPlanAddr,
-						name: 'Pioneer',
-						supplyMaximum: maxPioneer.toString(),
-						totalSupply: (maxPioneer - parseInt(CONETianDataBalance[Pioneer].toString())).toFixed(0)
+						totalSupply: (maxGuardian - parseInt(CONETianData.availableBalance.toString())).toFixed(0)
 					},
 					Guardian_referrer: {
-						balance: CONETianData[1][Guardian].toString(),
+						balance: CONETianData.balanceReferrer.toString(),
 						history: [],
 						network: 'CONET Holesky',
 						decimal: Guardian_referrer,
 						contract: CONETianPlanAddr,
 						name: 'Guardian_referrer'
-					},
-					Sentinel_referrer: {
-						balance: CONETianData[1][Sentinel].toString(),
-						history: [],
-						network: 'CONET Holesky',
-						decimal: Sentinel_referrer,
-						contract: CONETianPlanAddr,
-						name: 'Sentinel_referrer'
-					},
-					Conetian_referrer: {
-						balance: CONETianData[1][Conetian].toString(),
-						history: [],
-						network: 'CONET Holesky',
-						decimal: Conetian_referrer,
-						contract: CONETianPlanAddr,
-						name: 'Conetian_referrer'
-					},
-					Pioneer_referrer: {
-						balance: CONETianData[1][Pioneer].toString(),
-						history: [],
-						network: 'CONET Holesky',
-						decimal: Pioneer_referrer,
-						contract: CONETianPlanAddr,
-						name: 'Pioneer_referrer'
 					}
 				}
 				
@@ -2113,10 +2049,14 @@ const scan_Guardian_ReferralNodes = async (walletAddr) => {
 const scan_CONETianPlanAddr = async (walletAddr) => new Promise(async resolve => {
 	const CONETianPlanContract = new ethers.Contract(CONETianPlanAddr, CONETianPlan_ABI, provideCONET)
 	try {
-		const result = await CONETianPlanContract.getAssets(walletAddr)
-		const total = await CONETianPlanContract.getAllLeft()
-		return resolve({result, total})
-	}catch (ex) {
+		const [balanceGuardian, balanceReferrer, availableBalance] = await Promise.all([
+			CONETianPlanContract.balanceOf(walletAddr, Guardian),
+			CONETianPlanContract.balanceOf(walletAddr, Guardian_referrer),
+			CONETianPlanContract.getAvailableBalance()
+		])
+
+		return resolve({balanceGuardian, balanceReferrer, availableBalance})
+	} catch (ex) {
 		resolve (false)
 	}
 })

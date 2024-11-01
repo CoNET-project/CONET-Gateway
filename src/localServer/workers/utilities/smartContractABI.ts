@@ -4213,19 +4213,6 @@ const CONETianPlan_ABI = [
     },
     {
         "inputs": [],
-        "name": "Conetian",
-        "outputs": [
-            {
-                "internalType": "uint256",
-                "name": "",
-                "type": "uint256"
-            }
-        ],
-        "stateMutability": "view",
-        "type": "function"
-    },
-    {
-        "inputs": [],
         "name": "Guardian",
         "outputs": [
             {
@@ -4239,20 +4226,7 @@ const CONETianPlan_ABI = [
     },
     {
         "inputs": [],
-        "name": "Pioneer",
-        "outputs": [
-            {
-                "internalType": "uint256",
-                "name": "",
-                "type": "uint256"
-            }
-        ],
-        "stateMutability": "view",
-        "type": "function"
-    },
-    {
-        "inputs": [],
-        "name": "Sentinel",
+        "name": "GuardianReferrer",
         "outputs": [
             {
                 "internalType": "uint256",
@@ -4438,7 +4412,7 @@ const CONETianPlan_ABI = [
         "outputs": [
             {
                 "internalType": "bool",
-                "name": "",
+                "name": "existNFT",
                 "type": "bool"
             }
         ],
@@ -4447,49 +4421,12 @@ const CONETianPlan_ABI = [
     },
     {
         "inputs": [],
-        "name": "getAllLeft",
+        "name": "getAvailableBalance",
         "outputs": [
             {
-                "internalType": "uint256[4]",
-                "name": "nft",
-                "type": "uint256[4]"
-            }
-        ],
-        "stateMutability": "view",
-        "type": "function"
-    },
-    {
-        "inputs": [],
-        "name": "getAllSupply",
-        "outputs": [
-            {
-                "internalType": "uint256[4]",
-                "name": "nft",
-                "type": "uint256[4]"
-            }
-        ],
-        "stateMutability": "view",
-        "type": "function"
-    },
-    {
-        "inputs": [
-            {
-                "internalType": "address",
-                "name": "to",
-                "type": "address"
-            }
-        ],
-        "name": "getAssets",
-        "outputs": [
-            {
-                "internalType": "uint256[4]",
-                "name": "nft",
-                "type": "uint256[4]"
-            },
-            {
-                "internalType": "uint256[4]",
-                "name": "nft_referrer",
-                "type": "uint256[4]"
+                "internalType": "uint256",
+                "name": "available",
+                "type": "uint256"
             }
         ],
         "stateMutability": "view",
@@ -4559,65 +4496,7 @@ const CONETianPlan_ABI = [
     },
     {
         "inputs": [],
-        "name": "maxConetian",
-        "outputs": [
-            {
-                "internalType": "uint256",
-                "name": "",
-                "type": "uint256"
-            }
-        ],
-        "stateMutability": "view",
-        "type": "function"
-    },
-    {
-        "inputs": [],
         "name": "maxGuardian",
-        "outputs": [
-            {
-                "internalType": "uint256",
-                "name": "",
-                "type": "uint256"
-            }
-        ],
-        "stateMutability": "view",
-        "type": "function"
-    },
-    {
-        "inputs": [],
-        "name": "maxPioneer",
-        "outputs": [
-            {
-                "internalType": "uint256",
-                "name": "",
-                "type": "uint256"
-            }
-        ],
-        "stateMutability": "view",
-        "type": "function"
-    },
-    {
-        "inputs": [],
-        "name": "maxSentinel",
-        "outputs": [
-            {
-                "internalType": "uint256",
-                "name": "",
-                "type": "uint256"
-            }
-        ],
-        "stateMutability": "view",
-        "type": "function"
-    },
-    {
-        "inputs": [
-            {
-                "internalType": "uint256",
-                "name": "",
-                "type": "uint256"
-            }
-        ],
-        "name": "maxSupply",
         "outputs": [
             {
                 "internalType": "uint256",
@@ -4636,19 +4515,19 @@ const CONETianPlan_ABI = [
                 "type": "address"
             },
             {
-                "internalType": "address",
-                "name": "_referrer",
-                "type": "address"
-            },
-            {
                 "internalType": "string",
                 "name": "_tx",
                 "type": "string"
             },
             {
-                "internalType": "uint256[]",
+                "internalType": "uint256",
                 "name": "values",
-                "type": "uint256[]"
+                "type": "uint256"
+            },
+            {
+                "internalType": "address",
+                "name": "_referrer",
+                "type": "address"
             }
         ],
         "name": "mint",
@@ -4832,25 +4711,6 @@ const CONETianPlan_ABI = [
     },
     {
         "inputs": [],
-        "name": "totalSupply",
-        "outputs": [
-            {
-                "internalType": "uint256",
-                "name": "",
-                "type": "uint256"
-            }
-        ],
-        "stateMutability": "view",
-        "type": "function"
-    },
-    {
-        "inputs": [
-            {
-                "internalType": "uint256",
-                "name": "id",
-                "type": "uint256"
-            }
-        ],
         "name": "totalSupply",
         "outputs": [
             {

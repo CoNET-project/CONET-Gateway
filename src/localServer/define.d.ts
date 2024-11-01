@@ -255,12 +255,6 @@ interface conet_tokens {
 
 	CONETianPlan?: {
 		Guardian: CryptoAsset
-		Sentinel: CryptoAsset
-		Conetian: CryptoAsset
-		Pioneer: CryptoAsset
-		Pioneer_referrer: CryptoAsset
-		Conetian_referrer: CryptoAsset
-		Sentinel_referrer: CryptoAsset
 		Guardian_referrer: CryptoAsset
 	}
 }
