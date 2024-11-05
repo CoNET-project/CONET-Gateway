@@ -322,7 +322,7 @@ const encrypt_Message = async (privatePgpObj: any, armoredPublicKey: string, mes
 const getGuardianPrice = (nftNumber: number) => {
 	switch(nftNumber) {
 		case 0 : {
-			return 1200
+			return 100
 		}
 		case 1: {
 			return 700
@@ -369,7 +369,7 @@ const CONETianPlan_purchase = async (referrer: string, profile: profile, amount:
 	let i = 0
 	let cryptoAsset: CryptoAsset
 
-	if (amount.length !== 4 || !profile?.tokens||! (cryptoAsset = profile.tokens[tokenName])) {
+	if (amount.length !== 1 || !profile?.tokens||! (cryptoAsset = profile.tokens[tokenName])) {
         const cmd1 = {
             cmd: 'purchaseStatus',
             data: [-1]
