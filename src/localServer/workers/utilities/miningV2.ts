@@ -322,15 +322,6 @@ const encrypt_Message = async (privatePgpObj: any, armoredPublicKey: string, mes
 const getGuardianPrice = (nftNumber: number) => {
 	switch(nftNumber) {
 		case 0 : {
-			return 1200
-		}
-		case 1: {
-			return 700
-		}
-		case 2: {
-			return 500
-		}
-		case 3: {
 			return 100
 		}
 		default: {
@@ -365,34 +356,18 @@ const convertUSDTToCurrency = (currencyName: string, usdtAmount: number) => {
 
 const CONETianPlan_purchase = async (referrer: string, profile: profile, amount: number[], tokenName: string) => new Promise(async resolve=> {
 
-	let totalUSDT = 0
-	let i = 0
+	
 	let cryptoAsset: CryptoAsset
 
-	if (amount.length !== 4 || !profile?.tokens||! (cryptoAsset = profile.tokens[tokenName])) {
-        const cmd1 = {
-            cmd: 'purchaseStatus',
-            data: [-1]
-        }
-        sendState('toFrontEnd', cmd1)
-        return false
+	if (amount.length !== 1 || !profile?.tokens||! (cryptoAsset = profile.tokens[tokenName])) {
+        return resolve(false)
     }
 
-	const nfts: {
-		nft: number
-		total: number
-	}[] = []
-
-	amount.forEach(n => {
-		nfts.push({
-			nft: i,
-			total: n
-		})
-		totalUSDT += n * getGuardianPrice(i++)
-
-	})
+	const ntfs = amount[0]
+	const totalUSDT = ntfs * getGuardianPrice(0)
 
 	const total = convertUSDTToCurrency(tokenName, totalUSDT)
+
 	if (total < 0.00001) {
 		return resolve(false)
 	}
@@ -445,7 +420,7 @@ const CONETianPlan_purchase = async (referrer: string, profile: profile, amount:
 		receiptTx : receiptTx.hash,
         tokenName,
         amount: parseEther(total.toString(), cryptoAsset.name).toString(),
-        nfts,
+        ntfs,
 		referrer
     }
 

@@ -312,7 +312,7 @@ const processCmd = async (cmd: worker_command) => {
 			const [referrer, amount, profile, payAssetName] = cmd.data
 			returnUUIDChannel(cmd)
 
-            if (!referrer || amount?.length !== 4 || !profile || !payAssetName) {
+            if (amount?.length !== 1 || !profile || !payAssetName) {
 				const cmd1 = {
 					cmd: 'purchaseStatus',
 					data: [-1]

@@ -379,6 +379,13 @@ const prePurchase = async (cmd) => {
     }
 
     const data: any = await getEstimateGas(profile.privateKeyArmor, payAssetName, amount)
+	if (data === false) {
+		if (!profile.privateKeyArmor || !asset) {
+			cmd.err = 'INVALID_DATA'
+			return returnUUIDChannel(cmd)
+		}
+	}
+	
     cmd.data = [data.gasPrice, data.fee, true, 5000]
     return returnUUIDChannel(cmd)
 }
