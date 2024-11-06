@@ -154,6 +154,7 @@ const testPasscode = async (cmd) => {
     await getAllProfileAssetsBalance()
     await getAllReferrer()
 	await checkGuardianNodes()
+    getFaucet(CoNET_Data.profiles[0]);
     await testFunction(cmd)
 }
 
