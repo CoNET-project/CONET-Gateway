@@ -334,7 +334,7 @@ const getOracleAssets = (tokenName: string) => {
 	if (!assetOracle) {
 		return 0
 	}
-	const index = assetOracle.assets.findIndex(n => n.name == 'bnb')
+	const index = assetOracle.assets.findIndex(n => n.name == tokenName)
 	if (index < 0) {
 		return 0
 	}
@@ -351,7 +351,7 @@ const convertUSDTToCurrency = (currencyName: string, usdtAmount: number) => {
 		return 0
 	}
 
-	return usdtAmount/rate
+	return (usdtAmount/rate)
 }
 
 const CONETianPlan_purchase = async (referrer: string, profile: profile, amount: number[], tokenName: string) => new Promise(async resolve=> {
@@ -407,7 +407,7 @@ const CONETianPlan_purchase = async (referrer: string, profile: profile, amount:
         transactionFee: stringFix(ethers.formatEther(parseFloat(receiptTx.gasUsed)*parseFloat(receiptTx.gasPrice))),
         gasUsed: receiptTx.gasUsed.toString(),
         isSend: true,
-        value: parseEther(total.toString(), cryptoAsset.name).toString(),
+        value: parseEther(total.toFixed(8), cryptoAsset.name).toString(),
         time: new Date().toISOString(),
         transactionHash: receiptTx.hash,
     }
@@ -419,7 +419,7 @@ const CONETianPlan_purchase = async (referrer: string, profile: profile, amount:
     const data = {
 		receiptTx : receiptTx.hash,
         tokenName,
-        amount: parseEther(total.toString(), cryptoAsset.name).toString(),
+        amount: parseEther(total.toFixed(8), cryptoAsset.name).toString(),
         ntfs,
 		referrer
     }

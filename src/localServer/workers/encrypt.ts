@@ -350,6 +350,13 @@ const processCmd = async (cmd: worker_command) => {
 				return sendState('toFrontEnd', cmd1)
             }
 
+			const cmd2 = {
+				cmd: 'purchaseStatus',
+				data: [1]
+			}
+		
+			sendState('toFrontEnd', cmd2)
+
             sendState('beforeunload', true)
             const kk = await CONETianPlan_purchase(referrer, profile, amount, payAssetName)
             sendState('beforeunload', false)
@@ -394,6 +401,12 @@ const processCmd = async (cmd: worker_command) => {
 
             const sourceProfile = profiles[profileIndex]
             sendState('beforeunload', true)
+
+			const cmd2 = {
+				cmd: 'purchaseStatus',
+				data: [1]
+			}
+			sendState('toFrontEnd', cmd2)
             const kk = await CONET_transfer_token(sourceProfile, toAddress, amount, assetName)
             sendState('beforeunload', false)
 
