@@ -41,7 +41,7 @@ interface listenClient {
 	isUser: boolean
 }
 
-const maxScanNodesNumber = 80
+
 let getAllNodesProcess = false
 let Guardian_Nodes: nodeInfo[] = []
 
@@ -66,7 +66,7 @@ const getAllNodes = async () => {
 
 	Guardian_Nodes = []
 
-	for (let i = 0; i < maxScanNodesNumber; i ++) {
+	for (let i = 0; i < scanNodes; i ++) {
 		
 		Guardian_Nodes.push({
 			region: '',

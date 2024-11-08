@@ -1,5 +1,5 @@
 
-const maxScanNodesNumber = 121
+
 let Guardian_Nodes:nodes_info[]  = []
 
 let getAllNodesProcess = false
@@ -22,7 +22,7 @@ const getAllNodes = async () => {
 		return logger(`getAllNodes STOP scan because scanNodes == 0`)
 	}
 	Guardian_Nodes = []
-	for (let i = 0; i < maxScanNodesNumber; i ++) {
+	for (let i = 0; i < scanNodes; i ++) {
 		
 		Guardian_Nodes.push({
 			region: '',

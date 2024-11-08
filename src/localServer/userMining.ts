@@ -8,7 +8,7 @@ import Colors from 'colors/safe'
 import {request as requestHttps} from 'node:https'
 import GuardianNodesV2ABI from './CGPNv7New.json'
 import NodesInfoABI from './CONET_nodeInfo.ABI.json'
-import {createMessage, encrypt, enums, readKey,generateKey, GenerateKeyOptions, readPrivateKey, decryptKey} from 'openpgp'
+import {createMessage, encrypt, enums, readKey, generateKey, GenerateKeyOptions, readPrivateKey, decryptKey} from 'openpgp'
 import {getRandomValues} from 'node:crypto'
 import {RequestOptions, request } from 'node:http'
 
@@ -41,13 +41,13 @@ interface listenClient {
 	isUser: boolean
 }
 
-const maxScanNodesNumber = 121
+
 let getAllNodesProcess = false
 let Guardian_Nodes: nodeInfo[] = []
 
-const getAllNodes = async () => {
+const getAllNodes = () => new Promise(async resolve => {
 	if (getAllNodesProcess) {
-		return
+		return resolve (false)
 	}
 	getAllNodesProcess = true
 	const GuardianNodes = new ethers.Contract(CONET_Guardian_PlanV7, GuardianNodesV2ABI, provider)
@@ -57,15 +57,17 @@ const getAllNodes = async () => {
 		scanNodes = parseInt(maxNodes.toString())
 
 	} catch (ex) {
-		return logger (`getAllNodes currentNodeID Error`, ex)
+		logger (`getAllNodes currentNodeID Error`, ex)
+		return resolve (false)
 	}
 	if (!scanNodes) {
-		return logger(`getAllNodes STOP scan because scanNodes == 0`)
+		logger(`getAllNodes STOP scan because scanNodes == 0`)
+		return resolve (false)
 	}
 
 	Guardian_Nodes = []
 
-	for (let i = 0; i < maxScanNodesNumber; i ++) {
+	for (let i = 0; i < scanNodes; i ++) {
 		
 		Guardian_Nodes.push({
 			region: '',
@@ -77,19 +79,37 @@ const getAllNodes = async () => {
 	}
 	const GuardianNodesInfo = new ethers.Contract(GuardianNodesInfoV6, NodesInfoABI, provider)
 
-	await mapLimit(Guardian_Nodes, 5, async (n: nodeInfo, next) => {
+	mapLimit(Guardian_Nodes, 5, async (n: nodeInfo) => {
+
 		const nodeInfo = await GuardianNodesInfo.getNodeInfoById(n.nftNumber)
-		
-		n.region = nodeInfo.regionName
-		n.ip_addr = nodeInfo.ipaddress
-		n.armoredPublicKey = Buffer.from(nodeInfo.pgp,'base64').toString()
-		const pgpKey1 = await readKey({ armoredKey: n.armoredPublicKey})
-		n.domain = pgpKey1.getKeyIDs()[1].toHex().toUpperCase() + '.conet.network'
-		
+		if (nodeInfo.pgp) {
+			n.region = nodeInfo.regionName
+			n.ip_addr = nodeInfo.ipaddress
+			n.armoredPublicKey = Buffer.from(nodeInfo.pgp,'base64').toString()
+			const pgpKey1 = await readKey({ armoredKey: n.armoredPublicKey})
+			n.domain = pgpKey1.getKeyIDs()[1].toHex().toUpperCase() + '.conet.network'
+		} else {
+			logger(`nodeInfo ${n.nftNumber} Error!`)
+			throw new Error(`${n.nftNumber}`)
+		}
+
+	}, err => {
+		if (err) {
+			const length = parseInt(err.message) - 100
+			logger(`Error at ${length} Guardian_Nodes = ${Guardian_Nodes[length].domain}`)
+			Guardian_Nodes.splice(length)
+			logger(`Guardian_Nodes length = ${Guardian_Nodes.length} the last node is ${Guardian_Nodes[Guardian_Nodes.length - 1].ip_addr}`)
+
+		}
+		logger(`mapLimit finished err = ${err?.message}`)
+		getAllNodesProcess = false
+		return resolve (true)
 	})
 
-	getAllNodesProcess = false
-}
+	
+})
+	
+
 
 const getWallet = async (SRP: string, max: number, __start: number) => {
 	await getAllNodes()

@@ -1,7 +1,7 @@
 {
     "name": "@conet.project/conet-proxy",
 
-    "version": "0.3.4",
+    "version": "0.4.0",
 
     "license": "UNLICENSED",
     "files": [
@@ -31,20 +31,21 @@
         "hexdump-nodejs": "^0.1.0",
         "ip": "^2.0.1",
         "ethers": "^6.13.4",
-		"openpgp": "^5.11.2",
-		"eth-crypto": "^2.6.0"
+		"openpgp": "^6.0.0",
+		"eth-crypto": "^2.7.0"
     },
     "devDependencies": {
         "@types/async": "^3.2.24",
         "@types/express": "^5.0.0",
         "@types/fs-extra": "^11.0.4",
-        "@types/jest": "^29.5.13",
-        "@types/node": "^22.8.4",
+        "@types/jest": "^29.5.14",
+        "@types/node": "^22.9.0",
         "@types/pouchdb": "^6.4.2",
         "@types/uuid": "^10.0.0",
-        "@typescript-eslint/eslint-plugin": "^8.12.2",
-        "@typescript-eslint/parser": "^8.12.2",
-        "eslint": "^9.13.0",
+		"@types/openpgp": "^4.4.22",
+        "@typescript-eslint/eslint-plugin": "^8.13.0",
+        "@typescript-eslint/parser": "^8.13.0",
+        "eslint": "^9.14.0",
         "eslint-config-airbnb-base": "^15.0.0",
         "eslint-config-prettier": "^9.1.0",
         "jszip": "^3.10.1",

@@ -45,7 +45,7 @@ const createGPGKey = async ( passwd: string, name: string, email: string ) => {
 		name: name,
 		email: email
 	}
-	const option: openpgp.KeyOptions = {
+	const option = {
         type: 'ecc',
 		passphrase: passwd,
 		userIDs: [userId],
@@ -179,6 +179,7 @@ const joinMetadata = (metadata: any ) => {
 let _proxyServer: proxyServer
 
 const changeRegion = (selectedCountry: string) => {
+
 	const result = miningClass.changeUsedNodes (selectedCountry)
 	if (!result || !result.length) {
 		return false
@@ -452,7 +453,7 @@ export class Daemon {
         })
 
 
-     app.post('/startSilentPass', async (req: any, res: any) => {
+     	app.post('/startSilentPass', async (req: any, res: any) => {
             const selectedCountry = req.body.selectedCountry;
 
             console.log('selectedCountry', selectedCountry)
@@ -461,8 +462,9 @@ export class Daemon {
 				return res.status(400).send({ error: "No country selected" })
 			}
 			const ret = changeRegion (selectedCountry)
+
 			if (!ret) {
-				res.status(400).send({ error: `No nodes find in region ${selectedCountry}` })
+				return res.status(400).send({ error: `No nodes find in region ${selectedCountry}` })
 			}
 
 			res.json(ret).end()
