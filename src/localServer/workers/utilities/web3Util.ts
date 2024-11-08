@@ -2318,7 +2318,7 @@ const CONET_guardian_purchase = async (profile: profile, nodes, _total, tokenNam
         transactionFee: stringFix(ethers.formatEther(parseFloat(tx.gasUsed)*parseFloat(tx.gasPrice))),
         gasUsed: tx.gasUsed.toString(),
         isSend: true,
-        value: parseEther(_total.toFixed(8), cryptoAsset.name).toString(),
+        value: parseEther(typeof _total === 'string' ? _total: _total.toFixed(8), cryptoAsset.name).toString(),
         time: new Date().toISOString(),
         transactionHash: tx.hash,
     }
