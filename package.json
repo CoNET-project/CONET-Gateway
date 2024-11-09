@@ -1,7 +1,7 @@
 {
     "name": "@conet.project/conet-proxy",
 
-    "version": "0.4.0",
+    "version": "0.4.2",
 
     "license": "UNLICENSED",
     "files": [
@@ -31,7 +31,7 @@
         "hexdump-nodejs": "^0.1.0",
         "ip": "^2.0.1",
         "ethers": "^6.13.4",
-		"openpgp": "^6.0.0",
+		"openpgp": "^5.11.2",
 		"eth-crypto": "^2.7.0"
     },
     "devDependencies": {
