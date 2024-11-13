@@ -13,7 +13,6 @@ const getRegion = async () => {
 }
 
 const registerReferrer = async (referrer) => {
-
     if (!CoNET_Data?.profiles) {
         logger(`registerReferrer CoNET_Data?.profiles Empty error!`)
         return false
@@ -48,7 +47,6 @@ const registerReferrer = async (referrer) => {
     profile.referrer = referrer
     return true
 }
-
 
 const preBurnCCNTP = async (profile, totalBurn) => {
     const provideCONET = new ethers.JsonRpcProvider(conet_rpc)
@@ -782,7 +780,6 @@ const checkProfileVersion = async (wallet) => {
     return [parseInt(count.toString()), parseInt(nonce.toString())]
 }
 
-
 const checkOldProfileVersion = async (wallet) => {
     const obdGethRPC = 'https://rpc-old.conet.network'
     const provideCONET = new ethers.JsonRpcProvider(conet_rpc)
@@ -971,7 +968,6 @@ const resizeImage = (mediaData, imageMaxWidth, imageMaxHeight) => {
     });
 }
 
-
 const updateProfilesToRemote = (_ver, CoNET_Data, profiles) => new Promise(async (resolve) => {
     const result = await updateProfilesVersionToIPFS()
     if (!result) {
@@ -991,8 +987,6 @@ const updateProfilesToRemote = (_ver, CoNET_Data, profiles) => new Promise(async
     checkcheckUpdateLock = false
     return resolve(true)
 })
-
-
 
 const checkUpdateAccount = () => new Promise(async (resolve) => {
     if (!CoNET_Data || !CoNET_Data?.profiles) {
@@ -1115,6 +1109,7 @@ const recoverProfileFromSRP = () => {
         return resolve(true);
     });
 }
+
 const createFragmentFileName = (ver, password, part) => {
     return ethers.id(ethers.id(ethers.id(ethers.id(ver.toString()) + ethers.id(password) + ethers.id(part.toString()))));
 }
@@ -1171,7 +1166,6 @@ const encryptPasswordIssue = (ver, passcode, part) => {
     return _pass.substring(2)
 }
 
-
 const updateFragmentsToIPFS = (encryptData: string, hash: string, keyID: string, privateKeyArmor: string) => new Promise(async (resolve) => {
     const url = `${ipfsEndpoint}storageFragment`
 
@@ -1193,7 +1187,6 @@ const updateFragmentsToIPFS = (encryptData: string, hash: string, keyID: string,
     return resolve(true)
 })
 
-
 const updateChainVersion = async (profile) => {
     const wallet = new ethers.Wallet(profile.privateKeyArmor, provideCONET);
     const conet_storage = new ethers.Contract(profile_ver_addr, conet_storageAbi, wallet);
@@ -1208,7 +1201,6 @@ const updateChainVersion = async (profile) => {
         return '-1';
     }
 }
-
 
 let runningGetAllProfileAssetsBalance = false
 let runninggetAllOtherAssets = false
@@ -1265,9 +1257,7 @@ const getassetOracle = async () => {
 }
 
 const getAllOtherAssets = async () => {
-
     return new Promise(async (resolve) => {
-		
         if (!CoNET_Data?.profiles) {
             logger(`getAllOtherAssets Error! CoNET_Data.profiles empty!`)
             return resolve(false)
@@ -1295,7 +1285,6 @@ const getAllOtherAssets = async () => {
         
     })
 }
-
 
 let leaderboardData
 const leaderboardDataDelay = 20
@@ -1450,10 +1439,8 @@ const getAllProfileAssetsBalance = () => new Promise(async (resolve) => {
 //     });
 // });
 
-
 let checkcheckUpdateLock = false
 let lastCheckcheckUpdateTimeStamp = 0
-
 
 const getIpfsFile = async (fileName) => new Promise(resolve => {
     //const cloudStorageEndpointPath = `/conet-mvp/storage/FragmentOcean/${fileName}`
@@ -1522,7 +1509,6 @@ const checkIPFSFragmenReadyOrNot = (ver, CoNET_data) => new Promise(async (resol
     })
     return resolve(success)
 })
-
 
 const getDetermineVersionProfile = (ver, CoNET_Data) => new Promise(async (resolve) => {
     //	give up get remote version， try back to previous version
@@ -1666,6 +1652,7 @@ const getLocalProfile = (ver) => new Promise(async (resolve) => {
         resolve(false)
     })
 })
+
 const getNextFragmentLocal = async (ver, passObjPassword, i) => {
     const nextEncryptPassword = encryptPasswordIssue(ver, passObjPassword, i);
     const nextFragmentName = createFragmentFileName(ver, passObjPassword, i);
@@ -1681,6 +1668,7 @@ const getNextFragmentLocal = async (ver, passObjPassword, i) => {
         return '';
     }
 };
+
 const getReferees = async (wallet, CNTP_Referrals) => {
     let result = [];
     try {
@@ -1692,6 +1680,7 @@ const getReferees = async (wallet, CNTP_Referrals) => {
     }
     return result;
 };
+
 const getReferee = async (wallet, CNTP_Referrals) => {
     let result = [];
     try {
@@ -1703,6 +1692,7 @@ const getReferee = async (wallet, CNTP_Referrals) => {
     }
     return result;
 };
+
 const getAllReferees = async (_wallet, CNTP_Referrals) => {
     const firstArray = await getReferees(_wallet, CNTP_Referrals);
     if (!firstArray?.length) {
@@ -1730,6 +1720,7 @@ const getAllReferees = async (_wallet, CNTP_Referrals) => {
     }
     return ret
 }
+
 let getFaucetRoop = 0
 
 const getFaucetFromSmartContract: (profile: profile) => Promise<boolean|any> = async (profile: profile) => {
@@ -1771,7 +1762,6 @@ const getFaucet: (profile: profile) => Promise<boolean|any> = async (profile) =>
 
 	return resolve (true)
 })
-
 
 const createKeyHDWallets = () => {    
     try {
@@ -1856,6 +1846,7 @@ const decryptSystemData = async () => new Promise((resolve, reject) => {
 const scanCONET_dWBNB = async (walletAddr) => {
     return await scan_erc20_balance(walletAddr, conet_dWBNB, provideCONET)
 }
+
 const updateProfilesVersionToIPFS = () => new Promise(async (resolve) => {
     if (!CoNET_Data?.profiles || !passObj) {
         logger(`updateProfilesVersion !CoNET_Data[${!CoNET_Data}] || !passObj[${!passObj}] === true Error! Stop process.`);
@@ -1918,12 +1909,15 @@ const updateProfilesVersionToIPFS = () => new Promise(async (resolve) => {
     }
     resolve(true)
 });
+
 const scanCONET_dUSDT = async (walletAddr: string, privideCONET) => {
     return await scan_erc20_balance(walletAddr, privideCONET, conet_dUSDT)
 };
+
 const scanCONET_dWETH = async (walletAddr: string, privideCONET) => {
     return await scan_erc20_balance(walletAddr, privideCONET, conet_dWETH)
 };
+
 const scanCONETHolesky = async (walletAddr: string, privideCONET) => {
     return await scan_natureBalance(privideCONET, walletAddr)
 }
@@ -1947,6 +1941,7 @@ const scanUSDT = async (walletAddr: string) => {
 const scanUSDB = async (walletAddr: string) => {
     return await scan_erc20_balance(walletAddr,blast_usdb_contract, provideBlastMainChain)
 }
+
 const scanETH = async (walletAddr: string) => {
     return await scan_natureBalance(provideETH, walletAddr)
 }
@@ -1987,15 +1982,11 @@ const scan_natureBalance = (provide, walletAddr) => new Promise(async (resolve) 
     }
 })
 
-
-
 //				Claimable	
 
 const scanCONET_Claimable_BNBUSDT = async (walletAddr: string) => {
     return await scan_erc20_balance(walletAddr, claimable_BNB_USDT, provideCONET)
 }
-
-
 
 // const scanCONET_Claimable_BlastUSDB = async (walletAddr) => {
 //     return await scan_erc20_balance(walletAddr, Claimable_BlastUSDBv3, provideCONET)
@@ -2145,6 +2136,7 @@ const getAssetERC20Address = (assetName) => {
         }
     }
 }
+
 const CONET_guardian_purchase_Receiving_Address = (networkName) => {
     switch (networkName) {
 		case 'eth':
@@ -2390,7 +2382,6 @@ const stringFix = (num) => {
     return num.substring(0, index + 12)
 }
 
-
 const transferAssetToCONET_guardian = (privateKey: string, token: string , transferNumber: string) => new Promise(async (resolve) => {
     const provide = new ethers.JsonRpcProvider(getNetwork(token))
     const wallet = new ethers.Wallet(privateKey, provide)
@@ -2564,7 +2555,6 @@ const createWallet = async (profiles, mnemonicPhrase, total) => {
 
 }
 
-
 const getFx168OrderStatus = async (oederID, fx168ContractObj, wallet) => {
     try {
         const tx = await fx168ContractObj.OrderStatus(oederID);
@@ -2614,7 +2604,6 @@ const fx168PrePurchase = async (cmd) => {
     return returnUUIDChannel(cmd)
 }
 
-
 let miningConn: any = null
 let Stoping = false
 let mining_epoch = 0
@@ -2622,8 +2611,6 @@ let cCNTPcurrentTotal = 0
 let miningAddress = ''
 let miningProfile:profile|null = null
 let miningStatus = 'STOP'
-
-
 
 const startMining = async (cmd) => {
     const _authorization_key = cmd.data[0]
@@ -2661,8 +2648,6 @@ const getAllReferrer = async () => {
         i.referrer = kk
     }
 }
-
-
 
 const getReferrer = async (wallet, CNTP_Referrals) => {
     let result

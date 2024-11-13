@@ -1,4 +1,5 @@
 
+// --------------------------------------------------------------------------------------------
 
 const conet_rpc = 'https://rpc.conet.network';
 const api_endpoint = `https://api.conet.network/api/`;
@@ -12,6 +13,9 @@ const Arbitrum_One_RPC = 'https://arb1.arbitrum.io/rpc'
 const _ethRpc = ['https://rpc.ankr.com/eth', 'https://eth.llamarpc.com', 'https://ethereum-rpc.publicnode.com'];
 const blast_mainnet1 = ['https://blast.din.dev/rpc', 'https://rpc.ankr.com/blast', 'https://blastl2-mainnet.public.blastapi.io', 'https://blast.blockpi.network/v1/rpc/public'];
 const bsc_mainchain = 'https://bsc-dataseed.binance.org/';
+
+// --------------------------------------------------------------------------------------------
+
 const ReferralsAddressV3 = '0x1b104BCBa6870D518bC57B5AF97904fBD1030681'.toLowerCase();
 const conet_storage_old_address = `0x7d9CF1dd164D6AF82C00514071990358805d8d80`.toLowerCase();
 const adminCNTP = '0x44d1FCCce6BAF388617ee972A6FB898b6b5629B1';
@@ -19,14 +23,17 @@ const referrerCNTP = '0x63377154F972f6FC1319e382535EC9691754bd18';
 const CNTPV1 = '0xb182d2c2338775B0aC3e177351D638b23D3Da4Ea'.toLowerCase()
 const blast_mainnet_CNTP = '0x0f43685B2cB08b9FB8Ca1D981fF078C22Fec84c5'
 const conetianAddress =
-  "0x27B9043873dE8684822DEC12F90bAE08f6a06657".toLowerCase();
+"0x27B9043873dE8684822DEC12F90bAE08f6a06657".toLowerCase();
 const nftContract = "0x6365DbbeeC743d14eA3BC4823E53bf6a7984bf70".toLowerCase()
-//const CNTPB_contract = '0x6056473ADD8bC89a95325845F6a431CCD7A849bb'
-
-
+const ticketContract =
+"0x92a033A02fA92169046B91232195D0E82b8017AB".toLowerCase();
 const conet_dWETH = '0x84b6d6A6675F830c8385f022Aefc9e3846A89D3B'
 const conet_dUSDT = '0x0eD55798a8b9647f7908c72a0Ce844ad47274422'
 const conet_dWBNB = '0xd8b094E91c552c623bc054085871F6c1CA3E5cAd'
+const CONET_Guardian_Nodes1 = '0x5e4aE81285b86f35e3370B3EF72df1363DD05286';
+const fx168OrderContractAddress = '0x9aE6D3Bd3029C8B2A73817b9aFa1C029237E3e30';
+
+//const CNTPB_contract = '0x6056473ADD8bC89a95325845F6a431CCD7A849bb'
 // const Claimable_ETHUSDTv3 = '0x79E2EdE2F479fA7E44C89Bbaa721EB1f0d529b7B'.toLowerCase()
 // const Claimable_BNBUSDTv3 = '0xd008D56aa9A963FAD8FB1FbA1997C28dB85933e6'.toLowerCase()
 // const Claimable_BlastUSDBv3 = '0x16cDB3C07Db1d58330FF0e930C3C58935CB6Cc97'.toLowerCase()
@@ -34,10 +41,8 @@ const conet_dWBNB = '0xd8b094E91c552c623bc054085871F6c1CA3E5cAd'
 // const Claimable_BNB = '0x8E7B1D5f6DF4B0d7576B7430ECB1bEEE0b612382'.toLowerCase()
 // const Claimable_ETH = '0x6Eb683B666310cC4E08f32896ad620E5F204c8f8'.toLowerCase()
 
+// --------------------------------------------------------------------------------------------
 
-
-const CONET_Guardian_Nodes1 = '0x5e4aE81285b86f35e3370B3EF72df1363DD05286';
-const fx168OrderContractAddress = '0x9aE6D3Bd3029C8B2A73817b9aFa1C029237E3e30';
 const FragmentNameDeriveChildIndex = 65536;
 const blast_mainnet = () => blast_mainnet1[Math.round(Math.random() * (blast_mainnet1.length - 1))];
 const ethRpc = () => _ethRpc[Math.round(Math.random() * (_ethRpc.length - 1))];
@@ -520,14 +525,10 @@ const transferNFT = async () => {
 }
 
 const testFunction = async (cmd: worker_command) => {
-	
-	
 	const profiles = CoNET_Data?.profiles
 	if (!profiles) {
 		return
 	}
-
-	
 	
 	// await getAllNodes ()
 	// await getFaucet(profiles[0])
