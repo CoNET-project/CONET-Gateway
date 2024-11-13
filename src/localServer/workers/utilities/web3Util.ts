@@ -535,7 +535,6 @@ const getProfileAssets_CONET_Balance = async (profile: profile) => {
 						contract: CONET_Guardian_Nodes_V6,
 						name: 'Guardian',
 						supplyMaximum: maxGuardianNft.toString(),
-						totalSupply: maxGuardianNft.toFixed(0)
 					},
 					Guardian_referrer: {
 						balance: GuardianData.balanceReferrer.toString(),
