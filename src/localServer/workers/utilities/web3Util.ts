@@ -490,13 +490,13 @@ const getProfileAssets_CONET_Balance = async (profile: profile) => {
 		const GuardianData:{balanceGuardian: BigInt, balanceReferrer: BigInt, nodeNftId: BigInt}|false = _GuardianPlan
 		
 		if (CONETianData !== false) {
-			if (current.CONETianPlan) {
-				current.CONETianPlan.Guardian.balance = CONETianData.balanceGuardian.toString()
-				current.CONETianPlan.Guardian.totalSupply = (maxConetianNft - parseInt(CONETianData.availableBalance.toString())).toFixed(0)
-				current.CONETianPlan.Guardian_referrer.balance = CONETianData.balanceReferrer.toString()
+			if (current.ConetianPlan) {
+				current.ConetianPlan.Conetian.balance = CONETianData.balanceGuardian.toString()
+				current.ConetianPlan.Conetian.totalSupply = (maxConetianNft - parseInt(CONETianData.availableBalance.toString())).toFixed(0)
+				current.ConetianPlan.Conetian_referrer.balance = CONETianData.balanceReferrer.toString()
 			} else {
-				current.CONETianPlan = {
-					Guardian: {
+				current.ConetianPlan = {
+					Conetian: {
 						balance: CONETianData.balanceGuardian.toString(),
 						history: [],
 						network: 'CONET Holesky',
@@ -506,7 +506,7 @@ const getProfileAssets_CONET_Balance = async (profile: profile) => {
 						supplyMaximum: maxConetianNft.toString(),
 						totalSupply: (maxConetianNft - parseInt(CONETianData.availableBalance.toString())).toFixed(0)
 					},
-					Guardian_referrer: {
+					Conetian_referrer: {
 						balance: CONETianData.balanceReferrer.toString(),
 						history: [],
 						network: 'CONET Holesky',
