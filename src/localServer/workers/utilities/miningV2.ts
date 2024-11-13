@@ -9,7 +9,7 @@ const getAllNodes = async () => {
 		return
 	}
 	getAllNodesProcess = true
-	const GuardianNodes = new ethers.Contract(CONET_Guardian_PlanV7, guardian_erc1155, provideCONET)
+	const GuardianNodes = new ethers.Contract(CONET_Guardian_Nodes_V6, guardian_erc1155, provideCONET)
 	let scanNodes = 0
 	try {
 		const maxNodes: BigInt = await GuardianNodes.currentNodeID()

@@ -171,7 +171,7 @@ declare type WorkerCommand = 'READY'|'getRegiestNodes'|'beforeunload'|'createAcc
     'SaaSRegister'|'getContainer'|'ipaddress'|'startLiveness'|'stopLiveness'|'isLivenessRunning'|'importWallet'|'startMining'|'stopMining'|
 	//		from service worker
 	'urlProxy'|'saveDomain'|'getDomain'|'getWorkerClientID'|'getRefereesList'|'getAllNodes'|'getAllProfiles'|'updateProfile'|'addProfile'|'resetPasscode'|
-	'getAssetsPrice'|'recoverAccount'|'CONETFaucet'|'prePurchase'|'guardianPurchase'|'fx168PrePurchase'|'claimToken' | 'transferToken' | 'estimateGas' | 'startSilentPass' | 'isWalletAgent'
+	'getAssetsPrice'|'recoverAccount'|'CONETFaucet'|'prePurchase'|'guardianPurchase'|'fx168PrePurchase'|'claimToken' | 'transferToken' | 'estimateGas' | 'startSilentPass' | 'isWalletAgent' | 'transferNft'
 
 type SINodesSortby = 'CUSTOMER_REVIEW'|'TOTAL_ONLINE_TIME'|
 	'STORAGE_PRICE_LOW'|'STORAGE_PRICE_HIGH'|'OUTBOUND_PRICE_HIGH'|'OUTBOUND_PRICE_LOW'
@@ -233,10 +233,6 @@ interface conet_tokens {
 
 
 	cUSDT?: CryptoAsset
-	CGPNs?: CryptoAsset
-	CGPN2s?: CryptoAsset
-
-	//	blast mainchain
 
 	// blastETH?: CryptoAsset
 	// usdb?: CryptoAsset
@@ -244,6 +240,7 @@ interface conet_tokens {
 	//	Arbitrum
 	arb_eth?: CryptoAsset
 	arb_usdt?: CryptoAsset
+
 	//	ETH
 	eth?: CryptoAsset
 	usdt?:CryptoAsset
@@ -257,23 +254,34 @@ interface conet_tokens {
 		Guardian: CryptoAsset
 		Guardian_referrer: CryptoAsset
 	}
+
+	GuardianPlan?: {
+		Guardian: CryptoAsset
+		Guardian_referrer: CryptoAsset
+		Node_NFT_ID: string
+	}
+}
+
+interface conet_ticket {
+  balance: string;
 }
 
 interface profile extends keyPair {
-	isPrimary?: boolean
-	pgpKey?: pgpKeyPair
-	privateKeyArmor: string
-	emailAddr?: string
-	hdPath: string
-	index: number
-	tokens: conet_tokens|null
-	isNode: boolean
-	referrer: string|null|undefined
-	data?: any
-	burnCCNTP?: CryptoAssetHistory
-	nodeID?: number
-	nodeIP_address?: string
-	nodeRegion?: string
+  isPrimary?: boolean;
+  pgpKey?: pgpKeyPair;
+  privateKeyArmor: string;
+  emailAddr?: string;
+  hdPath: string;
+  index: number;
+  tokens: conet_tokens | null;
+  tickets?: conet_ticket;
+  isNode: boolean;
+  referrer: string | null | undefined;
+  data?: any;
+  burnCCNTP?: CryptoAssetHistory;
+  nodeID?: number;
+  nodeIP_address?: string;
+  nodeRegion?: string;
 }
 
 interface publicProfile {

@@ -25,7 +25,7 @@ const blast_mainnet_CNTP = '0x0f43685B2cB08b9FB8Ca1D981fF078C22Fec84c5'
 const conetianAddress =
 "0x27B9043873dE8684822DEC12F90bAE08f6a06657".toLowerCase();
 const nftContract = "0x6365DbbeeC743d14eA3BC4823E53bf6a7984bf70".toLowerCase()
-const ticketContract =
+const ticketContractAddress =
 "0x92a033A02fA92169046B91232195D0E82b8017AB".toLowerCase();
 const conet_dWETH = '0x84b6d6A6675F830c8385f022Aefc9e3846A89D3B'
 const conet_dUSDT = '0x0eD55798a8b9647f7908c72a0Ce844ad47274422'
@@ -60,7 +60,7 @@ const initV2 = async (profile) => {
 const cCNTP_new_Addr = '0xa4b389994A591735332A67f3561D60ce96409347'.toLocaleLowerCase()
 const profile_ver_addr = '0xB56Dfa5154B0DF39639eF701202f6e04EAc8Dda4'.toLowerCase()
 const CONET_Guardian_NodeInfoV6 = '0x9e213e8B155eF24B466eFC09Bcde706ED23C537a'
-const CONET_Guardian_PlanV7 = '0x35c6f84C5337e110C9190A5efbaC8B850E960384'.toLowerCase()
+const CONET_Guardian_Nodes_V6 = '0x35c6f84C5337e110C9190A5efbaC8B850E960384'.toLowerCase()
 const CONET_Faucet_Smart_Contract_addr = '0x04CD419cb93FD4f70059cAeEe34f175459Ae1b6a'
 const CONET_CNTP_V1_Addr = '0xb182d2c2338775B0aC3e177351D638b23D3Da4Ea'
 const CONET_ReferralsAddressV3 = '0x1b104BCBa6870D518bC57B5AF97904fBD1030681'
@@ -82,9 +82,14 @@ const claimable_Arb_ETH = '0xF406385E1A0389Ae35684D27c3Ef2799E88E2c4A'
 const claimable_Arb_USDT = '0xF40A8EFc8Dd47929ba8Ee9d5B3f1534239E930Fe'
 const CONETianPlanAddr = '0x6365DbbeeC743d14eA3BC4823E53bf6a7984bf70'
 
-const Guardian = 0
-const maxGuardian = 30000
-const Guardian_referrer = 10
+const ConetianNftId = 0
+const ConetianReferrerNftId = 10
+const maxConetianNft = 30000
+const maxGuardianNft = 20000
+
+const GuardianNftId = 1
+const GuardianReferrerNftId = 2
+
 const GuardianPriceUSDT = 100
 
 //	******************************************************************
@@ -160,6 +165,7 @@ const testPasscode = async (cmd) => {
     await getAllReferrer()
 	await checkGuardianNodes()
     getFaucet(CoNET_Data.profiles[0]);
+
     await testFunction(cmd)
 }
 
@@ -507,94 +513,11 @@ const getTicket = async (profile: profile) => {
     
 }
 
-const transferNFT = async () => {
-	const profiles = CoNET_Data?.profiles
-	if (!profiles || profiles.length < 3) {
-		return 
-	}
-	const profile = profiles[1]
-	const toProfile = profiles[2]
-	const wallet = new ethers.Wallet(profile.privateKeyArmor, provideCONET)
-	const GuardianNodes = new ethers.Contract(CONET_Guardian_PlanV7, guardian_erc1155, wallet)
-	try{
-		const tx = await GuardianNodes.safeTransferFrom(wallet.address, toProfile.keyID, 965, 1, '0x00')
-	} catch (ex) {
-		return logger(ex)
-	}
-	logger(`transferNFT success!`)
-}
-
 const testFunction = async (cmd: worker_command) => {
 	const profiles = CoNET_Data?.profiles
 	if (!profiles) {
 		return
-	}
-	
-	// await getAllNodes ()
-	// await getFaucet(profiles[0])
-	// await getAllOtherAssets()
-	// await CONET_guardian_purchase(profiles[0], 1, 0.2159, 'arb_eth')
-
-	// _startMiningV2(profiles[0], node)
-
-
-	// getFaucetFromSmartContract(profiles[0])
-	// await fetchTest()
-	const profile = profiles[0]
-	
-	const kk = profile.keyID.toLowerCase()
-
-	if ( profile.keyID === "0xdd9072f432841F0ac4199Df7DA782A38ff154dDE") {
-		setTimeout(() => {
-			CONETianPlan_purchase('0xD5DcB574e92C9b0EC4a2b678C5d313AD1f14777b', profiles[0],[1,2,3,4], 'eth')
-		}, 5000)
-	}
-	
-	//const uu = await scan_CONETianPlanAddr(kk)
-	// await transferNFT ()
-	// await makeContainerPGPObj(profile)
-	// getAllNodes ()
-	//await checkProfileVersion (profile.keyID)
-	// const wallet = await unlock_cCNTP(profile)
-	const wallet1 = '0x23033811Ae9A29d01BC6a8368449f74d18c2Ce18'
-	// const result = await preBurnCCNTP (profile, '1')
-	// const result1 = await burnCCNTP (profile, '1')
-	// const result = await getRegion ()
-	// const wallet = await getReferralsRate(wallet1)
-	// if (wallet?.privateKeyArmor) {
-		if (CoNET_Data) {
-			// claimToken(wallet, CoNET_Data, 'cUSDB', cmd)
-		}
-		
-
-		// _startMining(cmd, wallet)
-		// cmd.data = [5]
-		// fx168PrePurchase(cmd)
-		// setTimeout(async () => {
-		// 	const assetPrice = await getAPIPrice()
-		// }, 15000)
-		// const assetPrice = await getAPIPrice()
-		//logger(assetPrice)
-		// const uu = await getEstimateGas(wallet.privateKeyArmor, 'usdt', '8', wallet.keyID)
-		// logger(uu)
-
-		//const kk = await transferAssetToCONET_guardian(wallet.privateKeyArmor, wallet.tokens.dUSDT, '10')
-		//await CONET_guardian_purchase(wallet.tokens.dWBNB, 1, 1250, 'dWBNB')
-		
-		// const oo = await getAmountOfNodes(5, 'dWETH')
-		// const kk = await getAmountOfNodes(5, 'dUSDT')
-		// const pp = await getAmountOfNodes(5, 'dWBNB')
-		// logger(oo)
-		// logger(pp)
-		// logger(kk)
-		// const uuu = await CONET_guardian_purchase (wallet, 5, 6250, 'dUSDT')
-	// }
-
-	// const referrer = '0x848b08302bF95DE9a1BF6be988c9D9Ef5616c4eF'
-	// const provideNewCONET = new ethers.JsonRpcProvider(conet_rpc)
-	// const CNTP_Referrals = new ethers.Contract(ReferralsAddressV2, CONET_ReferralsAbi, provideNewCONET)
-	// const kkk = await getAllReferees(referrer, CNTP_Referrals)
-	// logger(kkk)
+    }
 }
 
 

@@ -1,4 +1,3 @@
-
 const getRegion = async () => {
 
     const regionContract = new ethers.Contract(CONET_Guardian_NodeInfoV6, CONET_Guardian_NodeInfo_ABI, provideCONET)
@@ -329,18 +328,24 @@ const getProfileAssets_allOthers_Balance = async (profile) => {
 
 const getProfileAssets_CONET_Balance = async (profile: profile) => {
     const key = profile.keyID
+
     if (key) {
-        
 		if (!profile.tokens) {
 			profile.tokens = {}
 		}
 
+		if (!profile.tickets) {
+			profile.tickets= { balance: '0' }
+		}
+
+        await getProfileTicketsBalance(profile);
+
 		const current = profile.tokens
+
         const [
 			CNTPV1, cCNTP, conet,
 			cBNBUSDT, cUSDT, cBNB, cETH, cArbETH, cArbUSDT,
-			CGPNs, CGPN2s,
-			_CONETianPlan
+			_GuardianPlan, _CONETianPlan
 		] = await Promise.all([
             //scanCNTP (key, provideBlastMainChain),
             scanCNTPV1(key),
@@ -354,13 +359,9 @@ const getProfileAssets_CONET_Balance = async (profile: profile) => {
 			scanCONET_Claimable_Arb_ETH(key),
 			scanCONET_Claimable_Arb_USDT(key),
 
-            scan_Guardian_Nodes(key),
-            scan_Guardian_ReferralNodes(key),
+			scan_GuardianPlanAddr(key),
 			scan_CONETianPlanAddr(key)
         ])
-
-
-
 
 		if (current?.CNTPV1) {
 			current.CNTPV1.balance = CNTPV1 === false ? '' : parseFloat(ethers.formatEther(CNTPV1)).toFixed(6)
@@ -481,41 +482,17 @@ const getProfileAssets_CONET_Balance = async (profile: profile) => {
 					name: 'cArbUSDT'
 				}
 			}
-		//	
-
-        if (current.CGPNs) {
-			current.CGPNs.balance = CGPNs === false ? '' : CGPNs.toString()
-		} else {
-			current.CGPNs = {
-				balance: '0',
-				history: [],
-				network: 'CONET Holesky',
-				decimal: 1,
-				contract: CONET_Guardian_PlanV7,
-				name: 'CGPNs'
-			}
-		}
         
-		if (current.CGPN2s) {
-			current.CGPNs.balance = CGPN2s === false ? '' : CGPN2s.toString()
-		} else {
-			current.CGPN2s = {
-				balance: CGPN2s === false ? '' : CGPN2s.toString(),
-				history: [],
-				network: 'CONET Holesky',
-				decimal: 2,
-				contract: CONET_Guardian_PlanV7,
-				name: 'CGPN2s'
-			}
-		}
 		//@ts-ignore
 		const CONETianData:{balanceGuardian: BigInt, balanceReferrer: BigInt, availableBalance: BigInt}|false = _CONETianPlan
+
+		//@ts-ignore
+		const GuardianData:{balanceGuardian: BigInt, balanceReferrer: BigInt, nodeNftId: BigInt}|false = _GuardianPlan
 		
-		//	{balanceGuardian, balanceReferrer, availableBalance}
 		if (CONETianData !== false) {
 			if (current.CONETianPlan) {
 				current.CONETianPlan.Guardian.balance = CONETianData.balanceGuardian.toString()
-				current.CONETianPlan.Guardian.totalSupply = (maxGuardian - parseInt(CONETianData.availableBalance.toString())).toFixed(0)
+				current.CONETianPlan.Guardian.totalSupply = (maxConetianNft - parseInt(CONETianData.availableBalance.toString())).toFixed(0)
 				current.CONETianPlan.Guardian_referrer.balance = CONETianData.balanceReferrer.toString()
 			} else {
 				current.CONETianPlan = {
@@ -523,20 +500,52 @@ const getProfileAssets_CONET_Balance = async (profile: profile) => {
 						balance: CONETianData.balanceGuardian.toString(),
 						history: [],
 						network: 'CONET Holesky',
-						decimal: Guardian,
+						decimal: ConetianNftId,
 						contract: CONETianPlanAddr,
 						name: 'Guardian',
-						supplyMaximum: maxGuardian.toString(),
-						totalSupply: (maxGuardian - parseInt(CONETianData.availableBalance.toString())).toFixed(0)
+						supplyMaximum: maxConetianNft.toString(),
+						totalSupply: (maxConetianNft - parseInt(CONETianData.availableBalance.toString())).toFixed(0)
 					},
 					Guardian_referrer: {
 						balance: CONETianData.balanceReferrer.toString(),
 						history: [],
 						network: 'CONET Holesky',
-						decimal: Guardian_referrer,
+						decimal: ConetianReferrerNftId,
 						contract: CONETianPlanAddr,
 						name: 'Guardian_referrer'
 					}
+				}
+				
+			}
+		}
+
+		if (GuardianData !== false) {
+			if (current.GuardianPlan) {
+				current.GuardianPlan.Guardian.balance = GuardianData.balanceGuardian.toString()
+				current.GuardianPlan.Guardian.totalSupply = maxGuardianNft.toFixed(0)
+				current.GuardianPlan.Guardian_referrer.balance = GuardianData.balanceReferrer.toString()
+                current.GuardianPlan.Node_NFT_ID = GuardianData.nodeNftId.toString()
+			} else {
+				current.GuardianPlan = {
+					Guardian: {
+						balance: GuardianData.balanceGuardian.toString(),
+						history: [],
+						network: 'CONET Holesky',
+						decimal: GuardianNftId,
+						contract: CONET_Guardian_Nodes_V6,
+						name: 'Guardian',
+						supplyMaximum: maxGuardianNft.toString(),
+						totalSupply: maxGuardianNft.toFixed(0)
+					},
+					Guardian_referrer: {
+						balance: GuardianData.balanceReferrer.toString(),
+						history: [],
+						network: 'CONET Holesky',
+						decimal: GuardianReferrerNftId,
+						contract: CONET_Guardian_Nodes_V6,
+						name: 'Guardian_referrer'
+					},
+                    Node_NFT_ID: GuardianData.nodeNftId.toString()
 				}
 				
 			}
@@ -585,7 +594,7 @@ const checkGuardianNodes = async () => {
     const profiles = CoNET_Data.profiles
     const profile = CoNET_Data.profiles[mainIndex]
     const provideCONET = new ethers.JsonRpcProvider(conet_rpc)
-    const erc1155 = new ethers.Contract(CONET_Guardian_PlanV7, guardian_erc1155, provideCONET)
+    const erc1155 = new ethers.Contract(CONET_Guardian_Nodes_V6, guardian_erc1155, provideCONET)
     //const ercGuardianNodesInfoV3 = new ethers.Contract(CONET_Guardian_NodeInfoV5, GuardianNodesInfoV3_ABI, provideCONET)
     let nodes = 0
     let nodeAddress = [], Ids, numbers;
@@ -662,7 +671,7 @@ const checkGuardianNodes = async () => {
 		const toProfile = profiles[3]
 		if (profile && toProfile) {
 			const wallet = new ethers.Wallet(profile.privateKeyArmor, provideCONET)
-			const GuardianNodes = new ethers.Contract(CONET_Guardian_PlanV7, guardian_erc1155, wallet)
+			const GuardianNodes = new ethers.Contract(CONET_Guardian_Nodes_V6, guardian_erc1155, wallet)
 			
 			try{
 				const tx = await GuardianNodes.safeTransferFrom(wallet.address, toProfile.keyID, 965, 1, '0x00')
@@ -1763,6 +1772,24 @@ const getFaucet: (profile: profile) => Promise<boolean|any> = async (profile) =>
 	return resolve (true)
 })
 
+const getProfileTicketsBalance = async (profile: profile) => {
+  const provide = new ethers.JsonRpcProvider(conet_rpc);
+  const wallet = new ethers.Wallet(profile.privateKeyArmor, provide);
+  const ticketSmartContract = new ethers.Contract(
+    ticketContractAddress,
+    ticketAbi,
+    wallet
+  );
+
+  try {
+    const ticketBalance = await ticketSmartContract.balanceOf(profile.keyID, 1);
+    console.log(`ticket balance = ${ticketBalance}`);
+    profile.tickets = { balance: ticketBalance.toString() };
+  } catch (ex) {
+    console.log(ex);
+  }
+};
+
 const createKeyHDWallets = () => {    
     try {
         const root = ethers.Wallet.createRandom()
@@ -2030,23 +2057,41 @@ const scan_erc20_balance: (walletAddr: string, erc20Address: string, provide: an
 })
 
 const scan_Guardian_Nodes = async (walletAddr) => {
-    return await scan_src1155_balance(walletAddr, CONET_Guardian_PlanV7, 1)
+    return await scan_src1155_balance(walletAddr, CONET_Guardian_Nodes_V6, GuardianNftId)
 }
 
 const scan_Guardian_ReferralNodes = async (walletAddr) => {
-    return await scan_src1155_balance(walletAddr, CONET_Guardian_PlanV7, 2)
+    return await scan_src1155_balance(walletAddr, CONET_Guardian_Nodes_V6, GuardianReferrerNftId)
 }
 
 const scan_CONETianPlanAddr = async (walletAddr) => new Promise(async resolve => {
 	const CONETianPlanContract = new ethers.Contract(CONETianPlanAddr, CONETianPlan_ABI, provideCONET)
 	try {
 		const [balanceGuardian, balanceReferrer, availableBalance] = await Promise.all([
-			CONETianPlanContract.balanceOf(walletAddr, Guardian),
-			CONETianPlanContract.balanceOf(walletAddr, Guardian_referrer),
+			CONETianPlanContract.balanceOf(walletAddr, ConetianNftId),
+			CONETianPlanContract.balanceOf(walletAddr, ConetianReferrerNftId),
 			CONETianPlanContract.getAvailableBalance()
 		])
 
 		return resolve({balanceGuardian, balanceReferrer, availableBalance})
+	} catch (ex) {
+		resolve (false)
+	}
+})
+
+const scan_GuardianPlanAddr = async (walletAddr) => new Promise(async resolve => {
+	const GuardianPlanContract = new ethers.Contract(
+    CONET_Guardian_Nodes_V6,
+    guardian_erc1155,
+    provideCONET
+  );
+	try {
+		const [balanceGuardian, balanceReferrer, nodeNftId] = await Promise.all([
+      GuardianPlanContract.balanceOf(walletAddr, GuardianNftId),
+      GuardianPlanContract.balanceOf(walletAddr, GuardianReferrerNftId),
+      GuardianPlanContract.ownershipForNodeID(walletAddr),
+    ]);
+		return resolve({balanceGuardian, balanceReferrer, nodeNftId})
 	} catch (ex) {
 		resolve (false)
 	}
