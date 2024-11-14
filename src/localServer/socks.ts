@@ -16,9 +16,7 @@
 
 import * as Net from 'net'
 import * as Rfc1928 from './rfc1928'
-import * as res from './res'
 import * as Crypto from 'crypto'
-import httpProxyHeader from './httpProxy'
 import {proxyServer } from './proxyServer'
 import * as Util from 'util'
 import { logger, hexDebug } from './logger'
@@ -36,22 +34,6 @@ const isSslFromBuffer = ( buffer: Buffer ) => {
 	return ret
 }
 
-const getHostNameFromSslConnection = ( buffer: Buffer ) => {
-	
-	if (!isSslFromBuffer(buffer)) {
-		return null
-	}
-	const lengthPoint = buffer.readInt16BE(0x95)
-	const serverName = buffer.slice (0x97, 0x97 +lengthPoint)
-	//	00000090  00 02 01 00 00 0A 00 08 00 06 00 1D 00 17 00 18  ................
-	//	use IP address
-	if (lengthPoint === 0x0A00 && serverName[0] === 0x8 && serverName[1] === 0x0) {
-		return null
-	}
-	hexDebug(serverName)
-	logger(`getHostNameFromSslConnection lengthPoint[${lengthPoint.toString(16)}] === 0x0A ${lengthPoint === 0x0A00} serverName[0] [${serverName[0].toString(16)}] serverName[0] === 0x8 ${serverName[0] === 0x8} && serverName[1] [${serverName[1].toString(16)}]  === 0x06 [${serverName[1] === 0x0}] `)
-	return serverName.toString()
-}
 
 export class socks5 {
 	private host
@@ -134,6 +116,7 @@ export class socks5 {
 				ssl: isSslFromBuffer (_data),
 				order: 0
 			}
+			
 			return this.proxyServer.requestGetWay ( uuuu, this.socket )
 		})
 
@@ -277,6 +260,7 @@ export class sockt4 {
 			}
 				
 		}
+
 		if ( ! this.keep ) {
 			this.debug ? logger (colors.red(`STOP session`)): null
 			this.socket.end ( this.req.request_failed )

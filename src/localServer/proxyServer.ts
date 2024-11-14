@@ -15,38 +15,68 @@ import { TransformCallback } from 'stream'
 import { ethers } from 'ethers'
 import EthCrypto from 'eth-crypto'
 import * as Crypto from 'crypto'
-import async from 'async'
-import CONET_Guardian_NodeInfo_ABI from './abi/CONET_Guardian_NodeInfo.json'
+import IP from 'ip'
+import {resolve4} from 'node:dns'
+import {createConnection} from 'node:net'
+
+const _HTTP_200 = ( body: string ) => {
+	const ret = `HTTP/1.1 200 OK\r\n` +
+				`Content-Type: text/html; charset=UTF-8\r\n` + 
+				`Connection: keep-alive\r\n` + 
+				`Content-Length: ${ body.length }\r\n\r\n` +
+				`${ body }`
+	return ret
+}
+
 
 const isSslFromBuffer = ( buffer ) => {
 
 	const request = buffer.toString()
 	return /^CONNECT\ /i.test(request)
 }
+const getHostIpv4: (host: string) => Promise<string> = (host: string) => new Promise(resolve => {
+	return resolve4(host, (err, ipv4s) => {
+		if (err||!ipv4s?.length) {
+			return resolve ('')
+		}
 
-const httpProxy = ( clientSocket: Net.Socket, buffer: Buffer, proxyServer: proxyServer) => {
+		return resolve(ipv4s[0])
+	})
+})
 
-		
-	const httpHead = new HttpProxyHeader ( buffer )
+
+const httpProxy = ( clientSocket: Net.Socket, _buffer: Buffer, agent: string, proxyServer: proxyServer) => {
+	const httpHead = new HttpProxyHeader ( _buffer )
 	const hostName = httpHead.host
-
-
-	const connect = ( _, _data?: Buffer ) => {
+	const ssl = isSslFromBuffer ( _buffer )
+	const connect = (_data: Buffer) => {
+		
 		const uuuu : VE_IPptpStream = {
 			uuid: Crypto.randomBytes (10).toString ('hex'),
 			host: hostName,
-			buffer: buffer.toString ( 'base64' ),
+			buffer: _data.toString ( 'base64' ),
 			cmd: httpHead.methods,
 			port: httpHead.Port,
-			ssl: isSslFromBuffer ( _data ),
+			ssl,
 			order: 0
 		}
+		// socks5Connect(uuuu, clientSocket)
+		// clientSocket.resume ()
 		return proxyServer.requestGetWay ( uuuu, clientSocket )
 	}
-		
-	return connect (null, buffer )
-	
 
+	const reqtest = _buffer.toString()
+	if (/^CONNECT /.test(reqtest)) {
+
+		clientSocket.once ('data', data => {
+			return connect (data)
+		})
+
+		const response = _HTTP_200('')
+		return clientSocket.write(response)
+	}
+
+	return connect (_buffer)
 }
 
 const getRandomSaaSNode = (saasNodes: nodes_info[]) => {
@@ -75,8 +105,6 @@ const getRandomNode = (activeNodes: nodes_info[], saasNode: nodes_info) => {
 	return ret
 }
 
-const CoNET_SI_Network_Domain = 'openpgp.online'
-const conet_DL_getSINodes = `https://${ CoNET_SI_Network_Domain }:4001/api/conet-si-list`
 
 const getPac = ( hostIp: string, port: string, http: boolean, sock5: boolean ) => {
 
@@ -117,15 +145,6 @@ const makePrivateKeyObj = async ( privateArmor: string, password = '' ) => {
 	return privateKey
 }
 
-const getNodeByIpaddress = (ipaddress: string, activeNodes: nodes_info[] ) => {
-
-	const index = activeNodes.findIndex(n => n.ip_addr === ipaddress)
-	if (index > -1) {
-		return activeNodes[index]
-	}
-	logger (Colors.red(`proxyServer getNodeByIpaddress [${ipaddress}] hasn't include at activeNodes list!`))
-	
-}
 
 const encrypt_Message = async (encryptionKeys, message: any) => {
 	const encryptObj = {
@@ -159,7 +178,9 @@ const createSock5ConnectCmd = async (currentProfile: profile, SaaSnode: nodes_in
 		walletAddress: currentProfile.keyID.toLowerCase()
 	}
 
-	logger(Colors.blue(`createSock5ConnectCmd`))
+
+	logger(Colors.blue(`createSock5ConnectCmd data = ${inspect(requestData, false, 3, true)}`))
+
 	const message =JSON.stringify(command)
 	const messageHash = ethers.id(message)
 	const signMessage = EthCrypto.sign(currentProfile.privateKeyArmor, messageHash)
@@ -198,36 +219,6 @@ class transferCount extends Transform {
 	}
 }
 
-
-const sendTransferDataToLocalHost = (infoData: ITypeTransferCount) => {
-	return new Promise(resolve => {
-		const option: RequestOptions = {
-			host: 'localhost',
-			method: 'POST',
-			port: '3001',
-			path: '/proxyusage',
-			headers: {
-				'Content-Type': 'application/json;charset=UTF-8',
-				'Connection': 'close',
-			}
-		}
-		const req = requestHttp(option, res => {
-			if (res.statusCode !==200) {
-				return logger (Colors.red(`sendTransferDataToLocalHost res.statusCode [${res.statusCode}] !== 200 ERROR`))
-			}
-			logger (Colors.blue(`sendTransferDataToLocalHost SUCCESS`))
-			res.destroy()
-			resolve(null)
-		})
-	
-		req.on('error', err => {
-			logger (Colors.red(`sendTransferDataToLocalHost on Error!`), err)
-		})
-	
-		req.end(JSON.stringify({data:infoData}))
-	})
-
-}
 
 const ConnectToProxyNode = (cmd : SICommandObj, SaaSnode: nodes_info, entryNode: nodes_info, socket: Net.Socket, uuuu: VE_IPptpStream, server: proxyServer) => {
 
@@ -344,10 +335,7 @@ export class proxyServer {
 					}
 					
 					default: {
-						const logStream = Colors.magenta(`unsupport proxy protocol!`)
-						loggerToStream(this.logStream, logStream)
-						logger(logStream)
-						return socket.end()
+						return httpProxy(socket, data, agent, this)
 					}
 				}
 			})
@@ -393,7 +381,8 @@ export class proxyServer {
 		if (!upChannel_SaaS_node ) {
 			return logger (Colors.red(`proxyServer makeUpChannel upChannel_SaaS_node Null Error!`))
 		}
-		logger(inspect(upChannel_SaaS_node, false, 3, true))
+
+		
 		
 		const cmd = await createSock5ConnectCmd (this.currentProfile, upChannel_SaaS_node, [uuuu])
 		if (!cmd) {
@@ -404,9 +393,9 @@ export class proxyServer {
 
 		const streamString = Colors.blue (`Create gateway request, Layer minus random SaaS node [${Colors.magenta(upChannel_SaaS_node.ip_addr)}] entry node [${Colors.magenta(entryNode.ip_addr)}]\n`)
 
-		loggerToStream(this.logStream, streamString)
-		logger(streamString)
-
+		// loggerToStream(this.logStream, streamString)
+		// logger(streamString)
+		// logger(Colors.blue(`entryNode [${entryNode.ip_addr}] => Saas[${upChannel_SaaS_node.ip_addr}]`))
 		
 		ConnectToProxyNode (cmd, upChannel_SaaS_node, entryNode, socket, uuuu, this)
 	}
@@ -443,4 +432,4 @@ export class proxyServer {
 	})
 }
 
-
+//		curl -v -x http://10.0.0.252:3002 "https://www.google.com"

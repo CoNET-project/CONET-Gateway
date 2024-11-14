@@ -393,12 +393,14 @@ export class miningV2_Class {
 	private init = (privateKeyArmor: string) => {
 		start (privateKeyArmor)
 	}
+	
 
 	constructor(privateKeyArmor: string) {
 		this.init(privateKeyArmor)
 	}
 
 	public changeUsedNodes (region: string) {
+		
 		SaaSNodes = new Map()
 		const nodes = Guardian_Nodes.filter(n => n.region.split('.')[1] === region)
 
@@ -415,6 +417,7 @@ export class miningV2_Class {
 			if (node && isExisting < 0) {
 				exportNodes.push(node)
 			}
+		
 		} while (exportNodes.length < 10 && exportNodes.length < nodes.length)
 
 		exportNodes.forEach(n => {
