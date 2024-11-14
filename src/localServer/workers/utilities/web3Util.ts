@@ -490,13 +490,13 @@ const getProfileAssets_CONET_Balance = async (profile: profile) => {
 		const GuardianData:{balanceGuardian: BigInt, balanceReferrer: BigInt, nodeNftId: BigInt}|false = _GuardianPlan
 		
 		if (CONETianData !== false) {
-			if (current.CONETianPlan) {
-				current.CONETianPlan.Guardian.balance = CONETianData.balanceGuardian.toString()
-				current.CONETianPlan.Guardian.totalSupply = (maxConetianNft - parseInt(CONETianData.availableBalance.toString())).toFixed(0)
-				current.CONETianPlan.Guardian_referrer.balance = CONETianData.balanceReferrer.toString()
+			if (current.ConetianPlan) {
+				current.ConetianPlan.Conetian.balance = CONETianData.balanceGuardian.toString()
+				current.ConetianPlan.Conetian.totalSupply =  parseInt(CONETianData.availableBalance.toString()).toFixed(0)
+				current.ConetianPlan.Conetian_referrer.balance = CONETianData.balanceReferrer.toString()
 			} else {
-				current.CONETianPlan = {
-					Guardian: {
+				current.ConetianPlan = {
+					Conetian: {
 						balance: CONETianData.balanceGuardian.toString(),
 						history: [],
 						network: 'CONET Holesky',
@@ -504,9 +504,9 @@ const getProfileAssets_CONET_Balance = async (profile: profile) => {
 						contract: CONETianPlanAddr,
 						name: 'Guardian',
 						supplyMaximum: maxConetianNft.toString(),
-						totalSupply: (maxConetianNft - parseInt(CONETianData.availableBalance.toString())).toFixed(0)
+						totalSupply: parseInt(CONETianData.availableBalance.toString()).toFixed(0)
 					},
-					Guardian_referrer: {
+					Conetian_referrer: {
 						balance: CONETianData.balanceReferrer.toString(),
 						history: [],
 						network: 'CONET Holesky',
@@ -522,7 +522,6 @@ const getProfileAssets_CONET_Balance = async (profile: profile) => {
 		if (GuardianData !== false) {
 			if (current.GuardianPlan) {
 				current.GuardianPlan.Guardian.balance = GuardianData.balanceGuardian.toString()
-				current.GuardianPlan.Guardian.totalSupply = maxGuardianNft.toFixed(0)
 				current.GuardianPlan.Guardian_referrer.balance = GuardianData.balanceReferrer.toString()
                 current.GuardianPlan.Node_NFT_ID = GuardianData.nodeNftId.toString()
 			} else {
@@ -535,7 +534,6 @@ const getProfileAssets_CONET_Balance = async (profile: profile) => {
 						contract: CONET_Guardian_Nodes_V6,
 						name: 'Guardian',
 						supplyMaximum: maxGuardianNft.toString(),
-						totalSupply: maxGuardianNft.toFixed(0)
 					},
 					Guardian_referrer: {
 						balance: GuardianData.balanceReferrer.toString(),

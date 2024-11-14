@@ -250,9 +250,9 @@ interface conet_tokens {
 	wbnb?: CryptoAsset
 	wusdt?: CryptoAsset
 
-	CONETianPlan?: {
-		Guardian: CryptoAsset
-		Guardian_referrer: CryptoAsset
+	ConetianPlan?: {
+		Conetian: CryptoAsset
+		Conetian_referrer: CryptoAsset
 	}
 
 	GuardianPlan?: {
