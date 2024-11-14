@@ -77,16 +77,25 @@ const getAllNodes = async () => {
 		})
 	}
 	const GuardianNodesInfo = new ethers.Contract(GuardianNodesInfoV6, NodesInfoABI, provider)
-
+	let i = 0
 	await mapLimit(Guardian_Nodes, 5, async (n: nodeInfo, next) => {
+		i = n.nftNumber
 		const nodeInfo = await GuardianNodesInfo.getNodeInfoById(n.nftNumber)
-		n.region = nodeInfo.regionName
-		n.ip_addr = nodeInfo.ipaddress
-		n.armoredPublicKey = Buffer.from(nodeInfo.pgp,'base64').toString()
-		const pgpKey1 = await readKey({ armoredKey: n.armoredPublicKey})
-		n.domain = pgpKey1.getKeyIDs()[1].toHex().toUpperCase() + '.conet.network'
+		if (nodeInfo?.pgpArmored){
+			n.region = nodeInfo.regionName
+			n.ip_addr = nodeInfo.ipaddress
+			n.armoredPublicKey = Buffer.from(nodeInfo.pgp,'base64').toString()
+			const pgpKey1 = await readKey({ armoredKey: n.armoredPublicKey})
+			n.domain = pgpKey1.getKeyIDs()[1].toHex().toUpperCase() + '.conet.network'
+		} else {
+			throw new Error('')
+		}
+		
+	}).catch(ex=> {
+		
 	})
-
+	const index = Guardian_Nodes.findIndex(n => n.nftNumber === i) - 1
+	Guardian_Nodes = Guardian_Nodes.slice(0, index)
 	getAllNodesProcess = false
 }
 
