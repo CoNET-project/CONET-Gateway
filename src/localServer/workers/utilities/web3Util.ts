@@ -2541,7 +2541,7 @@ const transferAssetToCONET_wallet = (privateKey, token, transferNumber, toAddr) 
         const tx = {
             to: toAddr,
             value: ethers.parseEther(transferNumber),
-        };
+        }
         try {
             return resolve(await wallet.sendTransaction(tx))
         }

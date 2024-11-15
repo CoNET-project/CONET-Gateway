@@ -1,7 +1,6 @@
 
 
 let Guardian_Nodes:nodes_info[]  = []
-
 let getAllNodesProcess = false
 
 const getAllNodes = async () => {
@@ -527,5 +526,27 @@ const claimToken = async (cmd: worker_command) => {
 		cmd.err = 'INVALID_DATA'
 		return returnUUIDChannel(cmd)
 	}
-	
+	const data = {
+		tokenName
+    }
+
+	const message = JSON.stringify({ walletAddress: profile.keyID, data })
+	const wallet = new ethers.Wallet(profile.privateKeyArmor)
+	const signMessage = await wallet.signMessage(message)
+	const sendData = {
+        message, signMessage
+    }
+	const url = `${apiv4_endpoint}claimToken`
+    let result
+
+    try {
+        result = await postToEndpoint(url, true, sendData)
+    }
+    catch (ex) {
+        cmd.err = 'NOT_READY'
+		return returnUUIDChannel(cmd)
+    }
+
+	return returnUUIDChannel(cmd)
+
 }
