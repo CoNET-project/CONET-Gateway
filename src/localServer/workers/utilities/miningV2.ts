@@ -541,11 +541,12 @@ const claimToken = async (cmd: worker_command) => {
 
     try {
         result = await postToEndpoint(url, true, sendData)
-    }
-    catch (ex) {
+    } catch (ex) {
         cmd.err = 'NOT_READY'
-		return returnUUIDChannel(cmd)
     }
+	if (!result) {
+		cmd.err = 'NOT_READY'
+	}
 
 	return returnUUIDChannel(cmd)
 
