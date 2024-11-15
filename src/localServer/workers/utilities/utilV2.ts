@@ -404,7 +404,8 @@ const prePurchase = async (cmd) => {
 
 const nodePrice = 1250
 
-const claimAdmin = '0x418833b70F882C833EF0F0Fcee3FB9d89C79d47C'
+
+
 const getClaimableAddress = (CONET_claimableName) => {
     switch (CONET_claimableName) {
         

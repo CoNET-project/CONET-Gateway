@@ -459,3 +459,73 @@ const CONETianPlan_purchase = async (referrer: string, profile: profile, amount:
     }
 	return resolve(true)
 })
+
+const claimAdmin = '0xD7fa7D7316C0de4538c7033c503Bee8Ad2AA338d'
+
+const approveClaimToken = async (profile: profile, token: CryptoAsset) => {
+	const getContract = getClaimableAddress(token.name)
+	if (!getContract) {
+		return false
+	}
+	const wallet = new ethers.Wallet(profile.privateKeyArmor, provideCONET)
+	const amount = ethers.parseEther (token.balance)
+	const approveContract = new ethers.Contract (getContract, cCNTP_ABI, wallet)
+	try {
+		const tx = await approveContract.approve(claimAdmin, amount)
+		return tx
+	} catch (ex) {
+		return false
+	}
+}
+
+const getTokenByName = (tokens: conet_tokens, tokenName: string) => {
+	const tokensKeys = Object.keys(tokens)
+	const tokensIndex = tokensKeys.findIndex(n => tokens[n].name === tokenName)
+	if (tokensIndex < 0) {
+		return null
+	}
+	return tokens[tokensKeys[tokensIndex]]
+}
+
+const claimToken = async (cmd: worker_command) => {
+	if (!cmd?.data?.length) {
+		cmd.err = 'INVALID_DATA'
+		return returnUUIDChannel(cmd)
+	}
+
+	const _profile: profile = cmd.data[0]
+	const tokenName = cmd.data[1]
+
+	if (!_profile?.keyID || !tokenName ) {
+		cmd.err = 'INVALID_DATA'
+		return returnUUIDChannel(cmd)
+	}
+
+	const profile = getProfileFromKeyID (_profile.keyID)
+
+	if (!profile) {
+		cmd.err = 'INVALID_DATA'
+		return returnUUIDChannel(cmd)
+	}
+
+	const tokens = profile.tokens
+	if (!tokens) {
+		cmd.err = 'INVALID_DATA'
+		return returnUUIDChannel(cmd)
+	}
+
+	const conetBalance = parseFloat(tokens.conet?.balance || '0')
+	const token = getTokenByName (tokens, tokenName)
+	if (conetBalance< 0.0001 || !token) {
+		await getFaucet(profile)
+		cmd.err = 'INVALID_DATA'
+		return returnUUIDChannel(cmd)
+	}
+	
+	const  tx = await approveClaimToken (profile, token)
+	if (!tx) {
+		cmd.err = 'INVALID_DATA'
+		return returnUUIDChannel(cmd)
+	}
+	
+}

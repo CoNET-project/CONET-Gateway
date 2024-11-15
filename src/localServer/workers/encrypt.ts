@@ -722,6 +722,10 @@ const processCmd = async (cmd: worker_command) => {
 			return recoverAccount(cmd)
 		}
 
+		case 'claimToken': {
+			return claimToken (cmd)
+		}
+
 		case 'getAllProfiles': {
 			const profiles = CoNET_Data?.profiles
 			if (!profiles) {
