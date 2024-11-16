@@ -467,10 +467,10 @@ const approveClaimToken = async (profile: profile, token: CryptoAsset) => {
 		return false
 	}
 	const wallet = new ethers.Wallet(profile.privateKeyArmor, provideCONET)
-	const amount = ethers.parseEther (token.balance)
 	const approveContract = new ethers.Contract (getContract, cCNTP_ABI, wallet)
 	try {
-		const tx = await approveContract.approve(claimAdmin, amount)
+		const balance = await approveContract.balanceOf(profile.keyID)
+		const tx = await approveContract.approve(claimAdmin, balance)
 		return tx
 	} catch (ex) {
 		return false
@@ -542,10 +542,10 @@ const claimToken = async (cmd: worker_command) => {
     try {
         result = await postToEndpoint(url, true, sendData)
     } catch (ex) {
-        cmd.err = 'NOT_READY'
+        cmd.err = 'INVALID_DATA'
     }
 	if (!result) {
-		cmd.err = 'NOT_READY'
+		cmd.err = 'INVALID_DATA'
 	}
 
 	return returnUUIDChannel(cmd)
