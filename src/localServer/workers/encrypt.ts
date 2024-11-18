@@ -104,6 +104,7 @@ const initEncryptWorker = async () => {
 	self.importScripts ( 'https://cdnjs.cloudflare.com/ajax/libs/async/3.2.5/async.min.js' )
 	self.importScripts ( 'https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js' )
 	self.importScripts ( 'https://cdnjs.cloudflare.com/ajax/libs/jimp/0.22.12/jimp.min.js')
+	// self.importScripts ( 'https://cdn.jsdelivr.net/npm/tronweb@6.0.0/+esm')
 	logger(`workerProcess: [30]`)
 	channelLoading.postMessage(30)
 	//self.importScripts ( 'https://cdn.jsdelivr.net/npm/eth-crypto@2.6.0/dist/lib/index.min.js' )
@@ -127,7 +128,8 @@ const initEncryptWorker = async () => {
     channelLoading.postMessage(70)
 	logger(`workerProcess: [70]`)
     // self.importScripts ( baseUrl + 'seguroSetup.js' )
-    self.importScripts(baseUrl + 'utilV2.js')
+    self.importScripts(baseUrl + 'TronWeb.js')
+	self.importScripts(baseUrl + 'utilV2.js')
 	self.importScripts(baseUrl + 'miningV2.js')
     
     self.importScripts('https://cdnjs.cloudflare.com/ajax/libs/ethers/6.13.4/ethers.umd.min.js')

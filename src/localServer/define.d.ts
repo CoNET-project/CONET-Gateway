@@ -8,6 +8,7 @@ declare const PouchDB: any
 declare const ethers: any
 declare const uuid
 declare const Jimp
+declare const TronWeb
 
 interface imapConnect {
 	imapServer: string
@@ -259,6 +260,11 @@ interface conet_tokens {
 		Guardian: CryptoAsset
 		Guardian_referrer: CryptoAsset
 		Node_NFT_ID: string
+	}
+	tron?:{
+		walletAddress: string
+		usdt: CryptoAsset
+		tron: CryptoAsset
 	}
 }
 

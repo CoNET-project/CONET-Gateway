@@ -203,7 +203,7 @@ let provideETH = null
 let provideBNB = null
 let provideArbOne = null
 
-const getProfileAssets_allOthers_Balance = async (profile) => {
+const getProfileAssets_allOthers_Balance = async (profile: profile) => {
     const key = profile.keyID
     if (key) {
 		if (!provideBlastMainChain) {
@@ -254,6 +254,32 @@ const getProfileAssets_allOthers_Balance = async (profile) => {
 				decimal: 6,
 				contract: eth_usdt_contract,
 				name: 'usdt'
+			}
+		}
+
+		if (current.tron) {
+			current.tron.usdt.balance = '0'
+			current.tron.tron.balance = '0'
+		} else {
+			current.tron = {
+				walletAddress: TronWeb.TronWeb.address.fromHex('0x454428d883521c8af9e88463e97e4d343c600914'),
+				usdt: {
+					balance: '',
+					history: [],
+					network: 'Tron',
+					decimal: 18,
+					contract: '',
+					name: 'tronUSDT'
+				},
+				tron: {
+					balance: '',
+					history: [],
+					network: 'Tron',
+					decimal: 18,
+					contract: '',
+					name: 'Tron'
+				}
+
 			}
 		}
 
