@@ -127,6 +127,7 @@ interface CryptoAsset {
 	decimal: number
 	contract: string
 	name: string
+	isNft?: boolean
 	unlocked?: boolean
 	supplyMaximum?: string
 	totalSupply?: string
@@ -172,7 +173,7 @@ declare type WorkerCommand = 'READY'|'getRegiestNodes'|'beforeunload'|'createAcc
     'SaaSRegister'|'getContainer'|'ipaddress'|'startLiveness'|'stopLiveness'|'isLivenessRunning'|'importWallet'|'startMining'|'stopMining'|
 	//		from service worker
 	'urlProxy'|'saveDomain'|'getDomain'|'getWorkerClientID'|'getRefereesList'|'getAllNodes'|'getAllProfiles'|'updateProfile'|'addProfile'|'resetPasscode'|
-	'getAssetsPrice'|'recoverAccount'|'CONETFaucet'|'prePurchase'|'guardianPurchase'|'fx168PrePurchase'|'claimToken' | 'transferToken' | 'estimateGas' | 'startSilentPass' | 'isWalletAgent' | 'transferNft'
+	'getAssetsPrice'|'recoverAccount'|'CONETFaucet'|'prePurchase'|'guardianPurchase'|'fx168PrePurchase'|'claimToken' | 'transferToken' | 'estimateGas' | 'estimateGasForNftContract' | 'startSilentPass' | 'isWalletAgent' | 'transferNft'
 
 type SINodesSortby = 'CUSTOMER_REVIEW'|'TOTAL_ONLINE_TIME'|
 	'STORAGE_PRICE_LOW'|'STORAGE_PRICE_HIGH'|'OUTBOUND_PRICE_HIGH'|'OUTBOUND_PRICE_LOW'
@@ -250,6 +251,9 @@ interface conet_tokens {
 	bnb?: CryptoAsset
 	wbnb?: CryptoAsset
 	wusdt?: CryptoAsset
+
+	ConetianNFT?: CryptoAsset
+	ConetianAgentNFT?: CryptoAsset
 
 	ConetianPlan?: {
 		Conetian: CryptoAsset

@@ -522,27 +522,64 @@ const getProfileAssets_CONET_Balance = async (profile: profile) => {
 				current.ConetianPlan.Conetian_referrer.balance = CONETianData.balanceReferrer.toString()
 			} else {
 				current.ConetianPlan = {
-					Conetian: {
-						balance: CONETianData.balanceGuardian.toString(),
-						history: [],
-						network: 'CONET Holesky',
-						decimal: ConetianNftId,
-						contract: CONETianPlanAddr,
-						name: 'Guardian',
-						supplyMaximum: maxConetianNft.toString(),
-						totalSupply: parseInt(CONETianData.availableBalance.toString()).toFixed(0)
-					},
-					Conetian_referrer: {
-						balance: CONETianData.balanceReferrer.toString(),
-						history: [],
-						network: 'CONET Holesky',
-						decimal: ConetianReferrerNftId,
-						contract: CONETianPlanAddr,
-						name: 'Guardian_referrer'
-					}
-				}
-				
+                    Conetian: {
+                        isNft: true,
+                        balance: CONETianData.balanceGuardian.toString(),
+                        history: [],
+                        network: "CONET Holesky",
+                        decimal: ConetianNftId,
+                        contract: CONETianPlanAddr,
+                        name: "Guardian",
+                        supplyMaximum: maxConetianNft.toString(),
+                        totalSupply: parseInt(
+                        CONETianData.availableBalance.toString()
+                        ).toFixed(0),
+                    },
+                    Conetian_referrer: {
+                        isNft: true,
+                        balance: CONETianData.balanceReferrer.toString(),
+                        history: [],
+                        network: "CONET Holesky",
+                        decimal: ConetianReferrerNftId,
+                        contract: CONETianPlanAddr,
+                        name: "Guardian_referrer",
+                    },
+                };
 			}
+            
+			if (current.ConetianNFT) {
+				current.ConetianNFT.balance = CONETianData.balanceGuardian.toString()
+                    current.ConetianNFT.totalSupply = parseInt(CONETianData.availableBalance.toString()
+          ).toFixed(0);
+			} else {
+				current.ConetianNFT = {
+                    isNft: true,
+                    balance: CONETianData.balanceGuardian.toString(),
+                    history: [],
+                    network: 'CONET Holesky',
+                    decimal: ConetianNftId,
+                    contract: CONETianPlanAddr,
+                    name: 'ConetianNFT',
+                    supplyMaximum: maxConetianNft.toString(),
+                    totalSupply: parseInt(CONETianData.availableBalance.toString()).toFixed(0)
+                };
+
+            }
+                
+            if (current.ConetianAgentNFT){
+                current.ConetianAgentNFT.balance =
+                CONETianData.balanceReferrer.toString()
+            } else {
+                current.ConetianAgentNFT = {
+                    isNft: true,
+                    balance: CONETianData.balanceReferrer.toString(),
+                    history: [],
+                    network: 'CONET Holesky',
+                    decimal: ConetianReferrerNftId,
+                    contract: CONETianPlanAddr,
+                    name: 'ConetianAgentNFT',
+                }
+            }
 		}
 
 		if (GuardianData !== false) {
@@ -553,21 +590,23 @@ const getProfileAssets_CONET_Balance = async (profile: profile) => {
 			} else {
 				current.GuardianPlan = {
 					Guardian: {
+                        isNft: true,
 						balance: GuardianData.balanceGuardian.toString(),
 						history: [],
 						network: 'CONET Holesky',
 						decimal: GuardianNftId,
 						contract: CONET_Guardian_Nodes_V6,
-						name: 'Guardian',
+						name: 'Guardian NFT',
 						supplyMaximum: maxGuardianNft.toString(),
 					},
 					Guardian_referrer: {
+                        isNft: true,
 						balance: GuardianData.balanceReferrer.toString(),
 						history: [],
 						network: 'CONET Holesky',
 						decimal: GuardianReferrerNftId,
 						contract: CONET_Guardian_Nodes_V6,
-						name: 'Guardian_referrer'
+						name: 'Guardian Referrer NFT'
 					},
                     Node_NFT_ID: GuardianData.nodeNftId.toString()
 				}
@@ -581,6 +620,163 @@ const getProfileAssets_CONET_Balance = async (profile: profile) => {
 }
 
 const maxfindNodeAddressNumber = 1000
+
+const getNftBalance = async (profile, assetName) => {
+    let cryptoAsset: any = null;
+    
+    switch (assetName.toLowerCase()) {
+        case "conetiannft":
+            cryptoAsset = profile?.tokens?.ConetianNFT;
+            if (!cryptoAsset) {
+                return null;
+            }
+            break;
+
+        case "conetianagentnft":
+            cryptoAsset = profile?.tokens?.ConetianAgentNFT;
+            if (!cryptoAsset) {
+                return null;
+            }
+            break;
+
+        default:
+            return null;
+    }
+
+    return parseFloat(cryptoAsset?.balance);
+};
+
+const transferNft = async (profile, to, _total, tokenName) => {
+  const nftBalance = await getNftBalance(profile, tokenName);
+
+  if (
+    !nftBalance ||
+    !CoNET_Data?.profiles ||
+    nftBalance - _total < 0 ||
+    !profile.privateKeyArmor
+  ) {
+    const cmd1 = {
+      cmd: "tokenTransferStatus",
+      data: [-1],
+    };
+    sendState("toFrontEnd", cmd1);
+    return false;
+  }
+
+  const cmd1 = {
+    cmd: "tokenTransferStatus",
+    data: [1],
+  };
+  sendState("toFrontEnd", cmd1);
+
+  const wallet = new ethers.Wallet(profile.privateKeyArmor, provideCONET);
+  const contract = new ethers.Contract(
+    nfts?.[tokenName.toLowerCase()].contractAddress,
+    nfts?.[tokenName.toLowerCase()].contractAbi,
+    wallet
+  );
+
+  let pendingTx: any = null;
+
+  try {
+    pendingTx = await contract.safeTransferFrom(
+      wallet.address,
+      to,
+      nfts?.[tokenName.toLowerCase()].id,
+      _total,
+      "0x00"
+    );
+
+    const completedTx = await pendingTx?.wait();
+
+    sendState("beforeunload", false);
+
+    const cmd2 = {
+      cmd: "tokenTransferStatus",
+      data: [2],
+    };
+    sendState("toFrontEnd", cmd2);
+
+    const historyEntry = {
+      status: "Confirmed",
+      Nonce: completedTx?.nonce?? '',
+      to: completedTx?.to?? '',
+      transactionFee: stringFix(
+        ethers.formatEther(parseFloat(completedTx?.gasUsed?? 0) * parseFloat(completedTx?.gasPrice?? 0))
+      ),
+      gasUsed: completedTx?.gasUsed?.toString()?? '',
+      isSend: true,
+      value: parseEther(
+        _total?.toString()?? '',
+        profile?.tokens[tokenName]?.name?? ''
+      ).toString(),
+      time: new Date().toISOString(),
+      transactionHash: completedTx?.hash?? '',
+    };
+
+    profile?.tokens?.[tokenName]?.history?.push(historyEntry);
+    await storagePieceToLocal();
+    await storeSystemData();
+    needUpgradeVer = epoch + 25;
+
+    return completedTx
+  } catch (ex) {
+    const data = [-1];
+    
+    if (pendingTx) {
+      data.push(pendingTx);
+    }
+
+    const cmd1 = {
+      cmd: "tokenTransferStatus",
+      data: data,
+    };
+    sendState("toFrontEnd", cmd1);
+
+    logger(ex);
+    return false
+  }
+};
+
+const estimateGasForNftContract = async (cmd: worker_command) => {
+  const [amount, sourceProfileKeyID, assetName, toAddress] = cmd.data;
+
+  if (!assetName || !toAddress || !amount || !sourceProfileKeyID) {
+    cmd.err = "INVALID_DATA";
+    return returnUUIDChannel(cmd);
+  }
+
+  const profiles = CoNET_Data?.profiles;
+
+  if (!profiles) {
+    cmd.err = "FAILURE";
+    return returnUUIDChannel(cmd);
+  }
+
+  const profile = getProfileFromKeyID(sourceProfileKeyID);
+
+  if (!profile || !profile?.tokens) {
+    cmd.err = "INVALID_DATA";
+    return returnUUIDChannel(cmd);
+  }
+
+  const asset = profile.tickets;
+
+  if (!profile.privateKeyArmor || !asset) {
+    cmd.err = "INVALID_DATA";
+    return returnUUIDChannel(cmd);
+  }
+
+  const data: any = await getEstimateGasForNftTransfer(
+    profile.privateKeyArmor,
+    nfts?.[assetName.toLowerCase()],
+    amount,
+    toAddress
+  );
+
+  cmd.data = [data.gasPrice, data.fee, true, 5000];
+  return returnUUIDChannel(cmd);
+};
 
 const findNodeAddress = (nodeAddress, mnemonicPhrase) => {
     const root = ethers.Wallet.fromPhrase(mnemonicPhrase)
@@ -1835,9 +2031,9 @@ const isWalletAgent = async (cmd) => {
     const provideNewCONET = new ethers.JsonRpcProvider(conet_rpc);
     
     const ConetianContract = new ethers.Contract(
-        nftContract,
-        nftAbi,
-        provideNewCONET
+      nftContract,
+      CONETianPlan_ABI,
+      provideNewCONET
     );
     
     try {
@@ -2325,6 +2521,61 @@ const getEstimateGasForTokenTransfer = (privateKey, asset, _transferNumber, toAd
     }
 })
 
+const getEstimateGasForNftTransfer = (
+  privateKey,
+  nftObj,
+  transferAmount,
+  toAddr
+) =>
+  new Promise(async (resolve) => {
+    const provide = new ethers.JsonRpcProvider(conet_rpc);
+    const wallet = new ethers.Wallet(privateKey, provide);
+    let _fee;
+    const smartContractAddr = nftObj?.contractAddress;
+
+    if (smartContractAddr) {
+      const estGas = new ethers.Contract(smartContractAddr, nftObj?.contractAbi, wallet);
+      try {
+        _fee = await estGas.safeTransferFrom.estimateGas(
+          wallet.address,
+          toAddr,
+          nftObj?.id,
+          transferAmount,
+          "0x"
+        );
+      } catch (ex) {
+        return resolve(false);
+      }
+    } else {
+      const tx = {
+        to: toAddr,
+        value: transferAmount,
+      };
+      try {
+        _fee = await wallet.estimateGas(tx);
+      } catch (ex) {
+        return resolve(false);
+      }
+    }
+
+    try {
+      const Fee = await provide.getFeeData();
+      const gasPrice = ethers.formatUnits(Fee.gasPrice, "gwei");
+      const fee = parseFloat(ethers.formatEther(_fee * Fee.gasPrice));
+
+      const roundedUpFee = Math.ceil(fee * 100000000) / 100000000;
+      let roundedUpFeeStr = roundedUpFee.toFixed(8).toString();
+
+      if (parseFloat(roundedUpFeeStr) === 0) {
+        roundedUpFeeStr = roundedUpFeeStr.slice(0, -1) + "1";
+      }
+
+      return resolve({ gasPrice, fee: roundedUpFeeStr });
+    } catch (ex) {
+      return resolve(false);
+    }
+  });
+
 const CONET_guardian_purchase = async (profile: profile, nodes, _total, tokenName) => {
 
     let cryptoAsset: CryptoAsset
@@ -2529,17 +2780,17 @@ const CONET_transfer_token = async (profile, to, _total, tokenName) => {
 
     const kk1 = {
         status: 'Confirmed',
-        Nonce: tx.nonce,
-        to: tx.to,
-        transactionFee: stringFix(ethers.formatEther(parseFloat(tx.gasUsed)*parseFloat(tx.gasPrice))),
-        gasUsed: tx.gasUsed.toString(),
+        Nonce: tx?.nonce?? '',
+        to: tx?.to?? '',
+        transactionFee: stringFix(ethers.formatEther(parseFloat(tx?.gasUsed?? 0)*parseFloat(tx?.gasPrice?? 0))),
+        gasUsed: tx?.gasUsed?.toString()?? '',
         isSend: true,
-        value: parseEther(_total.toString(), cryptoAsset.name).toString(),
+        value: parseEther(_total?.toString()?? '', cryptoAsset?.name?? '').toString(),
         time: new Date().toISOString(),
-        transactionHash: tx.hash,
+        transactionHash: tx?.hash?? '',
     }
 
-    cryptoAsset.history.push(kk1)
+    cryptoAsset?.history?.push(kk1)
     await storagePieceToLocal()
     await storeSystemData()
     needUpgradeVer = epoch + 25

@@ -217,563 +217,614 @@ let getFaucetCount = 0
 
 const processCmd = async (cmd: worker_command) => {
     switch (cmd.cmd) {
+      case "startMining": {
+        return startMining(cmd);
+      }
 
-        case 'startMining': {
-            return startMining(cmd)
-        }
-		
-        case 'stopMining': {
-			if (miningConn && typeof miningConn?.abort === 'function') {
-				miningConn.abort()
-				miningConn = null
-			}
-			
-            return returnUUIDChannel(cmd)
+      case "stopMining": {
+        if (miningConn && typeof miningConn?.abort === "function") {
+          miningConn.abort();
+          miningConn = null;
         }
 
-        case 'unlock_cCNTP': {
-            const [_profile] = cmd.data
+        return returnUUIDChannel(cmd);
+      }
 
-            if (!_profile) {
-                cmd.err = 'INVALID_DATA'
-                return returnUUIDChannel(cmd)
-            }
-            const profiles = CoNET_Data?.profiles
-            if (!profiles) {
-                cmd.err = 'NOT_READY';
-                return returnUUIDChannel(cmd)
-            }
-            const profileIndex = profiles.findIndex(n => n.keyID.toLowerCase() === _profile.keyID.toLowerCase())
-            if (profileIndex < 0) {
-                cmd.err = 'INVALID_DATA'
-                return returnUUIDChannel(cmd)
-            }
-            const profile = profiles[profileIndex]
+      case "unlock_cCNTP": {
+        const [_profile] = cmd.data;
 
-            returnUUIDChannel(cmd)
-            needUpgradeVer = epoch + 25
-            return
+        if (!_profile) {
+          cmd.err = "INVALID_DATA";
+          return returnUUIDChannel(cmd);
+        }
+        const profiles = CoNET_Data?.profiles;
+        if (!profiles) {
+          cmd.err = "NOT_READY";
+          return returnUUIDChannel(cmd);
+        }
+        const profileIndex = profiles.findIndex(
+          (n) => n.keyID.toLowerCase() === _profile.keyID.toLowerCase()
+        );
+        if (profileIndex < 0) {
+          cmd.err = "INVALID_DATA";
+          return returnUUIDChannel(cmd);
+        }
+        const profile = profiles[profileIndex];
+
+        returnUUIDChannel(cmd);
+        needUpgradeVer = epoch + 25;
+        return;
+      }
+
+      case "guardianPurchase": {
+        const [nodes, amount, profile, payAssetName] = cmd.data;
+        if (!nodes || !amount || !profile || !payAssetName) {
+          const cmd1 = {
+            cmd: "purchaseStatus",
+            data: [-1],
+          };
+          return sendState("toFrontEnd", cmd1);
+        }
+        const profiles = CoNET_Data?.profiles;
+        if (!profiles) {
+          const cmd1 = {
+            cmd: "purchaseStatus",
+            data: [-1],
+          };
+          return sendState("toFrontEnd", cmd1);
         }
 
-        case 'guardianPurchase': {
-            const [nodes, amount, profile, payAssetName] = cmd.data
-            if (!nodes || !amount || !profile || !payAssetName) {
-                const cmd1 = {
-					cmd: 'purchaseStatus',
-					data: [-1]
-				}
-				return sendState('toFrontEnd', cmd1)
-            }
-            const profiles = CoNET_Data?.profiles
-            if (!profiles) {
-                const cmd1 = {
-					cmd: 'purchaseStatus',
-					data: [-1]
-				}
-				return sendState('toFrontEnd', cmd1)
-            }
-
-            const profileIndex = profiles.findIndex(n => n.keyID.toLowerCase() === profile.keyID.toLowerCase())
-            if (profileIndex < 0) {
-                const cmd1 = {
-					cmd: 'purchaseStatus',
-					data: [-1]
-				}
-				return sendState('toFrontEnd', cmd1)
-            }
-			
-            const health = await getCONET_api_health()
-            if (!health) {
-                const cmd1 = {
-					cmd: 'purchaseStatus',
-					data: [-1]
-				}
-				return sendState('toFrontEnd', cmd1)
-            }
-
-            sendState('beforeunload', true)
-            const kk = await CONET_guardian_purchase(profile, nodes, amount, payAssetName);
-            sendState('beforeunload', false)
-
-            if (kk !== true) {
-                const cmd1 = {
-					cmd: 'purchaseStatus',
-					data: [-1]
-				}
-				return sendState('toFrontEnd', cmd1)
-            }
-            const cmd1 = {
-                cmd: 'purchaseStatus',
-                data: [4]
-            }
-            sendState('toFrontEnd', cmd1)
-            return returnUUIDChannel(cmd)
+        const profileIndex = profiles.findIndex(
+          (n) => n.keyID.toLowerCase() === profile.keyID.toLowerCase()
+        );
+        if (profileIndex < 0) {
+          const cmd1 = {
+            cmd: "purchaseStatus",
+            data: [-1],
+          };
+          return sendState("toFrontEnd", cmd1);
         }
 
-		case 'CONETianPlanPurchase': {
-			const [referrer, amount, profile, payAssetName] = cmd.data
-			returnUUIDChannel(cmd)
-
-            if (amount?.length !== 1 || !profile || !payAssetName) {
-				const cmd1 = {
-					cmd: 'purchaseStatus',
-					data: [-1]
-				}
-				return sendState('toFrontEnd', cmd1)
-				
-            }
-
-            const profiles = CoNET_Data?.profiles
-            if (!profiles) {
-                const cmd1 = {
-					cmd: 'purchaseStatus',
-					data: [-1]
-				}
-				return sendState('toFrontEnd', cmd1)
-
-            }
-
-            const profileIndex = profiles.findIndex(n => n.keyID.toLowerCase() === profile.keyID.toLowerCase())
-            if (profileIndex < 0) {
-                const cmd1 = {
-					cmd: 'purchaseStatus',
-					data: [-1]
-				}
-				return sendState('toFrontEnd', cmd1)
-				
-            }
-			
-            const health = await getCONET_api_health()
-            if (!health) {
-                const cmd1 = {
-					cmd: 'purchaseStatus',
-					data: [-1]
-				}
-				return sendState('toFrontEnd', cmd1)
-            }
-
-			const cmd2 = {
-				cmd: 'purchaseStatus',
-				data: [1]
-			}
-		
-			sendState('toFrontEnd', cmd2)
-
-            sendState('beforeunload', true)
-            const kk = await CONETianPlan_purchase(referrer, profile, amount, payAssetName)
-            sendState('beforeunload', false)
-
-            if (kk !== true) {
-                const cmd1 = {
-					cmd: 'purchaseStatus',
-					data: [-1]
-				}
-				return sendState('toFrontEnd', cmd1)
-            }
-
-            const cmd1 = {
-                cmd: 'purchaseStatus',
-                data: [4]
-            }
-
-            return sendState('toFrontEnd', cmd1)
-
-		}
-
-        case 'transferToken': {
-            const [amount, sourceProfileKeyID, assetName, toAddress] = cmd.data
-            if (!assetName || !toAddress || !amount || !sourceProfileKeyID) {
-                cmd.err = 'INVALID_DATA'
-                return returnUUIDChannel(cmd)
-            }
-            if (!getAddress(toAddress) && !getAddress(sourceProfileKeyID)) {
-                cmd.err = 'INVALID_DATA'
-                return returnUUIDChannel(cmd)
-            }
-            const profiles = CoNET_Data?.profiles
-            if (!profiles) {
-                cmd.err = 'NOT_READY'
-                return returnUUIDChannel(cmd)
-            }
-            const profileIndex = profiles.findIndex((n) => n.keyID.toLowerCase() === sourceProfileKeyID.toLowerCase())
-            if (profileIndex < 0) {
-                cmd.err = 'INVALID_DATA'
-                return returnUUIDChannel(cmd)
-            }
-
-            const sourceProfile = profiles[profileIndex]
-            sendState('beforeunload', true)
-
-			const cmd2 = {
-				cmd: 'purchaseStatus',
-				data: [1]
-			}
-			sendState('toFrontEnd', cmd2)
-            const kk = await CONET_transfer_token(sourceProfile, toAddress, amount, assetName)
-            sendState('beforeunload', false)
-
-            if (!!kk !== true) {
-                cmd.err = 'INVALID_DATA'
-                return returnUUIDChannel(cmd)
-            }
-
-            if (sourceProfile.keyID.toLowerCase() == miningAddress) {
-                cCNTPcurrentTotal -= amount
-            }
-
-            const cmd1 = {
-                cmd: 'tokenTransferStatus',
-                data: [4, kk]
-            };
-            sendState('toFrontEnd', cmd1)
-            return returnUUIDChannel(cmd)
+        const health = await getCONET_api_health();
+        if (!health) {
+          const cmd1 = {
+            cmd: "purchaseStatus",
+            data: [-1],
+          };
+          return sendState("toFrontEnd", cmd1);
         }
 
-        case 'estimateGas': {
-            const [amount, sourceProfileKeyID, assetName, toAddress] = cmd.data
+        sendState("beforeunload", true);
+        const kk = await CONET_guardian_purchase(
+          profile,
+          nodes,
+          amount,
+          payAssetName
+        );
+        sendState("beforeunload", false);
 
-            if (!assetName || !toAddress || !amount || !sourceProfileKeyID) {
-                cmd.err = 'INVALID_DATA'
-                return returnUUIDChannel(cmd)
-            }
+        if (kk !== true) {
+          const cmd1 = {
+            cmd: "purchaseStatus",
+            data: [-1],
+          };
+          return sendState("toFrontEnd", cmd1);
+        }
+        const cmd1 = {
+          cmd: "purchaseStatus",
+          data: [4],
+        };
+        sendState("toFrontEnd", cmd1);
+        return returnUUIDChannel(cmd);
+      }
 
-            const profiles = CoNET_Data?.profiles
+      case "CONETianPlanPurchase": {
+        const [referrer, amount, profile, payAssetName] = cmd.data;
+        returnUUIDChannel(cmd);
 
-            if (!profiles) {
-                cmd.err = 'FAILURE'
-                return returnUUIDChannel(cmd)
-            }
-
-            const profile = getProfileFromKeyID(sourceProfileKeyID)
-			
-            if (!profile || !profile?.tokens) {
-                cmd.err = 'INVALID_DATA';
-                return returnUUIDChannel(cmd)
-            }
-
-
-            const asset = profile.tokens[assetName]
-
-
-            if (!profile.privateKeyArmor || !asset) {
-                cmd.err = 'INVALID_DATA'
-                return returnUUIDChannel(cmd)
-            }
-
-            const data: any = await getEstimateGasForTokenTransfer(profile.privateKeyArmor, assetName, amount, toAddress)
-            cmd.data = [data.gasPrice, data.fee, true, 5000]
-            return returnUUIDChannel(cmd)
+        if (amount?.length !== 1 || !profile || !payAssetName) {
+          const cmd1 = {
+            cmd: "purchaseStatus",
+            data: [-1],
+          };
+          return sendState("toFrontEnd", cmd1);
         }
 
-        case 'isAddress': {
-            const address = cmd.data[0];
-            const ret = getAddress(address);
-            cmd.data = [ret === '' ? false : true];
-            return returnUUIDChannel(cmd);
+        const profiles = CoNET_Data?.profiles;
+        if (!profiles) {
+          const cmd1 = {
+            cmd: "purchaseStatus",
+            data: [-1],
+          };
+          return sendState("toFrontEnd", cmd1);
         }
 
-        case 'burnCCNTP': {
-            const [_profile, total] = cmd.data
-            if (!_profile) {
-                cmd.err = 'INVALID_DATA'
-                return returnUUIDChannel(cmd)
-            }
-
-            const profiles = CoNET_Data?.profiles
-            if (!profiles) {
-                cmd.err = 'NOT_READY'
-                return returnUUIDChannel(cmd)
-            }
-
-            const profileIndex = profiles.findIndex(n => n.keyID.toLowerCase() === _profile.keyID.toLowerCase())
-
-            if (profileIndex < 0) {
-                cmd.err = 'INVALID_DATA'
-                return returnUUIDChannel(cmd);
-            }
-
-            const profile = profiles[profileIndex]
-
-			
-
-            const tx = await burnCCNTP(profile, total)
-            if (!tx) {
-                cmd.err = 'INVALID_DATA'
-                return returnUUIDChannel(cmd)
-            }
-
-            profiles[0].burnCCNTP = tx
-            cmd.data = [tx]
-            returnUUIDChannel(cmd)
-            await storagePieceToLocal()
-            await storeSystemData()
-            return
+        const profileIndex = profiles.findIndex(
+          (n) => n.keyID.toLowerCase() === profile.keyID.toLowerCase()
+        );
+        if (profileIndex < 0) {
+          const cmd1 = {
+            cmd: "purchaseStatus",
+            data: [-1],
+          };
+          return sendState("toFrontEnd", cmd1);
         }
 
-        case 'preBurnCCNTP': {
-
-            const [_profile, total] = cmd.data
-            if (!_profile) {
-                cmd.err = 'INVALID_DATA'
-                return returnUUIDChannel(cmd)
-            }
-
-            const profiles = CoNET_Data?.profiles
-            if (!profiles) {
-                cmd.err = 'NOT_READY'
-                return returnUUIDChannel(cmd)
-            }
-
-            const profileIndex = profiles.findIndex(n => n.keyID.toLowerCase() === _profile.keyID.toLowerCase())
-            if (profileIndex < 0) {
-                cmd.err = 'INVALID_DATA'
-                return returnUUIDChannel(cmd)
-            }
-            const profile = profiles[profileIndex]
-            await getFaucet(profile)
-            const gasFee = await preBurnCCNTP(profile, total)
-            if (!gasFee) {
-                cmd.err = 'INVALID_DATA'
-                return returnUUIDChannel(cmd)
-            }
-            cmd.data = [gasFee]
-            return returnUUIDChannel(cmd)
+        const health = await getCONET_api_health();
+        if (!health) {
+          const cmd1 = {
+            cmd: "purchaseStatus",
+            data: [-1],
+          };
+          return sendState("toFrontEnd", cmd1);
         }
 
-		case 'startSilentPass': {
-			const [profileKeyId, entryRegion, egressRegion] = cmd.data
+        const cmd2 = {
+          cmd: "purchaseStatus",
+          data: [1],
+        };
 
-			if (!profileKeyId || !entryRegion || !egressRegion) {
-				cmd.err = 'INVALID_DATA'
-				return returnUUIDChannel(cmd)
-			}
+        sendState("toFrontEnd", cmd2);
 
-			const profiles = CoNET_Data?.profiles
-			if (!profiles) {
-				cmd.err = 'NOT_READY'
-				return returnUUIDChannel(cmd)
-			}
+        sendState("beforeunload", true);
+        const kk = await CONETianPlan_purchase(
+          referrer,
+          profile,
+          amount,
+          payAssetName
+        );
+        sendState("beforeunload", false);
 
-			const profileIndex = profiles.findIndex(n => n.keyID.toLowerCase() === profileKeyId.toLowerCase())
-			if (profileIndex < 0) {
-				cmd.err = 'INVALID_DATA'
-				return returnUUIDChannel(cmd)
-			}
-			const profile = profiles[profileIndex]
-
-			var result = await startSilentPass(profile, entryRegion, egressRegion)
-
-			if (result === false) {
-				cmd.err = 'FAILURE'
-				return returnUUIDChannel(cmd)
-			}
-
-			cmd.data = [result]
-			return returnUUIDChannel(cmd)
-		}
-
-		case 'getGuardianRegion' : {
-			const result = await getRegion ()
-			cmd.data = [result]
-			return returnUUIDChannel(cmd)
-		}
-
-		case 'prePurchase': {
-			return prePurchase(cmd)
-		}
-
-		case 'saveDomain': {
-			const domain: URL = cmd.data[0]
-			const id = cmd.data[1]
-			const node = cmd.data[2]
-			const index = backGroundPoolWorker.findIndex(n => n.id === id)
-			if (index > -1) {
-				backGroundPoolWorker.splice(index)
-			}
-			return backGroundPoolWorker.push({id, domain, node})
-		}
-
-		case 'fx168PrePurchase': {
-			return fx168PrePurchase (cmd)
-		}
-
-		case 'CONETFaucet': {
-			
-			const keyID = cmd.data[0]
-		
-			const profile = getProfileFromKeyID(keyID)
-			if (!profile) {
-				cmd.err = 'INVALID_DATA'
-				return returnUUIDChannel(cmd)
-			}
-
-			const result = await getFaucet(profile)
-
-			if (!result) {
-				cmd.err='FAILURE'
-				return returnUUIDChannel(cmd)
-			}
-			await getAllProfileAssetsBalance()
-			return returnUUIDChannel(cmd)
-		}
-	
-		case 'getDomain': {
-			const id = cmd.data[0]
-			if (id) {
-				const index = backGroundPoolWorker.findIndex(n => n.id === id)
-				if (index > -1) {
-					cmd.data[1] = backGroundPoolWorker[index]
-				} else {
-					cmd.err = 'UNKNOW_ERROR'
-				}
-			} else {
-				cmd.data[1] = backGroundPoolWorker[backGroundPoolWorker.length - 1]
-				if (!cmd.data[1]) {
-					cmd.err = 'INVALID_DATA'
-				}
-			}
-			
-			return responseChannel.postMessage(JSON.stringify(cmd))
-		}
-
-		case 'showSRP': {
-			return showSRP(cmd)
-		}
-	
-		case 'getWorkerClientID' : {
-			cmd.data = [ClientIDworker]
-			logger (`Worker encryptWorkerDoCommand got getWorkerClientID ClientIDworker = [${ClientIDworker}]`)
-			return responseChannel.postMessage(JSON.stringify(cmd))
-		}
-
-		case 'createAccount': {
-			return createAccount(cmd)
-		}
-
-        case 'getContainer': {
-            cmd.data = [platform]
-            return returnUUIDChannel(cmd)
+        if (kk !== true) {
+          const cmd1 = {
+            cmd: "purchaseStatus",
+            data: [-1],
+          };
+          return sendState("toFrontEnd", cmd1);
         }
 
-        case 'testPasscode': {
-            return testPasscode(cmd)
+        const cmd1 = {
+          cmd: "purchaseStatus",
+          data: [4],
+        };
+
+        return sendState("toFrontEnd", cmd1);
+      }
+
+      case "transferToken": {
+        const [amount, sourceProfileKeyID, assetName, toAddress] = cmd.data;
+        if (!assetName || !toAddress || !amount || !sourceProfileKeyID) {
+          cmd.err = "INVALID_DATA";
+          return returnUUIDChannel(cmd);
         }
-        case "showLeaderboard": {
-            cmd.data[0] = leaderboardData
-            return returnUUIDChannel(cmd)
+        if (!getAddress(toAddress) && !getAddress(sourceProfileKeyID)) {
+          cmd.err = "INVALID_DATA";
+          return returnUUIDChannel(cmd);
+        }
+        const profiles = CoNET_Data?.profiles;
+        if (!profiles) {
+          cmd.err = "NOT_READY";
+          return returnUUIDChannel(cmd);
+        }
+        const profileIndex = profiles.findIndex(
+          (n) => n.keyID.toLowerCase() === sourceProfileKeyID.toLowerCase()
+        );
+        if (profileIndex < 0) {
+          cmd.err = "INVALID_DATA";
+          return returnUUIDChannel(cmd);
         }
 
-        case 'importWallet': {
-            return importWallet(cmd)
+        const sourceProfile = profiles[profileIndex];
+
+        if (!sourceProfile.tokens) {
+          cmd.err = "INVALID_DATA";
+          return returnUUIDChannel(cmd);
         }
 
-        case 'SaaSRegister': {
-            return logger(`processCmd on SaaSRegister`)
+        sendState("beforeunload", true);
+
+        const cmd2 = {
+          cmd: "purchaseStatus",
+          data: [1],
+        };
+        sendState("toFrontEnd", cmd2);
+
+        let completedTx;
+
+        if (sourceProfile.tokens[assetName]?.isNft) {
+          completedTx = await transferNft(
+            sourceProfile,
+            toAddress,
+            amount,
+            assetName
+          );
+        } else {
+          completedTx = await CONET_transfer_token(
+            sourceProfile,
+            toAddress,
+            amount,
+            assetName
+          );
         }
 
-        case 'encrypt_deletePasscode': {
-            cmd.data = [initNullSystemInitialization()]
-            returnUUIDChannel(cmd)
-            return await deleteExistDB()
+        sendState("beforeunload", false);
+
+        if (!!completedTx !== true) {
+          cmd.err = "INVALID_DATA";
+          return returnUUIDChannel(cmd);
         }
 
+        if (sourceProfile.keyID.toLowerCase() == miningAddress) {
+          cCNTPcurrentTotal -= amount;
+        }
 
-		case 'ipaddress': {
-			
-			const url = `http://localhost:3001/ipaddress`
-			cmd.data = [await postToEndpoint(url, false, '')]
-			
-			return returnUUIDChannel(cmd)
-			
-		}
+        const cmd1 = {
+          cmd: "tokenTransferStatus",
+          data: [4, completedTx],
+        };
+        sendState("toFrontEnd", cmd1);
+        return returnUUIDChannel(cmd);
+      }
 
-		case 'syncAssetV1': {
-			const profile = gettPrimaryProfile()
-			if (profile) {
-				return getProfileAssets_CONET_Balance(profile)
-			}
-			return
-		}
+      case "estimateGas": {
+        const [amount, sourceProfileKeyID, assetName, toAddress] = cmd.data;
 
-		case 'registerReferrer': {
-			const referrer = cmd.data[0]
-			if (!referrer) {
-				cmd.err='FAILURE'
-				returnUUIDChannel(cmd)
-			}
-			const isAddr = ethers.isAddress(referrer)
+        if (!assetName || !toAddress || !amount || !sourceProfileKeyID) {
+          cmd.err = "INVALID_DATA";
+          return returnUUIDChannel(cmd);
+        }
 
-			if (!isAddr) {
-				cmd.err='FAILURE'
-				return returnUUIDChannel(cmd)
-			}
+        const profiles = CoNET_Data?.profiles;
 
-			const result = await registerReferrer(referrer)
-			if (result === false)  {
-				cmd.err='FAILURE'
-				return returnUUIDChannel(cmd)
-			}
-			return returnUUIDChannel(cmd)
-		}
+        if (!profiles) {
+          cmd.err = "FAILURE";
+          return returnUUIDChannel(cmd);
+        }
 
-		case 'getRefereesList': {
-			return getReferrerList(cmd)
-		}
+        const profile = getProfileFromKeyID(sourceProfileKeyID);
 
-		case 'recoverAccount': {
-			return recoverAccount(cmd)
-		}
+        if (!profile || !profile?.tokens) {
+          cmd.err = "INVALID_DATA";
+          return returnUUIDChannel(cmd);
+        }
 
-		case 'claimToken': {
-			return claimToken (cmd)
-		}
+        const asset = profile.tokens[assetName];
 
-		case 'getAllProfiles': {
-			const profiles = CoNET_Data?.profiles
-			if (!profiles) {
-				cmd.err = 'NOT_READY'
-				return returnUUIDChannel(cmd)
-			}
-			cmd.data = [profiles]
-			return returnUUIDChannel(cmd)
-		}
+        if (!profile.privateKeyArmor || !asset) {
+          cmd.err = "INVALID_DATA";
+          return returnUUIDChannel(cmd);
+        }
 
-		case 'getAllOtherAssets': {
+        let data: any = null;
 
-			
-			const profiles = CoNET_Data?.profiles
-			if (!profiles) {
-				cmd.err = 'NOT_READY'
-				return returnUUIDChannel(cmd)
-			}
-			await getAllOtherAssets()
-			cmd.data = [profiles]
-			return returnUUIDChannel(cmd)
-		}
+        if (profile.tokens[assetName]?.isNft) {
+          data = await getEstimateGasForNftTransfer(
+            profile.privateKeyArmor,
+            nfts?.[assetName.toLowerCase()],
+            amount,
+            toAddress
+          );
+        } else {
+          data = await getEstimateGasForTokenTransfer(
+            profile.privateKeyArmor,
+            assetName,
+            amount,
+            toAddress
+          );
+        }
 
-		case 'updateProfile': {
-			return updateProfile(cmd)
-		}
+        cmd.data = [data.gasPrice, data.fee, true, 5000];
+        return returnUUIDChannel(cmd);
+      }
 
-		case 'addProfile': {
-			return addProfile (cmd)
-		}
+      case "isAddress": {
+        const address = cmd.data[0];
+        const ret = getAddress(address);
+        cmd.data = [ret === "" ? false : true];
+        return returnUUIDChannel(cmd);
+      }
 
-		case 'resetPasscode': {
-			return resetPasscode (cmd)
-		}
+      case "burnCCNTP": {
+        const [_profile, total] = cmd.data;
+        if (!_profile) {
+          cmd.err = "INVALID_DATA";
+          return returnUUIDChannel(cmd);
+        }
 
-		case 'isWalletAgent': {
-			return isWalletAgent (cmd)
-		}
+        const profiles = CoNET_Data?.profiles;
+        if (!profiles) {
+          cmd.err = "NOT_READY";
+          return returnUUIDChannel(cmd);
+        }
 
-		default: {
-			cmd.err = 'INVALID_COMMAND'
-			responseChannel.postMessage(JSON.stringify(cmd))
-			console.log (`channelWorkerDoCommand unknow command!`, cmd)
-			return returnUUIDChannel(cmd)
-		}
-	}
+        const profileIndex = profiles.findIndex(
+          (n) => n.keyID.toLowerCase() === _profile.keyID.toLowerCase()
+        );
+
+        if (profileIndex < 0) {
+          cmd.err = "INVALID_DATA";
+          return returnUUIDChannel(cmd);
+        }
+
+        const profile = profiles[profileIndex];
+
+        const tx = await burnCCNTP(profile, total);
+        if (!tx) {
+          cmd.err = "INVALID_DATA";
+          return returnUUIDChannel(cmd);
+        }
+
+        profiles[0].burnCCNTP = tx;
+        cmd.data = [tx];
+        returnUUIDChannel(cmd);
+        await storagePieceToLocal();
+        await storeSystemData();
+        return;
+      }
+
+      case "preBurnCCNTP": {
+        const [_profile, total] = cmd.data;
+        if (!_profile) {
+          cmd.err = "INVALID_DATA";
+          return returnUUIDChannel(cmd);
+        }
+
+        const profiles = CoNET_Data?.profiles;
+        if (!profiles) {
+          cmd.err = "NOT_READY";
+          return returnUUIDChannel(cmd);
+        }
+
+        const profileIndex = profiles.findIndex(
+          (n) => n.keyID.toLowerCase() === _profile.keyID.toLowerCase()
+        );
+        if (profileIndex < 0) {
+          cmd.err = "INVALID_DATA";
+          return returnUUIDChannel(cmd);
+        }
+        const profile = profiles[profileIndex];
+        await getFaucet(profile);
+        const gasFee = await preBurnCCNTP(profile, total);
+        if (!gasFee) {
+          cmd.err = "INVALID_DATA";
+          return returnUUIDChannel(cmd);
+        }
+        cmd.data = [gasFee];
+        return returnUUIDChannel(cmd);
+      }
+
+      case "startSilentPass": {
+        const [profileKeyId, entryRegion, egressRegion] = cmd.data;
+
+        if (!profileKeyId || !entryRegion || !egressRegion) {
+          cmd.err = "INVALID_DATA";
+          return returnUUIDChannel(cmd);
+        }
+
+        const profiles = CoNET_Data?.profiles;
+        if (!profiles) {
+          cmd.err = "NOT_READY";
+          return returnUUIDChannel(cmd);
+        }
+
+        const profileIndex = profiles.findIndex(
+          (n) => n.keyID.toLowerCase() === profileKeyId.toLowerCase()
+        );
+        if (profileIndex < 0) {
+          cmd.err = "INVALID_DATA";
+          return returnUUIDChannel(cmd);
+        }
+        const profile = profiles[profileIndex];
+
+        var result = await startSilentPass(profile, entryRegion, egressRegion);
+
+        if (result === false) {
+          cmd.err = "FAILURE";
+          return returnUUIDChannel(cmd);
+        }
+
+        cmd.data = [result];
+        return returnUUIDChannel(cmd);
+      }
+
+      case "getGuardianRegion": {
+        const result = await getRegion();
+        cmd.data = [result];
+        return returnUUIDChannel(cmd);
+      }
+
+      case "prePurchase": {
+        return prePurchase(cmd);
+      }
+
+      case "saveDomain": {
+        const domain: URL = cmd.data[0];
+        const id = cmd.data[1];
+        const node = cmd.data[2];
+        const index = backGroundPoolWorker.findIndex((n) => n.id === id);
+        if (index > -1) {
+          backGroundPoolWorker.splice(index);
+        }
+        return backGroundPoolWorker.push({ id, domain, node });
+      }
+
+      case "fx168PrePurchase": {
+        return fx168PrePurchase(cmd);
+      }
+
+      case "CONETFaucet": {
+        const keyID = cmd.data[0];
+
+        const profile = getProfileFromKeyID(keyID);
+        if (!profile) {
+          cmd.err = "INVALID_DATA";
+          return returnUUIDChannel(cmd);
+        }
+
+        const result = await getFaucet(profile);
+
+        if (!result) {
+          cmd.err = "FAILURE";
+          return returnUUIDChannel(cmd);
+        }
+        await getAllProfileAssetsBalance();
+        return returnUUIDChannel(cmd);
+      }
+
+      case "getDomain": {
+        const id = cmd.data[0];
+        if (id) {
+          const index = backGroundPoolWorker.findIndex((n) => n.id === id);
+          if (index > -1) {
+            cmd.data[1] = backGroundPoolWorker[index];
+          } else {
+            cmd.err = "UNKNOW_ERROR";
+          }
+        } else {
+          cmd.data[1] = backGroundPoolWorker[backGroundPoolWorker.length - 1];
+          if (!cmd.data[1]) {
+            cmd.err = "INVALID_DATA";
+          }
+        }
+
+        return responseChannel.postMessage(JSON.stringify(cmd));
+      }
+
+      case "showSRP": {
+        return showSRP(cmd);
+      }
+
+      case "getWorkerClientID": {
+        cmd.data = [ClientIDworker];
+        logger(
+          `Worker encryptWorkerDoCommand got getWorkerClientID ClientIDworker = [${ClientIDworker}]`
+        );
+        return responseChannel.postMessage(JSON.stringify(cmd));
+      }
+
+      case "createAccount": {
+        return createAccount(cmd);
+      }
+
+      case "getContainer": {
+        cmd.data = [platform];
+        return returnUUIDChannel(cmd);
+      }
+
+      case "testPasscode": {
+        return testPasscode(cmd);
+      }
+      case "showLeaderboard": {
+        cmd.data[0] = leaderboardData;
+        return returnUUIDChannel(cmd);
+      }
+
+      case "importWallet": {
+        return importWallet(cmd);
+      }
+
+      case "SaaSRegister": {
+        return logger(`processCmd on SaaSRegister`);
+      }
+
+      case "encrypt_deletePasscode": {
+        cmd.data = [initNullSystemInitialization()];
+        returnUUIDChannel(cmd);
+        return await deleteExistDB();
+      }
+
+      case "ipaddress": {
+        const url = `http://localhost:3001/ipaddress`;
+        cmd.data = [await postToEndpoint(url, false, "")];
+
+        return returnUUIDChannel(cmd);
+      }
+
+      case "syncAssetV1": {
+        const profile = gettPrimaryProfile();
+        if (profile) {
+          return getProfileAssets_CONET_Balance(profile);
+        }
+        return;
+      }
+
+      case "registerReferrer": {
+        const referrer = cmd.data[0];
+        if (!referrer) {
+          cmd.err = "FAILURE";
+          returnUUIDChannel(cmd);
+        }
+        const isAddr = ethers.isAddress(referrer);
+
+        if (!isAddr) {
+          cmd.err = "FAILURE";
+          return returnUUIDChannel(cmd);
+        }
+
+        const result = await registerReferrer(referrer);
+        if (result === false) {
+          cmd.err = "FAILURE";
+          return returnUUIDChannel(cmd);
+        }
+        return returnUUIDChannel(cmd);
+      }
+
+      case "getRefereesList": {
+        return getReferrerList(cmd);
+      }
+
+      case "recoverAccount": {
+        return recoverAccount(cmd);
+      }
+
+      case "claimToken": {
+        return claimToken(cmd);
+      }
+
+      case "getAllProfiles": {
+        const profiles = CoNET_Data?.profiles;
+        if (!profiles) {
+          cmd.err = "NOT_READY";
+          return returnUUIDChannel(cmd);
+        }
+        cmd.data = [profiles];
+        return returnUUIDChannel(cmd);
+      }
+
+      case "getAllOtherAssets": {
+        const profiles = CoNET_Data?.profiles;
+        if (!profiles) {
+          cmd.err = "NOT_READY";
+          return returnUUIDChannel(cmd);
+        }
+        await getAllOtherAssets();
+        cmd.data = [profiles];
+        return returnUUIDChannel(cmd);
+      }
+
+      case "updateProfile": {
+        return updateProfile(cmd);
+      }
+
+      case "addProfile": {
+        return addProfile(cmd);
+      }
+
+      case "resetPasscode": {
+        return resetPasscode(cmd);
+      }
+
+      case "isWalletAgent": {
+        return isWalletAgent(cmd);
+      }
+
+      default: {
+        cmd.err = "INVALID_COMMAND";
+        responseChannel.postMessage(JSON.stringify(cmd));
+        console.log(`channelWorkerDoCommand unknow command!`, cmd);
+        return returnUUIDChannel(cmd);
+      }
+    }
 }
 
 /**

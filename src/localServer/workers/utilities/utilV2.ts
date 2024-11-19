@@ -93,6 +93,24 @@ const GuardianReferrerNftId = 2
 const GuardianPriceUSDT = 100
 
 //	******************************************************************
+
+const nfts = {
+  conetiannft: {
+    id: ConetianNftId,
+    name: "conetiannft",
+    contractAddress: CONETianPlanAddr,
+    contractAbi: CONETianPlan_ABI,
+  },
+  conetianagentnft: {
+    id: ConetianReferrerNftId,
+    name: "conetianagentnft",
+    contractAddress: CONETianPlanAddr,
+    contractAbi: CONETianPlan_ABI,
+  },
+};
+
+//	******************************************************************
+
 const getAddress = (addr) => {
     let ret = '';
     try {
