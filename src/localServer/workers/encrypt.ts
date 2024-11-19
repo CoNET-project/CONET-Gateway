@@ -131,6 +131,7 @@ const initEncryptWorker = async () => {
     self.importScripts(baseUrl + 'TronWeb.js')
 	self.importScripts(baseUrl + 'utilV2.js')
 	self.importScripts(baseUrl + 'miningV2.js')
+	self.importScripts(baseUrl + 'tool2.js')
     
     self.importScripts('https://cdnjs.cloudflare.com/ajax/libs/ethers/6.13.4/ethers.umd.min.js')
     workerReady = true

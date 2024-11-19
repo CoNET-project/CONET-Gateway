@@ -202,6 +202,7 @@ let provideBlastMainChain = null
 let provideETH = null
 let provideBNB = null
 let provideArbOne = null
+let provideTron = null
 
 const getProfileAssets_allOthers_Balance = async (profile: profile) => {
     const key = profile.keyID
@@ -218,6 +219,10 @@ const getProfileAssets_allOthers_Balance = async (profile: profile) => {
 			provideBNB = new ethers.JsonRpcProvider(bsc_mainchain)
 		}
 
+		if (!provideTron) {
+			provideTron = new ethers.JsonRpcProvider(tron_mainnet)
+		}
+
 		if (!provideArbOne) {
 			provideArbOne = new ethers.JsonRpcProvider(Arbitrum_One_RPC)
 		}
@@ -232,7 +237,8 @@ const getProfileAssets_allOthers_Balance = async (profile: profile) => {
         const [
 			usdt, eth, 
 			bnb, wusdt,
-			arb_usdt, arb_eth
+			arb_usdt, arb_eth,
+			tron, tronUsdt
 		] = await Promise.all([
             scanUSDT(key),
             scanETH(key),
@@ -241,7 +247,10 @@ const getProfileAssets_allOthers_Balance = async (profile: profile) => {
             scanWUSDT(key),
 
 			scanArbUSDT(key),
-			scanArbETH(key)
+			scanArbETH(key),
+
+			scanTron(key),
+			scanTronUSDT(key)
         ])
 
 		if (current.usdt) {
@@ -258,13 +267,14 @@ const getProfileAssets_allOthers_Balance = async (profile: profile) => {
 		}
 
 		if (current.tron) {
-			current.tron.usdt.balance = '0'
-			current.tron.tron.balance = '0'
+			current.tron.usdt.balance = tronUsdt === false ? '0': ethers.formatUnits(tronUsdt, 6)
+			current.tron.tron.balance = tron === false ? '0':  ethers.formatUnits(tron, 6)
+
 		} else {
 			current.tron = {
-				walletAddress: TronWeb.TronWeb.address.fromHex('0x454428d883521c8af9e88463e97e4d343c600914'),
+				walletAddress: TronWeb.TronWeb.address.fromHex(key),
 				usdt: {
-					balance: '',
+					balance: tronUsdt === false ? '0': ethers.formatUnits(tronUsdt, 6),
 					history: [],
 					network: 'Tron',
 					decimal: 18,
@@ -272,7 +282,7 @@ const getProfileAssets_allOthers_Balance = async (profile: profile) => {
 					name: 'tronUSDT'
 				},
 				tron: {
-					balance: '',
+					balance: tron === false ? '0':  ethers.formatUnits(tron, 6),
 					history: [],
 					network: 'Tron',
 					decimal: 18,
@@ -2009,8 +2019,17 @@ const scanArbETH = async (walletAddr: string) => {
 	return await scan_natureBalance(provideArbOne, walletAddr)
 }
 
+const scanTron = async (walletAddr: string) => {
+	return await scan_natureBalance (provideTron, walletAddr)
+}
+
 const scanWUSDT = async (walletAddr: string) => {
     return await scan_erc20_balance(walletAddr, bnb_usdt_contract, provideBNB)
+}
+
+const scanTronUSDT = async(walletAddr: string) => {
+	
+	return await scan_erc20_balance(walletAddr, tron_USDT, provideTron)
 }
 
 const scanArbUSDT = async(walletAddr: string) => {
