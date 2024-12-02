@@ -9,3 +9,5 @@ test.*
 .vscode
 ./test.*
 tsconfig2.json
+
+**/*.Identifier
