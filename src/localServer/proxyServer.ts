@@ -28,6 +28,8 @@ const _HTTP_200 = ( body: string ) => {
 	return ret
 }
 
+const _HTTP_200V2 = `HTTP/1.1 200 Connection Established\r\n\r\n`
+
 
 const isSslFromBuffer = ( buffer ) => {
 
@@ -50,7 +52,7 @@ const httpProxy = ( clientSocket: Net.Socket, _buffer: Buffer, agent: string, pr
 	const hostName = httpHead.host
 	const ssl = isSslFromBuffer ( _buffer )
 	const connect = (_data: Buffer) => {
-		
+		hexDebug(_data)
 		const uuuu : VE_IPptpStream = {
 			uuid: Crypto.randomBytes (10).toString ('hex'),
 			host: hostName,
@@ -67,12 +69,12 @@ const httpProxy = ( clientSocket: Net.Socket, _buffer: Buffer, agent: string, pr
 
 	const reqtest = _buffer.toString()
 	if (/^CONNECT /.test(reqtest)) {
-
+		hexDebug(_buffer)
 		clientSocket.once ('data', data => {
 			return connect (data)
 		})
 
-		const response = _HTTP_200('')
+		const response = _HTTP_200V2
 		return clientSocket.write(response)
 	}
 
@@ -180,6 +182,7 @@ const createSock5ConnectCmd = async (currentProfile: profile, SaaSnode: nodes_in
 
 
 	logger(Colors.blue(`createSock5ConnectCmd data = ${inspect(requestData, false, 3, true)}`))
+	logger(Colors.blue(`createSock5ConnectCmd data length = ${requestData[0].buffer.length}`))
 
 	const message =JSON.stringify(command)
 	const messageHash = ethers.id(message)
@@ -191,7 +194,7 @@ const createSock5ConnectCmd = async (currentProfile: profile, SaaSnode: nodes_in
 	return (command)
 }
 
-const otherRequestForNet = ( data: string, host: string, port: number, UserAgent: string,  ) => {
+const otherRequestForNet = ( data: string, host: string, port: number, UserAgent: string ) => {
 
 	return 	`POST /post HTTP/1.1\r\n` +
 			`Host: ${ host }${ port !== 80 ? ':'+ port : '' }\r\n` +
@@ -204,7 +207,7 @@ const otherRequestForNet = ( data: string, host: string, port: number, UserAgent
 
 
 class transferCount extends Transform {
-	public data  =''
+	public data  = ''
 	constructor(private upload: boolean, private info: ITypeTransferCount) {
 		super()
 	}

@@ -200,7 +200,7 @@ const _startMiningV2 = async (profile: profile, cmd: worker_command|null = null)
 			return
 		}
 
-		validator(response, profile, entryNode)
+		return validator(response, profile, entryNode)
     })
 }
 
@@ -224,7 +224,8 @@ const validator = async (response: nodeResponse, profile: profile, sentryNode: n
 	}
 
 	const url = `https://${sentryNode.domain}/post`
-	const req = await postToEndpoint(url, true, {data: request.requestData[0]}).catch(ex => {
+	const req = await postToEndpoint(url, true, {data: request.requestData[0]})
+	.catch(ex => {
 		logger(ex)
 	})
 

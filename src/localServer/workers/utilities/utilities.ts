@@ -343,8 +343,6 @@ const postToEndpoint = ( url: string, post: boolean, jsonData ) => new Promise (
 		reject (new Error ( Err ))
 	}, XMLHttpRequestTimeout )
 })
-	
-
 
 const changeBigIntToString = (Obj: any) => {
 	const keys = Object.keys(Obj)
@@ -699,7 +697,6 @@ const postToEndpointSSE = ( url: string, post: boolean, jsonData, CallBack:(err:
 			}
 			
 			const currentData = data.substring(chunk)
-			const responseText = data.split('\r\n\r\n')
 			chunk = data.length
 			CallBack (null, currentData)
 
