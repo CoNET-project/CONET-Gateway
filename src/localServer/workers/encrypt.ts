@@ -819,6 +819,14 @@ const processCmd = async (cmd: worker_command) => {
         return isWalletAgent(cmd);
       }
 
+      case "addMonitoredWallet": {
+        return addMonitoredWallet(cmd);
+      }
+
+      case "removeMonitoredWallet": {
+        return removeMonitoredWallet(cmd);
+      }
+
       default: {
         cmd.err = "INVALID_COMMAND";
         responseChannel.postMessage(JSON.stringify(cmd));

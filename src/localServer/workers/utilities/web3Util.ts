@@ -992,11 +992,13 @@ const listenProfileVer = async () => {
 			runningList.push(selectLeaderboard(block))
 			runningList.push(getassetOracle())
 
+            runningList.push(getBalanceOfMonitoredWallets())
+
             await Promise.all(runningList)
 
             const cmd = {
                 cmd: 'assets',
-                data: [profiles, RefereesList, leaderboardData, assetOracle]
+                data: [profiles, RefereesList, leaderboardData, assetOracle, CoNET_Data?.monitoredWallets ]
             }
 
             sendState('toFrontEnd', cmd)
@@ -2998,5 +3000,85 @@ const getReferrer = async (wallet, CNTP_Referrals) => {
         return null
     }
     return result
+}
+
+const addMonitoredWallet = (cmd) => {
+    const walletAddress = cmd.data[0]
+
+    if (
+        !CoNET_Data ||
+        !walletAddress
+    ) {
+        cmd.err = "FAILURE";
+        return returnUUIDChannel(cmd);
+    }
+
+    if (!CoNET_Data?.monitoredWallets){
+        CoNET_Data.monitoredWallets = []
+    }
+
+    if (!CoNET_Data.monitoredWallets.find(w => w.address === walletAddress)) {
+        const monitoredWallet = {
+            address: walletAddress,
+            cntpBalance: '0'
+        }
+
+        CoNET_Data?.monitoredWallets.push(monitoredWallet)
+    }
+
+    return returnUUIDChannel(cmd)
+}
+
+const removeMonitoredWallet = (cmd) => {
+    const walletAddress = cmd.data[0]
+
+    if (
+        !CoNET_Data ||
+        !walletAddress
+    ) {
+        cmd.err = "FAILURE";
+        return returnUUIDChannel(cmd);
+    }
+
+    if (!CoNET_Data?.monitoredWallets) {
+        CoNET_Data.monitoredWallets = [];
+    }
+
+    if (CoNET_Data.monitoredWallets.find(w => w.address === walletAddress)) {
+        CoNET_Data.monitoredWallets = CoNET_Data?.monitoredWallets.filter(w => w.address !== walletAddress)
+    }    
+}
+
+const getBalanceOfMonitoredWallets = async () => {
+    if(!CoNET_Data) {
+        return
+    }
+
+    if (!CoNET_Data?.monitoredWallets) {
+      CoNET_Data.monitoredWallets = [];
+    }
+
+    const wallets = CoNET_Data?.monitoredWallets
+
+    if (!wallets || wallets.length === 0) {
+        return
+    }
+
+    const tmpMonitoredWallets: MonitoredWallet[] = []
+
+    for (const wallet of wallets) {
+        const balance = await scanCCNTP(wallet.address)
+
+        if(balance) {
+            wallet.cntpBalance =
+              !balance
+                ? ""
+                : parseFloat(ethers.formatEther(balance)).toFixed(6);
+        }
+
+        tmpMonitoredWallets.push(wallet)
+    }
+
+    CoNET_Data.monitoredWallets = tmpMonitoredWallets
 }
 

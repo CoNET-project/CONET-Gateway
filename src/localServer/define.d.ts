@@ -173,7 +173,7 @@ declare type WorkerCommand = 'READY'|'getRegiestNodes'|'beforeunload'|'createAcc
     'SaaSRegister'|'getContainer'|'ipaddress'|'startLiveness'|'stopLiveness'|'isLivenessRunning'|'importWallet'|'startMining'|'stopMining'|
 	//		from service worker
 	'urlProxy'|'saveDomain'|'getDomain'|'getWorkerClientID'|'getRefereesList'|'getAllNodes'|'getAllProfiles'|'updateProfile'|'addProfile'|'resetPasscode'|
-	'getAssetsPrice'|'recoverAccount'|'CONETFaucet'|'prePurchase'|'guardianPurchase'|'fx168PrePurchase'|'claimToken' | 'transferToken' | 'estimateGas' | 'estimateGasForNftContract' | 'startSilentPass' | 'isWalletAgent' | 'transferNft'
+	'getAssetsPrice'|'recoverAccount'|'CONETFaucet'|'prePurchase'|'guardianPurchase'|'fx168PrePurchase'|'claimToken' | 'transferToken' | 'estimateGas' | 'estimateGasForNftContract' | 'startSilentPass' | 'isWalletAgent' | 'transferNft' | 'addMonitoredWallet' | 'removeMonitoredWallet'
 
 type SINodesSortby = 'CUSTOMER_REVIEW'|'TOTAL_ONLINE_TIME'|
 	'STORAGE_PRICE_LOW'|'STORAGE_PRICE_HIGH'|'OUTBOUND_PRICE_HIGH'|'OUTBOUND_PRICE_LOW'
@@ -340,8 +340,13 @@ interface fx168_Order {
 	nodes: number
 }
 
+interface MonitoredWallet {
+	address: string
+	cntpBalance: string
+}
+
 type encrypt_keys_object = {
-    profiles?: profile[]
+  profiles?: profile[]
 	isReady: boolean
 	ver: number
 	preferences?: any
@@ -352,6 +357,7 @@ type encrypt_keys_object = {
 	nonce: number
 	fx168Order?: fx168_Order[]
 	upgradev2?: boolean
+	monitoredWallets?: MonitoredWallet[]
 }
 
 type pgpKeyPair = {
