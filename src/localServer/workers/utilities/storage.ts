@@ -32,25 +32,26 @@ const checkStorage = async (plarformChannel: BroadcastChannel) => {
 		nonce: 0
 	}
 
-    try {
+	try {
 		doc = await database.get ('init', {latest: true})
 		initData = JSON.parse ( buffer.Buffer.from (doc.title,'base64').toString ())
 		passObj = initData.id
 		preferences = initData.preferences
 		
 	} catch (ex) {
-        logger (`checkStorage have no CoNET data in IndexDB, INIT CoNET data`)
+		logger (`checkStorage have no CoNET data in IndexDB, INIT CoNET data`)
 		plarformChannel.postMessage('NONE')
 		return returnInitNull (cmd)
 	}
-
-	// if (initData.container) {
-	// 	containerKeyObj = {
-	// 		privateKeyArmor: initData.container.privateKeyArmor,
-	// 		publicKeyArmor: initData.container.publicKeyArmor
-	// 	}
-	// }
 	
+	try {
+		const monitoredWalletsString = await database.get(monitoredWalletsDatabase)
+		const monitoredWallets = JSON.parse( monitoredWalletsString?.title)
+		CoNET_Data.monitoredWallets = monitoredWallets
+	} catch (error) {
+		
+	}
+
 	const data: systemInitialization = {
 		preferences: preferences,
 		passcode: {
@@ -61,11 +62,6 @@ const checkStorage = async (plarformChannel: BroadcastChannel) => {
 	cmd.data = [data]
 	plarformChannel.postMessage('LOCKED')
 	returnCommand (cmd)
-
-    //          already init database
-    // fetchProxyData(`http://localhost:3001/connecting`, data => {
-    //     processCmd (data)
-    // })
 }
 
 

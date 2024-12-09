@@ -3002,7 +3002,7 @@ const getReferrer = async (wallet, CNTP_Referrals) => {
     return result
 }
 
-const addMonitoredWallet = (cmd) => {
+const addMonitoredWallet = async (cmd) => {
     const walletAddress = cmd.data[0]
 
     if (
@@ -3026,10 +3026,12 @@ const addMonitoredWallet = (cmd) => {
         CoNET_Data?.monitoredWallets.push(monitoredWallet)
     }
 
+    await storageHashData(monitoredWalletsDatabase, JSON.stringify(CoNET_Data.monitoredWallets))
+
     return returnUUIDChannel(cmd)
 }
 
-const removeMonitoredWallet = (cmd) => {
+const removeMonitoredWallet = async (cmd) => {
     const walletAddress = cmd.data[0]
 
     if (
@@ -3047,6 +3049,10 @@ const removeMonitoredWallet = (cmd) => {
     if (CoNET_Data.monitoredWallets.find(w => w.address === walletAddress)) {
         CoNET_Data.monitoredWallets = CoNET_Data?.monitoredWallets.filter(w => w.address !== walletAddress)
     }    
+
+    await storageHashData(monitoredWalletsDatabase, JSON.stringify(CoNET_Data.monitoredWallets))
+
+    return returnUUIDChannel(cmd);
 }
 
 const getBalanceOfMonitoredWallets = async () => {
