@@ -340,9 +340,22 @@ interface fx168_Order {
 	nodes: number
 }
 
+interface MonitoredAsset {
+	id:string, 
+	name: string, 
+	balance: string
+}
+
 interface MonitoredWallet {
 	address: string
-	cntpBalance: string
+	assets: {
+		cntp: MonitoredAsset,
+		conet: MonitoredAsset,
+		guardianNft: MonitoredAsset,
+		conetianNft: MonitoredAsset,
+		guardianReferralNft: MonitoredAsset,
+		conetianReferralNft: MonitoredAsset,
+	}
 }
 
 type encrypt_keys_object = {

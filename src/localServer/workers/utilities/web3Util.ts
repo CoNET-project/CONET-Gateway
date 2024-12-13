@@ -3002,6 +3002,46 @@ const getReferrer = async (wallet, CNTP_Referrals) => {
     return result
 }
 
+const createMonitoredWalletStructure = (walletAddress):MonitoredWallet => {
+    const monitoredWallet: MonitoredWallet = {
+        address: walletAddress,
+        assets: {
+            cntp: {
+                id: 'cntp',
+                name: 'CNTP',
+                balance: '0'
+            },
+            conet: {
+                id: 'conet',
+                name: 'CONET',
+                balance: '0'
+            },
+            guardianNft: {
+                id: 'guardianNft',
+                name: 'Guardian NFT',
+                balance: '0'
+            },
+            conetianNft: {
+                id: 'conetianNft',
+                name: 'CoNETian NFT',
+                balance: '0'
+            },
+            guardianReferralNft: {
+                id: 'guardianReferralNft',
+                name: 'Guardian Referral NFT',
+                balance: '0'
+            },
+            conetianReferralNft: {
+                id: 'conetianReferralNft',
+                name: 'CoNETian Agent NFT',
+                balance: '0'
+            }
+        }
+    }
+
+    return monitoredWallet
+}
+
 const addMonitoredWallet = async (cmd) => {
     const walletAddress = cmd.data[0]
 
@@ -3018,10 +3058,7 @@ const addMonitoredWallet = async (cmd) => {
     }
 
     if (!CoNET_Data.monitoredWallets.find(w => w.address === walletAddress)) {
-        const monitoredWallet = {
-            address: walletAddress,
-            cntpBalance: '0'
-        }
+        const monitoredWallet: MonitoredWallet = createMonitoredWalletStructure(walletAddress)
 
         CoNET_Data?.monitoredWallets.push(monitoredWallet)
     }
@@ -3064,7 +3101,7 @@ const getBalanceOfMonitoredWallets = async () => {
       CoNET_Data.monitoredWallets = [];
     }
 
-    const wallets = CoNET_Data?.monitoredWallets
+    const wallets: MonitoredWallet[] = CoNET_Data?.monitoredWallets
 
     if (!wallets || wallets.length === 0) {
         return
@@ -3072,14 +3109,55 @@ const getBalanceOfMonitoredWallets = async () => {
 
     const tmpMonitoredWallets: MonitoredWallet[] = []
 
-    for (const wallet of wallets) {
-        const balance = await scanCCNTP(wallet.address)
+    for (let wallet of wallets) {
+        if(!wallet.assets){
+            wallet = createMonitoredWalletStructure(wallet.address)
+        }
 
-        if(balance) {
-            wallet.cntpBalance =
-              !balance
+        const promises: any = []
+
+        promises.push(scanCCNTP(wallet.address));
+        promises.push(scanCONETHolesky(wallet.address, provideCONET));
+        promises.push(scan_GuardianPlanAddr(wallet.address));
+        promises.push(scan_CONETianPlanAddr(wallet.address));
+
+        const [cntp, conet, guardianPlan, conetianPlan] = await Promise.all(promises)
+
+        if (cntp) {
+            wallet.assets.cntp.balance = !cntp
                 ? ""
-                : parseFloat(ethers.formatEther(balance)).toFixed(6);
+                : parseFloat(ethers.formatEther(cntp)).toFixed(6).toString();
+        }
+
+        if (conet) {
+        wallet.assets.conet.balance = !conet
+            ? ""
+            : parseFloat(ethers.formatEther(conet)).toFixed(6).toString();
+        }
+
+		const conetianData: {
+          balanceGuardian: BigInt;
+          balanceReferrer: BigInt;
+          availableBalance: BigInt;
+        } | false = conetianPlan;
+
+        const guardianData: { 
+            balanceGuardian: BigInt; 
+            balanceReferrer: BigInt; 
+            nodeNftId: BigInt 
+        } | false = guardianPlan;
+
+        if (conetianData !== false) {
+            wallet.assets.conetianNft.balance = conetianData.balanceGuardian.toString();
+            wallet.assets.conetianReferralNft.balance =
+            conetianData.balanceReferrer.toString();
+        }
+
+        if (guardianData !== false) {
+            wallet.assets.guardianNft.balance =
+            guardianData.balanceGuardian.toString();
+            wallet.assets.guardianReferralNft.balance =
+            guardianData.balanceReferrer.toString();
         }
 
         tmpMonitoredWallets.push(wallet)
