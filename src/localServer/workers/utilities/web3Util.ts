@@ -2297,6 +2297,68 @@ const scan_erc20_balance: (walletAddr: string, erc20Address: string, provide: an
     }
 })
 
+const getBalanceByTimestamp = async (erc20Contract, walletAddress: string, timestamp: number)=>{
+    try {
+        const blockNumber = await getBlockByTimestamp(provideCONET, timestamp);
+        const balance = await getBalanceByBlockNumber(erc20Contract, walletAddress, blockNumber);
+        
+        return balance
+    } catch (ex) {
+        console.log("historic balance error", ex);
+    }
+}
+
+const getBalanceByBlockNumber = async (erc20Contract, walletAddress, blockNumber)=>{
+    try {
+        const balance = await erc20Contract.balanceOf(walletAddress, {
+        blockTag: blockNumber,
+        });
+
+        return balance
+    } catch (ex) {
+        throw ex;
+    }
+}
+
+const getBlockByTimestamp = async (
+  provider: any,
+  targetTimestamp: number
+) => {
+  let latestBlock = await provider.getBlock("latest");
+  let earliestBlock = await provider.getBlock(0);
+
+  // Ensure the target timestamp is valid
+  if (targetTimestamp < earliestBlock.timestamp) {
+    throw new Error("Timestamp is earlier than the first block");
+  }
+
+  if (targetTimestamp > latestBlock.timestamp) {
+    throw new Error("Timestamp is in the future");
+  }
+
+  // Binary search for the block
+  let low = 0;
+  let high = latestBlock.number;
+
+  while (low <= high) {
+    const mid = Math.floor((low + high) / 2);
+    const block = await provider.getBlock(mid);
+
+    if (block.timestamp === targetTimestamp) {
+      return block; // Exact match
+    } else if (block.timestamp < targetTimestamp) {
+      low = mid + 1; // Target is in the future
+    } else {
+      high = mid - 1; // Target is in the past
+    }
+  }
+
+  // Return the closest block (either `low` or `high` will work here)
+  const closestBlock = await provider.getBlock(low);
+
+  return closestBlock;
+}
+
 const scan_Guardian_Nodes = async (walletAddr) => {
     return await scan_src1155_balance(walletAddr, CONET_Guardian_Nodes_V6, GuardianNftId)
 }
