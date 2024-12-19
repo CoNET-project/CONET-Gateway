@@ -24,7 +24,7 @@ const CNTPV1 = '0xb182d2c2338775B0aC3e177351D638b23D3Da4Ea'.toLowerCase()
 const blast_mainnet_CNTP = '0x0f43685B2cB08b9FB8Ca1D981fF078C22Fec84c5'
 const conetianAddress =
 "0x27B9043873dE8684822DEC12F90bAE08f6a06657".toLowerCase()
-const nftContract = "0x6365DbbeeC743d14eA3BC4823E53bf6a7984bf70".toLowerCase()
+const nftContract = "0x4F1F5c25429Ea458C9e4363F05110f668f20D58B".toLowerCase();
 const ticketContractAddress =
 "0x92a033A02fA92169046B91232195D0E82b8017AB".toLowerCase()
 const conet_dWETH = '0x84b6d6A6675F830c8385f022Aefc9e3846A89D3B'
@@ -81,7 +81,7 @@ const claimable_BNB = '0xBE8184294613a6f2531A7EA996deD57cb8CAeB0B'
 const claimable_ETH = '0xAD7dEC79BC005F699Ef80EB53fF1a7E21E24A456'
 const claimable_Arb_ETH = '0xF406385E1A0389Ae35684D27c3Ef2799E88E2c4A'
 const claimable_Arb_USDT = '0xF40A8EFc8Dd47929ba8Ee9d5B3f1534239E930Fe'
-const CONETianPlanAddr = '0x6365DbbeeC743d14eA3BC4823E53bf6a7984bf70'
+const CONETianPlanAddr = "0x4F1F5c25429Ea458C9e4363F05110f668f20D58B";
 
 const ConetianNftId = 0
 const ConetianReferrerNftId = 10

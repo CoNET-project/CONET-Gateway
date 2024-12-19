@@ -4426,6 +4426,19 @@ const CONETianPlan_ABI = [
     type: "function",
   },
   {
+    inputs: [],
+    name: "canTransferRule",
+    outputs: [
+      {
+        internalType: "bool",
+        name: "",
+        type: "bool",
+      },
+    ],
+    stateMutability: "view",
+    type: "function",
+  },
+  {
     inputs: [
       {
         internalType: "address",
@@ -4722,6 +4735,19 @@ const CONETianPlan_ABI = [
       },
     ],
     name: "setApprovalForAll",
+    outputs: [],
+    stateMutability: "nonpayable",
+    type: "function",
+  },
+  {
+    inputs: [
+      {
+        internalType: "bool",
+        name: "status",
+        type: "bool",
+      },
+    ],
+    name: "setCanTransferRule",
     outputs: [],
     stateMutability: "nonpayable",
     type: "function",
