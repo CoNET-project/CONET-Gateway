@@ -972,6 +972,7 @@ let provideCONET
 let lesteningBlock = false
 let epoch = 0
 let needUpgradeVer = 0
+let claimedCntpInChristmas2024Event = 0
 
 const listenProfileVer = async () => {
     epoch = await provideCONET.getBlockNumber()
@@ -994,11 +995,13 @@ const listenProfileVer = async () => {
 
             runningList.push(getBalanceOfMonitoredWallets())
 
+            runningList.push(getClaimedCntpReward())
+
             await Promise.all(runningList)
 
             const cmd = {
                 cmd: 'assets',
-                data: [profiles, RefereesList, leaderboardData, assetOracle, CoNET_Data?.monitoredWallets ]
+                data: [profiles, RefereesList, leaderboardData, assetOracle, CoNET_Data?.monitoredWallets, claimedCntpInChristmas2024Event ]
             }
 
             sendState('toFrontEnd', cmd)
@@ -1010,6 +1013,71 @@ const listenProfileVer = async () => {
     })
     epoch = await provideCONET.getBlockNumber()
     selectLeaderboard(epoch)
+}
+
+const getClaimedCntpReward = async () => {
+    const provider = new ethers.JsonRpcProvider(conet_rpc);
+    
+    const christmas2024Contract = new ethers.Contract(
+        christmas2024ContractAddress,
+        christmas2024Abi,
+        provider
+    );
+
+    try {
+        const claimedCntp = await christmas2024Contract.claimedCNTP()
+        claimedCntpInChristmas2024Event = Number(claimedCntp) / Math.pow(10, 18)
+    } catch (error) {
+        claimedCntpInChristmas2024Event = 0         
+    }
+}
+
+const getProfileAvailableCntpReward = async (cmd) => {
+    const walletAddress = cmd.data[0];
+
+    if (!CoNET_Data || !walletAddress) {
+        cmd.err = "FAILURE";
+        return returnUUIDChannel(cmd);
+    }
+
+    const provider = new ethers.JsonRpcProvider(conet_rpc);
+    
+    const christmas2024Contract = new ethers.Contract(
+        christmas2024ContractAddress,
+        christmas2024Abi,
+        provider
+    );
+
+    try {
+      const claimableCntp = await christmas2024Contract.showClaimableCNTP(walletAddress)
+      cmd.data = [Number(claimableCntp)];
+    } catch (err) {
+      logger(`error getting available CNTP reward`, err);
+      cmd.err = "FAILURE";
+    }
+
+    return returnUUIDChannel(cmd);
+}
+
+const claimChristmasReward = async (cmd: any) => {
+  const walletAddressTmp = cmd.data[0];
+  const walletAddress = ethers.getAddress(walletAddressTmp);
+
+  try {
+    const url = `${apiv4_endpoint}christmas2024`;
+    const result: any = await postToEndpoint(url, true, { walletAddress });
+    
+    if(!result){
+        cmd.err = "FAILURE"
+    }
+    else if (result.status === 200) {
+        cmd.data[0] = result;
+    }
+  } catch (err) {
+    cmd.err = "FAILURE"
+  }
+
+  return returnUUIDChannel(cmd);
 }
 
 const checkProfileVersion = async (wallet) => {
