@@ -1015,6 +1015,23 @@ const listenProfileVer = async () => {
     selectLeaderboard(epoch)
 }
 
+function isSpecificTime() {
+  const targetDate = new Date("2024-12-20T00:00:00-08:00"); // PST is UTC-8
+  const currentDate = new Date();
+
+  const targetDatePST = new Date(
+    targetDate.toLocaleString("en-US", { timeZone: "America/Los_Angeles" })
+  );
+
+  // Convert current date to PST
+  const currentDatePST = new Date(
+    currentDate.toLocaleString("en-US", { timeZone: "America/Los_Angeles" })
+  );
+
+  return targetDatePST.getTime() <= currentDatePST.getTime();
+}
+
+
 const getClaimedCntpReward = async () => {
     const provider = new ethers.JsonRpcProvider(conet_rpc);
     
@@ -1033,6 +1050,8 @@ const getClaimedCntpReward = async () => {
 }
 
 const getProfileAvailableCntpReward = async (cmd) => {
+    if (!isSpecificTime()) return;
+
     const walletAddress = cmd.data[0];
 
     if (!CoNET_Data || !walletAddress) {
@@ -1060,6 +1079,8 @@ const getProfileAvailableCntpReward = async (cmd) => {
 }
 
 const claimChristmasReward = async (cmd: any) => {
+  if (!isSpecificTime()) return;
+
   const walletAddressTmp = cmd.data[0];
   const walletAddress = ethers.getAddress(walletAddressTmp);
 
