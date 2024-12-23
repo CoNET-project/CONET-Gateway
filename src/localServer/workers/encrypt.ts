@@ -829,14 +829,6 @@ const processCmd = async (cmd: worker_command) => {
         return removeMonitoredWallet(cmd);
       }
 
-      case "getProfileAvailableCntpReward": {
-        return getProfileAvailableCntpReward(cmd);
-      }
-
-      case "claimChristmasReward": {
-        return claimChristmasReward(cmd);
-      }
-
       default: {
         cmd.err = "INVALID_COMMAND";
         responseChannel.postMessage(JSON.stringify(cmd));

@@ -585,3 +585,35 @@ const getRegionAllNodes = async (region: string, profile: profile) => {
 	//		curl -v -4 -x socks4://localhost:3003 "https://www.google.com"
 }
 
+function generateDaysArrayForBalanceChart(): number[] {
+  const currentDate = new Date(); // Current date (in local time)
+
+  // Get current day, month, and year in UTC
+  const currentDay = currentDate.getUTCDate(); // Current day of the month (UTC)
+  const currentMonth = currentDate.getUTCMonth() + 1; // Current month (1-indexed) (UTC)
+  const currentYear = currentDate.getUTCFullYear(); // Current year (UTC)
+
+  // Calculate the start date (30 days before today) using UTC
+  const startDate = new Date(
+    Date.UTC(currentYear, currentMonth - 1, currentDay - 30)
+  );
+
+  const daysArray: number[] = [];
+  let tempDate = new Date(startDate);
+
+  // Generate days with 7-day intervals using UTC
+  while (tempDate < currentDate) {
+    // Set the time to 00:00:00 UTC (midnight) on the selected day
+    tempDate.setUTCHours(0, 0, 0, 0); // Set to 00:00 UTC
+    daysArray.push(tempDate.getTime()); // Push the timestamp (UTC)
+
+    // Add 7 days in UTC
+    tempDate.setUTCDate(tempDate.getUTCDate() + 7);
+  }
+
+  // Add today's timestamp in UTC (at 00:00 UTC)
+  currentDate.setUTCHours(0, 0, 0, 0); // Set to 00:00 UTC
+  daysArray.push(currentDate.getTime()); // Push today's timestamp (UTC)
+
+  return daysArray;
+}
