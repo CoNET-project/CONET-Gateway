@@ -259,7 +259,6 @@ declare type WorkerCommand =
   | "addMonitoredWallet"
   | "removeMonitoredWallet"
   | "getProfileAvailableCntpReward"
-  | "claimChristmasReward" ;
 
 type SINodesSortby = 'CUSTOMER_REVIEW'|'TOTAL_ONLINE_TIME'|
 	'STORAGE_PRICE_LOW'|'STORAGE_PRICE_HIGH'|'OUTBOUND_PRICE_HIGH'|'OUTBOUND_PRICE_LOW'
@@ -362,6 +361,11 @@ interface conet_ticket {
   balance: string;
 }
 
+interface historicBalance {
+	timestamp: number
+	balance: string
+}
+
 interface profile extends keyPair {
   isPrimary?: boolean;
   pgpKey?: pgpKeyPair;
@@ -378,6 +382,7 @@ interface profile extends keyPair {
   nodeID?: number;
   nodeIP_address?: string;
   nodeRegion?: string;
+	historicBalance?: historicBalance[]
 }
 
 interface publicProfile {

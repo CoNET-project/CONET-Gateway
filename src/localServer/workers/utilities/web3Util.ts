@@ -976,7 +976,6 @@ let provideCONET
 let lesteningBlock = false
 let epoch = 0
 let needUpgradeVer = 0
-let claimedCntpInChristmas2024Event = 0
 
 const listenProfileVer = async () => {
     epoch = await provideCONET.getBlockNumber()
@@ -999,13 +998,13 @@ const listenProfileVer = async () => {
 
             runningList.push(getBalanceOfMonitoredWallets())
 
-            runningList.push(getClaimedCntpReward())
+            runningList.push(getHistoricBalance())
 
             await Promise.all(runningList)
 
             const cmd = {
                 cmd: 'assets',
-                data: [profiles, RefereesList, leaderboardData, assetOracle, CoNET_Data?.monitoredWallets, claimedCntpInChristmas2024Event ]
+                data: [profiles, RefereesList, leaderboardData, assetOracle, CoNET_Data?.monitoredWallets ]
             }
 
             sendState('toFrontEnd', cmd)
@@ -1017,6 +1016,58 @@ const listenProfileVer = async () => {
     })
     epoch = await provideCONET.getBlockNumber()
     selectLeaderboard(epoch)
+}
+
+const getHistoricBalance = async () => {
+    if (!CoNET_Data?.profiles) {
+        return logger(`getHistoricBalance Error! CoNET_Data.profiles empty Error!`)
+    }
+
+    const profiles = CoNET_Data.profiles
+    const daysInChart = generateDaysArrayForBalanceChart();
+
+    const runningList: any[] = []
+
+    for (let profile of profiles) {
+        const promise = getHistoricCntpBalance(profile, daysInChart)
+        runningList.push(promise)
+    }
+
+    await Promise.all(runningList)
+}
+
+const getHistoricCntpBalance = async (profile: profile, daysInChart: number[]) => {
+    const provideCONET = new ethers.JsonRpcProvider(conet_rpc);
+    const wallet = new ethers.Wallet(profile.privateKeyArmor, provideCONET)
+    const contract = new ethers.Contract(cCNTP_new_Addr, blast_CNTPAbi, wallet)
+
+    const runningList: any[] = []
+
+    for (let timestamp of daysInChart ) {
+      const promise =  getBalanceByTimestamp(
+        contract,
+        wallet.address,
+        timestamp
+      );
+
+      runningList.push(promise);
+    }
+
+    profile.historicBalance = [];
+
+    const balances = await Promise.all(runningList);
+
+    balances.forEach((balance, index) => {
+        const balanceObj = {
+            timestamp: daysInChart[index],
+            balance: ethers.formatEther(balance),
+        };
+
+        if(!profile.historicBalance) 
+            profile.historicBalance = [];
+
+        profile.historicBalance.push(balanceObj);
+    });
 }
 
 function isSpecificTime() {
@@ -1033,76 +1084,6 @@ function isSpecificTime() {
   );
 
   return targetDatePST.getTime() <= currentDatePST.getTime();
-}
-
-
-const getClaimedCntpReward = async () => {
-    const provider = new ethers.JsonRpcProvider(conet_rpc);
-    
-    const christmas2024Contract = new ethers.Contract(
-        christmas2024ContractAddress,
-        christmas2024Abi,
-        provider
-    );
-
-    try {
-        const claimedCntp = await christmas2024Contract.claimedCNTP()
-        claimedCntpInChristmas2024Event = Number(claimedCntp) / Math.pow(10, 18)
-    } catch (error) {
-        claimedCntpInChristmas2024Event = 0         
-    }
-}
-
-const getProfileAvailableCntpReward = async (cmd) => {
-    if (!isSpecificTime()) return;
-
-    const walletAddress = cmd.data[0];
-
-    if (!CoNET_Data || !walletAddress) {
-        cmd.err = "FAILURE";
-        return returnUUIDChannel(cmd);
-    }
-
-    const provider = new ethers.JsonRpcProvider(conet_rpc);
-    
-    const christmas2024Contract = new ethers.Contract(
-        christmas2024ContractAddress,
-        christmas2024Abi,
-        provider
-    );
-
-    try {
-      const claimableCntp = await christmas2024Contract.showClaimableCNTP(walletAddress)
-      cmd.data = [Number(claimableCntp)];
-    } catch (err) {
-      logger(`error getting available CNTP reward`, err);
-      cmd.err = "FAILURE";
-    }
-
-    return returnUUIDChannel(cmd);
-}
-
-const claimChristmasReward = async (cmd: any) => {
-  if (!isSpecificTime()) return;
-
-  const walletAddressTmp = cmd.data[0];
-  const walletAddress = ethers.getAddress(walletAddressTmp);
-
-  try {
-    const url = `${apiv4_endpoint}christmas2024`;
-    const result: any = await postToEndpoint(url, true, { walletAddress });
-    
-    if(!result){
-        cmd.err = "FAILURE"
-    }
-    else if (result.status === 200) {
-        cmd.data[0] = result;
-    }
-  } catch (err) {
-    cmd.err = "FAILURE"
-  }
-
-  return returnUUIDChannel(cmd);
 }
 
 const checkProfileVersion = async (wallet) => {
@@ -2398,6 +2379,7 @@ const getBalanceByTimestamp = async (erc20Contract, walletAddress: string, times
         return balance
     } catch (ex) {
         console.log("historic balance error", ex);
+        return 0
     }
 }
 
@@ -2421,11 +2403,11 @@ const getBlockByTimestamp = async (
   let earliestBlock = await provider.getBlock(0);
 
   // Ensure the target timestamp is valid
-  if (targetTimestamp < earliestBlock.timestamp) {
+  if (targetTimestamp < earliestBlock.timestamp * 1000) {
     throw new Error("Timestamp is earlier than the first block");
   }
 
-  if (targetTimestamp > latestBlock.timestamp) {
+  if (targetTimestamp > latestBlock.timestamp * 1000) {
     throw new Error("Timestamp is in the future");
   }
 
