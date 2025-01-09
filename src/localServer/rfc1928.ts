@@ -83,7 +83,7 @@
 		const reply_NO_ACCEPTABLE_METHODS = Buffer.from ( '05ff', 'hex' )
 	//		end reply Buffer
 	
-	export class  Requests {
+	export class Requests {
 	
 		constructor ( public buffer: Buffer ) {}
 		public get socketVersion () {
@@ -117,7 +117,7 @@
 	
 		public get ATYP_IP4Address () {
 			if ( this.ATYP !== ATYP.IP_V4 ) {
-			return null
+				return null
 			}
 				
 			return `${ this.buffer.readUInt8 (4).toString() }.${ this.buffer.readUInt8 (5).toString() }.${ this.buffer.readUInt8 (6).toString() }.${ this.buffer.readUInt8 (7).toString() }`
@@ -180,7 +180,7 @@
 		
 	}
 
-	export class socket4Requests {
+export class socket4Requests {
 	constructor ( public buffer: Buffer ) {}
 	public get socketVersion () {
 		return this.buffer.readUInt8 ( 0 )
@@ -226,5 +226,5 @@
 		return Buffer.from ('005b000000','hex')
 	}
 
-	}
+}
 	

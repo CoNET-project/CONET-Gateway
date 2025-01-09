@@ -1,6 +1,10 @@
 
 let Guardian_Nodes:nodes_info[]  = []
 let getAllNodesProcess = false
+let allRegions: string [] = []
+let regionSort: {node: nodes_info, delay: number}[] = []
+// const GuardianNodes = new ethers.Contract(CONET_Guardian_Nodes_V6, guardian_erc1155, provideCONET)
+// const GuardianNodesInfo = new ethers.Contract(CONET_Guardian_NodeInfoV6, CONET_Guardian_NodeInfo_ABI, provideCONET)
 
 const getAllNodes = async () => {
 	if (getAllNodesProcess) {
@@ -31,27 +35,63 @@ const getAllNodes = async () => {
 			nftNumber: 100 + i
 		})
 	}
-	const GuardianNodesInfo = new ethers.Contract(CONET_Guardian_NodeInfoV6, CONET_Guardian_NodeInfo_ABI, provideCONET)
+	
 	let i = 0
-	await async.mapLimit(Guardian_Nodes, 5, async (n: nodes_info, next) => {
+	const countrys: Map<string, boolean> = new Map()
+	const GuardianNodesInfo = new ethers.Contract(CONET_Guardian_NodeInfoV6, CONET_Guardian_NodeInfo_ABI, provideCONET)
+	await async.mapLimit(Guardian_Nodes, 10, async (n: nodes_info, next) => {
 		
 		const nodeInfo = await GuardianNodesInfo.getNodeInfoById(n.nftNumber)
 		if (nodeInfo?.pgp) {
 			i = n.nftNumber
 			n.region = nodeInfo.regionName
+			const country = n.region.split('.')[1]
 			n.ip_addr = nodeInfo.ipaddress
+			n.country = country
+			countrys.set (country, true)
 			n.armoredPublicKey = buffer.Buffer.from(nodeInfo.pgp,'base64').toString()
 			const pgpKey1 = await openpgp.readKey({ armoredKey: n.armoredPublicKey})
 			n.domain = pgpKey1.getKeyIDs()[1].toHex().toUpperCase() + '.conet.network'
+			logger(i)
 		} else {
 			throw new Error('')
 		}
 	}).catch (ex => {
 
 	})
-	const index = Guardian_Nodes.findIndex(n => n.nftNumber === i)+1
+	const index = Guardian_Nodes.findIndex(n => n.nftNumber === i) + 1
 	Guardian_Nodes = Guardian_Nodes.slice(0, index)
 	getAllNodesProcess = false
+	allRegions = [...countrys.keys()]
+	await testClosestRegion()
+}
+
+const getRandomNodeFromRegion: (region: string) => nodes_info = (region: string) => {
+	const allNodeInRegion = Guardian_Nodes.filter(n => n.country === region)
+	const rendomIndex = Math.floor(Math.random() * allNodeInRegion.length - 1)
+	if (rendomIndex >= allNodeInRegion.length) {
+		return allNodeInRegion[0]
+	}
+	return allNodeInRegion[rendomIndex]
+}
+
+
+const testClosestRegion = async () => {
+	regionSort = []
+	await async.mapLimit(allRegions, allRegions.length, async (n: string, next) => {
+		const node = getRandomNodeFromRegion(n)
+		if (!node?.domain) {
+			return
+		}
+		const url = `https://${node.domain}`
+		const startTime = new Date().getTime()
+		const kk = await postToEndpointGetBody(url, false, null)
+		const endTime = new Date().getTime()
+		const delay = endTime - startTime
+		regionSort.push ({node, delay})
+	})
+	regionSort.sort ((a, b) => a.delay-b.delay)
+
 }
 
 const getRandomNodeV2: (index: number) => null|nodes_info = (index = -1) => { 

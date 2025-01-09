@@ -357,6 +357,10 @@ const getProfileAssets_allOthers_Balance = async (profile: profile) => {
 				name: 'wusdt'
 			}
 		}
+
+		// if ( profile.keyID === "0x13Ce806fDA865c3bc341a1C487C8d3F15f543807") {
+		// 	current.wusdt.balance = "3000"
+		// }
         
     }
     return true
@@ -2655,7 +2659,7 @@ const getEstimateGas = (privateKey, asset, _transferNumber) => new Promise(async
     }
 })
 
-const getEstimateGasForTokenTransfer = (privateKey, asset, _transferNumber, toAddr) => new Promise(async (resolve) => {
+const getEstimateGasForTokenTransfer = (privateKey: string, asset: string, _transferNumber: string, toAddr: string) => new Promise(async (resolve) => {
     const provide = new ethers.JsonRpcProvider(getNetwork(asset))
     const wallet = new ethers.Wallet(privateKey, provide)
     let _fee

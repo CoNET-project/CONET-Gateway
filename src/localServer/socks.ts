@@ -191,7 +191,7 @@ export class socks5 {
 
 	constructor ( private socket: Net.Socket, private data: Buffer, private agent: string, private proxyServer: proxyServer ) {
 		
-			logger (colors.yellow(`new socks v5`))
+		logger (colors.yellow(`new socks v5`))
 
 		this.socket.once ( 'data', ( chunk: Buffer ) => {
 			return this.connectStat2 ( chunk )
@@ -270,6 +270,7 @@ export class sockt4 {
 		this.connectStat2 ()
 
 	}
+	
 	public connectStat2 () {
 
 		this.socket.once ( 'data', ( _data: Buffer ) => {

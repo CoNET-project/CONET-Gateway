@@ -58,3 +58,23 @@ var _HTTP_PROXY_302 = function () {
         "Location: http://".concat(lostManagerServerIP, "/proxyErr\n\n");
 };
 exports._HTTP_PROXY_302 = _HTTP_PROXY_302;
+
+
+function FindProxyForURL ( url, host ) {
+	if (isInNet ( dnsResolve( host ), "0.0.0.0", "255.0.0.0") ||
+	   isInNet( dnsResolve( host ), "172.16.0.0", "255.240.255.0") ||
+	   isInNet( dnsResolve( host ), "127.0.0.0", "255.255.255.0") ||
+	   isInNet ( dnsResolve( host ), "192.168.0.0", "255.255.0.0" ) ||
+	   isInNet ( dnsResolve( host ), "10.0.0.0", "255.0.0.0" ) ||
+	   isInNet( dnsResolve( host ), "216.225.195.198", "255.255.255.255" ) ||
+	   isInNet( dnsResolve( host ), "217.160.150.50", "255.255.255.255" ) ||
+	   isInNet( dnsResolve( host ), "74.208.224.40", "255.255.255.255" ) ||
+	   isInNet( dnsResolve( host ), "216.225.205.235", "255.255.255.255" ) ||
+	   isInNet( dnsResolve( host ), "216.225.203.45", "255.255.255.255" ) ||
+	   dnsDomainIs( host, "conet.network") ||
+	   dnsDomainIs( host, ".local") ||
+	   dnsDomainIs( host, "openpgp.online")) {
+		   return "DIRECT";
+	};
+	return "socks 127.0.0.1:8888";
+}

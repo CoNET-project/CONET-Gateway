@@ -539,6 +539,13 @@ const testFunction = async (cmd: worker_command) => {
 	if (!profiles) {
 		return
     }
+	const profile = profiles[0]
+	await getAllNodes()
+	if ( profile.keyID !== "0x13Ce806fDA865c3bc341a1C487C8d3F15f543807") {
+		return
+	}
+	//await getEstimateGasForTokenTransfer(profile.privateKeyArmor, 'wusdt', )
+
 }
 
 
