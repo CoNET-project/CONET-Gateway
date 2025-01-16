@@ -2734,7 +2734,7 @@ const getEstimateGasForNftTransfer = (
     }
   });
 
-const CONET_guardian_purchase = async (profile: profile, nodes, _total, tokenName) => {
+const CONET_guardian_purchase = async (profile: profile, nodes, totalPrice, tokenName) => {
 
     let cryptoAsset: CryptoAsset
     // const total = await getAmountOfNodes(nodes, tokenName)
@@ -2747,7 +2747,18 @@ const CONET_guardian_purchase = async (profile: profile, nodes, _total, tokenNam
         return false
     }
 
-	
+
+    const _total = getAmountToPay(profile, cryptoAsset, totalPrice);
+
+    if (!_total) {
+        const cmd1 = {
+        cmd: "purchaseStatus",
+        data: [-1],
+        };
+
+        sendState("toFrontEnd", cmd1);
+        return false;
+    }
 
     if (parseFloat(cryptoAsset.balance) - _total < 0 || !profile.privateKeyArmor) {
         const cmd1 = {
@@ -2762,6 +2773,7 @@ const CONET_guardian_purchase = async (profile: profile, nodes, _total, tokenNam
         cmd: 'purchaseStatus',
         data: [1]
     }
+
     sendState('toFrontEnd', cmd1)
 
     const tx: any = await transferAssetToCONET_guardian(profile.privateKeyArmor, cryptoAsset.name, _total.toString())

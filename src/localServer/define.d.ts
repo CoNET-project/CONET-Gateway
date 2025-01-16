@@ -814,7 +814,7 @@ type ITypeTransferCount = {
 //			git reset --soft HEAD~[number] to delete commit
 interface assetPrice {
 	name: string
-	price: number
+	price: any
 }
 interface assetOracle {
 	lastUpdate: number

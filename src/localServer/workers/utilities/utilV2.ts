@@ -34,6 +34,9 @@ const CONET_Guardian_Nodes1 = '0x5e4aE81285b86f35e3370B3EF72df1363DD05286'
 const fx168OrderContractAddress = '0x9aE6D3Bd3029C8B2A73817b9aFa1C029237E3e30'
 const christmas2024ContractAddress = "0xb188e707f4544835aEe28E4206C65edfF23221C0";
 
+const CONETIAN_PRICE = 100
+const GUARDIAN_PRICE = 1250
+
 //const CNTPB_contract = '0x6056473ADD8bC89a95325845F6a431CCD7A849bb'
 // const Claimable_ETHUSDTv3 = '0x79E2EdE2F479fA7E44C89Bbaa721EB1f0d529b7B'.toLowerCase()
 // const Claimable_BNBUSDTv3 = '0xd008D56aa9A963FAD8FB1FbA1997C28dB85933e6'.toLowerCase()
@@ -405,12 +408,20 @@ const prePurchase = async (cmd) => {
 
     const asset = profile.tokens[payAssetName]
 
-    if (!profile.privateKeyArmor || !asset) {
+    const isValid = validateFundsForPurchase(
+      profile,
+      asset,
+      amount
+    );
+
+    if (!profile.privateKeyArmor || !asset || !isValid) {
         cmd.err = 'INVALID_DATA'
         return returnUUIDChannel(cmd)
     }
 
-    const data: any = await getEstimateGas(profile.privateKeyArmor, payAssetName, amount)
+    const amountToPay = getAmountToPay(profile, asset, amount);
+
+    const data: any = await getEstimateGas(profile.privateKeyArmor, payAssetName, amountToPay)
 	if (data === false) {
 		if (!profile.privateKeyArmor || !asset) {
 			cmd.err = 'INVALID_DATA'
@@ -422,9 +433,75 @@ const prePurchase = async (cmd) => {
     return returnUUIDChannel(cmd)
 }
 
-const nodePrice = 1250
+const validateFundsForPurchase = (userProfile: profile, assetName: string, amount: any) => {
+    let userAsset: CryptoAsset = userProfile?.tokens?.[assetName];
+    
+    if (userAsset.name === "arbETH") userAsset.name = "arb_eth";
 
+    if (!assetOracle) return false;
 
+    const oracleAssets: assetPrice[] =
+      assetOracle.assets;
+    const foundAsset = findAsset(userAsset.name);
+
+    if (!foundAsset) return false;
+
+    const assetPrice: any =
+      userAsset.balance === "usdt" || userAsset.balance === "wusdt" || userAsset.balance === "arb_usdt"
+        ? "1"
+        : parseFloat(foundAsset.price).toFixed(4);
+
+    const relativePriceWindow = 2 / assetPrice;
+
+    return parseFloat(userAsset?.balance) >= amount - relativePriceWindow
+
+    function findAsset(
+      asset: string
+    ): assetPrice | undefined {
+      if (asset === "arb_eth") asset = "eth";
+      if (asset === "arb_usdt") asset = "usdt";
+      if (asset === "wusdt") asset = "usdt";
+      return oracleAssets.find((a) => a.name === asset);
+    }
+}
+
+const getAmountToPay = (userProfile: profile, profileAsset: CryptoAsset, amount: any) => {
+    if (profileAsset.name === "arbETH") profileAsset.name = "arb_eth";
+
+    let userBalance = userProfile?.tokens?.[profileAsset.name];
+
+    if (!assetOracle) return 0;
+
+    const oracleAssets: assetPrice[] =
+      assetOracle.assets;
+    const foundAsset = findAsset(profileAsset.name);
+
+    if (!foundAsset) return 0;
+
+    const assetPrice: any =
+      profileAsset.balance === "usdt" || profileAsset.balance === "wusdt" || profileAsset.balance === "arb_usdt"
+        ? "1"
+        : parseFloat(foundAsset.price).toFixed(4);
+
+    const balanceAsFloat = parseFloat(userBalance?.balance);
+    const relativePriceWindow = 2 / assetPrice;
+    const relaxedAmount = amount - relativePriceWindow;
+
+    if (balanceAsFloat >= amount) 
+        return amount;
+    else if (balanceAsFloat < amount && balanceAsFloat >= relaxedAmount)
+        return balanceAsFloat
+    else return 0
+
+    function findAsset(
+      asset: string
+    ): assetPrice | undefined {
+      if (asset === "arb_eth") asset = "eth";
+      if (asset === "arb_usdt") asset = "usdt";
+      if (asset === "wusdt") asset = "usdt";
+      return oracleAssets.find((a) => a.name === asset);
+    }
+}
 
 const getClaimableAddress = (CONET_claimableName) => {
     switch (CONET_claimableName) {
@@ -506,9 +583,6 @@ interface nodeResponse {
 	userWallets: string[]
 	nodeWallets?: string[]
 }
-
-
-
 
 const getTicket = async (profile: profile) => {
 	const message = JSON.stringify({ walletAddress: profile.keyID })

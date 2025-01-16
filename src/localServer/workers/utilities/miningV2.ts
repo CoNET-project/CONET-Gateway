@@ -404,7 +404,6 @@ const convertUSDTToCurrency = (currencyName: string, usdtAmount: number) => {
 
 const CONETianPlan_purchase = async (referrer: string, profile: profile, amount: number[], tokenName: string) => new Promise(async resolve=> {
 
-	
 	let cryptoAsset: CryptoAsset
 
 	if (amount.length !== 1 || !profile?.tokens||! (cryptoAsset = profile.tokens[tokenName])) {
@@ -414,88 +413,102 @@ const CONETianPlan_purchase = async (referrer: string, profile: profile, amount:
 	const ntfs = amount[0]
 	const totalUSDT = ntfs * getGuardianPrice(0)
 
-	const total = convertUSDTToCurrency(tokenName, totalUSDT)
+	const priceInConvertedCurrency = convertUSDTToCurrency(tokenName, totalUSDT)
+
+	const total = getAmountToPay(profile, cryptoAsset, priceInConvertedCurrency)
+	
+	if (!total) {
+		const cmd1 = {
+				cmd: 'purchaseStatus',
+				data: [-1]
+		}
+
+		sendState('toFrontEnd', cmd1)
+		return false
+	}
 
 	if (total < 0.00001) {
 		return resolve(false)
 	}
 
 	if (parseFloat(cryptoAsset.balance) - total < 0 || !profile.privateKeyArmor) {
-        const cmd1 = {
-            cmd: 'purchaseStatus',
-            data: [-1]
-        }
-        sendState('toFrontEnd', cmd1)
-        return false
-    }
+		const cmd1 = {
+				cmd: 'purchaseStatus',
+				data: [-1]
+		}
+
+		sendState('toFrontEnd', cmd1)
+		return false
+	}
 
 	let receiptTx: any = await transferAssetToCONET_guardian(profile.privateKeyArmor, cryptoAsset.name, total.toFixed(8))
 
 	if (typeof receiptTx === 'boolean') {
-        const cmd1 = {
-            cmd: 'purchaseStatus',
-            data: [-1]
-        }
-        sendState('toFrontEnd', cmd1)
-        return false
-    }
+		const cmd1 = {
+				cmd: 'purchaseStatus',
+				data: [-1]
+		}
+
+		sendState('toFrontEnd', cmd1)
+		return false
+	}
 
 	const cmd2 = {
-        cmd: 'purchaseStatus',
-        data: [2]
-    }
+		cmd: 'purchaseStatus',
+		data: [2]
+	}
 
-    sendState('toFrontEnd', cmd2)
+	sendState('toFrontEnd', cmd2)
 
+	const kk1: CryptoAssetHistory = {
+		status: 'Confirmed',
+		Nonce: receiptTx.nonce,
+		to: receiptTx.to,
+		transactionFee: stringFix(ethers.formatEther(parseFloat(receiptTx.gasUsed)*parseFloat(receiptTx.gasPrice))),
+		gasUsed: receiptTx.gasUsed.toString(),
+		isSend: true,
+		value: parseEther(total.toFixed(8), cryptoAsset.name).toString(),
+		time: new Date().toISOString(),
+		transactionHash: receiptTx.hash,
+	}
 
-    const kk1: CryptoAssetHistory = {
-        status: 'Confirmed',
-        Nonce: receiptTx.nonce,
-        to: receiptTx.to,
-        transactionFee: stringFix(ethers.formatEther(parseFloat(receiptTx.gasUsed)*parseFloat(receiptTx.gasPrice))),
-        gasUsed: receiptTx.gasUsed.toString(),
-        isSend: true,
-        value: parseEther(total.toFixed(8), cryptoAsset.name).toString(),
-        time: new Date().toISOString(),
-        transactionHash: receiptTx.hash,
-    }
-
-    cryptoAsset.history.push(kk1)
+	cryptoAsset.history.push(kk1)
 
 	getProfileAssets_allOthers_Balance(profile)
 
-    const data = {
+	const data = {
 		receiptTx : receiptTx.hash,
-        tokenName,
-        amount: parseEther(total.toFixed(8), cryptoAsset.name).toString(),
-        ntfs,
+		tokenName,
+		amount: parseEther(total.toFixed(8), cryptoAsset.name).toString(),
+		ntfs,
 		referrer
-    }
+	}
 
 	const message = JSON.stringify({ walletAddress: profile.keyID, data })
 	const wallet = new ethers.Wallet(profile.privateKeyArmor)
 	const signMessage = await wallet.signMessage(message)
 
 	const sendData = {
-        message, signMessage
-    }
+		message, signMessage
+	}
 
-    const cmd3 = {
-        cmd: 'purchaseStatus',
-        data: [3]
-    }
+	const cmd3 = {
+		cmd: 'purchaseStatus',
+		data: [3]
+	}
+
 	sendState('toFrontEnd', cmd3)
 
 	const url = `${apiv4_endpoint}PurchaseCONETianPlan`
-    let result
+	let result
 
-    try {
-        result = await postToEndpoint(url, true, sendData)
-    }
-    catch (ex) {
+	try {
+		result = await postToEndpoint(url, true, sendData)
+	}
+	catch (ex) {
+		return resolve(false)
+	}
 
-        return resolve(false)
-    }
 	return resolve(true)
 })
 
