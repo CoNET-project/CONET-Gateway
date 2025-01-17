@@ -2300,12 +2300,10 @@ const scanWUSDT = async (walletAddr: string) => {
 }
 
 const scanTronUSDT = async(walletAddr: string) => {
-	
 	return await scan_erc20_balance(walletAddr, tron_USDT, provideTron)
 }
 
 const scanArbUSDT = async(walletAddr: string) => {
-	
 	return await scan_erc20_balance(walletAddr, Arbitrum_USDT, provideArbOne)
 }
 
@@ -2373,8 +2371,8 @@ const scan_erc20_balance: (walletAddr: string, erc20Address: string, provide: an
 
 const getBalanceByTimestamp = async (erc20Contract, walletAddress: string, timestamp: number)=>{
     try {
-        const blockNumber = await getBlockByTimestamp(provideCONET, timestamp);
-        const balance = await getBalanceByBlockNumber(erc20Contract, walletAddress, blockNumber);
+        const block = await getBlockByTimestamp(provideCONET, timestamp);
+        const balance = await getBalanceByBlockNumber(erc20Contract, walletAddress, block);
         
         return balance
     } catch (ex) {
@@ -2383,10 +2381,10 @@ const getBalanceByTimestamp = async (erc20Contract, walletAddress: string, times
     }
 }
 
-const getBalanceByBlockNumber = async (erc20Contract, walletAddress, blockNumber)=>{
+const getBalanceByBlockNumber = async (erc20Contract, walletAddress, block)=>{
     try {
         const balance = await erc20Contract.balanceOf(walletAddress, {
-        blockTag: blockNumber,
+        blockTag: block.number,
         });
 
         return balance
@@ -2403,11 +2401,11 @@ const getBlockByTimestamp = async (
   let earliestBlock = await provider.getBlock(0);
 
   // Ensure the target timestamp is valid
-  if (targetTimestamp < earliestBlock.timestamp * 1000) {
+  if (targetTimestamp < earliestBlock.timestamp) {
     throw new Error("Timestamp is earlier than the first block");
   }
 
-  if (targetTimestamp > latestBlock.timestamp * 1000) {
+  if (targetTimestamp > latestBlock.timestamp) {
     throw new Error("Timestamp is in the future");
   }
 

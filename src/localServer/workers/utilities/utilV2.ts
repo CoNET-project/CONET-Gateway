@@ -686,7 +686,8 @@ function generateDaysArrayForBalanceChart(): number[] {
   while (tempDate < currentDate) {
     // Set the time to 00:00:00 UTC (midnight) on the selected day
     tempDate.setUTCHours(0, 0, 0, 0); // Set to 00:00 UTC
-    daysArray.push(tempDate.getTime()); // Push the timestamp (UTC)
+    const timestampInSeconds = tempDate.getTime() / 1000;
+    daysArray.push(timestampInSeconds); // Push the timestamp (UTC)
 
     // Add 7 days in UTC
     tempDate.setUTCDate(tempDate.getUTCDate() + 7);
@@ -694,7 +695,8 @@ function generateDaysArrayForBalanceChart(): number[] {
 
   // Add today's timestamp in UTC (at 00:00 UTC)
   currentDate.setUTCHours(0, 0, 0, 0); // Set to 00:00 UTC
-  daysArray.push(currentDate.getTime()); // Push today's timestamp (UTC)
+  const timestampInSeconds = currentDate.getTime() / 1000;
+  daysArray.push(timestampInSeconds); // Push today's timestamp (UTC)
 
   return daysArray;
 }
