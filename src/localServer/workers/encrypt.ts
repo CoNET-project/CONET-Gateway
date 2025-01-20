@@ -843,6 +843,10 @@ const processCmd = async (cmd: worker_command) => {
         return removeMonitoredWallet(cmd);
       }
 
+      case "claimConetianAirdrop": {
+        return claimConetianAirdrop(cmd);
+      }
+
       default: {
         cmd.err = "INVALID_COMMAND";
         responseChannel.postMessage(JSON.stringify(cmd));

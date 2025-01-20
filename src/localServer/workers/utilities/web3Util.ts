@@ -1002,6 +1002,8 @@ const listenProfileVer = async () => {
 
             await Promise.all(runningList)
 
+            await checkAvailableConetianAirdropForAllProfiles()
+
             const cmd = {
                 cmd: 'assets',
                 data: [profiles, RefereesList, leaderboardData, assetOracle, CoNET_Data?.monitoredWallets ]
@@ -2356,7 +2358,6 @@ const scanCONET_Claimable_ETHUSDT = async (walletAddr) => {
     return await scan_erc20_balance(walletAddr, claimable_USDT, provideCONET)
 }
 
-
 const scan_erc20_balance: (walletAddr: string, erc20Address: string, provide: any)=> Promise<false|BigInt> = (walletAddr, erc20Address, provide) => new Promise(async (resolve) => {
     const erc20 = new ethers.Contract(erc20Address, blast_CNTPAbi, provide)
     try {
@@ -3313,3 +3314,72 @@ const getBalanceOfMonitoredWallets = async () => {
     CoNET_Data.monitoredWallets = tmpMonitoredWallets
 }
 
+const claimConetianAirdrop = async (cmd: worker_command) => {
+    const walletAddress = cmd.data[0];
+
+    if (!CoNET_Data || !walletAddress) {
+        cmd.err = "FAILURE";
+        return returnUUIDChannel(cmd);
+    }
+    
+    const profile = CoNET_Data.profiles?.find(profile => profile.keyID === walletAddress)    
+    
+    if(!profile){
+        cmd.err = "FAILURE";
+        return returnUUIDChannel(cmd);
+    }
+
+    const provider = new ethers.JsonRpcProvider(conet_rpc);
+    const wallet = new ethers.Wallet(profile.privateKeyArmor, provider)
+    const contract = new ethers.Contract(conetianAirdropContractAddress, conetianAirdropAbi, wallet)
+    
+    try {
+        const result = await contract.CONETianMint()
+        console.log(result)
+    } catch (error) {
+        console.log(error)
+    }
+}
+
+const checkAvailableConetianAirdropForAllProfiles = async () => {
+    if(!CoNET_Data)
+        return 
+
+    const profiles = CoNET_Data.profiles
+
+    if (!profiles) {
+        return
+    }
+    
+    const promises: Promise<any>[] = []
+
+    for (let i = 0; i < profiles.length; i++) {
+        const profile = profiles[i]
+        promises.push(checkAvailableConetianAirdropForProfile(profile))
+    }
+
+    const results = await Promise.all(promises)
+
+    for (let i = 0; i < results.length; i++) {
+        const airdrop = {
+            availableConetian: results[i],
+        }
+
+        profiles[i].airdrop = {...airdrop}
+    }
+
+    CoNET_Data.profiles = profiles
+}
+
+const checkAvailableConetianAirdropForProfile = async (profile: profile) => {
+    const provider = new ethers.JsonRpcProvider(conet_rpc)
+    const wallet = new ethers.Wallet(profile.privateKeyArmor, provider)
+    const contract = new ethers.Contract(conetianAirdropContractAddress, conetianAirdropAbi, wallet)
+
+    try {
+        const result = await contract.availableCONETianAirDrop();
+        return parseInt(result) / Math.pow(10, 18)	
+    } catch (error) {
+        console.log(error)
+    }
+}
