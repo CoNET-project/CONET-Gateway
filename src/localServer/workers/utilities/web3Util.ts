@@ -3334,10 +3334,15 @@ const claimConetianAirdrop = async (cmd: worker_command) => {
     const contract = new ethers.Contract(conetianAirdropContractAddress, conetianAirdropAbi, wallet)
     
     try {
-        const result = await contract.CONETianMint()
-        console.log(result)
-    } catch (error) {
-        console.log(error)
+        const pendingTx = await contract.CONETianMint()
+        cmd.data = [true]
+        return returnUUIDChannel(cmd);
+    } catch (error: any) {
+        if(error?.reason)
+
+        cmd.err = 'FAILURE'
+        cmd.data = error?.reason
+        return returnUUIDChannel(cmd);
     }
 }
 
