@@ -35,6 +35,8 @@ const fx168OrderContractAddress = '0x9aE6D3Bd3029C8B2A73817b9aFa1C029237E3e30'
 const christmas2024ContractAddress = "0xb188e707f4544835aEe28E4206C65edfF23221C0";
 const conetianAirdropContractAddress =
   "0x675291851C5007759b35B89af9aDa3561Afbba18";
+const conetDepinContractAddress =
+    "0x675291851C5007759b35B89af9aDa3561Afbba18";
 
 const CONETIAN_PRICE = 100
 const GUARDIAN_PRICE = 1250

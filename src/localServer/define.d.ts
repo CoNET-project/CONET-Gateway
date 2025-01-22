@@ -306,6 +306,7 @@ type regionType = {
 interface conet_tokens {
 	//	CONET Holesky
 	conet?:CryptoAsset
+	conetDepin?:CryptoAsset
 	CNTP?: CryptoAsset
 	CNTPV1?: CryptoAsset
 	cCNTP?: CryptoAsset
@@ -318,7 +319,6 @@ interface conet_tokens {
 	cETH?: CryptoAsset
 	cArbETH?:CryptoAsset
 	cArbUSDT?:CryptoAsset
-
 
 	cUSDT?: CryptoAsset
 
