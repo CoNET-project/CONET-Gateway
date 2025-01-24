@@ -6682,7 +6682,7 @@ const christmas2024Abi = [
   },
 ];
 
-const conetianAirdropAbi = [
+const airdropAbi = [
   { inputs: [], stateMutability: "nonpayable", type: "constructor" },
   {
     inputs: [
@@ -6764,6 +6764,29 @@ const conetianAirdropAbi = [
   },
   {
     inputs: [],
+    name: "CNTP",
+    outputs: [
+      { internalType: "contract Claimable_CNTP_V7", name: "", type: "address" },
+    ],
+    stateMutability: "view",
+    type: "function",
+  },
+  {
+    inputs: [],
+    name: "CNTPAirDrop",
+    outputs: [],
+    stateMutability: "nonpayable",
+    type: "function",
+  },
+  {
+    inputs: [],
+    name: "CNTP_PoolMinted",
+    outputs: [{ internalType: "uint256", name: "", type: "uint256" }],
+    stateMutability: "view",
+    type: "function",
+  },
+  {
+    inputs: [],
     name: "CONETianCoNETAirDrop",
     outputs: [{ internalType: "uint256", name: "", type: "uint256" }],
     stateMutability: "view",
@@ -6814,6 +6837,22 @@ const conetianAirdropAbi = [
     type: "function",
   },
   {
+    inputs: [],
+    name: "Guardian",
+    outputs: [
+      { internalType: "contract GuardianNodes_V8", name: "", type: "address" },
+    ],
+    stateMutability: "view",
+    type: "function",
+  },
+  {
+    inputs: [{ internalType: "string", name: "_tx", type: "string" }],
+    name: "_bridgeMintTx",
+    outputs: [{ internalType: "bool", name: "isUsed", type: "bool" }],
+    stateMutability: "view",
+    type: "function",
+  },
+  {
     inputs: [{ internalType: "address", name: "", type: "address" }],
     name: "adminList",
     outputs: [{ internalType: "bool", name: "", type: "bool" }],
@@ -6841,7 +6880,16 @@ const conetianAirdropAbi = [
     type: "function",
   },
   {
-    inputs: [],
+    inputs: [{ internalType: "address", name: "to", type: "address" }],
+    name: "availableCNTPAirDrop",
+    outputs: [
+      { internalType: "uint256", name: "availableCoNET", type: "uint256" },
+    ],
+    stateMutability: "view",
+    type: "function",
+  },
+  {
+    inputs: [{ internalType: "address", name: "to", type: "address" }],
     name: "availableCONETianAirDrop",
     outputs: [
       { internalType: "uint256", name: "availableCoNET", type: "uint256" },
@@ -6857,21 +6905,21 @@ const conetianAirdropAbi = [
     type: "function",
   },
   {
-    inputs: [
-      { internalType: "address", name: "to", type: "address" },
-      { internalType: "uint256", name: "value", type: "uint256" },
-    ],
+    inputs: [{ internalType: "address", name: "", type: "address" }],
+    name: "blackList",
+    outputs: [{ internalType: "bool", name: "", type: "bool" }],
+    stateMutability: "view",
+    type: "function",
+  },
+  {
+    inputs: [{ internalType: "uint256", name: "value", type: "uint256" }],
     name: "bridgeBurn",
     outputs: [],
     stateMutability: "nonpayable",
     type: "function",
   },
   {
-    inputs: [
-      { internalType: "address", name: "to", type: "address" },
-      { internalType: "uint256", name: "value", type: "uint256" },
-      { internalType: "string", name: "_tx", type: "string" },
-    ],
+    inputs: [{ internalType: "string", name: "_tx", type: "string" }],
     name: "bridgeMint",
     outputs: [],
     stateMutability: "nonpayable",
@@ -6879,7 +6927,35 @@ const conetianAirdropAbi = [
   },
   {
     inputs: [],
-    name: "bridgedTotal",
+    name: "bridgeTotal",
+    outputs: [{ internalType: "uint256", name: "", type: "uint256" }],
+    stateMutability: "view",
+    type: "function",
+  },
+  {
+    inputs: [],
+    name: "bridgedBurnTotal",
+    outputs: [{ internalType: "uint256", name: "", type: "uint256" }],
+    stateMutability: "view",
+    type: "function",
+  },
+  {
+    inputs: [{ internalType: "address", name: "", type: "address" }],
+    name: "bridgedBurnUser",
+    outputs: [{ internalType: "uint256", name: "", type: "uint256" }],
+    stateMutability: "view",
+    type: "function",
+  },
+  {
+    inputs: [],
+    name: "bridgedMintTotal",
+    outputs: [{ internalType: "uint256", name: "", type: "uint256" }],
+    stateMutability: "view",
+    type: "function",
+  },
+  {
+    inputs: [{ internalType: "address", name: "", type: "address" }],
+    name: "bridgedMintUser",
     outputs: [{ internalType: "uint256", name: "", type: "uint256" }],
     stateMutability: "view",
     type: "function",
@@ -6902,16 +6978,56 @@ const conetianAirdropAbi = [
     type: "function",
   },
   {
-    inputs: [{ internalType: "bytes32", name: "", type: "bytes32" }],
-    name: "credentialTx",
-    outputs: [{ internalType: "bool", name: "", type: "bool" }],
+    inputs: [],
+    name: "decimals",
+    outputs: [{ internalType: "uint8", name: "", type: "uint8" }],
     stateMutability: "view",
     type: "function",
   },
   {
     inputs: [],
-    name: "decimals",
-    outputs: [{ internalType: "uint8", name: "", type: "uint8" }],
+    name: "getBalanceOfBridge",
+    outputs: [
+      { internalType: "uint256", name: "exportBalance", type: "uint256" },
+      { internalType: "uint256", name: "incomeBalance", type: "uint256" },
+    ],
+    stateMutability: "view",
+    type: "function",
+  },
+  {
+    inputs: [{ internalType: "string", name: "_tx", type: "string" }],
+    name: "getTxHash",
+    outputs: [{ internalType: "bytes32", name: "txHash", type: "bytes32" }],
+    stateMutability: "pure",
+    type: "function",
+  },
+  {
+    inputs: [],
+    name: "isGuardianNode",
+    outputs: [{ internalType: "bool", name: "isNode", type: "bool" }],
+    stateMutability: "view",
+    type: "function",
+  },
+  {
+    inputs: [
+      { internalType: "string", name: "_tx", type: "string" },
+      { internalType: "address", name: "to", type: "address" },
+      { internalType: "uint256", name: "value", type: "uint256" },
+    ],
+    name: "makeTxData",
+    outputs: [],
+    stateMutability: "nonpayable",
+    type: "function",
+  },
+  {
+    inputs: [{ internalType: "bytes32", name: "", type: "bytes32" }],
+    name: "mintTx",
+    outputs: [
+      { internalType: "bytes32", name: "tx", type: "bytes32" },
+      { internalType: "uint256", name: "value", type: "uint256" },
+      { internalType: "address", name: "to", type: "address" },
+      { internalType: "bool", name: "isUsed", type: "bool" },
+    ],
     stateMutability: "view",
     type: "function",
   },
@@ -6962,6 +7078,13 @@ const conetianAirdropAbi = [
     name: "transferFrom",
     outputs: [{ internalType: "bool", name: "", type: "bool" }],
     stateMutability: "nonpayable",
+    type: "function",
+  },
+  {
+    inputs: [{ internalType: "address", name: "", type: "address" }],
+    name: "whiteList",
+    outputs: [{ internalType: "bool", name: "", type: "bool" }],
+    stateMutability: "view",
     type: "function",
   },
 ];

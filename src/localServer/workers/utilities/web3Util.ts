@@ -1015,7 +1015,7 @@ const listenProfileVer = async () => {
 
             await Promise.all(runningList)
 
-            await checkAvailableConetianAirdropForAllProfiles()
+            await checkAllAvailableAirdropsForAllProfiles()
 
             const cmd = {
                 cmd: 'assets',
@@ -3348,7 +3348,7 @@ const claimConetianAirdrop = async (cmd: worker_command) => {
 
     const provider = new ethers.JsonRpcProvider(conet_rpc);
     const wallet = new ethers.Wallet(profile.privateKeyArmor, provider)
-    const contract = new ethers.Contract(conetianAirdropContractAddress, conetianAirdropAbi, wallet)
+    const contract = new ethers.Contract(airdropContractAddress, airdropAbi, wallet)
     
     try {
         const pendingTx = await contract.CONETianMint()
@@ -3362,6 +3362,33 @@ const claimConetianAirdrop = async (cmd: worker_command) => {
         return returnUUIDChannel(cmd);
     }
 }
+
+const checkAllAvailableAirdropsForAllProfiles = async () =>{
+    if (!CoNET_Data) return;
+
+    const profiles = CoNET_Data.profiles;
+
+    if (!profiles) {
+      return;
+    }
+
+    const promises: Promise<any>[] = []
+
+    promises.push(checkAvailableConetianAirdropForAllProfiles())
+    promises.push(checkAvailableCntpAirdropForAllProfiles())
+
+    const  [availableConetian, availableCntp ]: any = await Promise.all(promises)
+
+    for (let i = 0; i < profiles.length; i++) {
+        profiles[i].airdrop = { 
+            availableConetian: availableConetian[i],
+            availableCntp: availableCntp[i],
+            availableGuardian: 0  
+        };
+    }
+
+    CoNET_Data.profiles = profiles;
+};
 
 const checkAvailableConetianAirdropForAllProfiles = async () => {
     if(!CoNET_Data)
@@ -3382,24 +3409,52 @@ const checkAvailableConetianAirdropForAllProfiles = async () => {
 
     const results = await Promise.all(promises)
 
-    for (let i = 0; i < results.length; i++) {
-        const airdrop = {
-            availableConetian: results[i],
-        }
-
-        profiles[i].airdrop = {...airdrop}
-    }
-
-    CoNET_Data.profiles = profiles
+    return results;
 }
 
 const checkAvailableConetianAirdropForProfile = async (profile: profile) => {
     const provider = new ethers.JsonRpcProvider(conet_rpc)
     const wallet = new ethers.Wallet(profile.privateKeyArmor, provider)
-    const contract = new ethers.Contract(conetianAirdropContractAddress, conetianAirdropAbi, wallet)
+    const contract = new ethers.Contract(airdropContractAddress, airdropAbi, wallet)
 
     try {
-        const result = await contract.availableCONETianAirDrop();
+        const result = await contract.availableCONETianAirDrop(profile.keyID);
+        return parseInt(result) / Math.pow(10, 18)	
+    } catch (error) {
+        console.log(error)
+    }
+}
+
+const checkAvailableCntpAirdropForAllProfiles = async () => {
+    if(!CoNET_Data)
+        return 
+
+    const profiles = CoNET_Data.profiles
+
+    if (!profiles) {
+        return
+    }
+    
+    const promises: Promise<any>[] = []
+
+    for (let i = 0; i < profiles.length; i++) {
+        const profile = profiles[i]
+        
+        promises.push(checkAvailableCntpAirdropForProfile(profile))
+    }
+
+    const results = await Promise.all(promises)
+
+    return results;
+}
+
+const checkAvailableCntpAirdropForProfile = async (profile: profile) => {
+    const provider = new ethers.JsonRpcProvider(conet_rpc)
+    const wallet = new ethers.Wallet(profile.privateKeyArmor, provider)
+    const contract = new ethers.Contract(airdropContractAddress, airdropAbi, wallet)
+
+    try {
+        const result = await contract.availableCNTPAirDrop(profile.keyID);
         return parseInt(result) / Math.pow(10, 18)	
     } catch (error) {
         console.log(error)
