@@ -262,11 +262,7 @@ const processCmd = async (cmd: worker_command) => {
       case "guardianPurchase": {
         const [nodes, amount, profile, payAssetName] = cmd.data;
 
-        const isValid = validateFundsForPurchase(
-          profile,
-          payAssetName,
-          amount
-        );
+        const isValid = validateFundsForPurchase(profile, payAssetName, amount);
 
         if (!isValid || !nodes || !amount || !profile || !payAssetName) {
           const cmd1 = {
@@ -333,11 +329,7 @@ const processCmd = async (cmd: worker_command) => {
         const [referrer, amount, profile, payAssetName] = cmd.data;
         returnUUIDChannel(cmd);
 
-        const isValid = validateFundsForPurchase(
-          profile,
-          payAssetName,
-          amount
-        );
+        const isValid = validateFundsForPurchase(profile, payAssetName, amount);
 
         if (!isValid || amount?.length !== 1 || !profile || !payAssetName) {
           const cmd1 = {
@@ -843,8 +835,8 @@ const processCmd = async (cmd: worker_command) => {
         return removeMonitoredWallet(cmd);
       }
 
-      case "claimConetianAirdrop": {
-        return claimConetianAirdrop(cmd);
+      case "redeemAirdrop": {
+        return redeemAirdrop(cmd);
       }
 
       default: {

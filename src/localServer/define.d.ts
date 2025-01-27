@@ -259,7 +259,7 @@ declare type WorkerCommand =
   | "addMonitoredWallet"
   | "removeMonitoredWallet"
   | "getProfileAvailableCntpReward"
-	| "claimConetianAirdrop"
+	| "redeemAirdrop"
 
 type SINodesSortby = 'CUSTOMER_REVIEW'|'TOTAL_ONLINE_TIME'|
 	'STORAGE_PRICE_LOW'|'STORAGE_PRICE_HIGH'|'OUTBOUND_PRICE_HIGH'|'OUTBOUND_PRICE_LOW'
@@ -369,8 +369,9 @@ interface historicBalance {
 
 interface airdrop {
 	availableCntp?: number
+	gasForCntp?: number
 	availableConetian?: number
-	availableGuardian?: number
+	gasForConetian?: number
 }
 
 interface profile extends keyPair {
