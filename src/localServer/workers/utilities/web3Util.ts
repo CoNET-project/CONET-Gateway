@@ -986,6 +986,7 @@ const checkSmartContractAsset = async (eventLogs, tokenABILog, tokenName, profil
 const listeningAddress = []
 
 let provideCONET
+let conetDepinProvider
 let lesteningBlock = false
 let epoch = 0
 let needUpgradeVer = 0
@@ -2267,7 +2268,13 @@ const scanCONET_dWETH = async (walletAddr: string, privideCONET) => {
 };
 
 const scanCONETDepin = async (walletAddr: string) => {
-    return await scan_erc20_balance(walletAddr, conetDepinContractAddress, provideCONET)
+    conetDepinProvider = new ethers.JsonRpcProvider(mainChain_rpc);
+
+    return await scan_erc20_balance(
+      walletAddr,
+      conetDepinContractAddress,
+      conetDepinProvider
+    );
 };
 
 const scanCONETHolesky = async (walletAddr: string, privideCONET) => {
@@ -3350,9 +3357,7 @@ const checkAllAvailableAirdropsForAllProfiles = async () =>{
     for (let i = 0; i < profiles.length; i++) {
         profiles[i].airdrop = { 
             availableConetian: conetianAirdrop.airdrops[i],
-            gasForConetian: conetianAirdrop.gasFees[i],
             availableCntp: cntpAirdrop.airdrops[i],
-            gasForCntp: cntpAirdrop.gasFees[i],
         };
     }
 
@@ -3375,15 +3380,12 @@ const checkAvailableConetianAirdropForAllProfiles = async () => {
     for (let i = 0; i < profiles.length; i++) {
         const profile = profiles[i]
         airdropPromises.push(checkAvailableConetianAirdropForProfile(profile))
-        gasFeePromises.push(getGasFeeForConetianAirdrop(profile))
     }
 
     const airdropResults = await Promise.all(airdropPromises)
-    const gasFees = await Promise.all(gasFeePromises)
 
     const results = {
         airdrops: airdropResults,
-        gasFees: gasFees
     }
 
     return results;
@@ -3420,15 +3422,12 @@ const checkAvailableCntpAirdropForAllProfiles = async () => {
         const profile = profiles[i]
         
         availableAirdropPromises.push(checkAvailableCntpAirdropForProfile(profile))
-        gasFeePromises.push(getGasFeeForCntpAirdrop(profile))
     }
 
     const airdropResults = await Promise.all(availableAirdropPromises)
-    const gasFees = await Promise.all(gasFeePromises)
 
     const results = {
         airdrops: airdropResults,
-        gasFees: gasFees
     }
 
     return results;
@@ -3456,11 +3455,12 @@ const getGasFeeForCntpAirdrop = async (profile: profile) => {
     const ethInWei = ethers.parseEther(profile?.tokens?.cCNTP?.balance);
 
     try {
-        const airdropContractResult = await airdropContract.CNTPAirDrop.estimateGas();
-        const airdropGasFee = parseInt(airdropContractResult) / Math.pow(10, 18)	
-
         const cntpContractResult = await cntpContract.approve.estimateGas(airdropContractAddress, ethInWei);
         const approveGasFee = parseInt(cntpContractResult) / Math.pow(10, 18)	
+        
+        const airdropContractResult =
+          await airdropContract.CNTPAirBridgeAirdrop.estimateGas();
+        const airdropGasFee = parseInt(airdropContractResult) / Math.pow(10, 18)	
 
         return airdropGasFee + approveGasFee
     } catch (error) {
@@ -3476,7 +3476,7 @@ const getGasFeeForConetianAirdrop = async (profile: profile) => {
 
     try {
         const airdropContractResult =
-          await airdropContract.CONETianMint.estimateGas();
+          await airdropContract.CONETianBridgeAirdrop.estimateGas();
         const airdropGasFee = parseInt(airdropContractResult) / Math.pow(10, 18)	
 
         return airdropGasFee
@@ -3528,11 +3528,11 @@ const redeemAirdrop = async (cmd) => {
 
     if (!profile?.tokens?.cCNTP?.balance) throw new Error("FAILURE");
 
-    const ethInWei = ethers
-      .parseEther(profile?.tokens?.cCNTP?.balance);
-
-    const approveTx = await cntpContract.approve(airdropContractAddress, ethInWei);
-    const approveReceipt = await approveTx.wait();
+    if (parseFloat(profile?.tokens?.cCNTP?.balance) >= 0.001) {
+        const ethInWei = ethers.parseEther(profile?.tokens?.cCNTP?.balance);
+        const approveTx = await cntpContract.approve(airdropContractAddress, ethInWei);
+        const approveReceipt = await approveTx.wait()
+    }
   } catch (error: any) {
     cmd.err = "FAILURE";
     if (error?.reason) {
@@ -3542,8 +3542,11 @@ const redeemAirdrop = async (cmd) => {
   }
 
   try {
-    if (canCntpAirdropTotal > 0) {
-      const pendingCntpAirdropTx = await conetContract.CNTPAirDrop();
+    if (
+      canCntpAirdropTotal > 0 &&
+      parseFloat(profile?.tokens?.cCNTP?.balance) >= 0.001
+    ) {
+      const pendingCntpAirdropTx = await conetContract.CNTPAirBridgeAirdrop();
       cmd.data.push(true);
     }
   } catch (error: any) {
@@ -3555,7 +3558,8 @@ const redeemAirdrop = async (cmd) => {
 
   try {
     if (canConetianAirdropTotal > 0) {
-      const pendingConetianAirdropTx = await conetContract.CONETianMint();
+      const pendingConetianAirdropTx =
+        await conetContract.CONETianBridgeAirdrop();
       cmd.data.push(true);
     }
   } catch (error: any) {

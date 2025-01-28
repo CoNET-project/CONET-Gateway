@@ -6575,6 +6575,39 @@ const airdropAbi = [
     type: "event",
   },
   {
+    anonymous: false,
+    inputs: [
+      {
+        indexed: true,
+        internalType: "address[]",
+        name: "to",
+        type: "address[]",
+      },
+      {
+        indexed: true,
+        internalType: "uint256[]",
+        name: "value",
+        type: "uint256[]",
+      },
+    ],
+    name: "bridgeBetch",
+    type: "event",
+  },
+  {
+    anonymous: false,
+    inputs: [
+      { indexed: true, internalType: "address", name: "to", type: "address" },
+      {
+        indexed: true,
+        internalType: "uint256",
+        name: "value",
+        type: "uint256",
+      },
+    ],
+    name: "bridgeTo",
+    type: "event",
+  },
+  {
     inputs: [],
     name: "CNTP",
     outputs: [
@@ -6585,7 +6618,7 @@ const airdropAbi = [
   },
   {
     inputs: [],
-    name: "CNTPAirDrop",
+    name: "CNTPAirBridgeAirdrop",
     outputs: [],
     stateMutability: "nonpayable",
     type: "function",
@@ -6595,6 +6628,13 @@ const airdropAbi = [
     name: "CNTP_PoolMinted",
     outputs: [{ internalType: "uint256", name: "", type: "uint256" }],
     stateMutability: "view",
+    type: "function",
+  },
+  {
+    inputs: [],
+    name: "CONETianBridgeAirdrop",
+    outputs: [],
+    stateMutability: "nonpayable",
     type: "function",
   },
   {
@@ -6616,13 +6656,6 @@ const airdropAbi = [
     name: "CONETianEnd",
     outputs: [{ internalType: "bool", name: "", type: "bool" }],
     stateMutability: "view",
-    type: "function",
-  },
-  {
-    inputs: [],
-    name: "CONETianMint",
-    outputs: [],
-    stateMutability: "nonpayable",
     type: "function",
   },
   {
@@ -6654,13 +6687,6 @@ const airdropAbi = [
     outputs: [
       { internalType: "contract GuardianNodes_V8", name: "", type: "address" },
     ],
-    stateMutability: "view",
-    type: "function",
-  },
-  {
-    inputs: [{ internalType: "string", name: "_tx", type: "string" }],
-    name: "_bridgeMintTx",
-    outputs: [{ internalType: "bool", name: "isUsed", type: "bool" }],
     stateMutability: "view",
     type: "function",
   },
@@ -6724,20 +6750,6 @@ const airdropAbi = [
     type: "function",
   },
   {
-    inputs: [{ internalType: "uint256", name: "value", type: "uint256" }],
-    name: "bridgeBurn",
-    outputs: [],
-    stateMutability: "nonpayable",
-    type: "function",
-  },
-  {
-    inputs: [{ internalType: "string", name: "_tx", type: "string" }],
-    name: "bridgeMint",
-    outputs: [],
-    stateMutability: "nonpayable",
-    type: "function",
-  },
-  {
     inputs: [],
     name: "bridgeTotal",
     outputs: [{ internalType: "uint256", name: "", type: "uint256" }],
@@ -6769,13 +6781,6 @@ const airdropAbi = [
     inputs: [{ internalType: "address", name: "", type: "address" }],
     name: "bridgedMintUser",
     outputs: [{ internalType: "uint256", name: "", type: "uint256" }],
-    stateMutability: "view",
-    type: "function",
-  },
-  {
-    inputs: [],
-    name: "canTransferRule",
-    outputs: [{ internalType: "bool", name: "", type: "bool" }],
     stateMutability: "view",
     type: "function",
   },
@@ -6822,11 +6827,10 @@ const airdropAbi = [
   },
   {
     inputs: [
-      { internalType: "string", name: "_tx", type: "string" },
-      { internalType: "address", name: "to", type: "address" },
-      { internalType: "uint256", name: "value", type: "uint256" },
+      { internalType: "address[]", name: "_toArray", type: "address[]" },
+      { internalType: "uint256[]", name: "values", type: "uint256[]" },
     ],
-    name: "makeTxData",
+    name: "managerAirdropBetch",
     outputs: [],
     stateMutability: "nonpayable",
     type: "function",
@@ -6848,13 +6852,6 @@ const airdropAbi = [
     name: "name",
     outputs: [{ internalType: "string", name: "", type: "string" }],
     stateMutability: "view",
-    type: "function",
-  },
-  {
-    inputs: [{ internalType: "bool", name: "status", type: "bool" }],
-    name: "setCanTransferRule",
-    outputs: [],
-    stateMutability: "nonpayable",
     type: "function",
   },
   {

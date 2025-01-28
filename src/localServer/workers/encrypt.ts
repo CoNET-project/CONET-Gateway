@@ -147,6 +147,7 @@ const initEncryptWorker = async () => {
     }
     responseChannel.postMessage(JSON.stringify(cmd))
     provideCONET = new ethers.JsonRpcProvider(conet_rpc)
+    conetDepinProvider = new ethers.JsonRpcProvider(mainChain_rpc);
     await checkStorage(channelPlatform)
     listenProfileVer()
 }

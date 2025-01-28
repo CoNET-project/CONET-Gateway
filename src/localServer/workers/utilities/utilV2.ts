@@ -2,6 +2,7 @@
 // --------------------------------------------------------------------------------------------
 
 const conet_rpc = 'https://rpc.conet.network'
+const mainChain_rpc = "https://mainnet-rpc.conet.network";
 const api_endpoint = `https://api.conet.network/api/`
 const apiv2_endpoint = `https://apiv3.conet.network/api/`
 
@@ -33,8 +34,8 @@ const conet_dWBNB = '0xd8b094E91c552c623bc054085871F6c1CA3E5cAd'
 const CONET_Guardian_Nodes1 = '0x5e4aE81285b86f35e3370B3EF72df1363DD05286'
 const fx168OrderContractAddress = '0x9aE6D3Bd3029C8B2A73817b9aFa1C029237E3e30'
 const christmas2024ContractAddress = "0xb188e707f4544835aEe28E4206C65edfF23221C0";
-const airdropContractAddress = "0x05ad832e81b703FaeA855476788bdBdBc4897F14";
-const conetDepinContractAddress = "0x05ad832e81b703FaeA855476788bdBdBc4897F14";
+const airdropContractAddress = "0xa0822b9fe34f81dd926ff1c182cb17baf50004f7";
+const conetDepinContractAddress = "0xc4C9927516db9BBe42DC0b003A7AB0946AC649C1";
 
 const CONETIAN_PRICE = 100
 const GUARDIAN_PRICE = 1250
