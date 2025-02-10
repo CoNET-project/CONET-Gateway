@@ -3525,7 +3525,7 @@ const redeemAirdrop = async (cmd) => {
 
     if (!profile?.tokens?.cCNTP?.balance) throw new Error("FAILURE");
 
-    if (parseFloat(profile?.tokens?.cCNTP?.balance) >= 0.001) {
+    if (parseFloat(profile?.tokens?.cCNTP?.balance) >= 0.00001) {
         const ethInWei = ethers.parseEther(profile?.tokens?.cCNTP?.balance);
         const approveTx = await cntpContract.approve(airdropContractAddress, ethInWei);
         const approveReceipt = await approveTx.wait()
@@ -3541,7 +3541,7 @@ const redeemAirdrop = async (cmd) => {
   try {
     if (
       canCntpAirdropTotal > 0 &&
-      parseFloat(profile?.tokens?.cCNTP?.balance) >= 0.001
+      parseFloat(profile?.tokens?.cCNTP?.balance) >= 0.00001
     ) {
       const pendingCntpAirdropTx = await conetContract.CNTPAirBridgeAirdrop();
       cmd.data.push(true);

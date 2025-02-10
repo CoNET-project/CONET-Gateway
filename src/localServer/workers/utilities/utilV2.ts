@@ -1,4 +1,3 @@
-
 // --------------------------------------------------------------------------------------------
 
 const conet_holesky_rpc = 'https://rpc.conet.network'
@@ -16,6 +15,7 @@ const _ethRpc = ['https://rpc.ankr.com/eth', 'https://eth.llamarpc.com', 'https:
 const blast_mainnet1 = ['https://blast.din.dev/rpc', 'https://rpc.ankr.com/blast', 'https://blastl2-mainnet.public.blastapi.io', 'https://blast.blockpi.network/v1/rpc/public']
 const bsc_mainchain = 'https://bsc-dataseed.binance.org/'
 const tron_mainnet = 'https://api.trongrid.io/jsonrpc'
+
 // --------------------------------------------------------------------------------------------
 
 const ReferralsAddress_cancun = '0xbd67716ab31fc9691482a839117004497761D0b9'.toLowerCase()
@@ -38,8 +38,6 @@ const christmas2024ContractAddress = "0xb188e707f4544835aEe28E4206C65edfF23221C0
 const airdropContractAddress = "0xa0822b9fe34f81dd926ff1c182cb17baf50004f7";
 const conetDepinContractAddress = "0xc4C9927516db9BBe42DC0b003A7AB0946AC649C1";
 
-const CONETIAN_PRICE = 100
-const GUARDIAN_PRICE = 1250
 
 //const CNTPB_contract = '0x6056473ADD8bC89a95325845F6a431CCD7A849bb'
 // const Claimable_ETHUSDTv3 = '0x79E2EdE2F479fA7E44C89Bbaa721EB1f0d529b7B'.toLowerCase()
@@ -50,20 +48,6 @@ const GUARDIAN_PRICE = 1250
 // const Claimable_ETH = '0x6Eb683B666310cC4E08f32896ad620E5F204c8f8'.toLowerCase()
 
 // --------------------------------------------------------------------------------------------
-
-const FragmentNameDeriveChildIndex = 65536;
-const blast_mainnet = () => blast_mainnet1[Math.round(Math.random() * (blast_mainnet1.length - 1))];
-const ethRpc = () => _ethRpc[Math.round(Math.random() * (_ethRpc.length - 1))];
-let allNodes;
-let authorization_key = ''
-
-const initV2 = async (profile) => {
-    const url = `${apiv4_endpoint}initV3`
-    const result = await postToEndpoint(url, true, { walletAddress: profile.keyID })
-	return result
-}
-
-//	******************************************************************
 
 const cCNTP_Holesky_Addr = '0xa4b389994A591735332A67f3561D60ce96409347'.toLocaleLowerCase()
 const cCNTP_cancun_Addr = '0x6C7C575010F86A311673432319299F3D68e4b522'.toLocaleLowerCase()
@@ -92,6 +76,14 @@ const claimable_Arb_ETH = '0xF406385E1A0389Ae35684D27c3Ef2799E88E2c4A'
 const claimable_Arb_USDT = '0xF40A8EFc8Dd47929ba8Ee9d5B3f1534239E930Fe'
 const CONETianPlanAddr = "0x4F1F5c25429Ea458C9e4363F05110f668f20D58B";
 
+//const CNTPB_contract = '0x6056473ADD8bC89a95325845F6a431CCD7A849bb'
+// const Claimable_ETHUSDTv3 = '0x79E2EdE2F479fA7E44C89Bbaa721EB1f0d529b7B'.toLowerCase()
+// const Claimable_BNBUSDTv3 = '0xd008D56aa9A963FAD8FB1FbA1997C28dB85933e6'.toLowerCase()
+// const Claimable_BlastUSDBv3 = '0x16cDB3C07Db1d58330FF0e930C3C58935CB6Cc97'.toLowerCase()
+//const Claimable_BlastETH = '0x47A10d4BBF904BCd550200CcBB6266fB88EB9804'.toLowerCase()
+// const Claimable_BNB = '0x8E7B1D5f6DF4B0d7576B7430ECB1bEEE0b612382'.toLowerCase()
+// const Claimable_ETH = '0x6Eb683B666310cC4E08f32896ad620E5F204c8f8'.toLowerCase()
+
 const ConetianNftId = 0
 const ConetianReferrerNftId = 10
 const maxConetianNft = 30000
@@ -102,7 +94,24 @@ const GuardianReferrerNftId = 2
 
 const GuardianPriceUSDT = 100
 
-//	******************************************************************
+const CONETIAN_PRICE = 100;
+const GUARDIAN_PRICE = 1250;
+
+// --------------------------------------------------------------------------------------------
+
+const FragmentNameDeriveChildIndex = 65536;
+const blast_mainnet = () => blast_mainnet1[Math.round(Math.random() * (blast_mainnet1.length - 1))];
+const ethRpc = () => _ethRpc[Math.round(Math.random() * (_ethRpc.length - 1))];
+let allNodes;
+let authorization_key = ''
+
+const initV2 = async (profile) => {
+    const url = `${apiv4_endpoint}initV3`
+    const result = await postToEndpoint(url, true, { walletAddress: profile.keyID })
+	return result
+}
+
+// --------------------------------------------------------------------------------------------
 
 const nfts = {
   conetiannft: {
