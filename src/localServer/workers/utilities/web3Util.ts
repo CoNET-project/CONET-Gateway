@@ -555,7 +555,7 @@ const getProfileAssets_CONET_Balance = async (profile: profile) => {
                         history: [],
                         network: "CONET Holesky",
                         decimal: ConetianNftId,
-                        contract: CONETianPlanAddr,
+                        contract: CONETianPlanAddr_cancun,
                         name: "Guardian",
                         supplyMaximum: maxConetianNft.toString(),
                         totalSupply: parseInt(
@@ -568,7 +568,7 @@ const getProfileAssets_CONET_Balance = async (profile: profile) => {
                         history: [],
                         network: "CONET Holesky",
                         decimal: ConetianReferrerNftId,
-                        contract: CONETianPlanAddr,
+                        contract: CONETianPlanAddr_cancun,
                         name: "Guardian_referrer",
                     },
                 };
@@ -585,7 +585,7 @@ const getProfileAssets_CONET_Balance = async (profile: profile) => {
                     history: [],
                     network: 'CONET Holesky',
                     decimal: ConetianNftId,
-                    contract: CONETianPlanAddr,
+                    contract: CONETianPlanAddr_cancun,
                     name: 'ConetianNFT',
                     supplyMaximum: maxConetianNft.toString(),
                     totalSupply: parseInt(CONETianData.availableBalance.toString()).toFixed(0)
@@ -603,7 +603,7 @@ const getProfileAssets_CONET_Balance = async (profile: profile) => {
                     history: [],
                     network: 'CONET Holesky',
                     decimal: ConetianReferrerNftId,
-                    contract: CONETianPlanAddr,
+                    contract: CONETianPlanAddr_cancun,
                     name: 'ConetianAgentNFT',
                 }
             }
@@ -2463,7 +2463,7 @@ const scan_Guardian_ReferralNodes = async (walletAddr) => {
 }
 
 const scan_CONETianPlanAddr = async (walletAddr) => new Promise(async resolve => {
-	const CONETianPlanContract = new ethers.Contract(CONETianPlanAddr, CONETianPlan_ABI, provideCONET)
+	const CONETianPlanContract = new ethers.Contract(CONETianPlanAddr_cancun, CONETianPlan_ABI, provideCONET)
 	try {
 		const [balanceGuardian, balanceReferrer, availableBalance] = await Promise.all([
 			CONETianPlanContract.balanceOf(walletAddr, ConetianNftId),
