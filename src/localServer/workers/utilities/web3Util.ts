@@ -1,6 +1,6 @@
 const getRegion = async () => {
 
-    const regionContract = new ethers.Contract(CONET_Guardian_NodeInfoV6, CONET_Guardian_NodeInfo_ABI, provideCONET)
+    const regionContract = new ethers.Contract(CONET_Guardian_NodeInfoV6_cancou, CONET_Guardian_NodeInfo_ABI, provideCONET)
     try {
         const gasPrice = await regionContract.getAllRegions()
         return gasPrice
@@ -26,7 +26,7 @@ const registerReferrer = async (referrer) => {
         return false
     }
 
-    const provideNewCONET = new ethers.JsonRpcProvider(conet_rpc)
+    const provideNewCONET = new ethers.JsonRpcProvider(conet_cancun_rpc)
     const wallet = new ethers.Wallet(profile.privateKeyArmor, provideNewCONET)
     const CNTP_Referrals = new ethers.Contract(CONET_ReferralsAddressV3, CONET_ReferralsAbi, wallet)
     try {
@@ -48,9 +48,9 @@ const registerReferrer = async (referrer) => {
 }
 
 const preBurnCCNTP = async (profile, totalBurn) => {
-    const provideCONET = new ethers.JsonRpcProvider(conet_rpc)
+    const provideCONET = new ethers.JsonRpcProvider(conet_cancun_rpc)
     const walletObj = new ethers.Wallet(profile.privateKeyArmor, provideCONET)
-    const erc20 = new ethers.Contract(cCNTP_new_Addr, blast_CNTPAbi, walletObj)
+    const erc20 = new ethers.Contract(cCNTP_cancun_Addr, blast_CNTPAbi, walletObj)
     let total
     try {
         const gasPrice = await provideCONET.getFeeData()
@@ -66,7 +66,7 @@ const preBurnCCNTP = async (profile, totalBurn) => {
 const burnCCNTP = async (profile, totalBurn) => {
 	
     const walletObj = new ethers.Wallet(profile.privateKeyArmor, provideCONET)
-    const erc20 = new ethers.Contract(cCNTP_new_Addr, blast_CNTPAbi, walletObj)
+    const erc20 = new ethers.Contract(cCNTP_cancun_Addr, blast_CNTPAbi, walletObj)
     const value = parseEther(totalBurn, 'ccntp')
     let tx
     try {
@@ -144,7 +144,7 @@ const startSilentPass = async (profile: profile, entryRegion: string, egressRegi
 	const egressFilter = new RegExp(`${egressRegion}$`, 'i')
 	const egressFilterRegion: string[] = regions.filter(n => egressFilter.test(n))
     
-	const GuardianNodesSC = new ethers.Contract(CONET_Guardian_NodeInfoV6, CONET_Guardian_NodeInfo_ABI, provideCONET)
+	const GuardianNodesSC = new ethers.Contract(CONET_Guardian_NodeInfoV6_cancou, CONET_Guardian_NodeInfo_ABI, provideCONET)
 	const entryNodes: nodes_info[] = []
 	const egressNodes: nodes_info[] = []
 
@@ -425,7 +425,7 @@ const getProfileAssets_CONET_Balance = async (profile: profile) => {
 				history: [],
 				network: 'CONET Holesky',
 				decimal: 18,
-				contract: cCNTP_new_Addr,
+				contract: cCNTP_cancun_Addr,
 				name: 'cCNTP'
 			}
 		}
@@ -622,7 +622,7 @@ const getProfileAssets_CONET_Balance = async (profile: profile) => {
 						history: [],
 						network: 'CONET Holesky',
 						decimal: GuardianNftId,
-						contract: CONET_Guardian_Nodes_V6,
+						contract: CONET_Guardian_Nodes_V6_cancou,
 						name: 'Guardian NFT',
 						supplyMaximum: maxGuardianNft.toString(),
 					},
@@ -632,7 +632,7 @@ const getProfileAssets_CONET_Balance = async (profile: profile) => {
 						history: [],
 						network: 'CONET Holesky',
 						decimal: GuardianReferrerNftId,
-						contract: CONET_Guardian_Nodes_V6,
+						contract: CONET_Guardian_Nodes_V6_cancou,
 						name: 'Guardian Referrer NFT'
 					},
                     Node_NFT_ID: GuardianData.nodeNftId.toString()
@@ -840,8 +840,8 @@ const checkGuardianNodes = async () => {
 
     const profiles = CoNET_Data.profiles
     const profile = CoNET_Data.profiles[mainIndex]
-    const provideCONET = new ethers.JsonRpcProvider(conet_rpc)
-    const erc1155 = new ethers.Contract(CONET_Guardian_Nodes_V6, guardian_erc1155, provideCONET)
+    const provideCONET = new ethers.JsonRpcProvider(conet_cancun_rpc)
+    const erc1155 = new ethers.Contract(CONET_Guardian_Nodes_V6_cancou, guardian_erc1155, provideCONET)
     //const ercGuardianNodesInfoV3 = new ethers.Contract(CONET_Guardian_NodeInfoV5, GuardianNodesInfoV3_ABI, provideCONET)
     let nodes = 0
     let nodeAddress = [], Ids, numbers;
@@ -918,7 +918,7 @@ const checkGuardianNodes = async () => {
 		const toProfile = profiles[3]
 		if (profile && toProfile) {
 			const wallet = new ethers.Wallet(profile.privateKeyArmor, provideCONET)
-			const GuardianNodes = new ethers.Contract(CONET_Guardian_Nodes_V6, guardian_erc1155, wallet)
+			const GuardianNodes = new ethers.Contract(CONET_Guardian_Nodes_V6_cancou, guardian_erc1155, wallet)
 			
 			try{
 				const tx = await GuardianNodes.safeTransferFrom(wallet.address, toProfile.keyID, 965, 1, '0x00')
@@ -929,9 +929,11 @@ const checkGuardianNodes = async () => {
 			logger(`transferNFT success!`)
 		}
 	}
-		
-		
-	
+	async.mapLimit(profiles, 1, async (n, next) => {
+		await getFaucet(n)
+	}, () => {
+
+	})
     await storagePieceToLocal()
     await storeSystemData()
     needUpgradeVer = epoch + 25
@@ -1053,9 +1055,9 @@ const getHistoricBalance = async () => {
 }
 
 const getHistoricCntpBalance = async (profile: profile, daysInChart: number[]) => {
-    const provideCONET = new ethers.JsonRpcProvider(conet_rpc);
+    const provideCONET = new ethers.JsonRpcProvider(conet_cancun_rpc);
     const wallet = new ethers.Wallet(profile.privateKeyArmor, provideCONET)
-    const contract = new ethers.Contract(cCNTP_new_Addr, blast_CNTPAbi, wallet)
+    const contract = new ethers.Contract(cCNTP_cancun_Addr, blast_CNTPAbi, wallet)
 
     const runningList: any[] = []
 
@@ -1113,7 +1115,7 @@ const checkProfileVersion = async (wallet) => {
 
 const checkOldProfileVersion = async (wallet) => {
     const obdGethRPC = 'https://rpc-old.conet.network'
-    const provideCONET = new ethers.JsonRpcProvider(conet_rpc)
+    const provideCONET = new ethers.JsonRpcProvider(conet_cancun_rpc)
     const provideOldCONET = new ethers.JsonRpcProvider(obdGethRPC)
     const old_conet_storage = new ethers.Contract(conet_storage_old_address, conet_storageAbi, provideOldCONET)
     const new_conet_storage = new ethers.Contract(profile_ver_addr, conet_storageAbi, provideCONET)
@@ -1723,21 +1725,18 @@ const getAllProfileAssetsBalance = () => new Promise(async (resolve) => {
     }
 
     await Promise.all(runningList)
-    const CNTP_Referrals = new ethers.Contract(ReferralsAddressV3, CONET_ReferralsAbi, provideCONET)
+    const CNTP_Referrals = new ethers.Contract(ReferralsAddress_cancun, CONET_ReferralsAbi, provideCONET)
     RefereesList = await getAllReferees(profiles[0].keyID, CNTP_Referrals)
 
     const connt = profiles[0]?.tokens?.conet
 
-    if (connt && connt.balance > '0.0001') {
-        let update = false
-        if (referrer) {
-            update = await registerReferrer(referrer)
-        }
+    async.mapLimit(profiles, 1, async (n, next) => {
+		await getFaucet(n)
+	}, () => {
 
-        await checkUpdateAccount()
-    } else {
-        await getFaucet(profiles[0])
-    }
+	})
+    
+    
 	
     const cmd = {
         cmd: 'assets',
@@ -2071,10 +2070,6 @@ const getFaucet: (profile: profile) => Promise<boolean|any> = async (profile) =>
 
 	const conet = profile?.tokens?.conet
 
-	if (conet && conet?.balance > '0.0001') {
-		return resolve (await getFaucetFromSmartContract(profile))
-	}
-
 	const health = await getCONET_api_health()
 	if (!health) {
 		return resolve(false)
@@ -2090,12 +2085,14 @@ const getFaucet: (profile: profile) => Promise<boolean|any> = async (profile) =>
         logger(`getFaucet postToEndpoint [${url}] error! `, ex)
         return resolve(false)
     }
-
-	return resolve (true)
+	setTimeout(() => {
+		return resolve (true)
+	}, 1000)
+	
 })
 
 const getProfileTicketsBalance = async (profile: profile) => {
-  const provide = new ethers.JsonRpcProvider(conet_rpc);
+  const provide = new ethers.JsonRpcProvider(conet_cancun_rpc);
   const wallet = new ethers.Wallet(profile.privateKeyArmor, provide);
   const ticketSmartContract = new ethers.Contract(
     ticketContractAddress,
@@ -2130,7 +2127,7 @@ const isWalletAgent = async (cmd) => {
         return returnUUIDChannel(cmd);
     }
     
-    const provideNewCONET = new ethers.JsonRpcProvider(conet_rpc);
+    const provideNewCONET = new ethers.JsonRpcProvider(conet_cancun_rpc);
     
     const ConetianContract = new ethers.Contract(
       nftContract,
@@ -2286,7 +2283,7 @@ const scanCNTPV1 = async (walletAddr: string) => {
 }
 
 const scanCCNTP = async (walletAddr: string) => {
-    return await scan_erc20_balance(walletAddr, cCNTP_new_Addr, provideCONET)
+    return await scan_erc20_balance(walletAddr, cCNTP_cancun_Addr, provideCONET)
 }
 
 const scanCNTP = async (walletAddr: string) => {
@@ -2458,11 +2455,11 @@ const getBlockByTimestamp = async (
 }
 
 const scan_Guardian_Nodes = async (walletAddr) => {
-    return await scan_src1155_balance(walletAddr, CONET_Guardian_Nodes_V6, GuardianNftId)
+    return await scan_src1155_balance(walletAddr, CONET_Guardian_Nodes_V6_cancou, GuardianNftId)
 }
 
 const scan_Guardian_ReferralNodes = async (walletAddr) => {
-    return await scan_src1155_balance(walletAddr, CONET_Guardian_Nodes_V6, GuardianReferrerNftId)
+    return await scan_src1155_balance(walletAddr, CONET_Guardian_Nodes_V6_cancou, GuardianReferrerNftId)
 }
 
 const scan_CONETianPlanAddr = async (walletAddr) => new Promise(async resolve => {
@@ -2482,7 +2479,7 @@ const scan_CONETianPlanAddr = async (walletAddr) => new Promise(async resolve =>
 
 const scan_GuardianPlanAddr = async (walletAddr) => new Promise(async resolve => {
 	const GuardianPlanContract = new ethers.Contract(
-    CONET_Guardian_Nodes_V6,
+    CONET_Guardian_Nodes_V6_cancou,
     guardian_erc1155,
     provideCONET
   );
@@ -2525,7 +2522,7 @@ const getNetwork = (networkName) => {
         case 'conet':
         case 'cntpb':
             {
-                return conet_rpc
+                return conet_cancun_rpc
             }
         case 'usdt':
         case 'eth':
@@ -2572,7 +2569,7 @@ const getAssetERC20Address = (assetName) => {
             return conet_dWETH
         }
         case 'cCNTP': {
-            return cCNTP_new_Addr
+            return cCNTP_cancun_Addr
         }
 		case 'arb_usdt': {
 			return Arbitrum_USDT
@@ -2709,7 +2706,7 @@ const getEstimateGasForNftTransfer = (
   toAddr
 ) =>
   new Promise(async (resolve) => {
-    const provide = new ethers.JsonRpcProvider(conet_rpc);
+    const provide = new ethers.JsonRpcProvider(conet_cancun_rpc);
     const wallet = new ethers.Wallet(privateKey, provide);
     let _fee;
     const smartContractAddr = nftObj?.contractAddress;
@@ -3090,7 +3087,7 @@ const fx168PrePurchase = async (cmd) => {
         CoNET_Data.fx168Order = [];
     }
     const publikPool = await createWallet(profiles, CoNET_Data.mnemonicPhrase, nodes);
-    const provideCONET = new ethers.JsonRpcProvider(conet_rpc);
+    const provideCONET = new ethers.JsonRpcProvider(conet_cancun_rpc);
     const wallet = new ethers.Wallet(profiles[0].privateKeyArmor, provideCONET);
     const fx168ContractObj = new ethers.Contract(fx168OrderContractAddress, fx168_Order_Abi, wallet);
     const fx168ContractObjRead = new ethers.Contract(fx168OrderContractAddress, fx168_Order_Abi, provideCONET);
@@ -3150,8 +3147,8 @@ const getAllReferrer = async () => {
     if (!CoNET_Data?.profiles) {
         return null
     }
-    const provideNewCONET = new ethers.JsonRpcProvider(conet_rpc)
-    const CNTP_Referrals = new ethers.Contract(ReferralsAddressV3, CONET_ReferralsAbi, provideNewCONET)
+    const provideNewCONET = new ethers.JsonRpcProvider(conet_cancun_rpc)
+    const CNTP_Referrals = new ethers.Contract(ReferralsAddress_cancun, CONET_ReferralsAbi, provideNewCONET)
     for (let i of CoNET_Data?.profiles) {
         const kk = await getReferrer(i.keyID, CNTP_Referrals);
         if (!kk || kk === '0x0000000000000000000000000000000000000000') {
@@ -3392,7 +3389,7 @@ const checkAvailableConetianAirdropForAllProfiles = async () => {
 }
 
 const checkAvailableConetianAirdropForProfile = async (profile: profile) => {
-    const provider = new ethers.JsonRpcProvider(conet_rpc)
+    const provider = new ethers.JsonRpcProvider(conet_cancun_rpc)
     const wallet = new ethers.Wallet(profile.privateKeyArmor, provider)
     const contract = new ethers.Contract(airdropContractAddress, airdropAbi, wallet)
 
@@ -3434,7 +3431,7 @@ const checkAvailableCntpAirdropForAllProfiles = async () => {
 }
 
 const checkAvailableCntpAirdropForProfile = async (profile: profile) => {
-    const provider = new ethers.JsonRpcProvider(conet_rpc)
+    const provider = new ethers.JsonRpcProvider(conet_cancun_rpc)
     const wallet = new ethers.Wallet(profile.privateKeyArmor, provider)
     const contract = new ethers.Contract(airdropContractAddress, airdropAbi, wallet)
 
@@ -3448,10 +3445,10 @@ const checkAvailableCntpAirdropForProfile = async (profile: profile) => {
 }
 
 const getGasFeeForCntpAirdrop = async (profile: profile) => {
-    const provider = new ethers.JsonRpcProvider(conet_rpc)
+    const provider = new ethers.JsonRpcProvider(conet_cancun_rpc)
     const wallet = new ethers.Wallet(profile.privateKeyArmor, provider)
     const airdropContract = new ethers.Contract(airdropContractAddress, airdropAbi, wallet)
-    const cntpContract = new ethers.Contract(cCNTP_new_Addr, blast_CNTPAbi, wallet)
+    const cntpContract = new ethers.Contract(cCNTP_cancun_Addr, blast_CNTPAbi, wallet)
     const ethInWei = ethers.parseEther(profile?.tokens?.cCNTP?.balance);
 
     try {
@@ -3470,7 +3467,7 @@ const getGasFeeForCntpAirdrop = async (profile: profile) => {
 }
 
 const getGasFeeForConetianAirdrop = async (profile: profile) => {
-    const provider = new ethers.JsonRpcProvider(conet_rpc)
+    const provider = new ethers.JsonRpcProvider(conet_cancun_rpc)
     const wallet = new ethers.Wallet(profile.privateKeyArmor, provider)
     const airdropContract = new ethers.Contract(airdropContractAddress, airdropAbi, wallet)
 
@@ -3499,7 +3496,7 @@ const redeemAirdrop = async (cmd) => {
     cmd.err = "FAILURE";
     return returnUUIDChannel(cmd);
   }
-  const provider = new ethers.JsonRpcProvider(conet_rpc);
+  const provider = new ethers.JsonRpcProvider(conet_cancun_rpc);
   const wallet = new ethers.Wallet(profile.privateKeyArmor, provider);
   
   const conetContract = new ethers.Contract(
@@ -3509,7 +3506,7 @@ const redeemAirdrop = async (cmd) => {
   );
 
   const cntpContract = new ethers.Contract(
-    cCNTP_new_Addr,
+    cCNTP_cancun_Addr,
     blast_CNTPAbi,
     wallet
   );

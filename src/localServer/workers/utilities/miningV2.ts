@@ -11,7 +11,7 @@ const getAllNodes = async () => {
 		return
 	}
 	getAllNodesProcess = true
-	const GuardianNodes = new ethers.Contract(CONET_Guardian_Nodes_V6, guardian_erc1155, provideCONET)
+	const GuardianNodes = new ethers.Contract(CONET_Guardian_Nodes_V6_cancou, guardian_erc1155, provideCONET)
 	let scanNodes = 0
 	try {
 		const maxNodes: BigInt = await GuardianNodes.currentNodeID()
@@ -38,7 +38,7 @@ const getAllNodes = async () => {
 	
 	let i = 0
 	const countrys: Map<string, boolean> = new Map()
-	const GuardianNodesInfo = new ethers.Contract(CONET_Guardian_NodeInfoV6, CONET_Guardian_NodeInfo_ABI, provideCONET)
+	const GuardianNodesInfo = new ethers.Contract(CONET_Guardian_NodeInfoV6_cancou, CONET_Guardian_NodeInfo_ABI, provideCONET)
 	await async.mapLimit(Guardian_Nodes, 10, async (n: nodes_info, next) => {
 		
 		const nodeInfo = await GuardianNodesInfo.getNodeInfoById(n.nftNumber)
@@ -198,7 +198,7 @@ const _startMiningV2 = async (profile: profile, cmd: worker_command|null = null)
 				history: [],
 				network: 'CONET Holesky',
 				decimal: 18,
-				contract: cCNTP_new_Addr,
+				contract: cCNTP_cancun_Addr,
 				name: 'cCNTP'
 			}
 			

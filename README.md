@@ -28,7 +28,7 @@ Run CLI command:
 yarn run seguro-gateway [--port] [port] [--path] [./path/to/workers]
 
 Examples:
-
+curl -v -4 -x http://127.0.0.1:3002 "https://conet.network"
 // Run with default port 3001 and empty path
 yarn run seguro-gateway
 

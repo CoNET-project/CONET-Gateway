@@ -1,7 +1,8 @@
 
 // --------------------------------------------------------------------------------------------
 
-const conet_rpc = 'https://rpc.conet.network'
+const conet_holesky_rpc = 'https://rpc.conet.network'
+const conet_cancun_rpc = 'https://cancun-rpc.conet.network'
 const mainChain_rpc = "https://mainnet-rpc.conet.network";
 const api_endpoint = `https://api.conet.network/api/`
 const apiv2_endpoint = `https://apiv3.conet.network/api/`
@@ -17,7 +18,7 @@ const bsc_mainchain = 'https://bsc-dataseed.binance.org/'
 const tron_mainnet = 'https://api.trongrid.io/jsonrpc'
 // --------------------------------------------------------------------------------------------
 
-const ReferralsAddressV3 = '0x1b104BCBa6870D518bC57B5AF97904fBD1030681'.toLowerCase()
+const ReferralsAddress_cancun = '0xbd67716ab31fc9691482a839117004497761D0b9'.toLowerCase()
 const conet_storage_old_address = `0x7d9CF1dd164D6AF82C00514071990358805d8d80`.toLowerCase()
 const adminCNTP = '0x44d1FCCce6BAF388617ee972A6FB898b6b5629B1'
 const referrerCNTP = '0x63377154F972f6FC1319e382535EC9691754bd18';
@@ -31,7 +32,7 @@ const ticketContractAddress =
 const conet_dWETH = '0x84b6d6A6675F830c8385f022Aefc9e3846A89D3B'
 const conet_dUSDT = '0x0eD55798a8b9647f7908c72a0Ce844ad47274422'
 const conet_dWBNB = '0xd8b094E91c552c623bc054085871F6c1CA3E5cAd'
-const CONET_Guardian_Nodes1 = '0x5e4aE81285b86f35e3370B3EF72df1363DD05286'
+const CONET_Guardian_Nodes_old = '0x5e4aE81285b86f35e3370B3EF72df1363DD05286'
 const fx168OrderContractAddress = '0x9aE6D3Bd3029C8B2A73817b9aFa1C029237E3e30'
 const christmas2024ContractAddress = "0xb188e707f4544835aEe28E4206C65edfF23221C0";
 const airdropContractAddress = "0xa0822b9fe34f81dd926ff1c182cb17baf50004f7";
@@ -64,10 +65,11 @@ const initV2 = async (profile) => {
 
 //	******************************************************************
 
-const cCNTP_new_Addr = '0xa4b389994A591735332A67f3561D60ce96409347'.toLocaleLowerCase()
-const profile_ver_addr = '0xB56Dfa5154B0DF39639eF701202f6e04EAc8Dda4'.toLowerCase()
-const CONET_Guardian_NodeInfoV6 = '0x9e213e8B155eF24B466eFC09Bcde706ED23C537a'
-const CONET_Guardian_Nodes_V6 = '0x35c6f84C5337e110C9190A5efbaC8B850E960384'.toLowerCase()
+const cCNTP_Holesky_Addr = '0xa4b389994A591735332A67f3561D60ce96409347'.toLocaleLowerCase()
+const cCNTP_cancun_Addr = '0x6C7C575010F86A311673432319299F3D68e4b522'.toLocaleLowerCase()
+const profile_ver_addr = '0x20f8B4De2922d2e9d83B73f4561221d9278Af181'.toLowerCase()
+const CONET_Guardian_NodeInfoV6_cancou = '0x88cBCc093344F2e1A6c2790A537574949D711E9d'
+const CONET_Guardian_Nodes_V6_cancou = '0x312c96DbcCF9aa277999b3a11b7ea6956DdF5c61'.toLowerCase()
 const CONET_Faucet_Smart_Contract_addr = '0x04CD419cb93FD4f70059cAeEe34f175459Ae1b6a'
 const CONET_CNTP_V1_Addr = '0xb182d2c2338775B0aC3e177351D638b23D3Da4Ea'
 const CONET_ReferralsAddressV3 = '0x1b104BCBa6870D518bC57B5AF97904fBD1030681'
@@ -79,7 +81,7 @@ const bnb_usdt_contract = '0x55d398326f99059fF775485246999027B3197955'
 
 const eth_usdt_contract = '0xdac17f958d2ee523a2206206994597c13d831ec7'
 
-const assetOracle_contract_addr = '0x8A7FD0B01B9CAb2Ef1FdcEe4134e32D066895e0c'
+const assetOracle_contract_addr = '0x0Ac28e301FeE0f60439675594141BEB53853f7b9'
 
 //		claimable
 const claimable_BNB_USDT = '0x49d1E11A25E99015cAaE3e032a7ED23D4399F3f9'
@@ -151,6 +153,8 @@ const createAccount = async (cmd) => {
 
     await storagePieceToLocal()
     await storeSystemData()
+
+	await getAllProfileAssetsBalance()
     cmd.data[0] = CoNET_Data.mnemonicPhrase
     return returnUUIDChannel(cmd)
 }
@@ -190,7 +194,6 @@ const testPasscode = async (cmd) => {
     await getAllProfileAssetsBalance()
     await getAllReferrer()
 	await checkGuardianNodes()
-    getFaucet(CoNET_Data.profiles[0]);
 
     await testFunction(cmd)
 }
@@ -273,6 +276,7 @@ const importWallet = async (cmd) => {
 
     await storagePieceToLocal()
     await storeSystemData()
+	await getAllProfileAssetsBalance()
     needUpgradeVer = epoch + 25
 }
 
@@ -633,7 +637,7 @@ const getRegionAllNodes = async (region: string, profile: profile) => {
 	}
 	const filter = new RegExp(`${region}$`, 'i')
 	const filterRegion: string[] = regions.filter(n => filter.test(n))
-	const GuardianNodesSC = new ethers.Contract(CONET_Guardian_NodeInfoV6, CONET_Guardian_NodeInfo_ABI, provideCONET)
+	const GuardianNodesSC = new ethers.Contract(CONET_Guardian_NodeInfoV6_cancou, CONET_Guardian_NodeInfo_ABI, provideCONET)
 	const nodes: nodes_info[] = []
 
 	await async.mapLimit(filterRegion, 5, async (n, next) => {
