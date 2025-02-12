@@ -3530,6 +3530,8 @@ const redeemAirdrop = async (cmd) => {
         const ethInWei = ethers.parseEther(bronCNTPValue.toString())
         const approveTx = await cntpContract.bronCNTP(ethInWei);
         await approveTx.wait()
+		const pendingCntpAirdropTx = await conetContract.CNTPAirBridgeAirdrop();
+      	cmd.data.push(true);
     }
   } catch (error: any) {
     cmd.err = "FAILURE";
@@ -3537,21 +3539,6 @@ const redeemAirdrop = async (cmd) => {
       cmd.data.push(error?.reason);
     }
     return returnUUIDChannel(cmd);
-  }
-
-  try {
-    if (
-      canCntpAirdropTotal > 0 &&
-      parseFloat(profile?.tokens?.cCNTP?.balance) >= 0.00001
-    ) {
-      const pendingCntpAirdropTx = await conetContract.CNTPAirBridgeAirdrop();
-      cmd.data.push(true);
-    }
-  } catch (error: any) {
-    cmd.err = "FAILURE";
-    if (error?.reason) {
-      cmd.data.push(error?.reason);
-    }
   }
 
   try {
