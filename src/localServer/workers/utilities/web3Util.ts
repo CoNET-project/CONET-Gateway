@@ -3524,13 +3524,13 @@ const redeemAirdrop = async (cmd) => {
       throw new Error("FAILURE");
 
     if (!profile?.tokens?.cCNTP?.balance) throw new Error("FAILURE");
-	const bronCNTPValue = parseInt((parseFloat(profile?.tokens?.cCNTP?.balance) * 1000).toFixed(0))/1000
+	const bronCNTPValue = parseInt((parseFloat(profile?.tokens?.cCNTP?.balance) * 1000).toFixed(0))/1000 - 0.00001
     if (bronCNTPValue >= 0.001) {
 		//		don't brun all balance
         const ethInWei = ethers.parseEther(bronCNTPValue.toString())
         const approveTx = await cntpContract.bronCNTP(ethInWei);
         await approveTx.wait()
-		const pendingCntpAirdropTx = await conetContract.CNTPAirBridgeAirdrop();
+		await conetContract.CNTPAirBridgeAirdrop();
       	cmd.data.push(true);
     }
   } catch (error: any) {
