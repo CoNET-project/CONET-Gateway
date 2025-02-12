@@ -3391,7 +3391,7 @@ const checkAvailableConetianAirdropForAllProfiles = async () => {
 const checkAvailableConetianAirdropForProfile = async (profile: profile) => {
     const provider = new ethers.JsonRpcProvider(conet_cancun_rpc)
     const wallet = new ethers.Wallet(profile.privateKeyArmor, provider)
-    const contract = new ethers.Contract(airdropContractAddress, airdropAbi, wallet)
+    const contract = new ethers.Contract(airdropContractAddress_cancun, airdropAbi, wallet)
 
     try {
         const result = await contract.availableCONETianAirDrop(profile.keyID);
@@ -3433,7 +3433,7 @@ const checkAvailableCntpAirdropForAllProfiles = async () => {
 const checkAvailableCntpAirdropForProfile = async (profile: profile) => {
     const provider = new ethers.JsonRpcProvider(conet_cancun_rpc)
     const wallet = new ethers.Wallet(profile.privateKeyArmor, provider)
-    const contract = new ethers.Contract(airdropContractAddress, airdropAbi, wallet)
+    const contract = new ethers.Contract(airdropContractAddress_cancun, airdropAbi, wallet)
 
     try {
         const result = await contract.availableCNTPAirDrop(profile.keyID);
@@ -3447,12 +3447,12 @@ const checkAvailableCntpAirdropForProfile = async (profile: profile) => {
 const getGasFeeForCntpAirdrop = async (profile: profile) => {
     const provider = new ethers.JsonRpcProvider(conet_cancun_rpc)
     const wallet = new ethers.Wallet(profile.privateKeyArmor, provider)
-    const airdropContract = new ethers.Contract(airdropContractAddress, airdropAbi, wallet)
+    const airdropContract = new ethers.Contract(airdropContractAddress_cancun, airdropAbi, wallet)
     const cntpContract = new ethers.Contract(cCNTP_cancun_Addr, blast_CNTPAbi, wallet)
     const ethInWei = ethers.parseEther(profile?.tokens?.cCNTP?.balance);
 
     try {
-        const cntpContractResult = await cntpContract.approve.estimateGas(airdropContractAddress, ethInWei);
+        const cntpContractResult = await cntpContract.approve.estimateGas(airdropContractAddress_cancun, ethInWei);
         const approveGasFee = parseInt(cntpContractResult) / Math.pow(10, 18)	
         
         const airdropContractResult =
@@ -3469,7 +3469,7 @@ const getGasFeeForCntpAirdrop = async (profile: profile) => {
 const getGasFeeForConetianAirdrop = async (profile: profile) => {
     const provider = new ethers.JsonRpcProvider(conet_cancun_rpc)
     const wallet = new ethers.Wallet(profile.privateKeyArmor, provider)
-    const airdropContract = new ethers.Contract(airdropContractAddress, airdropAbi, wallet)
+    const airdropContract = new ethers.Contract(airdropContractAddress_cancun, airdropAbi, wallet)
 
     try {
         const airdropContractResult =
@@ -3500,14 +3500,14 @@ const redeemAirdrop = async (cmd) => {
   const wallet = new ethers.Wallet(profile.privateKeyArmor, provider);
   
   const conetContract = new ethers.Contract(
-    airdropContractAddress,
+    airdropContractAddress_cancun,
     airdropAbi,
     wallet
   );
 
   const cntpContract = new ethers.Contract(
     cCNTP_cancun_Addr,
-    blast_CNTPAbi,
+    cCNTP_V8_ABI,
     wallet
   );
 
@@ -3524,11 +3524,12 @@ const redeemAirdrop = async (cmd) => {
       throw new Error("FAILURE");
 
     if (!profile?.tokens?.cCNTP?.balance) throw new Error("FAILURE");
-
-    if (parseFloat(profile?.tokens?.cCNTP?.balance) >= 0.00001) {
-        const ethInWei = ethers.parseEther(profile?.tokens?.cCNTP?.balance);
-        const approveTx = await cntpContract.approve(airdropContractAddress, ethInWei);
-        const approveReceipt = await approveTx.wait()
+	const bronCNTPValue = parseInt((parseFloat(profile?.tokens?.cCNTP?.balance) * 1000).toFixed(0))/1000
+    if (bronCNTPValue >= 0.001) {
+		//		don't brun all balance
+        const ethInWei = ethers.parseEther(bronCNTPValue.toString())
+        const approveTx = await cntpContract.bronCNTP(ethInWei);
+        await approveTx.wait()
     }
   } catch (error: any) {
     cmd.err = "FAILURE";
