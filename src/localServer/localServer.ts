@@ -178,23 +178,12 @@ const joinMetadata = (metadata: any ) => {
 
 let _proxyServer: proxyServer
 
-const changeRegion = (selectedCountry: string) => {
 
-	const result = miningClass.changeUsedNodes (selectedCountry)
-	if (!result || !result.length) {
-		return false
-	}
+const startSilentPass = (vpnObj: Native_StartVPNObj) => {
+	logger(inspect(vpnObj, false, 3, true))
 
-	const activeNodes = result.slice(0, result.length/2)
-	const egressNodes = result.slice(result.length/2)
-
-	if (_proxyServer) {
-		_proxyServer.restart(profile, activeNodes, egressNodes)
-	} else {
-		_proxyServer = new proxyServer((3002).toString(), activeNodes, egressNodes, profile, true, '')
-	}
-
-	return result
+	new proxyServer((3002).toString(), vpnObj.entryNodes, vpnObj.exitNode, vpnObj.privateKey, true, '')
+	return true
 }
 
 
@@ -218,6 +207,13 @@ const otherRespon = ( body: string| Buffer, _status: number ) => {
 export const return404 = () => {
 	const kkk = '<html>\r\n<head><title>404 Not Found</title></head>\r\n<body bgcolor="white">\r\n<center><h1>404 Not Found</h1></center>\r\n<hr><center>nginx/1.6.2</center>\r\n</body>\r\n</html>\r\n'
 	return otherRespon ( Buffer.from ( kkk ), 404 )
+}
+
+
+type Native_StartVPNObj = {
+	entryNodes: nodes_info[]
+	privateKey: string
+	exitNode: nodes_info[]
 }
 
 
@@ -454,20 +450,16 @@ export class Daemon {
 
 
      	app.post('/startSilentPass', async (req: any, res: any) => {
-            const selectedCountry = req.body.selectedCountry;
+            const vpnObj: Native_StartVPNObj = req.body.vpnInfo
 
-            console.log('selectedCountry', selectedCountry)
 
-			if (!selectedCountry) {
+			if (!vpnObj) {
 				return res.status(400).send({ error: "No country selected" })
 			}
-			const ret = changeRegion (selectedCountry)
 
-			if (!ret) {
-				return res.status(400).send({ error: `No nodes find in region ${selectedCountry}` })
-			}
+			startSilentPass (vpnObj)
 
-			res.json(ret).end()
+			res.status(200).json({}).end()
             
         })
 

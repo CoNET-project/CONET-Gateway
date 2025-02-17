@@ -36,7 +36,7 @@ export const launchDaemon = (port: number, path: string) => {
     new Daemon ( port, path )
 }
 
-export const proxyServer = (post: string, entryNode: nodes_info, _egressNode: nodes_info, profile: profile) => new proxyServer_class(post, [entryNode], [_egressNode], profile, false, '')
+export const proxyServer = (post: string, entryNode: nodes_info, _egressNode: nodes_info, privateKey: string) => new proxyServer_class(post, [entryNode], [_egressNode], privateKey, false, '')
 
 if (argv.port || argv.path) {
     PATH = argv.path

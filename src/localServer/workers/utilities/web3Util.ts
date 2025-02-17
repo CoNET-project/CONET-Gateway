@@ -3391,10 +3391,9 @@ const checkAvailableConetianAirdropForAllProfiles = async () => {
 const checkAvailableConetianAirdropForProfile = async (profile: profile) => {
     const provider = new ethers.JsonRpcProvider(conet_cancun_rpc)
     const wallet = new ethers.Wallet(profile.privateKeyArmor, provider)
-    const contract = new ethers.Contract(airdropContractAddress_cancun, airdropAbi, wallet)
-
+	const contract_update = new ethers.Contract(airdropContract_update_Address_cancun, airdropAbi, wallet)
     try {
-        const result = await contract.availableCONETianAirDrop(profile.keyID);
+        const result = await contract_update.availableCONETianAirDrop(profile.keyID);
         return parseInt(result) / Math.pow(10, 18)	
     } catch (error) {
         console.log(error)
@@ -3500,7 +3499,7 @@ const redeemAirdrop = async (cmd) => {
   const wallet = new ethers.Wallet(profile.privateKeyArmor, provider);
   
   const conetContract = new ethers.Contract(
-    airdropContractAddress_cancun,
+    airdropContract_update_Address_cancun,
     airdropAbi,
     wallet
   );
@@ -3522,15 +3521,14 @@ const redeemAirdrop = async (cmd) => {
     );
     if (canCntpAirdropTotal <= 0 && canConetianAirdropTotal <= 0)
       throw new Error("FAILURE");
-
-    if (!profile?.tokens?.cCNTP?.balance) throw new Error("FAILURE");
-	const bronCNTPValue = parseInt((parseFloat(profile?.tokens?.cCNTP?.balance) * 1000).toFixed(0))/1000 - 0.00001
+	const newBalance = await cntpContract.balanceOf(profile.keyID)
+	const bronCNTPValue = parseInt(ethers.formatEther(newBalance))
+	// const bronCNTPValue = parseInt((parseFloat(newBalance) * 1000).toFixed(0))/1000 - 0.00001
     if (bronCNTPValue >= 0.001) {
 		//		don't brun all balance
-        const ethInWei = ethers.parseEther(bronCNTPValue.toString())
-        const approveTx = await cntpContract.bronCNTP(ethInWei);
+        // const ethInWei = ethers.parseEther(bronCNTPValue.toString())
+        const approveTx = await cntpContract.bronCNTP(newBalance);
         await approveTx.wait()
-		await conetContract.CNTPAirBridgeAirdrop();
       	cmd.data.push(true);
     }
   } catch (error: any) {

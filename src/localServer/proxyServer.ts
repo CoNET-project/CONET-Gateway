@@ -13,7 +13,6 @@ import type {RequestOptions} from 'node:https'
 import * as openpgp from 'openpgp'
 import { TransformCallback } from 'stream'
 import { ethers } from 'ethers'
-import EthCrypto from 'eth-crypto'
 import * as Crypto from 'crypto'
 import IP from 'ip'
 import {resolve4} from 'node:dns'
@@ -160,11 +159,8 @@ const encrypt_Message = async (encryptionKeys, message: any) => {
 }
 
 
-const createSock5ConnectCmd = async (currentProfile: profile, SaaSnode: nodes_info, requestData: any[]) => {
-	if (!currentProfile.pgpKey|| !SaaSnode.armoredPublicKey ) {
-		logger (Colors.red(`currentProfile?.pgpKey[${currentProfile?.pgpKey}]|| !SaaSnode?.armoredPublicKey[${SaaSnode?.armoredPublicKey}] Error`))
-		return null
-	}
+const createSock5ConnectCmd = async (wallet: ethers.Wallet, SaaSnode: nodes_info, requestData: any[]) => {
+
 
 	if  (!SaaSnode?.publicKeyObj) {
 		SaaSnode.publicKeyObj = await openpgp.readKey ({ armoredKey: SaaSnode.armoredPublicKey })
@@ -177,7 +173,7 @@ const createSock5ConnectCmd = async (currentProfile: profile, SaaSnode: nodes_in
 		algorithm: 'aes-256-cbc',
 		Securitykey: key,
 		requestData,
-		walletAddress: currentProfile.keyID.toLowerCase()
+		walletAddress: wallet.address.toLowerCase()
 	}
 
 
@@ -185,11 +181,10 @@ const createSock5ConnectCmd = async (currentProfile: profile, SaaSnode: nodes_in
 	logger(Colors.blue(`createSock5ConnectCmd data length = ${requestData[0].buffer.length}`))
 
 	const message =JSON.stringify(command)
-	const messageHash = ethers.id(message)
-	const signMessage = EthCrypto.sign(currentProfile.privateKeyArmor, messageHash)
-
+	const signMessage = await wallet.signMessage(message)
 
 	const encryptedCommand = await encrypt_Message( SaaSnode.publicKeyObj, {message, signMessage})
+	logger(inspect({message, signMessage}, false, 3, true))
 	command.requestData = [encryptedCommand, '', key]
 	return (command)
 }
@@ -297,6 +292,7 @@ export class proxyServer {
 	public connectHostTimeOut = 1000 * 5
 	public useGatWay = true
 	public clientSockets: Set<Net.Socket> = new Set()
+	public currentWallet: ethers.Wallet
 
 	private startLocalProxy = async () => {
 
@@ -363,16 +359,6 @@ export class proxyServer {
 		this.server.listen ( this.proxyPort, () => {
 			return logger ( Colors.blue(`Proxy SERVER success on port : [${ this.proxyPort }] entry nodes length =[${this._egressNodes?.length}] SaaS nodes = [${this._egressNodes?.length}]`))
 		})
-
-		if (!this.currentProfile?.keyObj) {
-			this.currentProfile.keyObj = {
-				privateKeyObj: null,
-				publicKeyObj: null
-			}
-		}
-		if (this.currentProfile.pgpKey?.privateKeyArmor) {
-			this.currentProfile.keyObj.privateKeyObj = await makePrivateKeyObj (this.currentProfile.pgpKey.privateKeyArmor)
-		}
 		
 	}
 
@@ -387,7 +373,7 @@ export class proxyServer {
 
 		
 		
-		const cmd = await createSock5ConnectCmd (this.currentProfile, upChannel_SaaS_node, [uuuu])
+		const cmd = await createSock5ConnectCmd (this.currentWallet, upChannel_SaaS_node, [uuuu])
 		if (!cmd) {
 			return logger (Colors.red(`requestGetWay createSock5Connect return Null Error!`))
 		}
@@ -403,8 +389,8 @@ export class proxyServer {
 		ConnectToProxyNode (cmd, upChannel_SaaS_node, entryNode, socket, uuuu, this)
 	}
 
-	public restart = (currentProfile: profile, entryNodes: nodes_info[], egressNodes: nodes_info[]) => {
-		this.currentProfile = currentProfile
+	public restart = (privateKey: string, entryNodes: nodes_info[], egressNodes: nodes_info[]) => {
+		this.privateKey = privateKey
 		this._entryNodes = entryNodes
 		this._egressNodes = egressNodes
 	}
@@ -413,7 +399,7 @@ export class proxyServer {
 		public proxyPort: string,						//			Proxy server listening port number
 		private _entryNodes: nodes_info[],	 				//			gateway nodes information
 		private _egressNodes: nodes_info[],
-		private currentProfile: profile,
+		private privateKey: string,
 		public debug = false,
 		public logStream: string
 
@@ -422,7 +408,7 @@ export class proxyServer {
 
 		logger(Colors.magenta(`${proxyPort} Entry Nodes\n${_entryNodes.map(n => [n.ip_addr, n.region])}`))
 		logger(Colors.magenta(`${proxyPort} Egress Nodes\n${ _egressNodes.map(n =>[n.ip_addr, n.region])}`))
-
+		this.currentWallet = new ethers.Wallet(privateKey)
 		this.startLocalProxy()
 	}
 
@@ -435,4 +421,4 @@ export class proxyServer {
 	})
 }
 
-//		curl -v -x http://10.0.0.252:3002 "https://www.google.com"
+//		curl -v -x http://127.0.0.1:3002 "https://www.google.com"

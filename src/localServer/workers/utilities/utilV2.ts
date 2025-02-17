@@ -36,7 +36,8 @@ const CONET_Guardian_Nodes_old = '0x5e4aE81285b86f35e3370B3EF72df1363DD05286'
 const fx168OrderContractAddress = '0x9aE6D3Bd3029C8B2A73817b9aFa1C029237E3e30'
 const christmas2024ContractAddress = "0xb188e707f4544835aEe28E4206C65edfF23221C0";
 const airdropContractAddress_cancun = "0x8A8898960B45AEa683b36EB214422740cb19fD06";
-const conetDepinContractAddress = "0xC6edDb4Bc6161259325cf56AEf8b0D4fb289898A";
+const airdropContract_update_Address_cancun = "0x41B2e6da821066bf99C30058C91ea5b2A80888E7";
+const conetDepinContractAddress = "0xc4D5cc27026F52dc357cccD293549076a6b7757D";
 
 
 //const CNTPB_contract = '0x6056473ADD8bC89a95325845F6a431CCD7A849bb'
