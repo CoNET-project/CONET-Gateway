@@ -182,7 +182,7 @@ let _proxyServer: proxyServer
 const startSilentPass = (vpnObj: Native_StartVPNObj) => {
 	logger(inspect(vpnObj, false, 3, true))
 
-	new proxyServer((3002).toString(), vpnObj.entryNodes, vpnObj.exitNode, vpnObj.privateKey, true, '')
+	_proxyServer = new proxyServer((3002).toString(), vpnObj.entryNodes, vpnObj.exitNode, vpnObj.privateKey, true, '')
 	return true
 }
 
@@ -463,6 +463,13 @@ export class Daemon {
             
         })
 
+		app.get('/stopSilentPass'), async (req: any, res: any) => {
+			if (_proxyServer) {
+				await _proxyServer.end()
+			}
+			res.status(200).end()
+		}
+
         app.post('/loginRequest', (req: any, res: any) =>{
 
             const headerName=Colors.blue (`Local Server /loginRequest remoteAddress = ${req.socket?.remoteAddress}`)
@@ -497,6 +504,8 @@ export class Daemon {
 
             this.loginListening.write (JSON.stringify(cmd)+'\r\n\r\n')
         })
+
+
 
         app.all ('*', (req: any, res: any) => {
 			logger (Colors.red(`Local web server got unknow request URL Error! [${ splitIpAddr (req.ip) }] => ${ req.method } url =[${ req.url }]`))

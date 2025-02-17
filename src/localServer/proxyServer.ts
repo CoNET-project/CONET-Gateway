@@ -412,7 +412,7 @@ export class proxyServer {
 		this.startLocalProxy()
 	}
 
-	public end = new Promise(resolve=> {
+	public end = () => new Promise(resolve=> {
 		if (this.server !== null) {
 			this.server.close(err => {
 				resolve (true)
