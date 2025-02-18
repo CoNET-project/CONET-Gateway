@@ -11,13 +11,30 @@ import {logger} from './logger'
 import Ip from "ip"
 import {ethers} from 'ethers'
 import * as openpgp from 'openpgp'
+import os from 'node:os'
 import CONET_Guardian_NodeInfo_ABI from './CONET_Guardian_NodeInfo_ABI.json'
 
 import {miningV2_Class} from './userMining'
 
 
+
 const ver = '0.1.4'
 
+const getLocalNetworkIpaddress = () => {
+	const interfaceAll = os.networkInterfaces()
+	let ipv4: string[] = []
+
+	Object.keys(interfaceAll).map(n => {
+		const _address = interfaceAll[n]?.filter((n:os.NetworkInterfaceInfo) => n.family === 'IPv4')
+		if (_address) {
+			ipv4 = [...ipv4, ..._address.map(n => n.address)]
+		}
+		
+	})
+	
+	const ret = ipv4.filter(n => !/^127\.|^169\./.test(n))
+	return ret[0]
+}
 
 const CONET_Guardian_NodeInfoV6 = "0x9e213e8B155eF24B466eFC09Bcde706ED23C537a"
 const conet_rpc = 'https://rpc.conet.network'
@@ -299,8 +316,8 @@ export class Daemon {
         })
 
 		app.get('/ipaddress', (req: any, res: any) => {
-
-			return res.json ({ip:Ip.address()}).end()
+			
+			return res.json ({ip:getLocalNetworkIpaddress()}).end()
 		})
 
         app.post ('/proxyusage', (req, res) => {
@@ -463,12 +480,12 @@ export class Daemon {
             
         })
 
-		app.get('/stopSilentPass'), async (req: any, res: any) => {
+		app.get('/stopSilentPass', async (req: any, res: any) => {
 			if (_proxyServer) {
 				await _proxyServer.end()
 			}
 			res.status(200).end()
-		}
+		})
 
         app.post('/loginRequest', (req: any, res: any) =>{
 
@@ -529,4 +546,3 @@ export class Daemon {
 //		curl -X POST -H "Content-Type: application/json" --data '{"selectedCountry": "US"}' "http://localhost:3001/startSilentPass"
 //		Proxy server test 
 //		curl -v -4 -x socks5h://localhost:3002 "https://www.google.com"
-
