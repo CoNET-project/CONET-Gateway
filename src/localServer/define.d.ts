@@ -260,6 +260,7 @@ declare type WorkerCommand =
   | "removeMonitoredWallet"
   | "getProfileAvailableCntpReward"
 	| "redeemAirdrop"
+	| "redeemSilentPassPassport"
 
 type SINodesSortby = 'CUSTOMER_REVIEW'|'TOTAL_ONLINE_TIME'|
 	'STORAGE_PRICE_LOW'|'STORAGE_PRICE_HIGH'|'OUTBOUND_PRICE_HIGH'|'OUTBOUND_PRICE_LOW'
@@ -367,11 +368,33 @@ interface historicBalance {
 	balance: string
 }
 
+interface passportAirdrop {
+	guardianPassport: number
+	conetianPassport: number
+}
+
+interface passportInfoFromChain {
+	nftIDs: BigInt[]
+	expires: BigInt[]
+	expiresDays: BigInt[]
+	premium: boolean[]
+}
+
+interface passportInfo {
+	walletAddress: string
+	nftID: number
+	expires: number
+	expiresDays: number
+	premium: boolean
+}
+
 interface airdrop {
 	availableCntp?: number
 	gasForCntp?: number
 	availableConetian?: number
 	gasForConetian?: number
+	availableGuardianPassport?: number
+	availableConetianPassport?: number
 }
 
 interface profile extends keyPair {
@@ -392,6 +415,7 @@ interface profile extends keyPair {
   nodeRegion?: string;
 	historicBalance?: historicBalance[]
 	airdrop?: airdrop
+	silentPassPassports?: passportInfo[]
 }
 
 interface publicProfile {

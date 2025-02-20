@@ -840,6 +840,10 @@ const processCmd = async (cmd: worker_command) => {
         return redeemAirdrop(cmd);
       }
 
+      case "redeemSilentPassPassport": {
+        return redeemSilentPassPassport(cmd);
+      }
+
       default: {
         cmd.err = "INVALID_COMMAND";
         responseChannel.postMessage(JSON.stringify(cmd));

@@ -38,7 +38,9 @@ const christmas2024ContractAddress = "0xb188e707f4544835aEe28E4206C65edfF23221C0
 const airdropContractAddress_cancun = "0x8A8898960B45AEa683b36EB214422740cb19fD06";
 const airdropContract_update_Address_cancun = "0x41B2e6da821066bf99C30058C91ea5b2A80888E7";
 const conetDepinContractAddress = "0xc4D5cc27026F52dc357cccD293549076a6b7757D";
-
+const passportAirdropContractAddress_cancun = "0xe996e897bc088B840283cAdAfD75A856bEa44730";
+const passportContractAddress_cancun = "0xb889F14b557C2dB610f283055A988952953E0E94";
+const passportContractAddress_mainnet = "0xbb283d754D2d32C00b5605eab38CC5026EC9B19F";
 
 //const CNTPB_contract = '0x6056473ADD8bC89a95325845F6a431CCD7A849bb'
 // const Claimable_ETHUSDTv3 = '0x79E2EdE2F479fA7E44C89Bbaa721EB1f0d529b7B'.toLowerCase()

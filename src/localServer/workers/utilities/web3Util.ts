@@ -1014,11 +1014,13 @@ const listenProfileVer = async () => {
 
             runningList.push(getBalanceOfMonitoredWallets())
 
-            runningList.push(getHistoricBalance())
+            // runningList.push(getHistoricBalance())
 
             await Promise.all(runningList)
 
             await checkAllAvailableAirdropsForAllProfiles()
+
+            await getPassportsInfoForAllProfiles()
 
             const cmd = {
                 cmd: 'assets',
@@ -3348,13 +3350,16 @@ const checkAllAvailableAirdropsForAllProfiles = async () =>{
 
     promises.push(checkAvailableConetianAirdropForAllProfiles())
     promises.push(checkAvailableCntpAirdropForAllProfiles())
+    promises.push(checkAvailablePassportAirdropForAllProfiles());
 
-    const  [conetianAirdrop, cntpAirdrop ]: any = await Promise.all(promises)
+    const  [conetianAirdrop, cntpAirdrop, passportAirdrop ]: any = await Promise.all(promises)
 
     for (let i = 0; i < profiles.length; i++) {
         profiles[i].airdrop = { 
-            availableConetian: conetianAirdrop.airdrops[i],
-            availableCntp: cntpAirdrop.airdrops[i],
+            availableConetian: conetianAirdrop?.airdrops[i],
+            availableCntp: cntpAirdrop?.airdrops[i],
+            availableGuardianPassport: passportAirdrop?.airdrops[i]?.guardianPassport,
+            availableConetianPassport: passportAirdrop?.airdrops[i]?.conetianPassport,
         };
     }
 
@@ -3372,7 +3377,6 @@ const checkAvailableConetianAirdropForAllProfiles = async () => {
     }
     
     const airdropPromises: Promise<any>[] = []
-    const gasFeePromises: Promise<any>[] = []
 
     for (let i = 0; i < profiles.length; i++) {
         const profile = profiles[i]
@@ -3412,7 +3416,6 @@ const checkAvailableCntpAirdropForAllProfiles = async () => {
     }
     
     const availableAirdropPromises: Promise<any>[] = []
-    const gasFeePromises: Promise<any>[] = []
 
     for (let i = 0; i < profiles.length; i++) {
         const profile = profiles[i]
@@ -3442,6 +3445,172 @@ const checkAvailableCntpAirdropForProfile = async (profile: profile) => {
         return 0
     }
 }
+
+const checkAvailablePassportAirdropForAllProfiles =  async () => {
+    if (!CoNET_Data) return;
+
+    const profiles = CoNET_Data.profiles;
+
+    if (!profiles) {
+      return;
+    }
+
+    const airdropPromises: Promise<passportAirdrop>[] = [];
+
+    for (let i = 0; i < profiles.length; i++) {
+      const profile = profiles[i];
+      airdropPromises.push(checkAvailablePassportAirdropsForProfile(profile));
+    }
+
+    const airdropResults = await Promise.all(airdropPromises);
+
+    const results = {
+      airdrops: airdropResults,
+    };
+
+    return results;
+};
+
+const getPassportsInfoForAllProfiles = async () => {
+    if (!CoNET_Data) return;
+
+    const profiles = CoNET_Data.profiles;
+
+    if (!profiles) {
+      return;
+    }
+
+    for (const profile of profiles) {
+        const result = await getPassportsInfoForProfile(profile);
+        profile.silentPassPassports = result
+    }
+};
+
+const getPassportsInfoForProfile = async (profile: profile): Promise<passportInfo[]> => {
+    const tmpCancunPassports = await getPassportsInfo(profile, 'cancun');
+    const tmpMainnetPassports = await getPassportsInfo(profile, 'mainnet');
+
+    const cancunPassports: passportInfo[] = []
+    const mainnetPassports: passportInfo[] = []
+
+    for (let i = 0; i < tmpCancunPassports?.nftIDs?.length; i++) {
+        cancunPassports.push({
+            walletAddress: profile.keyID,
+            nftID: parseInt(tmpCancunPassports.nftIDs[i].toString()),
+            expires: parseInt(tmpCancunPassports.expires[i].toString()),
+            expiresDays: parseInt(tmpCancunPassports.expiresDays[i].toString()),
+            premium: tmpCancunPassports.premium[i]
+        })
+    }
+
+    for (let i = 0; i < tmpMainnetPassports?.nftIDs?.length; i++) {
+        mainnetPassports.push({
+            walletAddress: profile.keyID,
+            nftID: parseInt(tmpMainnetPassports.nftIDs[i].toString()),
+            expires: parseInt( tmpMainnetPassports.expires[i].toString()),
+            expiresDays: parseInt (tmpMainnetPassports.expiresDays[i].toString()),
+            premium: tmpMainnetPassports.premium[i]
+        })
+    }
+
+    const allPassports = cancunPassports.concat(mainnetPassports)
+
+    allPassports?.sort((a, b) => {
+        return a.nftID - b.nftID
+    })
+
+    return allPassports;
+}
+
+const getPassportsInfo = async (profile: profile, chain: string): Promise<passportInfoFromChain> => {  
+    let provider;
+    let contractAddress;
+    let contractAbi;
+
+    if (chain === 'mainnet') {
+        provider = conetDepinProvider
+        contractAddress = passportContractAddress_mainnet
+        contractAbi = passportAbi_mainnet
+    } else {
+        provider = provideCONET
+        contractAddress = passportContractAddress_cancun
+        contractAbi = passportAbi_cancun
+    }
+
+    const wallet = new ethers.Wallet(profile.privateKeyArmor, provider);
+    const passportContract = new ethers.Contract(contractAddress, contractAbi, wallet);
+
+    try {
+        const tx = await passportContract.getUserInfo(wallet.address);
+        return tx;
+    } catch (ex) {
+        console.log(ex);
+        return {
+            nftIDs: [],
+            expires: [],
+            expiresDays: [],
+            premium: []
+        }
+    }
+};
+
+const checkAvailablePassportAirdropsForProfile = async (
+  profile: profile
+): Promise<passportAirdrop> => {
+  const airdropPromises: Promise<any>[] = [];
+
+  airdropPromises.push(
+    checkAvailableGuardianPassportAirdropForProfile(profile)
+  );
+  airdropPromises.push(
+    checkAvailableConetianPassportAirdropForProfile(profile)
+  );
+
+  const [guardianAirdropResults, conetianAirdropResults] = await Promise.all(
+    airdropPromises
+  );
+
+  const results: passportAirdrop = {
+    guardianPassport: guardianAirdropResults,
+    conetianPassport: conetianAirdropResults,
+  };
+
+  return results;
+};
+
+const checkAvailableGuardianPassportAirdropForProfile = async (profile: profile) => {
+  const provider = new ethers.JsonRpcProvider(conet_cancun_rpc);
+  const wallet = new ethers.Wallet(profile.privateKeyArmor, provider);
+  const contract = new ethers.Contract(
+    passportAirdropContractAddress_cancun,
+    passportAirdropAbi_cancun,
+    wallet
+  );
+  try {
+    const result = await contract.availableGuardianAirdrop(profile.keyID);
+    return parseInt(result)
+  } catch (error) {
+    console.log(error);
+    return 0;
+  }
+};
+
+const checkAvailableConetianPassportAirdropForProfile = async (profile: profile) => {
+  const provider = new ethers.JsonRpcProvider(conet_cancun_rpc);
+  const wallet = new ethers.Wallet(profile.privateKeyArmor, provider);
+  const contract = new ethers.Contract(
+    passportAirdropContractAddress_cancun,
+    passportAirdropAbi_cancun,
+    wallet
+  );
+  try {
+    const result = await contract.availableCONETianAirDrop(profile.keyID);
+    return parseInt(result)
+  } catch (error) {
+    console.log(error);
+    return 0;
+  }
+};
 
 const getGasFeeForCntpAirdrop = async (profile: profile) => {
     const provider = new ethers.JsonRpcProvider(conet_cancun_rpc)
@@ -3481,6 +3650,46 @@ const getGasFeeForConetianAirdrop = async (profile: profile) => {
         return 0
     }
 }
+
+const getGasFeeForGuardianPassportAirdrop = async (profile: profile) => {
+  const provider = new ethers.JsonRpcProvider(conet_cancun_rpc);
+  const wallet = new ethers.Wallet(profile.privateKeyArmor, provider);
+  const contract = new ethers.Contract(
+    passportAirdropContractAddress_cancun,
+    passportAirdropAbi_cancun,
+    wallet
+  );
+
+  try {
+    const result = await contract.GuardianAirdrop.estimateGas();
+    const gasFee = parseInt(result) / Math.pow(10, 18);
+
+    return gasFee;
+  } catch (error) {
+    console.log(error);
+    return 0;
+  }
+};
+
+const getGasFeeForConetianPassportAirdrop = async (profile: profile) => {
+  const provider = new ethers.JsonRpcProvider(conet_cancun_rpc);
+  const wallet = new ethers.Wallet(profile.privateKeyArmor, provider);
+  const contract = new ethers.Contract(
+    passportAirdropContractAddress_cancun,
+    passportAirdropAbi_cancun,
+    wallet
+  );
+
+  try {
+    const result = await contract.CONETianAirdrop.estimateGas();
+    const gasFee = parseInt(result) / Math.pow(10, 18);
+
+    return gasFee;
+  } catch (error) {
+    console.log(error);
+    return 0;
+  }
+};
 
 const redeemAirdrop = async (cmd) => {
   const walletAddress = cmd.data[0];
@@ -3543,6 +3752,79 @@ const redeemAirdrop = async (cmd) => {
     if (canConetianAirdropTotal > 0) {
       const pendingConetianAirdropTx =
         await conetContract.CONETianBridgeAirdrop();
+      cmd.data.push(true);
+    }
+  } catch (error: any) {
+    cmd.err = "FAILURE";
+    if (error?.reason) {
+      cmd.data.push(error?.reason);
+    }
+  }
+
+  return returnUUIDChannel(cmd);
+};
+
+const redeemSilentPassPassport = async (cmd) => {
+  const walletAddress = cmd.data[0];
+
+  if (!CoNET_Data || !walletAddress) {
+    cmd.err = "FAILURE";
+    return returnUUIDChannel(cmd);
+  }
+
+  const profile = CoNET_Data.profiles?.find(
+    (profile) => profile.keyID === walletAddress
+  );
+
+  if (!profile) {
+    cmd.err = "FAILURE";
+    return returnUUIDChannel(cmd);
+  }
+  
+  const provider = new ethers.JsonRpcProvider(conet_cancun_rpc);
+  const wallet = new ethers.Wallet(profile.privateKeyArmor, provider);
+
+  const passportContract = new ethers.Contract(
+    passportAirdropContractAddress_cancun,
+    passportAirdropAbi_cancun,
+    wallet
+  );
+
+  let canGuardianAirdropTotal = 0;
+  let canConetianAirdropTotal = 0;
+  cmd.data = [];
+
+  try {
+    canGuardianAirdropTotal = await checkAvailableGuardianPassportAirdropForProfile(profile);
+    canConetianAirdropTotal = await checkAvailableConetianPassportAirdropForProfile(profile);
+
+    if (canGuardianAirdropTotal <= 0 && canConetianAirdropTotal <= 0)
+        throw new Error("FAILURE");
+  } catch (error: any) {
+    cmd.err = "FAILURE";
+    if (error?.reason) {
+      cmd.data.push(error?.reason);
+    }
+    return returnUUIDChannel(cmd);
+  }
+
+  try {
+    if (canGuardianAirdropTotal > 0) {
+      const pendingGuardianAirdropTx =
+        await passportContract.GuardianAirdrop();
+      cmd.data.push(true);
+    }
+  } catch (error: any) {
+    cmd.err = "FAILURE";
+    if (error?.reason) {
+      cmd.data.push(error?.reason);
+    }
+  }
+
+  try {
+    if (canConetianAirdropTotal > 0) {
+      const pendingConetianAirdropTx =
+        await passportContract.CONETianAirdrop();
       cmd.data.push(true);
     }
   } catch (error: any) {
