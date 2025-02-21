@@ -641,6 +641,23 @@ const getProfileAssets_CONET_Balance = async (profile: profile) => {
 			}
 		}
 		
+		if (current.SilentPassPassportNFT) {
+            current.SilentPassPassportNFT.balance = '1'
+            current.SilentPassPassportNFT.totalSupply = '1'
+        } else {
+            current.SilentPassPassportNFT = {
+            isNft: true,
+            hasUniqueNft: true,
+            balance: '1',
+            history: [],
+            network: "CONET Holesky",
+            decimal: 0,
+            contract: CONETianPlanAddr_cancun,
+            name: "SilentPassPassportNFT",
+            supplyMaximum: maxConetianNft.toString(),
+            totalSupply: '1',
+            };
+        }
     }
 
     return true
@@ -666,6 +683,15 @@ const getNftBalance = async (profile, assetName) => {
             }
             break;
 
+        case "silentpasspassportnft":
+            cryptoAsset = { balance: 1 }
+
+            if (!cryptoAsset) {
+                return null;
+            }
+
+            break;
+
         default:
             return null;
     }
@@ -673,8 +699,8 @@ const getNftBalance = async (profile, assetName) => {
     return parseFloat(cryptoAsset?.balance);
 };
 
-const transferNft = async (profile, to, _total, tokenName) => {
-  const nftBalance = await getNftBalance(profile, tokenName);
+const transferNft = async (profile, to, _total, nft) => {
+  const nftBalance = await getNftBalance(profile, nft.name);
 
   if (
     !nftBalance ||
@@ -696,10 +722,12 @@ const transferNft = async (profile, to, _total, tokenName) => {
   };
   sendState("toFrontEnd", cmd1);
 
-  const wallet = new ethers.Wallet(profile.privateKeyArmor, provideCONET);
+  const provider = getProvider(nft.network)
+
+  const wallet = new ethers.Wallet(profile.privateKeyArmor, provider);
   const contract = new ethers.Contract(
-    nfts?.[tokenName.toLowerCase()].contractAddress,
-    nfts?.[tokenName.toLowerCase()].contractAbi,
+    nft.contractAddress,
+    nft.contractAbi,
     wallet
   );
 
@@ -709,7 +737,7 @@ const transferNft = async (profile, to, _total, tokenName) => {
     pendingTx = await contract.safeTransferFrom(
       wallet.address,
       to,
-      nfts?.[tokenName.toLowerCase()].id,
+      nft.id,
       _total,
       "0x00"
     );
@@ -735,13 +763,13 @@ const transferNft = async (profile, to, _total, tokenName) => {
       isSend: true,
       value: parseEther(
         _total?.toString()?? '',
-        profile?.tokens[tokenName]?.name?? ''
+        profile?.tokens[nft.name]?.name?? ''
       ).toString(),
       time: new Date().toISOString(),
       transactionHash: completedTx?.hash?? '',
     };
 
-    profile?.tokens?.[tokenName]?.history?.push(historyEntry);
+    profile?.tokens?.[nft.name]?.history?.push(historyEntry);
     await storagePieceToLocal();
     await storeSystemData();
     needUpgradeVer = epoch + 25;
@@ -2550,6 +2578,20 @@ const getNetwork = (networkName) => {
     }
 }
 
+const getProvider = (network) => {
+    switch (network) {
+        case 'CONET Holesky': {
+            return new ethers.JsonRpcProvider(conet_cancun_rpc)
+        }
+        case 'CONET DePIN': {
+            return new ethers.JsonRpcProvider(mainChain_rpc)
+        }
+        default: {
+            return new ethers.JsonRpcProvider(conet_cancun_rpc)
+        }
+    }
+}
+
 const getAssetERC20Address = (assetName) => {
     switch (assetName) {
         case 'usdt': {
@@ -2708,8 +2750,8 @@ const getEstimateGasForNftTransfer = (
   toAddr
 ) =>
   new Promise(async (resolve) => {
-    const provide = new ethers.JsonRpcProvider(conet_cancun_rpc);
-    const wallet = new ethers.Wallet(privateKey, provide);
+    const provider = getProvider(nftObj.network);
+    const wallet = new ethers.Wallet(privateKey, provider);
     let _fee;
     const smartContractAddr = nftObj?.contractAddress;
 
@@ -2739,7 +2781,7 @@ const getEstimateGasForNftTransfer = (
     }
 
     try {
-      const Fee = await provide.getFeeData();
+      const Fee = await provider.getFeeData();
       const gasPrice = ethers.formatUnits(Fee.gasPrice, "gwei");
       const fee = parseFloat(ethers.formatEther(_fee * Fee.gasPrice));
 
@@ -3499,7 +3541,8 @@ const getPassportsInfoForProfile = async (profile: profile): Promise<passportInf
             nftID: parseInt(tmpCancunPassports.nftIDs[i].toString()),
             expires: parseInt(tmpCancunPassports.expires[i].toString()),
             expiresDays: parseInt(tmpCancunPassports.expiresDays[i].toString()),
-            premium: tmpCancunPassports.premium[i]
+            premium: tmpCancunPassports.premium[i],
+            network: 'Conet Holesky'
         })
     }
 
@@ -3509,7 +3552,8 @@ const getPassportsInfoForProfile = async (profile: profile): Promise<passportInf
             nftID: parseInt(tmpMainnetPassports.nftIDs[i].toString()),
             expires: parseInt( tmpMainnetPassports.expires[i].toString()),
             expiresDays: parseInt (tmpMainnetPassports.expiresDays[i].toString()),
-            premium: tmpMainnetPassports.premium[i]
+            premium: tmpMainnetPassports.premium[i],
+            network: 'CONET DePIN'
         })
     }
 

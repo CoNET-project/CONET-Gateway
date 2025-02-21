@@ -128,6 +128,7 @@ interface CryptoAsset {
 	contract: string
 	name: string
 	isNft?: boolean
+	hasUniqueNft?: boolean
 	unlocked?: boolean
 	supplyMaximum?: string
 	totalSupply?: string
@@ -341,6 +342,7 @@ interface conet_tokens {
 
 	ConetianNFT?: CryptoAsset
 	ConetianAgentNFT?: CryptoAsset
+	SilentPassPassportNFT?: CryptoAsset
 
 	ConetianPlan?: {
 		Conetian: CryptoAsset
@@ -352,6 +354,7 @@ interface conet_tokens {
 		Guardian_referrer: CryptoAsset
 		Node_NFT_ID: string
 	}
+
 	tron?:{
 		walletAddress: string
 		usdt: CryptoAsset
@@ -386,6 +389,7 @@ interface passportInfo {
 	expires: number
 	expiresDays: number
 	premium: boolean
+	network: string
 }
 
 interface airdrop {

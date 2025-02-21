@@ -121,18 +121,60 @@ const nfts = {
   conetiannft: {
     id: ConetianNftId,
     name: "conetiannft",
+    network: 'CONET Holesky',
     contractAddress: CONETianPlanAddr_cancun,
     contractAbi: CONETianPlan_ABI,
   },
   conetianagentnft: {
     id: ConetianReferrerNftId,
     name: "conetianagentnft",
+    network: 'CONET Holesky',
     contractAddress: CONETianPlanAddr_cancun,
     contractAbi: CONETianPlan_ABI,
   },
+  silentpasspassportnft_cancun: {
+    id: null,
+    name: "silentpasspassportnft",
+    network: 'CONET Holesky',
+    contractAddress: passportContractAddress_cancun,
+    contractAbi: passportAbi_cancun,
+  },
+  silentpasspassportnft_mainnet: {
+    id: null,
+    name: "silentpasspassportnft",
+    network: 'CONET DePIN',
+    contractAddress: passportContractAddress_mainnet,
+    contractAbi: passportAbi_mainnet,
+  }
 };
 
 //	******************************************************************
+
+const getNftInfo = (nftName, nftId, nftNetwork) => {
+    const nftInfo = nfts[nftName];
+
+    if (nftInfo) {
+        return nftInfo;
+    }
+
+    if(nftNetwork==="mainnet") {
+        return {
+            id: nftId,
+            name: nftName,
+            network: nfts['silentpasspassportnft_mainnet'].network,
+            contractAddress: nfts['silentpasspassportnft_mainnet'].contractAddress,
+            contractAbi: nfts['silentpasspassportnft_mainnet'].contractAbi,
+        }
+    }
+
+    return {
+        id: nftId,
+        name: nftName,
+        network: nfts['silentpasspassportnft_cancun'].network,
+        contractAddress: nfts['silentpasspassportnft_cancun'].contractAddress,
+        contractAbi: nfts['silentpasspassportnft_cancun'].contractAbi,
+    }
+}
 
 const getAddress = (addr) => {
     let ret = '';
