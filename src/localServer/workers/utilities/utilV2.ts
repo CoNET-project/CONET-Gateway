@@ -40,7 +40,7 @@ const airdropContract_update_Address_cancun = "0x41B2e6da821066bf99C30058C91ea5b
 const conetDepinContractAddress = "0xc4D5cc27026F52dc357cccD293549076a6b7757D";
 const passportAirdropContractAddress_cancun = "0xe996e897bc088B840283cAdAfD75A856bEa44730";
 const passportContractAddress_cancun = "0xb889F14b557C2dB610f283055A988952953E0E94";
-const passportContractAddress_mainnet = "0xbb283d754D2d32C00b5605eab38CC5026EC9B19F";
+const passportContractAddress_mainnet = "0x054498c353452A6F29FcA5E7A0c4D13b2D77fF08";
 
 //const CNTPB_contract = '0x6056473ADD8bC89a95325845F6a431CCD7A849bb'
 // const Claimable_ETHUSDTv3 = '0x79E2EdE2F479fA7E44C89Bbaa721EB1f0d529b7B'.toLowerCase()
@@ -157,7 +157,7 @@ const getNftInfo = (nftName, nftId, nftNetwork) => {
         return nftInfo;
     }
 
-    if(nftNetwork==="mainnet") {
+    if(nftNetwork.toLowerCase().replaceAll(' ', '') === "conetdepin") {
         return {
             id: nftId,
             name: nftName,

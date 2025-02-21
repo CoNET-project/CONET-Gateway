@@ -650,7 +650,7 @@ const getProfileAssets_CONET_Balance = async (profile: profile) => {
             hasUniqueNft: true,
             balance: '1',
             history: [],
-            network: "CONET Holesky",
+            network: "CONET DePIN",
             decimal: 0,
             contract: CONETianPlanAddr_cancun,
             name: "SilentPassPassportNFT",
@@ -2579,11 +2579,11 @@ const getNetwork = (networkName) => {
 }
 
 const getProvider = (network) => {
-    switch (network) {
-        case 'CONET Holesky': {
+    switch (network.toLowerCase().replaceAll(' ', '')) {
+        case 'conetholesky': {
             return new ethers.JsonRpcProvider(conet_cancun_rpc)
         }
-        case 'CONET DePIN': {
+        case 'conetdepin': {
             return new ethers.JsonRpcProvider(mainChain_rpc)
         }
         default: {
