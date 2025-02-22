@@ -3906,44 +3906,61 @@ const redeemSilentPassPassport = async (cmd) => {
 };
 
 const waitBridgeReady = (profile: profile, amount: string): Promise<void> => {
-  return new Promise((resolve) => {
+  return new Promise((resolve, reject) => {
     const provider = new ethers.JsonRpcProvider(mainChain_rpc);
+    const ethTreasuryContract = new ethers.Contract(
+      ethTreasuryContractAddress,
+      ethTreasuryAbi,
+      provider
+    );
 
-    const ethTreasuryContract = new ethers.Contract(ethTreasuryContractAddress, ethTreasuryAbi, provider);
+    const timeout = setTimeout(() => {
+      provider.off("block", bridgeTransactionListener);
 
-    provider.on("block", async function bridgeTransactionListener(blockNumber) {
-      const block = await provider.getBlock(blockNumber);
-
-      const transactions: any[] = [];
-      for(let i = 0; i < block.transactions.length; i++) {
-        const tx = await provider.getTransactionReceipt(block.transactions[i]);
-        transactions.push(tx);
-      }
-
-      const logs: any = []
-      for(let i = 0; i < transactions.length; i++) {
-        for(let j = 0; j < transactions[i].logs.length; j++) {
-            const log = transactions[i].logs[j];
-            const parsedLog = ethTreasuryContract.interface.parseLog(log); 
-            logs.push({rawLog: log, parsedLog});
-        }
-      }
-
-      const found = logs.some((log: any) => {
-        const txValueInEth = ethers.formatEther(log?.parsedLog?.args?.[1]);
-
-        return (
-          ethTreasuryContractAddress === log?.rawLog?.address &&
-          profile.keyID === log?.parsedLog?.args?.[0] &&
-          amount === txValueInEth.toString()
+        const error: any = new Error(
+          "Timeout: No matching bridge transaction found within 1 minute"
         );
-      });
+        error.reason = "Timeout: No matching bridge transaction found within 1 minute";
 
-      if (found) {
-        provider.off("block", bridgeTransactionListener); // Stop listening
-        resolve(); // Resolve the promise
-      }
-    });
+      reject(error);
+    }, 60000); // 1 minute timeout
+
+    function bridgeTransactionListener(blockNumber: number) {
+      provider.getBlock(blockNumber).then(async (block) => {
+        const transactions = await Promise.all(
+          block.transactions.map((tx) => provider.getTransactionReceipt(tx))
+        );
+
+        const logs: any[] = [];
+        transactions.forEach((tx) => {
+          tx.logs.forEach((log) => {
+            try {
+              const parsedLog = ethTreasuryContract.interface.parseLog(log);
+              logs.push({ rawLog: log, parsedLog });
+            } catch (error) {
+              // Ignore logs that cannot be parsed
+            }
+          });
+        });
+
+        const found = logs.some((log) => {
+          const txValueInEth = ethers.formatEther(log?.parsedLog?.args?.[1]);
+          return (
+            ethTreasuryContractAddress === log?.rawLog?.address &&
+            profile.keyID === log?.parsedLog?.args?.[0] &&
+            amount === txValueInEth.toString()
+          );
+        });
+
+        if (found) {
+          clearTimeout(timeout);
+          provider.off("block", bridgeTransactionListener); // Stop listening
+          resolve(); // Resolve the promise
+        }
+      });
+    }
+
+    provider.on("block", bridgeTransactionListener);
   });
 };
 
@@ -3983,14 +4000,23 @@ const bridge = async (cmd: any) => {
         ethTreasuryContractAddress
       );
 
+      if (tx === false) {
+        throw new Error('Transfer failed. Check your ETH balance and try again!');
+      }
+
       await waitPromise; // Wait for the condition in listener to be met
 
       return returnUUIDChannel(cmd);
     } catch (error: any) {
         cmd.err = "FAILURE";
-        if (error?.reason) {
-            cmd.data.push(error?.reason);
+        
+        if (!error?.reason) {
+            error.reason = 'Bridge failed. Check your ETH balance and try again!'
         }
+
+        cmd.data = []
+        cmd.data.push(error?.reason);
+        return returnUUIDChannel(cmd);
     }
 
 
