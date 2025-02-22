@@ -65,10 +65,14 @@ const tron_USDT = '0xA614F803B6FD780986A42C78EC9C7F77E6DED13C'
 const blast_usdb_contract = '0x4300000000000000000000000000000000000003'
 const bnb_wbnb_contract = '0xbb4CdB9CBd36B01bD1cBaEBF2De08d9173bc095c'
 const bnb_usdt_contract = '0x55d398326f99059fF775485246999027B3197955'
-
 const eth_usdt_contract = '0xdac17f958d2ee523a2206206994597c13d831ec7'
 
 const assetOracle_contract_addr = '0x0Ac28e301FeE0f60439675594141BEB53853f7b9'
+const receivedPoolContractAddress =
+  "0x287CFe91c3779Ea9F495f7cf2cd88b438550c8D8";
+const conetMainnetBridgeContractAddress =
+  "0xD9f2d81FF6ca7a172143FC9DE2aF23FcffD53dbf";
+const ethTreasuryContractAddress = "0x8E946aaD91155A8A37d24Dc10DE851f4Ef41C2Ef";
 
 //		claimable
 const claimable_BNB_USDT = '0x49d1E11A25E99015cAaE3e032a7ED23D4399F3f9'

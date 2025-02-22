@@ -848,6 +848,10 @@ const processCmd = async (cmd: worker_command) => {
         return redeemSilentPassPassport(cmd);
       }
 
+      case "bridge": {
+        return bridge(cmd);
+      }
+
       default: {
         cmd.err = "INVALID_COMMAND";
         responseChannel.postMessage(JSON.stringify(cmd));

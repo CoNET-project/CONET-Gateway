@@ -236,12 +236,15 @@ const getProfileAssets_allOthers_Balance = async (profile: profile) => {
         // const walletETH = new ethers.Wallet(profile.privateKeyArmor, provideETH)
         const [
 			usdt, eth, 
+            conet_eth,
 			bnb, wusdt,
 			arb_usdt, arb_eth,
 			tron, tronUsdt
 		] = await Promise.all([
             scanUSDT(key),
             scanETH(key),
+
+            scanConetETH(key),
 
             scanBNB(key),
             scanWUSDT(key),
@@ -305,6 +308,20 @@ const getProfileAssets_allOthers_Balance = async (profile: profile) => {
 				name: 'eth'
 			}
 		}
+
+        if (current.conet_eth) {
+            current.conet_eth.balance =
+            conet_eth === false ? "" : ethers.formatEther(conet_eth);
+        } else {
+            current.conet_eth = {
+              balance: conet_eth === false ? "" : ethers.formatEther(conet_eth),
+              history: [],
+              network: "conetMainnet",
+              decimal: 18,
+              contract: "",
+              name: "conet_eth",
+            };
+        }
 
         if (current.arb_usdt) {
 			current.arb_usdt.balance = arb_usdt === false ? '': ethers.formatUnits(arb_usdt, 6)
@@ -2295,8 +2312,6 @@ const scanCONET_dWETH = async (walletAddr: string, privideCONET) => {
 };
 
 const scanCONETDepin = async (walletAddr: string) => {
-    conetDepinProvider = new ethers.JsonRpcProvider(mainChain_rpc);
-
     return await scan_erc20_balance(
       walletAddr,
       conetDepinContractAddress,
@@ -2364,9 +2379,13 @@ const scanBNB = async (walletAddr) => {
     return await scan_natureBalance(provideBNB, walletAddr)
 }
 
-const scan_natureBalance = (provide, walletAddr) => new Promise(async (resolve) => {
+const scanConetETH = async (walletAddr: string) => {
+    return await scan_natureBalance(conetDepinProvider, walletAddr);
+};
+
+const scan_natureBalance = (provider, walletAddr) => new Promise(async (resolve) => {
     try {
-        const result = await provide.getBalance(walletAddr)
+        const result = await provider.getBalance(walletAddr)
         return resolve(result)
     }
     catch (ex) {
@@ -2553,6 +2572,11 @@ const getNetwork = (networkName) => {
         case 'cntpb':
             {
                 return conet_cancun_rpc
+            }
+        case 'conetDepin':
+        case 'conet_eth':
+            {
+                return mainChain_rpc
             }
         case 'usdt':
         case 'eth':
@@ -3880,3 +3904,94 @@ const redeemSilentPassPassport = async (cmd) => {
 
   return returnUUIDChannel(cmd);
 };
+
+const waitBridgeReady = (profile: profile, amount: string): Promise<void> => {
+  return new Promise((resolve) => {
+    const provider = new ethers.JsonRpcProvider(mainChain_rpc);
+
+    const ethTreasuryContract = new ethers.Contract(ethTreasuryContractAddress, ethTreasuryAbi, provider);
+
+    provider.on("block", async function bridgeTransactionListener(blockNumber) {
+      const block = await provider.getBlock(blockNumber);
+
+      const transactions: any[] = [];
+      for(let i = 0; i < block.transactions.length; i++) {
+        const tx = await provider.getTransactionReceipt(block.transactions[i]);
+        transactions.push(tx);
+      }
+
+      const logs: any = []
+      for(let i = 0; i < transactions.length; i++) {
+        for(let j = 0; j < transactions[i].logs.length; j++) {
+            const log = transactions[i].logs[j];
+            const parsedLog = ethTreasuryContract.interface.parseLog(log); 
+            logs.push({rawLog: log, parsedLog});
+        }
+      }
+
+      const found = logs.some((log: any) => {
+        const txValueInEth = ethers.formatEther(log?.parsedLog?.args?.[1]);
+
+        return (
+          ethTreasuryContractAddress === log?.rawLog?.address &&
+          profile.keyID === log?.parsedLog?.args?.[0] &&
+          amount === txValueInEth.toString()
+        );
+      });
+
+      if (found) {
+        provider.off("block", bridgeTransactionListener); // Stop listening
+        resolve(); // Resolve the promise
+      }
+    });
+  });
+};
+
+const bridge = async (cmd: any) => {
+    const walletAddress = cmd.data[0];
+    const originChain = cmd.data[1];
+    const destinationChain = cmd.data[2];
+    const tokenName = cmd.data[3];
+    const amount = cmd.data[4];
+
+    if (!CoNET_Data || !walletAddress || !originChain || !destinationChain || !tokenName || !amount) {
+        cmd.err = "FAILURE";
+        return returnUUIDChannel(cmd);
+    }
+
+    const profile = CoNET_Data.profiles?.find((profile) => profile.keyID === walletAddress);
+
+    if (!profile) {
+        cmd.err = "FAILURE";
+        return returnUUIDChannel(cmd);
+    }
+    
+    if(!profile.tokens){
+        cmd.err = "FAILURE";
+        return returnUUIDChannel(cmd);
+    }
+
+    const token = profile.tokens[tokenName];
+
+    try {
+      const waitPromise = waitBridgeReady(profile, amount); // Start listening
+
+      const tx: any = await transferAssetToCONET_wallet(
+        profile.privateKeyArmor,
+        token,
+        amount,
+        ethTreasuryContractAddress
+      );
+
+      await waitPromise; // Wait for the condition in listener to be met
+
+      return returnUUIDChannel(cmd);
+    } catch (error: any) {
+        cmd.err = "FAILURE";
+        if (error?.reason) {
+            cmd.data.push(error?.reason);
+        }
+    }
+
+
+}

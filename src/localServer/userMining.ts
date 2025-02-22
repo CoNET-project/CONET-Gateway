@@ -96,9 +96,9 @@ const getAllNodes = () => new Promise(async resolve => {
 	}, err => {
 		if (err) {
 			const length = parseInt(err.message) - 100
-			logger(`Error at ${length} Guardian_Nodes = ${Guardian_Nodes[length].domain}`)
+			logger(`Error at ${length} Guardian_Nodes = ${Guardian_Nodes?.[length]?.domain}`)
 			Guardian_Nodes.splice(length)
-			logger(`Guardian_Nodes length = ${Guardian_Nodes.length} the last node is ${Guardian_Nodes[Guardian_Nodes.length - 1].ip_addr}`)
+			logger(`Guardian_Nodes length = ${Guardian_Nodes.length} the last node is ${Guardian_Nodes?.[Guardian_Nodes.length - 1]?.ip_addr}`)
 
 		}
 		logger(`mapLimit finished err = ${err?.message}`)
