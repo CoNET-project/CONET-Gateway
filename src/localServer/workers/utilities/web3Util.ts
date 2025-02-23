@@ -2675,6 +2675,7 @@ const CONET_guardian_purchase_Receiving_Address = (networkName) => {
 
 const parseEther = (_ether, tokenName) => {
 	const ether = typeof (_ether) === 'number' ? _ether.toFixed(8) : _ether
+
     switch (tokenName) {
 		case 'arb_usdt':
         case 'usdt': {
@@ -3059,6 +3060,7 @@ const transferAssetToCONET_wallet = (privateKey, token, transferNumber, toAddr) 
     const provide = new ethers.JsonRpcProvider(getNetwork(token.name))
     const wallet = new ethers.Wallet(privateKey, provide)
     const smartContractAddr = getAssetERC20Address(token.name)
+
     if (smartContractAddr) {
         const transferObj = new ethers.Contract(smartContractAddr, blast_CNTPAbi, wallet)
         const amount = parseEther(transferNumber, token.name)
@@ -4018,6 +4020,63 @@ const bridge = async (cmd: any) => {
         cmd.data.push(error?.reason);
         return returnUUIDChannel(cmd);
     }
+}
 
+const estimateGasForBridge = async (cmd: any) => {
+    const walletAddress = cmd.data[0];
+    const tokenName = cmd.data[1];
+    const amount = cmd.data[2];
 
+    if (!CoNET_Data || !walletAddress || !tokenName || !amount) {
+        cmd.err = "FAILURE";
+        return returnUUIDChannel(cmd);
+    }
+
+    const profile = CoNET_Data.profiles?.find((profile) => profile.keyID === walletAddress);
+
+    if (!profile) {
+        cmd.err = "FAILURE";
+        return returnUUIDChannel(cmd);
+    }
+    
+    if(!profile.tokens){
+        cmd.err = "FAILURE";
+        return returnUUIDChannel(cmd);
+    }
+
+    const provider = new ethers.JsonRpcProvider(getNetwork(tokenName));
+    const wallet = new ethers.Wallet(profile.privateKeyArmor, provider);
+
+    const tx = {
+        to: ethTreasuryContractAddress,
+        value: parseEther(amount, tokenName),
+    };
+
+    let _fee;
+    try {
+        try {
+            _fee = await wallet.estimateGas(tx)
+        } catch (error) {
+            throw new Error('Getting gas failed. Check your ETH balance and try again!');
+        }
+
+        const Fee = await provider.getFeeData();
+        const gasPrice = ethers.formatUnits(Fee.gasPrice, "gwei");
+        const fee = parseFloat(ethers.formatEther(_fee * Fee.gasPrice)).toFixed(8);
+
+        cmd.data = [fee, gasPrice];
+
+        return returnUUIDChannel(cmd);
+    } catch (error: any) {
+        cmd.err = "FAILURE";
+        
+        if (!error?.reason) {
+            error.reason =
+              "Getting gas failed. Check your ETH balance and try again!";
+        }
+
+        cmd.data = []
+        cmd.data.push(error?.reason);
+        return returnUUIDChannel(cmd);
+    }
 }

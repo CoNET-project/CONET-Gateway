@@ -852,6 +852,10 @@ const processCmd = async (cmd: worker_command) => {
         return bridge(cmd);
       }
 
+      case "estimateGasForBridge": {
+        return estimateGasForBridge(cmd);
+      }
+
       default: {
         cmd.err = "INVALID_COMMAND";
         responseChannel.postMessage(JSON.stringify(cmd));

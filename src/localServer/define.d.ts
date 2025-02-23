@@ -263,6 +263,7 @@ declare type WorkerCommand =
 	| "redeemAirdrop"
 	| "redeemSilentPassPassport"
 	| "bridge"
+	| "estimateGasForBridge"
 
 type SINodesSortby = 'CUSTOMER_REVIEW'|'TOTAL_ONLINE_TIME'|
 	'STORAGE_PRICE_LOW'|'STORAGE_PRICE_HIGH'|'OUTBOUND_PRICE_HIGH'|'OUTBOUND_PRICE_LOW'
