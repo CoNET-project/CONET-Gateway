@@ -38,7 +38,9 @@ const christmas2024ContractAddress = "0xb188e707f4544835aEe28E4206C65edfF23221C0
 const airdropContractAddress_cancun = "0x8A8898960B45AEa683b36EB214422740cb19fD06";
 const airdropContract_update_Address_cancun = "0x41B2e6da821066bf99C30058C91ea5b2A80888E7";
 const conetDepinContractAddress = "0xc4D5cc27026F52dc357cccD293549076a6b7757D";
-
+const passportAirdropContractAddress_cancun = "0xe996e897bc088B840283cAdAfD75A856bEa44730";
+const passportContractAddress_cancun = "0xb889F14b557C2dB610f283055A988952953E0E94";
+const passportContractAddress_mainnet = "0x054498c353452A6F29FcA5E7A0c4D13b2D77fF08";
 
 //const CNTPB_contract = '0x6056473ADD8bC89a95325845F6a431CCD7A849bb'
 // const Claimable_ETHUSDTv3 = '0x79E2EdE2F479fA7E44C89Bbaa721EB1f0d529b7B'.toLowerCase()
@@ -63,10 +65,14 @@ const tron_USDT = '0xA614F803B6FD780986A42C78EC9C7F77E6DED13C'
 const blast_usdb_contract = '0x4300000000000000000000000000000000000003'
 const bnb_wbnb_contract = '0xbb4CdB9CBd36B01bD1cBaEBF2De08d9173bc095c'
 const bnb_usdt_contract = '0x55d398326f99059fF775485246999027B3197955'
-
 const eth_usdt_contract = '0xdac17f958d2ee523a2206206994597c13d831ec7'
 
 const assetOracle_contract_addr = '0x0Ac28e301FeE0f60439675594141BEB53853f7b9'
+const receivedPoolContractAddress =
+  "0x287CFe91c3779Ea9F495f7cf2cd88b438550c8D8";
+const conetMainnetBridgeContractAddress =
+  "0xD9f2d81FF6ca7a172143FC9DE2aF23FcffD53dbf";
+const ethTreasuryContractAddress = "0x8E946aaD91155A8A37d24Dc10DE851f4Ef41C2Ef";
 
 //		claimable
 const claimable_BNB_USDT = '0x49d1E11A25E99015cAaE3e032a7ED23D4399F3f9'
@@ -119,18 +125,60 @@ const nfts = {
   conetiannft: {
     id: ConetianNftId,
     name: "conetiannft",
+    network: 'CONET Holesky',
     contractAddress: CONETianPlanAddr_cancun,
     contractAbi: CONETianPlan_ABI,
   },
   conetianagentnft: {
     id: ConetianReferrerNftId,
     name: "conetianagentnft",
+    network: 'CONET Holesky',
     contractAddress: CONETianPlanAddr_cancun,
     contractAbi: CONETianPlan_ABI,
   },
+  silentpasspassportnft_cancun: {
+    id: null,
+    name: "silentpasspassportnft",
+    network: 'CONET Holesky',
+    contractAddress: passportContractAddress_cancun,
+    contractAbi: passportAbi_cancun,
+  },
+  silentpasspassportnft_mainnet: {
+    id: null,
+    name: "silentpasspassportnft",
+    network: 'CONET DePIN',
+    contractAddress: passportContractAddress_mainnet,
+    contractAbi: passportAbi_mainnet,
+  }
 };
 
 //	******************************************************************
+
+const getNftInfo = (nftName, nftId, nftNetwork) => {
+    const nftInfo = nfts[nftName];
+
+    if (nftInfo) {
+        return nftInfo;
+    }
+
+    if(nftNetwork.toLowerCase().replaceAll(' ', '') === "conetdepin") {
+        return {
+            id: nftId,
+            name: nftName,
+            network: nfts['silentpasspassportnft_mainnet'].network,
+            contractAddress: nfts['silentpasspassportnft_mainnet'].contractAddress,
+            contractAbi: nfts['silentpasspassportnft_mainnet'].contractAbi,
+        }
+    }
+
+    return {
+        id: nftId,
+        name: nftName,
+        network: nfts['silentpasspassportnft_cancun'].network,
+        contractAddress: nfts['silentpasspassportnft_cancun'].contractAddress,
+        contractAbi: nfts['silentpasspassportnft_cancun'].contractAbi,
+    }
+}
 
 const getAddress = (addr) => {
     let ret = '';

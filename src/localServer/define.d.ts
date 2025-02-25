@@ -128,6 +128,7 @@ interface CryptoAsset {
 	contract: string
 	name: string
 	isNft?: boolean
+	hasUniqueNft?: boolean
 	unlocked?: boolean
 	supplyMaximum?: string
 	totalSupply?: string
@@ -260,6 +261,9 @@ declare type WorkerCommand =
   | "removeMonitoredWallet"
   | "getProfileAvailableCntpReward"
 	| "redeemAirdrop"
+	| "redeemSilentPassPassport"
+	| "bridge"
+	| "estimateGasForBridge"
 
 type SINodesSortby = 'CUSTOMER_REVIEW'|'TOTAL_ONLINE_TIME'|
 	'STORAGE_PRICE_LOW'|'STORAGE_PRICE_HIGH'|'OUTBOUND_PRICE_HIGH'|'OUTBOUND_PRICE_LOW'
@@ -333,6 +337,8 @@ interface conet_tokens {
 	eth?: CryptoAsset
 	usdt?:CryptoAsset
 
+	conet_eth?: CryptoAsset
+
 	//	BSC
 	bnb?: CryptoAsset
 	wbnb?: CryptoAsset
@@ -340,6 +346,7 @@ interface conet_tokens {
 
 	ConetianNFT?: CryptoAsset
 	ConetianAgentNFT?: CryptoAsset
+	SilentPassPassportNFT?: CryptoAsset
 
 	ConetianPlan?: {
 		Conetian: CryptoAsset
@@ -351,6 +358,7 @@ interface conet_tokens {
 		Guardian_referrer: CryptoAsset
 		Node_NFT_ID: string
 	}
+
 	tron?:{
 		walletAddress: string
 		usdt: CryptoAsset
@@ -367,11 +375,34 @@ interface historicBalance {
 	balance: string
 }
 
+interface passportAirdrop {
+	guardianPassport: number
+	conetianPassport: number
+}
+
+interface passportInfoFromChain {
+	nftIDs: BigInt[]
+	expires: BigInt[]
+	expiresDays: BigInt[]
+	premium: boolean[]
+}
+
+interface passportInfo {
+	walletAddress: string
+	nftID: number
+	expires: number
+	expiresDays: number
+	premium: boolean
+	network: string
+}
+
 interface airdrop {
 	availableCntp?: number
 	gasForCntp?: number
 	availableConetian?: number
 	gasForConetian?: number
+	availableGuardianPassport?: number
+	availableConetianPassport?: number
 }
 
 interface profile extends keyPair {
@@ -392,6 +423,7 @@ interface profile extends keyPair {
   nodeRegion?: string;
 	historicBalance?: historicBalance[]
 	airdrop?: airdrop
+	silentPassPassports?: passportInfo[]
 }
 
 interface publicProfile {

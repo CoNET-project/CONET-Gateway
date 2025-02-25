@@ -236,12 +236,15 @@ const getProfileAssets_allOthers_Balance = async (profile: profile) => {
         // const walletETH = new ethers.Wallet(profile.privateKeyArmor, provideETH)
         const [
 			usdt, eth, 
+            conet_eth,
 			bnb, wusdt,
 			arb_usdt, arb_eth,
 			tron, tronUsdt
 		] = await Promise.all([
             scanUSDT(key),
             scanETH(key),
+
+            scanConetETH(key),
 
             scanBNB(key),
             scanWUSDT(key),
@@ -305,6 +308,20 @@ const getProfileAssets_allOthers_Balance = async (profile: profile) => {
 				name: 'eth'
 			}
 		}
+
+        if (current.conet_eth) {
+            current.conet_eth.balance =
+            conet_eth === false ? "" : ethers.formatEther(conet_eth);
+        } else {
+            current.conet_eth = {
+              balance: conet_eth === false ? "" : ethers.formatEther(conet_eth),
+              history: [],
+              network: "conetMainnet",
+              decimal: 18,
+              contract: "",
+              name: "conet_eth",
+            };
+        }
 
         if (current.arb_usdt) {
 			current.arb_usdt.balance = arb_usdt === false ? '': ethers.formatUnits(arb_usdt, 6)
@@ -641,6 +658,23 @@ const getProfileAssets_CONET_Balance = async (profile: profile) => {
 			}
 		}
 		
+		if (current.SilentPassPassportNFT) {
+            current.SilentPassPassportNFT.balance = '1'
+            current.SilentPassPassportNFT.totalSupply = '1'
+        } else {
+            current.SilentPassPassportNFT = {
+            isNft: true,
+            hasUniqueNft: true,
+            balance: '1',
+            history: [],
+            network: "CONET DePIN",
+            decimal: 0,
+            contract: CONETianPlanAddr_cancun,
+            name: "SilentPassPassportNFT",
+            supplyMaximum: maxConetianNft.toString(),
+            totalSupply: '1',
+            };
+        }
     }
 
     return true
@@ -666,6 +700,15 @@ const getNftBalance = async (profile, assetName) => {
             }
             break;
 
+        case "silentpasspassportnft":
+            cryptoAsset = { balance: 1 }
+
+            if (!cryptoAsset) {
+                return null;
+            }
+
+            break;
+
         default:
             return null;
     }
@@ -673,8 +716,8 @@ const getNftBalance = async (profile, assetName) => {
     return parseFloat(cryptoAsset?.balance);
 };
 
-const transferNft = async (profile, to, _total, tokenName) => {
-  const nftBalance = await getNftBalance(profile, tokenName);
+const transferNft = async (profile, to, _total, nft) => {
+  const nftBalance = await getNftBalance(profile, nft.name);
 
   if (
     !nftBalance ||
@@ -696,10 +739,12 @@ const transferNft = async (profile, to, _total, tokenName) => {
   };
   sendState("toFrontEnd", cmd1);
 
-  const wallet = new ethers.Wallet(profile.privateKeyArmor, provideCONET);
+  const provider = getProvider(nft.network)
+
+  const wallet = new ethers.Wallet(profile.privateKeyArmor, provider);
   const contract = new ethers.Contract(
-    nfts?.[tokenName.toLowerCase()].contractAddress,
-    nfts?.[tokenName.toLowerCase()].contractAbi,
+    nft.contractAddress,
+    nft.contractAbi,
     wallet
   );
 
@@ -709,7 +754,7 @@ const transferNft = async (profile, to, _total, tokenName) => {
     pendingTx = await contract.safeTransferFrom(
       wallet.address,
       to,
-      nfts?.[tokenName.toLowerCase()].id,
+      nft.id,
       _total,
       "0x00"
     );
@@ -735,13 +780,13 @@ const transferNft = async (profile, to, _total, tokenName) => {
       isSend: true,
       value: parseEther(
         _total?.toString()?? '',
-        profile?.tokens[tokenName]?.name?? ''
+        profile?.tokens[nft.name]?.name?? ''
       ).toString(),
       time: new Date().toISOString(),
       transactionHash: completedTx?.hash?? '',
     };
 
-    profile?.tokens?.[tokenName]?.history?.push(historyEntry);
+    profile?.tokens?.[nft.name]?.history?.push(historyEntry);
     await storagePieceToLocal();
     await storeSystemData();
     needUpgradeVer = epoch + 25;
@@ -1014,11 +1059,13 @@ const listenProfileVer = async () => {
 
             runningList.push(getBalanceOfMonitoredWallets())
 
-            runningList.push(getHistoricBalance())
+            // runningList.push(getHistoricBalance())
 
             await Promise.all(runningList)
 
             await checkAllAvailableAirdropsForAllProfiles()
+
+            await getPassportsInfoForAllProfiles()
 
             const cmd = {
                 cmd: 'assets',
@@ -2265,8 +2312,6 @@ const scanCONET_dWETH = async (walletAddr: string, privideCONET) => {
 };
 
 const scanCONETDepin = async (walletAddr: string) => {
-    conetDepinProvider = new ethers.JsonRpcProvider(mainChain_rpc);
-
     return await scan_erc20_balance(
       walletAddr,
       conetDepinContractAddress,
@@ -2334,9 +2379,13 @@ const scanBNB = async (walletAddr) => {
     return await scan_natureBalance(provideBNB, walletAddr)
 }
 
-const scan_natureBalance = (provide, walletAddr) => new Promise(async (resolve) => {
+const scanConetETH = async (walletAddr: string) => {
+    return await scan_natureBalance(conetDepinProvider, walletAddr);
+};
+
+const scan_natureBalance = (provider, walletAddr) => new Promise(async (resolve) => {
     try {
-        const result = await provide.getBalance(walletAddr)
+        const result = await provider.getBalance(walletAddr)
         return resolve(result)
     }
     catch (ex) {
@@ -2524,6 +2573,11 @@ const getNetwork = (networkName) => {
             {
                 return conet_cancun_rpc
             }
+        case 'conetDepin':
+        case 'conet_eth':
+            {
+                return mainChain_rpc
+            }
         case 'usdt':
         case 'eth':
             {
@@ -2544,6 +2598,20 @@ const getNetwork = (networkName) => {
         //     }
         default: {
             return ''
+        }
+    }
+}
+
+const getProvider = (network) => {
+    switch (network.toLowerCase().replaceAll(' ', '')) {
+        case 'conetholesky': {
+            return new ethers.JsonRpcProvider(conet_cancun_rpc)
+        }
+        case 'conetdepin': {
+            return new ethers.JsonRpcProvider(mainChain_rpc)
+        }
+        default: {
+            return new ethers.JsonRpcProvider(conet_cancun_rpc)
         }
     }
 }
@@ -2607,6 +2675,7 @@ const CONET_guardian_purchase_Receiving_Address = (networkName) => {
 
 const parseEther = (_ether, tokenName) => {
 	const ether = typeof (_ether) === 'number' ? _ether.toFixed(8) : _ether
+
     switch (tokenName) {
 		case 'arb_usdt':
         case 'usdt': {
@@ -2706,8 +2775,8 @@ const getEstimateGasForNftTransfer = (
   toAddr
 ) =>
   new Promise(async (resolve) => {
-    const provide = new ethers.JsonRpcProvider(conet_cancun_rpc);
-    const wallet = new ethers.Wallet(privateKey, provide);
+    const provider = getProvider(nftObj.network);
+    const wallet = new ethers.Wallet(privateKey, provider);
     let _fee;
     const smartContractAddr = nftObj?.contractAddress;
 
@@ -2737,7 +2806,7 @@ const getEstimateGasForNftTransfer = (
     }
 
     try {
-      const Fee = await provide.getFeeData();
+      const Fee = await provider.getFeeData();
       const gasPrice = ethers.formatUnits(Fee.gasPrice, "gwei");
       const fee = parseFloat(ethers.formatEther(_fee * Fee.gasPrice));
 
@@ -2991,6 +3060,7 @@ const transferAssetToCONET_wallet = (privateKey, token, transferNumber, toAddr) 
     const provide = new ethers.JsonRpcProvider(getNetwork(token.name))
     const wallet = new ethers.Wallet(privateKey, provide)
     const smartContractAddr = getAssetERC20Address(token.name)
+
     if (smartContractAddr) {
         const transferObj = new ethers.Contract(smartContractAddr, blast_CNTPAbi, wallet)
         const amount = parseEther(transferNumber, token.name)
@@ -3348,13 +3418,16 @@ const checkAllAvailableAirdropsForAllProfiles = async () =>{
 
     promises.push(checkAvailableConetianAirdropForAllProfiles())
     promises.push(checkAvailableCntpAirdropForAllProfiles())
+    promises.push(checkAvailablePassportAirdropForAllProfiles());
 
-    const  [conetianAirdrop, cntpAirdrop ]: any = await Promise.all(promises)
+    const  [conetianAirdrop, cntpAirdrop, passportAirdrop ]: any = await Promise.all(promises)
 
     for (let i = 0; i < profiles.length; i++) {
         profiles[i].airdrop = { 
-            availableConetian: conetianAirdrop.airdrops[i],
-            availableCntp: cntpAirdrop.airdrops[i],
+            availableConetian: conetianAirdrop?.airdrops[i],
+            availableCntp: cntpAirdrop?.airdrops[i],
+            availableGuardianPassport: passportAirdrop?.airdrops[i]?.guardianPassport,
+            availableConetianPassport: passportAirdrop?.airdrops[i]?.conetianPassport,
         };
     }
 
@@ -3372,7 +3445,6 @@ const checkAvailableConetianAirdropForAllProfiles = async () => {
     }
     
     const airdropPromises: Promise<any>[] = []
-    const gasFeePromises: Promise<any>[] = []
 
     for (let i = 0; i < profiles.length; i++) {
         const profile = profiles[i]
@@ -3412,7 +3484,6 @@ const checkAvailableCntpAirdropForAllProfiles = async () => {
     }
     
     const availableAirdropPromises: Promise<any>[] = []
-    const gasFeePromises: Promise<any>[] = []
 
     for (let i = 0; i < profiles.length; i++) {
         const profile = profiles[i]
@@ -3442,6 +3513,174 @@ const checkAvailableCntpAirdropForProfile = async (profile: profile) => {
         return 0
     }
 }
+
+const checkAvailablePassportAirdropForAllProfiles =  async () => {
+    if (!CoNET_Data) return;
+
+    const profiles = CoNET_Data.profiles;
+
+    if (!profiles) {
+      return;
+    }
+
+    const airdropPromises: Promise<passportAirdrop>[] = [];
+
+    for (let i = 0; i < profiles.length; i++) {
+      const profile = profiles[i];
+      airdropPromises.push(checkAvailablePassportAirdropsForProfile(profile));
+    }
+
+    const airdropResults = await Promise.all(airdropPromises);
+
+    const results = {
+      airdrops: airdropResults,
+    };
+
+    return results;
+};
+
+const getPassportsInfoForAllProfiles = async () => {
+    if (!CoNET_Data) return;
+
+    const profiles = CoNET_Data.profiles;
+
+    if (!profiles) {
+      return;
+    }
+
+    for (const profile of profiles) {
+        const result = await getPassportsInfoForProfile(profile);
+        profile.silentPassPassports = result
+    }
+};
+
+const getPassportsInfoForProfile = async (profile: profile): Promise<passportInfo[]> => {
+    const tmpCancunPassports = await getPassportsInfo(profile, 'cancun');
+    const tmpMainnetPassports = await getPassportsInfo(profile, 'mainnet');
+
+    const cancunPassports: passportInfo[] = []
+    const mainnetPassports: passportInfo[] = []
+
+    for (let i = 0; i < tmpCancunPassports?.nftIDs?.length; i++) {
+        cancunPassports.push({
+            walletAddress: profile.keyID,
+            nftID: parseInt(tmpCancunPassports.nftIDs[i].toString()),
+            expires: parseInt(tmpCancunPassports.expires[i].toString()),
+            expiresDays: parseInt(tmpCancunPassports.expiresDays[i].toString()),
+            premium: tmpCancunPassports.premium[i],
+            network: 'Conet Holesky'
+        })
+    }
+
+    for (let i = 0; i < tmpMainnetPassports?.nftIDs?.length; i++) {
+        mainnetPassports.push({
+            walletAddress: profile.keyID,
+            nftID: parseInt(tmpMainnetPassports.nftIDs[i].toString()),
+            expires: parseInt( tmpMainnetPassports.expires[i].toString()),
+            expiresDays: parseInt (tmpMainnetPassports.expiresDays[i].toString()),
+            premium: tmpMainnetPassports.premium[i],
+            network: 'CONET DePIN'
+        })
+    }
+
+    const allPassports = cancunPassports.concat(mainnetPassports)
+
+    allPassports?.sort((a, b) => {
+        return a.nftID - b.nftID
+    })
+
+    return allPassports;
+}
+
+const getPassportsInfo = async (profile: profile, chain: string): Promise<passportInfoFromChain> => {  
+    let provider;
+    let contractAddress;
+    let contractAbi;
+
+    if (chain === 'mainnet') {
+        provider = conetDepinProvider
+        contractAddress = passportContractAddress_mainnet
+        contractAbi = passportAbi_mainnet
+    } else {
+        provider = provideCONET
+        contractAddress = passportContractAddress_cancun
+        contractAbi = passportAbi_cancun
+    }
+
+    const wallet = new ethers.Wallet(profile.privateKeyArmor, provider);
+    const passportContract = new ethers.Contract(contractAddress, contractAbi, wallet);
+
+    try {
+        const tx = await passportContract.getUserInfo(wallet.address);
+        return tx;
+    } catch (ex) {
+        console.log(ex);
+        return {
+            nftIDs: [],
+            expires: [],
+            expiresDays: [],
+            premium: []
+        }
+    }
+};
+
+const checkAvailablePassportAirdropsForProfile = async (
+  profile: profile
+): Promise<passportAirdrop> => {
+  const airdropPromises: Promise<any>[] = [];
+
+  airdropPromises.push(
+    checkAvailableGuardianPassportAirdropForProfile(profile)
+  );
+  airdropPromises.push(
+    checkAvailableConetianPassportAirdropForProfile(profile)
+  );
+
+  const [guardianAirdropResults, conetianAirdropResults] = await Promise.all(
+    airdropPromises
+  );
+
+  const results: passportAirdrop = {
+    guardianPassport: guardianAirdropResults,
+    conetianPassport: conetianAirdropResults,
+  };
+
+  return results;
+};
+
+const checkAvailableGuardianPassportAirdropForProfile = async (profile: profile) => {
+  const provider = new ethers.JsonRpcProvider(conet_cancun_rpc);
+  const wallet = new ethers.Wallet(profile.privateKeyArmor, provider);
+  const contract = new ethers.Contract(
+    passportAirdropContractAddress_cancun,
+    passportAirdropAbi_cancun,
+    wallet
+  );
+  try {
+    const result = await contract.availableGuardianAirdrop(profile.keyID);
+    return parseInt(result)
+  } catch (error) {
+    console.log(error);
+    return 0;
+  }
+};
+
+const checkAvailableConetianPassportAirdropForProfile = async (profile: profile) => {
+  const provider = new ethers.JsonRpcProvider(conet_cancun_rpc);
+  const wallet = new ethers.Wallet(profile.privateKeyArmor, provider);
+  const contract = new ethers.Contract(
+    passportAirdropContractAddress_cancun,
+    passportAirdropAbi_cancun,
+    wallet
+  );
+  try {
+    const result = await contract.availableCONETianAirDrop(profile.keyID);
+    return parseInt(result)
+  } catch (error) {
+    console.log(error);
+    return 0;
+  }
+};
 
 const getGasFeeForCntpAirdrop = async (profile: profile) => {
     const provider = new ethers.JsonRpcProvider(conet_cancun_rpc)
@@ -3481,6 +3720,46 @@ const getGasFeeForConetianAirdrop = async (profile: profile) => {
         return 0
     }
 }
+
+const getGasFeeForGuardianPassportAirdrop = async (profile: profile) => {
+  const provider = new ethers.JsonRpcProvider(conet_cancun_rpc);
+  const wallet = new ethers.Wallet(profile.privateKeyArmor, provider);
+  const contract = new ethers.Contract(
+    passportAirdropContractAddress_cancun,
+    passportAirdropAbi_cancun,
+    wallet
+  );
+
+  try {
+    const result = await contract.GuardianAirdrop.estimateGas();
+    const gasFee = parseInt(result) / Math.pow(10, 18);
+
+    return gasFee;
+  } catch (error) {
+    console.log(error);
+    return 0;
+  }
+};
+
+const getGasFeeForConetianPassportAirdrop = async (profile: profile) => {
+  const provider = new ethers.JsonRpcProvider(conet_cancun_rpc);
+  const wallet = new ethers.Wallet(profile.privateKeyArmor, provider);
+  const contract = new ethers.Contract(
+    passportAirdropContractAddress_cancun,
+    passportAirdropAbi_cancun,
+    wallet
+  );
+
+  try {
+    const result = await contract.CONETianAirdrop.estimateGas();
+    const gasFee = parseInt(result) / Math.pow(10, 18);
+
+    return gasFee;
+  } catch (error) {
+    console.log(error);
+    return 0;
+  }
+};
 
 const redeemAirdrop = async (cmd) => {
   const walletAddress = cmd.data[0];
@@ -3554,3 +3833,250 @@ const redeemAirdrop = async (cmd) => {
 
   return returnUUIDChannel(cmd);
 };
+
+const redeemSilentPassPassport = async (cmd) => {
+  const walletAddress = cmd.data[0];
+
+  if (!CoNET_Data || !walletAddress) {
+    cmd.err = "FAILURE";
+    return returnUUIDChannel(cmd);
+  }
+
+  const profile = CoNET_Data.profiles?.find(
+    (profile) => profile.keyID === walletAddress
+  );
+
+  if (!profile) {
+    cmd.err = "FAILURE";
+    return returnUUIDChannel(cmd);
+  }
+  
+  const provider = new ethers.JsonRpcProvider(conet_cancun_rpc);
+  const wallet = new ethers.Wallet(profile.privateKeyArmor, provider);
+
+  const passportContract = new ethers.Contract(
+    passportAirdropContractAddress_cancun,
+    passportAirdropAbi_cancun,
+    wallet
+  );
+
+  let canGuardianAirdropTotal = 0;
+  let canConetianAirdropTotal = 0;
+  cmd.data = [];
+
+  try {
+    canGuardianAirdropTotal = await checkAvailableGuardianPassportAirdropForProfile(profile);
+    canConetianAirdropTotal = await checkAvailableConetianPassportAirdropForProfile(profile);
+
+    if (canGuardianAirdropTotal <= 0 && canConetianAirdropTotal <= 0)
+        throw new Error("FAILURE");
+  } catch (error: any) {
+    cmd.err = "FAILURE";
+    if (error?.reason) {
+      cmd.data.push(error?.reason);
+    }
+    return returnUUIDChannel(cmd);
+  }
+
+  try {
+    if (canGuardianAirdropTotal > 0) {
+      const pendingGuardianAirdropTx =
+        await passportContract.GuardianAirdrop();
+      cmd.data.push(true);
+    }
+  } catch (error: any) {
+    cmd.err = "FAILURE";
+    if (error?.reason) {
+      cmd.data.push(error?.reason);
+    }
+  }
+
+  try {
+    if (canConetianAirdropTotal > 0) {
+      const pendingConetianAirdropTx =
+        await passportContract.CONETianAirdrop();
+      cmd.data.push(true);
+    }
+  } catch (error: any) {
+    cmd.err = "FAILURE";
+    if (error?.reason) {
+      cmd.data.push(error?.reason);
+    }
+  }
+
+  return returnUUIDChannel(cmd);
+};
+
+const waitBridgeReady = (profile: profile, amount: string): Promise<void> => {
+  return new Promise((resolve, reject) => {
+    const provider = new ethers.JsonRpcProvider(mainChain_rpc);
+    const ethTreasuryContract = new ethers.Contract(
+      ethTreasuryContractAddress,
+      ethTreasuryAbi,
+      provider
+    );
+
+    const timeout = setTimeout(() => {
+      provider.off("block", bridgeTransactionListener);
+
+        const error: any = new Error(
+          "Timeout: No matching bridge transaction found within 1 minute"
+        );
+        error.reason = "Timeout: No matching bridge transaction found within 1 minute";
+
+      reject(error);
+    }, 60000); // 1 minute timeout
+
+    function bridgeTransactionListener(blockNumber: number) {
+      provider.getBlock(blockNumber).then(async (block) => {
+        const transactions = await Promise.all(
+          block.transactions.map((tx) => provider.getTransactionReceipt(tx))
+        );
+
+        const logs: any[] = [];
+        transactions.forEach((tx) => {
+          tx.logs.forEach((log) => {
+            try {
+              const parsedLog = ethTreasuryContract.interface.parseLog(log);
+              logs.push({ rawLog: log, parsedLog });
+            } catch (error) {
+              // Ignore logs that cannot be parsed
+            }
+          });
+        });
+
+        const found = logs.some((log) => {
+          const txValueInEth = ethers.formatEther(log?.parsedLog?.args?.[1]);
+          return (
+            ethTreasuryContractAddress === log?.rawLog?.address &&
+            profile.keyID === log?.parsedLog?.args?.[0] &&
+            amount === txValueInEth.toString()
+          );
+        });
+
+        if (found) {
+          clearTimeout(timeout);
+          provider.off("block", bridgeTransactionListener); // Stop listening
+          resolve(); // Resolve the promise
+        }
+      });
+    }
+
+    provider.on("block", bridgeTransactionListener);
+  });
+};
+
+const bridge = async (cmd: any) => {
+    const walletAddress = cmd.data[0];
+    const originChain = cmd.data[1];
+    const destinationChain = cmd.data[2];
+    const tokenName = cmd.data[3];
+    const amount = cmd.data[4];
+
+    if (!CoNET_Data || !walletAddress || !originChain || !destinationChain || !tokenName || !amount) {
+        cmd.err = "FAILURE";
+        return returnUUIDChannel(cmd);
+    }
+
+    const profile = CoNET_Data.profiles?.find((profile) => profile.keyID === walletAddress);
+
+    if (!profile) {
+        cmd.err = "FAILURE";
+        return returnUUIDChannel(cmd);
+    }
+    
+    if(!profile.tokens){
+        cmd.err = "FAILURE";
+        return returnUUIDChannel(cmd);
+    }
+
+    const token = profile.tokens[tokenName];
+
+    try {
+      const waitPromise = waitBridgeReady(profile, amount); // Start listening
+
+      const tx: any = await transferAssetToCONET_wallet(
+        profile.privateKeyArmor,
+        token,
+        amount,
+        ethTreasuryContractAddress
+      );
+
+      if (tx === false) {
+        throw new Error('Transfer failed. Check your ETH balance and try again!');
+      }
+
+      await waitPromise; // Wait for the condition in listener to be met
+
+      return returnUUIDChannel(cmd);
+    } catch (error: any) {
+        cmd.err = "FAILURE";
+        
+        if (!error?.reason) {
+            error.reason = 'Bridge failed. Check your ETH balance and try again!'
+        }
+
+        cmd.data = []
+        cmd.data.push(error?.reason);
+        return returnUUIDChannel(cmd);
+    }
+}
+
+const estimateGasForBridge = async (cmd: any) => {
+    const walletAddress = cmd.data[0];
+    const tokenName = cmd.data[1];
+    const amount = cmd.data[2];
+
+    if (!CoNET_Data || !walletAddress || !tokenName || !amount) {
+        cmd.err = "FAILURE";
+        return returnUUIDChannel(cmd);
+    }
+
+    const profile = CoNET_Data.profiles?.find((profile) => profile.keyID === walletAddress);
+
+    if (!profile) {
+        cmd.err = "FAILURE";
+        return returnUUIDChannel(cmd);
+    }
+    
+    if(!profile.tokens){
+        cmd.err = "FAILURE";
+        return returnUUIDChannel(cmd);
+    }
+
+    const provider = new ethers.JsonRpcProvider(getNetwork(tokenName));
+    const wallet = new ethers.Wallet(profile.privateKeyArmor, provider);
+
+    const tx = {
+        to: ethTreasuryContractAddress,
+        value: parseEther(amount, tokenName),
+    };
+
+    let _fee;
+    try {
+        try {
+            _fee = await wallet.estimateGas(tx)
+        } catch (error) {
+            throw new Error('Getting gas failed. Check your ETH balance and try again!');
+        }
+
+        const Fee = await provider.getFeeData();
+        const gasPrice = ethers.formatUnits(Fee.gasPrice, "gwei");
+        const fee = parseFloat(ethers.formatEther(_fee * Fee.gasPrice)).toFixed(8);
+
+        cmd.data = [fee, gasPrice];
+
+        return returnUUIDChannel(cmd);
+    } catch (error: any) {
+        cmd.err = "FAILURE";
+        
+        if (!error?.reason) {
+            error.reason =
+              "Getting gas failed. Check your ETH balance and try again!";
+        }
+
+        cmd.data = []
+        cmd.data.push(error?.reason);
+        return returnUUIDChannel(cmd);
+    }
+}

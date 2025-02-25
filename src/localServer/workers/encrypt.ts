@@ -402,7 +402,7 @@ const processCmd = async (cmd: worker_command) => {
       }
 
       case "transferToken": {
-        const [amount, sourceProfileKeyID, assetName, toAddress] = cmd.data;
+        const [amount, sourceProfileKeyID, assetName, toAddress, nftId, network] = cmd.data;
         if (!assetName || !toAddress || !amount || !sourceProfileKeyID) {
           cmd.err = "INVALID_DATA";
           return returnUUIDChannel(cmd);
@@ -442,11 +442,13 @@ const processCmd = async (cmd: worker_command) => {
         let completedTx;
 
         if (sourceProfile.tokens[assetName]?.isNft) {
+          const nft = getNftInfo(assetName.toLowerCase(), nftId, network);
+
           completedTx = await transferNft(
             sourceProfile,
             toAddress,
             amount,
-            assetName
+            nft
           );
         } else {
           completedTx = await CONET_transfer_token(
@@ -477,7 +479,7 @@ const processCmd = async (cmd: worker_command) => {
       }
 
       case "estimateGas": {
-        const [amount, sourceProfileKeyID, assetName, toAddress] = cmd.data;
+        const [amount, sourceProfileKeyID, assetName, toAddress, nftId, network] = cmd.data;
 
         if (!assetName || !toAddress || !amount || !sourceProfileKeyID) {
           cmd.err = "INVALID_DATA";
@@ -508,9 +510,11 @@ const processCmd = async (cmd: worker_command) => {
         let data: any = null;
 
         if (profile.tokens[assetName]?.isNft) {
+          const nft = getNftInfo(assetName.toLowerCase(), nftId, network);
+
           data = await getEstimateGasForNftTransfer(
             profile.privateKeyArmor,
-            nfts?.[assetName.toLowerCase()],
+            nft,
             amount,
             toAddress
           );
@@ -838,6 +842,18 @@ const processCmd = async (cmd: worker_command) => {
 
       case "redeemAirdrop": {
         return redeemAirdrop(cmd);
+      }
+
+      case "redeemSilentPassPassport": {
+        return redeemSilentPassPassport(cmd);
+      }
+
+      case "bridge": {
+        return bridge(cmd);
+      }
+
+      case "estimateGasForBridge": {
+        return estimateGasForBridge(cmd);
       }
 
       default: {
