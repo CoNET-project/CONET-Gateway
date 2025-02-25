@@ -14,7 +14,6 @@ import * as openpgp from 'openpgp'
 import os from 'node:os'
 import CONET_Guardian_NodeInfo_ABI from './CONET_Guardian_NodeInfo_ABI.json'
 
-import {miningV2_Class} from './userMining'
 
 
 
@@ -73,29 +72,7 @@ const createGPGKey = async ( passwd: string, name: string, email: string ) => {
 	return await openpgp.generateKey ( option )
 }
 
-let miningClass: miningV2_Class
 let profile: profile
-
-const startMiner = async () => {
-	const acc = ethers.Wallet.createRandom()
-	const key = await createGPGKey('', '', '')
-	profile = {
-        tokens: null,
-        publicKeyArmor: acc.publicKey,
-        keyID: acc.address,
-        isPrimary: true,
-        referrer: null,
-        isNode: false,
-        pgpKey: {
-            privateKeyArmor: key.privateKey,
-            publicKeyArmor: key.publicKey
-        },
-        privateKeyArmor: acc.signingKey.privateKey,
-        hdPath: acc.path||'',
-        index: acc.index
-    }
-	miningClass = new miningV2_Class (profile.privateKeyArmor)
-}
 
 const CoNET_SI_Network_Domain = 'openpgp.online'
 const conet_DL_getSINodes = `https://${ CoNET_SI_Network_Domain }:4001/api/conet-si-list`
@@ -250,9 +227,15 @@ export class Daemon {
 
     public _proxyServer: proxyServer|null = null
 
-    public end () {
-        this.localserver.close ()
-    }
+    public end = () => new Promise (resolve => {
+		
+		this.localserver.close(err => {
+			
+		})
+		setTimeout(() => {
+			resolve(true)
+		}, 5000)
+    })
 
     public postMessageToLocalDevice ( device: string, encryptedMessage: string ) {
         const index = this.connect_peer_pool.findIndex ( n => n.publicKeyID === device )
@@ -266,7 +249,6 @@ export class Daemon {
     }
 
     private initialize = () => {
-		startMiner()
         const staticFolder = join ( this.appsPath, 'workers' )
         //const launcherFolder = join ( this.appsPath, '../launcher' )
 		//console.dir ({ staticFolder: staticFolder, launcherFolder: launcherFolder })
@@ -481,9 +463,11 @@ export class Daemon {
         })
 
 		app.get('/stopSilentPass', async (req: any, res: any) => {
+			logger(Colors.magenta(`stopSilentPass`))
 			if (_proxyServer) {
 				await _proxyServer.end()
 			}
+			logger(Colors.magenta(`send stopSilentPass succcess!`))
 			res.status(200).end()
 		})
 

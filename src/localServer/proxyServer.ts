@@ -415,8 +415,12 @@ export class proxyServer {
 	public end = () => new Promise(resolve=> {
 		if (this.server !== null) {
 			this.server.close(err => {
-				resolve (true)
+				
 			})
+			setTimeout(() => {
+				resolve (true)
+			}, 6000)
+			
 		}
 	})
 }
