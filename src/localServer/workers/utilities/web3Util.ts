@@ -400,7 +400,7 @@ const getProfileAssets_CONET_Balance = async (profile: profile) => {
 		const current = profile.tokens
 
         const [
-			CNTPV1, cCNTP, conet, conetDepin,
+			CNTPV1, cCNTP, conet, conetDepin, conet_eth,
 			cBNBUSDT, cUSDT, cBNB, cETH, cArbETH, cArbUSDT,
 			_GuardianPlan, _CONETianPlan
 		] = await Promise.all([
@@ -410,6 +410,7 @@ const getProfileAssets_CONET_Balance = async (profile: profile) => {
             scanCONETHolesky(key, provideCONET),
             scanCONETDepin(key),
 
+            scanConetETH(key),
             scanCONET_Claimable_BNBUSDT(key),
             scanCONET_Claimable_ETHUSDT(key),
 			scanCONET_Claimable_BNB(key),
@@ -472,6 +473,20 @@ const getProfileAssets_CONET_Balance = async (profile: profile) => {
 				name: 'conetDepin'
 			}
 		}
+
+        if (current.conet_eth) {
+            current.conet_eth.balance =
+            conet_eth === false ? "" : ethers.formatEther(conet_eth);
+        } else {
+            current.conet_eth = {
+              balance: conet_eth === false ? "" : ethers.formatEther(conet_eth),
+              history: [],
+              network: "CONET DePIN",
+              decimal: 18,
+              contract: "",
+              name: "conet_eth",
+            };
+        }
 		
 		//			Claimable Assets
         
