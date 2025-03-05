@@ -316,7 +316,7 @@ const getProfileAssets_allOthers_Balance = async (profile: profile) => {
             current.conet_eth = {
               balance: conet_eth === false ? "" : ethers.formatEther(conet_eth),
               history: [],
-              network: "conetMainnet",
+              network: "CONET DePIN",
               decimal: 18,
               contract: "",
               name: "conet_eth",
