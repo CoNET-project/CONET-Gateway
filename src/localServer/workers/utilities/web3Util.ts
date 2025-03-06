@@ -3564,9 +3564,51 @@ const getPassportsInfoForAllProfiles = async () => {
     }
 
     for (const profile of profiles) {
-        const result = await getPassportsInfoForProfile(profile);
-        profile.silentPassPassports = result
+        const passports = await getPassportsInfoForProfile(profile);
+        const currentPassport = await getCurrentPassportInfo(profile);
+
+        profile.silentPassPassports = passports;
+        profile.activePassport = {
+            nftID: currentPassport?.nftIDs?.toString(),
+            expires: currentPassport?.expires?.toString(),
+            expiresDays: currentPassport?.expiresDays?.toString(),
+            premium: currentPassport?.premium,
+            }
     }
+};
+
+const getCurrentPassportInfoInMainnet = async (profile: profile) => {
+  if (!profile) {
+    return;
+  }
+
+  const wallet = new ethers.Wallet(
+    profile.privateKeyArmor,
+    conetDepinProvider
+  );
+
+  const passportContract = new ethers.Contract(
+    passportContractAddress_mainnet,
+    passportAbi_mainnet,
+    wallet
+  );
+
+  try {
+    const result = await passportContract.getCurrentPassport(wallet.address);
+    return result;
+  } catch (ex) {
+    console.log(ex);
+  }
+};
+
+const getCurrentPassportInfo = async (profile: profile) => {
+  if (!CoNET_Data) {
+    return;
+  }
+
+  const resultMainnet = await getCurrentPassportInfoInMainnet(profile);
+
+  return resultMainnet;
 };
 
 const getPassportsInfoForProfile = async (profile: profile): Promise<passportInfo[]> => {

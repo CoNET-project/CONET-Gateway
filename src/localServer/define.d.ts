@@ -424,6 +424,14 @@ interface profile extends keyPair {
 	historicBalance?: historicBalance[]
 	airdrop?: airdrop
 	silentPassPassports?: passportInfo[]
+	activePassport?: freePassport
+}
+
+interface freePassport {
+  nftID: string;
+  expires: string;
+  expiresDays: string;
+  premium: boolean;
 }
 
 interface publicProfile {
