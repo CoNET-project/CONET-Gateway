@@ -316,7 +316,7 @@ const getProfileAssets_allOthers_Balance = async (profile: profile) => {
             current.conet_eth = {
               balance: conet_eth === false ? "" : ethers.formatEther(conet_eth),
               history: [],
-              network: "conetMainnet",
+              network: "CONET DePIN",
               decimal: 18,
               contract: "",
               name: "conet_eth",
@@ -400,7 +400,7 @@ const getProfileAssets_CONET_Balance = async (profile: profile) => {
 		const current = profile.tokens
 
         const [
-			CNTPV1, cCNTP, conet, conetDepin,
+			CNTPV1, cCNTP, conet, conetDepin, conet_eth,
 			cBNBUSDT, cUSDT, cBNB, cETH, cArbETH, cArbUSDT,
 			_GuardianPlan, _CONETianPlan
 		] = await Promise.all([
@@ -410,6 +410,7 @@ const getProfileAssets_CONET_Balance = async (profile: profile) => {
             scanCONETHolesky(key, provideCONET),
             scanCONETDepin(key),
 
+            scanConetETH(key),
             scanCONET_Claimable_BNBUSDT(key),
             scanCONET_Claimable_ETHUSDT(key),
 			scanCONET_Claimable_BNB(key),
@@ -472,6 +473,20 @@ const getProfileAssets_CONET_Balance = async (profile: profile) => {
 				name: 'conetDepin'
 			}
 		}
+
+        if (current.conet_eth) {
+            current.conet_eth.balance =
+            conet_eth === false ? "" : ethers.formatEther(conet_eth);
+        } else {
+            current.conet_eth = {
+              balance: conet_eth === false ? "" : ethers.formatEther(conet_eth),
+              history: [],
+              network: "CONET DePIN",
+              decimal: 18,
+              contract: "",
+              name: "conet_eth",
+            };
+        }
 		
 		//			Claimable Assets
         
@@ -3549,9 +3564,51 @@ const getPassportsInfoForAllProfiles = async () => {
     }
 
     for (const profile of profiles) {
-        const result = await getPassportsInfoForProfile(profile);
-        profile.silentPassPassports = result
+        const passports = await getPassportsInfoForProfile(profile);
+        const currentPassport = await getCurrentPassportInfo(profile);
+
+        profile.silentPassPassports = passports;
+        profile.activePassport = {
+            nftID: currentPassport?.nftIDs?.toString(),
+            expires: currentPassport?.expires?.toString(),
+            expiresDays: currentPassport?.expiresDays?.toString(),
+            premium: currentPassport?.premium,
+            }
     }
+};
+
+const getCurrentPassportInfoInMainnet = async (profile: profile) => {
+  if (!profile) {
+    return;
+  }
+
+  const wallet = new ethers.Wallet(
+    profile.privateKeyArmor,
+    conetDepinProvider
+  );
+
+  const passportContract = new ethers.Contract(
+    passportContractAddress_mainnet,
+    passportAbi_mainnet,
+    wallet
+  );
+
+  try {
+    const result = await passportContract.getCurrentPassport(wallet.address);
+    return result;
+  } catch (ex) {
+    console.log(ex);
+  }
+};
+
+const getCurrentPassportInfo = async (profile: profile) => {
+  if (!CoNET_Data) {
+    return;
+  }
+
+  const resultMainnet = await getCurrentPassportInfoInMainnet(profile);
+
+  return resultMainnet;
 };
 
 const getPassportsInfoForProfile = async (profile: profile): Promise<passportInfo[]> => {
