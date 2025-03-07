@@ -183,7 +183,7 @@ const createSock5ConnectCmd = async (wallet: ethers.Wallet, SaaSnode: nodes_info
 	const message =JSON.stringify(command)
 	const signMessage = await wallet.signMessage(message)
 
-	const encryptedCommand = await encrypt_Message( SaaSnode.publicKeyObj, {message, signMessage})
+	const encryptedCommand = await encrypt_Message( SaaSnode.publicKeyObj, { message, signMessage })
 	logger(inspect({message, signMessage}, false, 3, true))
 	command.requestData = [encryptedCommand, '', key]
 	return (command)

@@ -527,6 +527,6 @@ export class Daemon {
 
 //		test 
 //		curl -v localhost:3001/getAllRegions
-//		curl -X POST -H "Content-Type: application/json" --data '{"selectedCountry": "US"}' "http://localhost:3001/startSilentPass"
+//		curl -X POST -H "Content-Type: application/json" --data '{"walletAddress": "0x39EE68D74E6Dc6FF047E60D6Fc769f6E4Bab7fB5", "solanaWallet": "9qrjMUHXsZg7Er7Q9EJEEZpR4cPvM1FAkDJSwkcbCoFy"}' "https://apiv4.conet.network/api/spclub"
 //		Proxy server test 
 //		curl -v -4 -x socks5h://localhost:3002 "https://www.google.com"
