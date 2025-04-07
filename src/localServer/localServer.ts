@@ -210,14 +210,13 @@ type Native_StartVPNObj = {
 	exitNode: nodes_info[]
 }
 
-
+const appsPath: string = join ( __dirname )
 export class Daemon {
     private logsPool: proxyLogs[] = []
 
     private loginListening: express.Response|null = null
     private localserver: Server
     private connect_peer_pool: any [] = []
-	private appsPath: string = join ( __dirname )
     private worker_command_waiting_pool: Map<string, express.Response> = new Map()
     private logStram = ''
 
@@ -249,7 +248,7 @@ export class Daemon {
     }
 
     private initialize = () => {
-        const staticFolder = join ( this.appsPath, 'workers' )
+        const staticFolder = join ( appsPath, 'workers' )
         //const launcherFolder = join ( this.appsPath, '../launcher' )
 		//console.dir ({ staticFolder: staticFolder, launcherFolder: launcherFolder })
 
@@ -508,7 +507,7 @@ export class Daemon {
 
 
 
-        app.all ('*', (req: any, res: any) => {
+        app.all ('/', (req: any, res: any) => {
 			logger (Colors.red(`Local web server got unknow request URL Error! [${ splitIpAddr (req.ip) }] => ${ req.method } url =[${ req.url }]`))
 			return res.status(404).end (return404 ())
 		})
@@ -522,7 +521,7 @@ export class Daemon {
 }
 
 
-// new Daemon(3001, '')
+new Daemon(3001, '')
 
 
 //		test 

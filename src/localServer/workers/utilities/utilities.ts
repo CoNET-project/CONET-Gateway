@@ -330,7 +330,12 @@ const postToEndpoint = ( url: string, post: boolean, jsonData ) => new Promise (
 		logger(`postToEndpoint [${url}] xhr.status [${xhr.status === 200}] !== 200 Error`)
 		return resolve (false)
 	}
-
+	xhr.onerror = err => {
+		reject (err)
+	}
+	xhr.onabort = ex => {
+		reject (ex)
+	}
 	xhr.open( post? 'POST': 'GET', url, true )
 	xhr.setRequestHeader('Content-Type', 'application/json;charset=UTF-8')
 
