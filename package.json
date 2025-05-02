@@ -1,7 +1,7 @@
 {
     "name": "@conet.project/conet-proxy",
 
-    "version": "0.10.4",
+    "version": "0.11.0",
 
     "license": "UNLICENSED",
     "files": [
@@ -30,27 +30,27 @@
         "yargs": "^17.7.2",
         "hexdump-nodejs": "^0.1.0",
         "ip": "^2.0.1",
-        "ethers": "^6.13.5",
+        "ethers": "^6.13.7",
 		"openpgp": "^5.11.2",
-		"eth-crypto": "^2.7.0"
+		"eth-crypto": "^2.8.0"
     },
     "devDependencies": {
         "@types/async": "^3.2.24",
         "@types/express": "^5.0.1",
         "@types/fs-extra": "^11.0.4",
         "@types/jest": "^29.5.14",
-        "@types/node": "^22.14.0",
+        "@types/node": "^22.15.2",
         "@types/pouchdb": "^6.4.2",
         "@types/uuid": "^10.0.0",
 		"@types/openpgp": "^5.0.0",
-        "@typescript-eslint/eslint-plugin": "~8.29.0",
-        "@typescript-eslint/parser": "^8.29.0",
-        "eslint": "^9.24.0",
+        "@typescript-eslint/eslint-plugin": "^8.31.0",
+        "@typescript-eslint/parser": "^8.31.0",
+        "eslint": "^9.25.1",
         "eslint-config-airbnb-base": "^15.0.0",
-        "eslint-config-prettier": "^10.1.1",
+        "eslint-config-prettier": "^10.1.2",
         "jszip": "^3.10.1",
         "pouchdb": "^9.0.0",
-        "ts-jest": "^29.3.1",
+        "ts-jest": "^29.3.2",
         "ts-node": "^10.9.2",
         "typescript": "^5.8.3"
     },
