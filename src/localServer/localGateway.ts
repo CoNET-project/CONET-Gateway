@@ -60,4 +60,7 @@ const start = () => {
 start()
 
 
-//			curl -v -x http://127.0.0.1:8889 "https://www.google.com"
+//			curl -v -x http://127.0.0.1:8888 "https://www.google.com"
+//          curl -v -x socks4a://localhost:8888 "https://www.google.com"
+//          curl -v -x socks4://localhost:8888 "https://www.google.com"
+//          curl -v -x socks5h://localhost:8888 "https://www.google.com"

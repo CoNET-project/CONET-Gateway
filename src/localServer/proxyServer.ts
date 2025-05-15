@@ -50,6 +50,7 @@ const httpProxy = ( clientSocket: Net.Socket, _buffer: Buffer, agent: string, pr
 	const httpHead = new HttpProxyHeader ( _buffer )
 	const hostName = httpHead.host
 	const ssl = isSslFromBuffer ( _buffer )
+    
 	const connect = (_data: Buffer) => {
 		hexDebug(_data)
 		const uuuu : VE_IPptpStream = {
