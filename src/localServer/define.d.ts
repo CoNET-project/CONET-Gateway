@@ -693,7 +693,7 @@ interface requestObj {
 interface VE_IPptpStream {
     type?: string
     buffer: string
-    host: string|null
+    host: string
     port: number
     cmd: string
     //ATYP: number
@@ -868,4 +868,9 @@ interface assetPrice {
 interface assetOracle {
 	lastUpdate: number
 	assets: assetPrice[]
+}
+
+type filterRule = {
+    DOMAIN: string[]
+    IP: string[]
 }

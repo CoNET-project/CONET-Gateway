@@ -210,6 +210,11 @@ type Native_StartVPNObj = {
 	exitNode: nodes_info[]
 }
 
+type filterRule = {
+    DOMAIN: string[]
+    IP: string[]
+}
+
 const appsPath: string = join ( __dirname )
 export class Daemon {
     private logsPool: proxyLogs[] = []
@@ -266,7 +271,21 @@ export class Daemon {
             return this.initialize ()
         })
 
+        app.post ( '/rule', ( req: any, res: any ) => {
+            const vpnObj = req.body.data
+            try {
+                const data: filterRule = JSON.parse(vpnObj)
+                logger(inspect(data, false, 3, true))
+            if (_proxyServer) {
+                _proxyServer.rule(data)
+            }
+            } catch (ex) {
+                logger(`/rule JSON.parse(vpnObj) Error`)
+            }
 
+            
+            return res.end()
+        })
 
         app.post ( '/postMessage', ( req: any, res: any ) => {
             const post_data: postData = req.body

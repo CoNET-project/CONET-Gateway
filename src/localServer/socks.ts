@@ -101,12 +101,17 @@ export class socks5 {
 			}
 		}
 
-
+        
 
 		//		PAYMENT REQUIRE
 
 
 		this.socket.once ( 'data', ( _data: Buffer ) => {
+            
+            if (!req.host) {
+                return this.stopConnection(req)
+            }
+
 			const uuuu : VE_IPptpStream = {
 				uuid: this.uuid,
 				host: req.host,
@@ -116,6 +121,8 @@ export class socks5 {
 				ssl: isSslFromBuffer (_data),
 				order: 0
 			}
+
+
 			
 			return this.proxyServer.requestGetWay ( uuuu, this.socket )
 		})

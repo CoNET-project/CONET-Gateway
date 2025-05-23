@@ -16,6 +16,7 @@ import { ethers } from 'ethers'
 import * as Crypto from 'crypto'
 import IP from 'ip'
 import {resolve4} from 'node:dns'
+import OS from 'node:os'
 import {createConnection} from 'node:net'
 
 const _HTTP_200 = ( body: string ) => {
@@ -25,6 +26,11 @@ const _HTTP_200 = ( body: string ) => {
 				`Content-Length: ${ body.length }\r\n\r\n` +
 				`${ body }`
 	return ret
+}
+
+type filterRule = {
+    DOMAIN: string[]
+    IP: string[]
 }
 
 const _HTTP_200V2 = `HTTP/1.1 200 Connection Established\r\n\r\n`
@@ -44,6 +50,8 @@ const getHostIpv4: (host: string) => Promise<string> = (host: string) => new Pro
 		return resolve(ipv4s[0])
 	})
 })
+
+
 
 
 const httpProxy = ( clientSocket: Net.Socket, _buffer: Buffer, agent: string, proxyServer: proxyServer) => {
@@ -280,6 +288,66 @@ const ConnectToProxyNode = (cmd : SICommandObj, SaaSnode: nodes_info, entryNode:
 
 }
 
+const isLocalhost = (hostname) => {
+    if (hostname === 'localhost' || hostname === '127.0.0.1' || hostname === '::1') {
+        return true
+    }
+    try {
+        const hostIP = require('dns').lookupSync(hostname)
+        const networkInterfaces = OS.networkInterfaces()
+        const isPublic = IP.isPublic(hostIP)
+
+        if (!isPublic) {
+            return true
+        }
+        for (const name of Object.keys(networkInterfaces)) {
+            if (!networkInterfaces[name]) {
+                continue
+            }
+
+            for (const net of networkInterfaces[name]) {
+                if (net.address === hostIP) {
+                    return true
+                }
+            }
+        }
+        return false
+    } catch (error) {
+        return false
+    }
+}
+
+
+const ConnectViaLocal = (uuuu : VE_IPptpStream, resoestSocket: Net.Socket ) => {
+    const port = uuuu.port
+	const host = uuuu.host
+    
+    const socket = createConnection ( port, host, () => {
+
+        socket.pipe(resoestSocket).pipe(socket)
+        
+        const data = Buffer.from(uuuu.buffer, 'base64')
+        if (data) {
+            socket.write (data)
+        }
+        
+        resoestSocket.resume()
+    })
+
+    socket.once ( 'end', () => {
+        // logger (Colors.red(`socks5Connect host [${host}:${port}] on END!`))
+        resoestSocket.end().destroy()
+    })
+
+    socket.on ( 'error', err => {
+        resoestSocket.end().destroy()
+        logger (Colors.red(`socks5Connect [${host}:${port}] on Error! [${err.message}]`))
+    })
+    
+    
+
+
+}
 
 export class proxyServer {
 
@@ -294,6 +362,7 @@ export class proxyServer {
 	public useGatWay = true
 	public clientSockets: Set<Net.Socket> = new Set()
 	public currentWallet: ethers.Wallet
+    public ruleData: filterRule|null = null
 
 	private startLocalProxy = async () => {
 
@@ -363,8 +432,62 @@ export class proxyServer {
 		
 	}
 
+    private checkRule = (host: string) => {
+        
+        const isIpAddress = IP.isV4Format(host)
+        
+        if (isIpAddress) {
+            const isPublic = IP.isPublic(host)
+
+            if (!isPublic) {
+                return true
+            }
+
+            if (!this.ruleData) {
+                return false
+            }
+
+            const index = this.ruleData.IP.findIndex(n => IP.cidrSubnet(n).contains(host))
+            if (index > -1) {
+                return false
+            }
+
+            return true
+        }
+
+        const isLocal = isLocalhost (host)
+        if (isLocal) {
+            return true
+        }
+
+        if (!this.ruleData) {
+            return false
+        }
+        const hostName = host.toLowerCase()
+        const index = this.ruleData.DOMAIN.findIndex(n => {
+            const splitN = n.split('.').filter(n => n.length)
+            const regExpData = splitN.join('\.')
+            const regionRule = new RegExp(`(^|\\.)${regExpData}$`)
+            return regionRule.test(hostName)
+        })
+        
+        if (index > -1 ) {
+            return true
+        }
+
+        return false
+    }
+
+
 	public requestGetWay = async (uuuu : VE_IPptpStream, socket: Net.Socket ) => {
 
+
+        if (this.checkRule(uuuu.host)) {
+            logger(`Direct to connect ${uuuu.host}:${uuuu.port} Server!`)
+            return ConnectViaLocal(uuuu, socket)
+        }
+        logger(`package ${uuuu.host}:${uuuu.port} to Layer Minus Protocol!`)
+        
 		const upChannel_SaaS_node  = getRandomSaaSNode(this._egressNodes)
 
 	
@@ -424,6 +547,11 @@ export class proxyServer {
 			
 		}
 	})
+
+    public rule = (_rule: filterRule) => {
+        _rule.DOMAIN = _rule.DOMAIN.map(n=> n.toLowerCase())
+        this.ruleData = _rule
+    }
 }
 
 //		curl -v -x http://127.0.0.1:3002 "https://www.google.com"
