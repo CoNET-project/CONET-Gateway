@@ -116,10 +116,7 @@ export class socks5 {
 				uuid: this.uuid,
 				host: req.host,
 				buffer:  _data.toString ( 'base64' ),
-				cmd: this._cmd,
-				port: req.port,
-				ssl: isSslFromBuffer (_data),
-				order: 0
+				port: req.port
 			}
 
 
@@ -300,10 +297,7 @@ export class sockt4 {
 			uuid: this.uuid,
 			host: this.req.domainName||this.req.targetIp,
 			buffer: buffer.toString ( 'base64' ),
-			cmd: this._cmd,
-			port: this.req.port,
-			ssl: isSslFromBuffer ( buffer ),
-			order: 0
+			port: this.req.port
 		}
 		
 		return this.proxyServer.requestGetWay ( uuuu, this.socket )

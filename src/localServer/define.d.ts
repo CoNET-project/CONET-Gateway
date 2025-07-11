@@ -591,7 +591,7 @@ type CoNETIndexDBInit = {
 	preferences: any
 }
 
-type SICommandObj_Command = 'SaaS_Proxy'|'SaaS_Sock5'|'mining'|'mining_validator'
+type SICommandObj_Command = 'SaaS_Sock5'|'mining'|'mining_validator'|'SilentPass'
 
 interface SICommandObj {
 	command: SICommandObj_Command
@@ -695,13 +695,8 @@ interface VE_IPptpStream {
     buffer: string
     host: string
     port: number
-    cmd: string
     //ATYP: number
     uuid?: string
-    length?:number
-    randomBuffer?: Buffer
-    ssl: boolean
-	order: number
 }
 
 type proxyLogs =  {
@@ -855,7 +850,7 @@ type ITypeTransferCount = {
 	startTime: number
 	endTime: number
 	nodeIpaddress: string
-	ssl: boolean
+	ssl?: boolean
 }
 
 

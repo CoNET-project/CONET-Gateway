@@ -65,10 +65,7 @@ const httpProxy = ( clientSocket: Net.Socket, _buffer: Buffer, agent: string, pr
 			uuid: Crypto.randomBytes (10).toString ('hex'),
 			host: hostName,
 			buffer: _data.toString ( 'base64' ),
-			cmd: httpHead.methods,
-			port: httpHead.Port,
-			ssl,
-			order: 0
+			port: httpHead.Port
 		}
 		// socks5Connect(uuuu, clientSocket)
 		// clientSocket.resume ()
@@ -240,7 +237,6 @@ const ConnectToProxyNode = (cmd : SICommandObj, SaaSnode: nodes_info, entryNode:
 
 	const infoData: ITypeTransferCount = {
 		hostInfo: hostInfo,
-		ssl: uuuu.ssl,
 		startTime: new Date().getTime(),
 		download: 0,
 		upload: 0,
@@ -555,3 +551,29 @@ export class proxyServer {
 }
 
 //		curl -v -x http://127.0.0.1:3002 "https://www.google.com"
+
+const test = () => {
+	const entryNodes: nodes_info[] = [{
+		"region": "NW.DE",
+		"country": "DE",
+		"ip_addr": "217.160.189.159",
+		"armoredPublicKey": "-----BEGIN PGP PUBLIC KEY BLOCK-----\n\nxjMEZq2V5xYJKwYBBAHaRw8BAQdAhqIi6sQx/wqogD+T0Yftwsx7iBhd4Iyh\nlRCFnJKBODHNKjB4Y2JCQjEzNzE5NzNENTdlNmJENDVhQzBkZmVGRDQ5M2I1\nOUY5RDc2QsKMBBAWCgA+BYJmrZXnBAsJBwgJkArZXaLou3oNAxUICgQWAAIB\nAhkBApsDAh4BFiEExfcG2i3ma6s72VROCtldoui7eg0AAHFgAQCrT8y1Y69H\noXTHfdLuEk+XUDpq4CAvj7KkHxbPNQU+PQD/SdBbRUcvSkzzoU4tLcXxVI0Q\nST8za1hvo3RdWCglxAPOOARmrZXnEgorBgEEAZdVAQUBAQdAcLPhpj4WdcZN\nu7pP/LLYYjzg0JhyYvVpDwUoXa9WmkoDAQgHwngEGBYKACoFgmatlecJkArZ\nXaLou3oNApsMFiEExfcG2i3ma6s72VROCtldoui7eg0AADvRAQDrgO8K+hza\ntH4LTpGZ7OscC7M2ZtUV0zXshHlEnxS5NgD/ZCAHabk0Y47bANGG7KrcqsHY\n3pmfYRPFcvckAoPiagc=\n=VhCf\n-----END PGP PUBLIC KEY BLOCK-----\n",
+		"last_online": false,
+		"nftNumber": 100,
+		"domain": "9977E9A45187DD80.conet.network"
+	}]
+	const egressNodes: nodes_info[] = [{
+		"region": "MD.ES",
+		"country": "ES",
+		"ip_addr": "93.93.112.187",
+		"armoredPublicKey": "-----BEGIN PGP PUBLIC KEY BLOCK-----\n\nxjMEZo9ITBYJKwYBBAHaRw8BAQdAtFGkXMLHSAJ3jMZAVmfMvtFF74PkpYR9\nT50s9Ndr6HnNKjB4NmJGM0FhNzI2MWUyMUJlNUZjNzgxQWMwOUY5NDc1YzhB\nMzRBZkVlYcKMBBAWCgA+BYJmj0hMBAsJBwgJkOe/gynD16TlAxUICgQWAAIB\nAhkBApsDAh4BFiEEpJqLA2EpKEPDlaCI57+DKcPXpOUAALCdAQCIFyD/LlbY\nRGWzyaS++BBNIslOoktpHxzcgS+sD7dJggEAxGvDZQiu42l7VlStvlN4J9Jr\nGWJy8opWUlghMFcZHgrOOARmj0hMEgorBgEEAZdVAQUBAQdAqtevF55R1RHW\nh3L8novWfriyXuVZJo/vwUTylQwdCggDAQgHwngEGBYKACoFgmaPSEwJkOe/\ngynD16TlApsMFiEEpJqLA2EpKEPDlaCI57+DKcPXpOUAAHHFAQCbOklWpmRw\niorLHhB99zbaNfsn9/F2uJwRs9U0/mBAhQEAg0VOc4nDfb9MD0tHTP6crD62\nFaYFiQ7vNSBo3DuXlw0=\n=XXSu\n-----END PGP PUBLIC KEY BLOCK-----\n",
+		"last_online": false,
+		"nftNumber": 101,
+		"domain": "B4CB0A41352E9BDF.conet.network"
+	}]
+	const privateKey = '0xc3c55e163fa1ad5a08101b21eeb56756fb68605b0c8ce7b2bbbfa336f01b32c0'
+	
+	new proxyServer('3003',entryNodes, egressNodes, privateKey, true, '')
+}
+
+test ()
