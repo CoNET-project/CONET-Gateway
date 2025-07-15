@@ -5,6 +5,7 @@ import * as unzipper from 'unzipper'
 import http from 'node:http'
 import currentVer from './workers/update.json'
 import { inspect } from "node:util"
+import { app as electronApp } from 'electron'
 // 定义 update.json 的数据结构
 interface UpdateInfo {
 	ver: string
@@ -135,15 +136,20 @@ export const runUpdater = async (nodes: nodes_info[] ) => {
 	}
     // --- 步骤 3: 从选定节点下载并解压文件 ---
     const downloadUrl = `${baseApiUrl}${updateInfo.filename}`
-    const extractPath = join(__dirname, 'workers')
+    // 关键改动 2: 不再使用 __dirname，而是使用 userData 目录
+	// 这确保了我们将文件解压到 Electron 应用的可写区域
+	const userDataPath = electronApp.getPath('userData');
+	const extractPath = join(userDataPath, 'workers');
 
-    logger(`⏳ 正在从 ${downloadUrl} 下载并解压...`)
-    logger(`将解压到目录: ${extractPath}`)
+	logger(`⏳ 正在从 ${downloadUrl} 下载并解压...`);
+	logger(`将解压到可写目录: ${extractPath}`); // 日志信息更新，更准确
 
-    // 确保目标目录存在
-    if (!fs.existsSync(extractPath)) {
-      	fs.mkdirSync(extractPath, { recursive: true })
-    }
+	// 确保目标目录存在
+	// 这个逻辑在这里依然有效，它会创建 userData/workers 目录（如果尚不存在）
+	if (!fs.existsSync(extractPath)) {
+		fs.mkdirSync(extractPath, { recursive: true });
+	}
+
 	await downloadAndUnzip(downloadUrl, extractPath)
     logger(`🎉 成功下载并解压文件到 ${extractPath}`)
 

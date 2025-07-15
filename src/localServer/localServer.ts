@@ -14,7 +14,8 @@ import * as openpgp from 'openpgp'
 import os from 'node:os'
 import CONET_Guardian_NodeInfo_ABI from './CONET_Guardian_NodeInfo_ABI.json'
 import {runUpdater} from './updateProcess'
-
+import { app as electronApp } from 'electron'
+import fs from 'node:fs'
 
 const ver = '0.1.4'
 
@@ -215,7 +216,7 @@ type filterRule = {
     IP: string[]
 }
 
-const appsPath: string = join ( __dirname )
+
 export class Daemon {
     private logsPool: proxyLogs[] = []
 
@@ -253,9 +254,28 @@ export class Daemon {
     }
 
     private initialize = () => {
-        const staticFolder = join ( appsPath, 'workers' )
-        //const launcherFolder = join ( this.appsPath, '../launcher' )
-		//console.dir ({ staticFolder: staticFolder, launcherFolder: launcherFolder })
+		// --- 关键逻辑开始 ---
+
+		// 1. 定义默认路径（只读的应用包内部）
+		const defaultPath = join(__dirname, 'workers')
+
+		// 2. 定义更新路径（可写的 userData 目录内部）
+		const userDataPath = electronApp.getPath('userData');
+		const updatedPath = join(userDataPath, 'workers');
+
+		// 3. 检查更新路径是否存在，然后决定使用哪个路径
+		//    如果 updatedPath 存在，就用它；否则，回退到 defaultPath。
+		const staticFolder = fs.existsSync(updatedPath) ? updatedPath : defaultPath;
+
+		// 确保我们选择的目录确实存在（主要针对首次启动时 defaultPath 的情况）
+		if (!fs.existsSync(staticFolder)) {
+			// 如果连默认目录都不存在，可能需要从别处复制或创建
+			logger(Colors.red(`CRITICAL ERROR: Static folder not found at ${staticFolder}`));
+			// 在这种情况下，可以考虑从一个备用位置将默认 `workers` 内容复制到 `updatedPath`
+			// fs.cpSync(join(__dirname, 'initial_workers'), updatedPath, { recursive: true });
+		}
+		
+		// --- 关键逻辑结束 ---
 
         const app = express()
 		const cors = require('cors')
@@ -530,17 +550,17 @@ export class Daemon {
             this.loginListening.write (JSON.stringify(cmd)+'\r\n\r\n')
         })
 
-
-
         app.all ('/', (req: any, res: any) => {
 			logger (Colors.red(`Local web server got unknow request URL Error! [${ splitIpAddr (req.ip) }] => ${ req.method } url =[${ req.url }]`))
 			return res.status(404).end (return404 ())
 		})
 
         this.localserver = app.listen ( this.PORT, () => {
-            return console.table([
-                { 'CONET Local Web Server': `http://localhost:${ this.PORT }, local-path = [${ staticFolder }]` },
-            ])
+            // 在日志中打印出当前正在使用的路径，这对于调试至关重要！
+			return console.table([
+				{ 'CONET Local Web Server': `http://localhost:${this.PORT}` },
+				{ 'Serving files from': staticFolder } 
+			])
         })
     }
 }

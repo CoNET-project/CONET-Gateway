@@ -1,7 +1,7 @@
 {
     "name": "@conet.project/conet-proxy",
 
-    "version": "0.13.2",
+    "version": "0.14.1",
 
     "license": "UNLICENSED",
     "files": [
@@ -34,7 +34,8 @@
 		"openpgp": "^5.11.2",
 		"eth-crypto": "^2.8.0",
 		"axios": "^1.10.0",
-		"unzipper": "^0.12.3"
+		"unzipper": "^0.12.3",
+		"electron": "^37.2.1"
     },
     "devDependencies": {
         "@types/async": "^3.2.24",
