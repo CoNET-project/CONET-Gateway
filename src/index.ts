@@ -2,6 +2,7 @@
 import {Daemon} from './localServer/localServer'
 import { proxyServer as proxyServer_class } from './localServer/proxyServer'
 const yargs = require('yargs')
+
 const argv = yargs(process.argv.slice(2))
     .usage('Usage: yarn run seguro-gateway --port [number] --path [string]')
     .help('h')
@@ -30,7 +31,7 @@ const argv = yargs(process.argv.slice(2))
     .argv
 
 let PORT = 3001
-let PATH = ''
+let PATH = __dirname
 
 export const launchDaemon = (port: number, path: string) => {
     new Daemon ( port, path )

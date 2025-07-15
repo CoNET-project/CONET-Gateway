@@ -13,11 +13,10 @@ import {ethers} from 'ethers'
 import * as openpgp from 'openpgp'
 import os from 'node:os'
 import CONET_Guardian_NodeInfo_ABI from './CONET_Guardian_NodeInfo_ABI.json'
-import {runUpdater} from './updateProcess'
-import { app as electronApp } from 'electron'
+import {runUpdater, readUpdateInfo} from './updateProcess'
 import fs from 'node:fs'
 
-const ver = '0.1.4'
+const ver = '0.1.5'
 
 const getLocalNetworkIpaddress = () => {
 	const interfaceAll = os.networkInterfaces()
@@ -173,13 +172,17 @@ const joinMetadata = (metadata: any ) => {
 let _proxyServer: proxyServer
 
 
-const startSilentPass = (vpnObj: Native_StartVPNObj) => {
+const startSilentPass = (vpnObj: Native_StartVPNObj, currentVer: UpdateInfo, reactFolder: string) => {
 	logger(inspect(vpnObj, false, 3, true))
 
 	_proxyServer = new proxyServer((3002).toString(), vpnObj.entryNodes, vpnObj.exitNode, vpnObj.privateKey, true, '')
-	runUpdater(vpnObj.entryNodes)
+	runUpdater(vpnObj.entryNodes, currentVer, reactFolder)
 	return true
 }
+
+
+
+
 
 
 const otherRespon = ( body: string| Buffer, _status: number ) => {
@@ -225,8 +228,8 @@ export class Daemon {
     private connect_peer_pool: any [] = []
     private worker_command_waiting_pool: Map<string, express.Response> = new Map()
     private logStram = ''
-
-    constructor ( private PORT = 3000, private reactBuildFolder: string ) {
+	private currentVer:UpdateInfo|null
+    constructor ( private PORT = 3000, private reactBuildFolder: string) {
         this.initialize()
     }
 
@@ -253,26 +256,23 @@ export class Daemon {
         return ws.send ( JSON.stringify ( sendData ))
     }
 
-    private initialize = () => {
+    private initialize = async () => {
 		// --- 关键逻辑开始 ---
 
 		// 1. 定义默认路径（只读的应用包内部）
 		const defaultPath = join(__dirname, 'workers')
 
 		// 2. 定义更新路径（可写的 userData 目录内部）
-		const userDataPath = electronApp.getPath('userData');
-		const updatedPath = join(userDataPath, 'workers');
+		const userDataPath = this.reactBuildFolder
+		const updatedPath = join(userDataPath, 'workers')
 
 		// 3. 检查更新路径是否存在，然后决定使用哪个路径
 		//    如果 updatedPath 存在，就用它；否则，回退到 defaultPath。
-		const staticFolder = fs.existsSync(updatedPath) ? updatedPath : defaultPath;
-
-		// 确保我们选择的目录确实存在（主要针对首次启动时 defaultPath 的情况）
-		if (!fs.existsSync(staticFolder)) {
-			// 如果连默认目录都不存在，可能需要从别处复制或创建
-			logger(Colors.red(`CRITICAL ERROR: Static folder not found at ${staticFolder}`));
-			// 在这种情况下，可以考虑从一个备用位置将默认 `workers` 内容复制到 `updatedPath`
-			// fs.cpSync(join(__dirname, 'initial_workers'), updatedPath, { recursive: true });
+		let staticFolder = fs.existsSync(updatedPath) ? updatedPath : defaultPath
+		this.currentVer = await readUpdateInfo(staticFolder, '')
+		if (!this.currentVer) {
+			staticFolder = defaultPath
+			logger(Colors.red(`updatedPath ERROR, go back to defaultPath ${defaultPath}`))
 		}
 		
 		// --- 关键逻辑结束 ---
@@ -499,8 +499,10 @@ export class Daemon {
 			if (!vpnObj) {
 				return res.status(400).send({ error: "No country selected" })
 			}
-
-			startSilentPass (vpnObj)
+			if (this.currentVer) {
+				startSilentPass (vpnObj, this.currentVer, this.reactBuildFolder)
+			}
+			
 
 			res.status(200).json({}).end()
             
@@ -565,8 +567,6 @@ export class Daemon {
     }
 }
 
-
-new Daemon(3001, '')
 
 
 //		test 

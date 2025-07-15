@@ -184,5 +184,4 @@ const test = () => {
 	new ProxyServer(3002, layerMinus)
 }
 
-test ()
 

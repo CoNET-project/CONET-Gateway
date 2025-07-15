@@ -575,5 +575,3 @@ const test = () => {
 	
 	new proxyServer('3003',entryNodes, egressNodes, privateKey, true, '')
 }
-
-test ()

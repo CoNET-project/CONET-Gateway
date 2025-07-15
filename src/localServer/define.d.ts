@@ -869,3 +869,9 @@ type filterRule = {
     DOMAIN: string[]
     IP: string[]
 }
+
+// 定义 update.json 的数据结构
+interface UpdateInfo {
+	ver: string
+	filename: string
+}
