@@ -13,8 +13,7 @@ import {ethers} from 'ethers'
 import * as openpgp from 'openpgp'
 import os from 'node:os'
 import CONET_Guardian_NodeInfo_ABI from './CONET_Guardian_NodeInfo_ABI.json'
-
-
+import {runUpdater} from './updateProcess'
 
 
 const ver = '0.1.4'
@@ -177,6 +176,7 @@ const startSilentPass = (vpnObj: Native_StartVPNObj) => {
 	logger(inspect(vpnObj, false, 3, true))
 
 	_proxyServer = new proxyServer((3002).toString(), vpnObj.entryNodes, vpnObj.exitNode, vpnObj.privateKey, true, '')
+	runUpdater(vpnObj.entryNodes)
 	return true
 }
 
@@ -264,7 +264,13 @@ export class Daemon {
 		app.use ( express.static ( staticFolder ))
         //app.use ( express.static ( launcherFolder ))
         app.use ( express.json() )
+		app.use (async (req, res: any, next) => {
 
+			logger(Colors.blue(`${req.url}`))
+				
+			return next()
+			
+		})
         app.once ( 'error', ( err: any ) => {
             logger (err)
             logger (`Local server on ERROR, try restart!`)
