@@ -172,11 +172,11 @@ const joinMetadata = (metadata: any ) => {
 let _proxyServer: proxyServer
 
 
-const startSilentPass = (vpnObj: Native_StartVPNObj, currentVer: UpdateInfo, reactFolder: string) => {
+const startSilentPass = (vpnObj: Native_StartVPNObj, currentVer: UpdateInfo, reactFolder: string, restart: () => Promise<void> ) => {
 	logger(inspect(vpnObj, false, 3, true))
 
 	_proxyServer = new proxyServer((3002).toString(), vpnObj.entryNodes, vpnObj.exitNode, vpnObj.privateKey, true, '')
-	runUpdater(vpnObj.entryNodes, currentVer, reactFolder)
+	runUpdater(vpnObj.entryNodes, currentVer, reactFolder, restart)
 	return true
 }
 
@@ -235,15 +235,17 @@ export class Daemon {
 
     public _proxyServer: proxyServer|null = null
 
-    public end = () => new Promise (resolve => {
-		
-		this.localserver.close(err => {
-			
-		})
-		setTimeout(() => {
-			resolve(true)
-		}, 5000)
-    })
+	public end = (): Promise<void> => new Promise(resolve => {
+		if (this.localserver) {
+			this.localserver.close(err => {
+				if (err) {
+					logger(Colors.red('关闭服务器时出错:'), err)
+				}
+			})
+		}
+		// 即使服务器不存在或关闭出错，也继续执行
+		resolve()
+	})
 
     public postMessageToLocalDevice ( device: string, encryptedMessage: string ) {
         const index = this.connect_peer_pool.findIndex ( n => n.publicKeyID === device )
@@ -296,6 +298,10 @@ export class Daemon {
             logger (`Local server on ERROR, try restart!`)
             return this.initialize ()
         })
+
+		app.get('/ver'), ( req, res ) => {
+			res.end({ver: this.currentVer?.ver})
+		}
 
         app.post ( '/rule', ( req: any, res: any ) => {
             const vpnObj = req.body.data
@@ -483,7 +489,7 @@ export class Daemon {
 
         app.get('/ver', (req, res) => {
 			logger (`APP get ${req.url}`)
-            res.json({ver})
+            res.json({ver: this.currentVer?.ver})
         })
 
         app.get('/getAllRegions',async (req, res) => {
@@ -500,7 +506,7 @@ export class Daemon {
 				return res.status(400).send({ error: "No country selected" })
 			}
 			if (this.currentVer) {
-				startSilentPass (vpnObj, this.currentVer, this.reactBuildFolder)
+				startSilentPass (vpnObj, this.currentVer, this.reactBuildFolder, this.restart)
 			}
 			
 
@@ -565,6 +571,28 @@ export class Daemon {
 			])
         })
     }
+
+	// 将 restart 方法改为箭头函数属性
+	public restart = async (): Promise<void> => {
+		logger(Colors.magenta('🔄 开始热启动本地 Web 服务器...'))
+
+		// 1. 确保当前有服务器正在运行
+		if (!this.localserver) {
+			logger(Colors.yellow('服务器未运行，无需重启。将直接进行初始化。'))
+			await this.initialize()
+			return
+		}
+
+		// 2. 关闭现有服务器，并等待其完全关闭
+		logger('🚀 正在关闭现有服务器...')
+		await this.end()
+		logger('✅ 旧服务器已成功关闭。')
+
+		// 3. 再次调用 initialize 方法
+		logger('🚀 正在使用新配置重新初始化服务器...')
+		await this.initialize()
+		logger(Colors.green('🎉 服务器热启动完成！'))
+	}
 }
 
 

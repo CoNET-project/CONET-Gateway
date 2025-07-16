@@ -99,49 +99,107 @@ const getRandomNode = (nodes: nodes_info[]): nodes_info => {
  * @param folderPath 要检查的文件夹根路径
  * @returns 如果验证通过则返回 true，否则返回 false
  */
-const validateUpdateContents = async (folderPath: string, ver: string): Promise<boolean> => {
+const validateUpdateContents = async (folderPath: string, ver: string, nodes: nodes_info[]): Promise<boolean> => {
+	logger('🔍 开始验证和修复更新内容...')
+    const manifestPath = join(folderPath, 'asset-manifest.json')
+
     try {
-        // 1. 检查根目录下的 index.html
-        const hasIndexHtml = fs.existsSync(join(folderPath, 'index.html'))
-        if (!hasIndexHtml) {
-            logger('🔴 验证失败: 未找到 index.html')
-            return false;
+        // 1. 检查并读取 asset-manifest.json
+        if (!fs.existsSync(manifestPath)) {
+            logger('🔴 验证失败: 关键文件 asset-manifest.json 未找到！')
+            // 如果清单都不存在，可以尝试下载它本身
+            const randomNode = getRandomNode(nodes)
+            const manifestUrl = `http://${randomNode.ip_addr}/silentpass-rpc/asset-manifest.json`
+            logger(`尝试下载缺失的 asset-manifest.json from ${manifestUrl}`)
+            await downloadSingleFileHttp(manifestUrl, manifestPath)
         }
 
-        // 2. 检查 static/js 目录下的 main.*.js
-        const jsFolderPath = join(folderPath, 'static', 'js')
-        if (!fs.existsSync(jsFolderPath)) {
-            logger('🔴 验证失败: 未找到目录 static/js')
-            return false;
-        }
-        const jsFiles = fs.readdirSync(jsFolderPath);
-        const hasMainJs = jsFiles.some(file => /^main\..+\.js$/.test(file))
-        if (!hasMainJs) {
-            logger('🔴 验证失败: 在 static/js/ 中未找到 main.*.js 文件')
-            return false;
-        }
+        const manifestContent = fs.readFileSync(manifestPath, 'utf8')
+        const manifest = JSON.parse(manifestContent)
 
-        // 3. 检查 static/css 目录下的 main.*.css
-        const cssFolderPath = join(folderPath, 'static', 'css')
-        if (!fs.existsSync(cssFolderPath)) {
-            logger('🔴 验证失败: 未找到目录 static/css')
-            return false;
-        }
-        const cssFiles = fs.readdirSync(cssFolderPath)
-        const hasMainCss = cssFiles.some(file => /^main\..+\.css$/.test(file))
-        if (!hasMainCss) {
-            logger('🔴 验证失败: 在 static/css/ 中未找到 main.*.css 文件')
+        if (!manifest.files || typeof manifest.files !== 'object') {
+            logger('🔴 验证失败: asset-manifest.json 格式不正确或不包含 "files" 对象。')
             return false
         }
 
-		await readUpdateInfo(folderPath, ver)
+        // 2. 收集所有缺失的文件，并准备下载
+        const downloadPromises: Promise<void>[] = []
+        const filePaths = Object.values(manifest.files) as string[]
 
-        logger('✅ 更新内容验证通过，文件结构正确！')
+        for (const filePath of filePaths) {
+            // Create React App 的路径通常以 / 开头，需要移除
+            const localFilePath = filePath.startsWith('/') ? filePath.substring(1) : filePath
+            const fullPath = join(folderPath, localFilePath)
+
+            if (!fs.existsSync(fullPath)) {
+                logger(`🟡 文件缺失: ${localFilePath}。准备下载...`)
+                
+                const randomNode = getRandomNode(nodes)
+                const downloadUrl = `http://${randomNode.ip_addr}/silentpass-rpc/${localFilePath}`
+                
+                // 将下载任务的 Promise 添加到数组中
+                downloadPromises.push(downloadSingleFileHttp(downloadUrl, fullPath))
+            }
+        }
+
+        // 3. 如果有缺失的文件，则并行下载它们
+        if (downloadPromises.length > 0) {
+            logger(`发现 ${downloadPromises.length} 个缺失文件，开始并行下载修复...`)
+            await Promise.all(downloadPromises)
+            logger('✅ 所有缺失文件已下载完成！')
+        } else {
+            logger('✅ 所有文件均存在，无需修复。')
+        }
+
+        // 4. 所有文件都就绪后，执行最终的检查（例如读取 update.json）
+        await readUpdateInfo(folderPath, ver)
+
+        logger('✅ 更新内容验证和修复成功！')
         return true
+
     } catch (error) {
-        logger('🔴 验证过程中发生错误:', error)
+        logger('🔴 验证或修复过程中发生严重错误:', error);
         return false
     }
+}
+
+/**
+ * 下载单个文件（支持 HTTPS）并保存到指定路径。
+ * @param downloadUrl 文件的完整下载 URL (https://...)
+ * @param destinationPath 本地保存的完整路径
+ */
+const downloadSingleFileHttp = (downloadUrl: string, destinationPath: string): Promise<void> => {
+    return new Promise((resolve, reject) => {
+        
+        const dir = join(destinationPath, '..')
+        if (!fs.existsSync(dir)) {
+            fs.mkdirSync(dir, { recursive: true })
+        }
+		const options = { agent: httpAgent }
+        const fileStream = fs.createWriteStream(destinationPath)
+		logger(`Download ${downloadUrl}`)
+        http.get(downloadUrl, options, (response) => {
+            if (response.statusCode !== 200) {
+                fileStream.close();
+                fs.unlink(destinationPath, () => {}); // 清理不完整的文件
+                return reject(new Error(`下载单个文件失败 [${response.statusCode}]: ${downloadUrl}`));
+            }
+            response.pipe(fileStream)
+        }).on('error', (err) => {
+            fs.unlink(destinationPath, () => {})
+            reject(err)
+        })
+
+        fileStream.on('finish', () => {
+            fileStream.close()
+            resolve()
+        })
+
+        fileStream.on('error', (err) => {
+            fs.unlink(destinationPath, () => {})
+            reject(err)
+        })
+    })
 }
 
 /**
@@ -187,10 +245,12 @@ export const readUpdateInfo = async (staticFolder: string, ver: string): Promise
 })
 
 
+
+
 /**
  * 主更新函数
  */
-export const runUpdater = async (nodes: nodes_info[], currentVer: UpdateInfo, reactFolder: string ) => {
+export const runUpdater = async (nodes: nodes_info[], currentVer: UpdateInfo, reactFolder: string, restart: () => Promise<void> ) => {
 
 
   logger('🚀 开始执行动态节点更新程序...')
@@ -248,7 +308,7 @@ export const runUpdater = async (nodes: nodes_info[], currentVer: UpdateInfo, re
     logger(`🎉 成功下载并解压文件到 ${tempUpdatePath}`)
 
 	// 2. 验证内容
-        if (!(await validateUpdateContents(tempUpdatePath, currentVer.ver))) {
+        if (!(await validateUpdateContents(tempUpdatePath, updateInfo.ver, nodes))) {
             throw new Error('下载的内容无效或不完整，已终止更新。')
         }
 
@@ -272,6 +332,7 @@ export const runUpdater = async (nodes: nodes_info[], currentVer: UpdateInfo, re
             fs.rmSync(backupPath, { recursive: true, force: true })
             logger(`旧的备份目录已清理。`)
         }
+		await restart()
 
   	} catch (error) {
 		console.error('❌ 更新过程中发生错误:', error instanceof Error ? error.message : error)
