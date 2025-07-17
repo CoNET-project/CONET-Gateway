@@ -20,6 +20,8 @@ const downloadAndUnzip = (downloadUrl: string, extractPath: string, redirectCoun
             return reject(new Error('超过最大重定向次数'))
         }
 		const options = { agent: httpAgent }
+		// 在此处添加 headers
+
         http.get(downloadUrl, options, (response) => {
             // 处理重定向
             if (response.statusCode && response.statusCode >= 300 && response.statusCode < 400 && response.headers.location) {
@@ -55,6 +57,8 @@ const fetchText = (requestUrl: string, redirectCount = 0): Promise<string> => {
     }
 	logger(`fetchText access ${requestUrl}`)
 	const options = { agent: httpAgent }
+	// 在此处添加 headers
+
     http.get(requestUrl, options, (response) => {
 		// 处理重定向
 		if (response.statusCode && response.statusCode >= 300 && response.statusCode < 400 && response.headers.location) {
@@ -176,6 +180,7 @@ const downloadSingleFileHttp = (downloadUrl: string, destinationPath: string): P
             fs.mkdirSync(dir, { recursive: true })
         }
 		const options = { agent: httpAgent }
+		
         const fileStream = fs.createWriteStream(destinationPath)
 		logger(`Download ${downloadUrl}`)
         http.get(downloadUrl, options, (response) => {
