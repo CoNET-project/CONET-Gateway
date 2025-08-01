@@ -691,7 +691,7 @@ interface requestObj {
 }
 
 interface VE_IPptpStream {
-    type?: string
+    type?: 'HTTP'
     buffer: string
     host: string
     port: number

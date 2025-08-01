@@ -17,6 +17,7 @@
 
 import {createHash } from 'crypto'
 import { isIP } from 'net'
+import { logger } from './logger'
 
 const cacheFileType = /\.jpeg$|\.html$|\.css$|\.gif$|\.js$|\.jpg$|\.png$|\.svg$|\.xml$/i
 
@@ -26,8 +27,10 @@ export default class httpProxy {
 	public text: string
 	public _parts: string []
 	public headers: Object
+	public requestWithoutHostName = '/'
+	public reBuildRequest = ''
 	constructor ( public buffer: Buffer ) {
-		this.text = buffer.toString( 'utf8' )
+		this.text = buffer.toString()
 		this._parts = this.text.split ('\r\n\r\n')
 		this.commandWithLine = this._parts[0].split ( /\r\n/ )
 		let u = '{'
@@ -46,6 +49,25 @@ export default class httpProxy {
 		u +='}'
 
 		this.headers = JSON.parse ( u )
+		const com = this.commandWithLine[0].split(' ')
+
+		try {
+			const url = new URL(com[1])
+			
+			
+			this.requestWithoutHostName = com[1]
+			if (!/CONNECT /i.test(com[0])) {
+				this.requestWithoutHostName = (url.pathname || '/') + (url.search || '')
+				logger(`this.requestWithoutHostName = ${this.requestWithoutHostName}`)
+			}
+			
+		} catch (ex) {
+			logger(`com[1] catch EX!`)
+			this.requestWithoutHostName = com[1]
+		}
+		this.commandWithLine[0] = `${com[0]} ${this.requestWithoutHostName} ${com[2]}`
+		this.reBuildRequest = this.text.replace(/.*\r\n/, `${this.commandWithLine[0]}\r\n`)
+
 	}
 
 	get parts () {
@@ -104,6 +126,13 @@ export default class httpProxy {
 		return this.headers['host'].split(':')[0]
 	}
 
+	get Port () {
+		if ( !this.headers['host'] ) {
+			return 80
+		}
+		return this.headers['host'].split(':')[1]||80
+	}
+
 	get cachePath () {
 		if ( !this.isGet || ! this.isCanCacheFile )
 			return null
@@ -158,26 +187,7 @@ export default class httpProxy {
 		return body.length
 	}
 
-	get Port () {
-		//console.log ( this.commandWithLine )
-		const uu = this.commandWithLine[0].split(/\/\//)
-		if ( uu.length > 1 ) {
-			const kk = uu[1].split (':')
-			if ( kk.length > 1 ) {
-				const ret = kk[1].split (' ')[0]
-				console.log ( `ret = [${ ret }]`)
-				return parseInt ( ret )
-			}
-			return 80
-		}
-		const vv = this.commandWithLine[0].split(':')
-		if ( vv.length > 1 ) {
-			const kk = vv[1].split (' ')[0]
-			return parseInt ( kk )
-		}
 
-		return 443
-	}
 
 	get BodyLength () {
 		return parseInt ( this.headers[ 'content-length' ])

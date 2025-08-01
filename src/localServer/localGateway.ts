@@ -65,7 +65,9 @@ start()
 //          curl -v -x socks4a://localhost:8888 "https://www.google.com"
 //          curl -v -x socks4://localhost:8888 "https://www.google.com"
 //          curl -v -x socks5h://localhost:8888 "https://www.google.com"
-//          curl -v -x socks5h://localhost:3002 "https://www.google.com"
+//          curl -v -x http://127.0.0.1:3002 "http://216.225.196.167"
+//			curl -v -x socks5h://localhost:3002 "http://216.225.196.167"
+//			curl -v -x http://127.0.0.1:3002 "https://www.google.com"
 
 
 

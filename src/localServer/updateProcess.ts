@@ -7,7 +7,7 @@ import { inspect } from "node:util"
 import os from 'node:os'
 
 const MAX_REDIRECTS = 5 // 防止无限重定向
-const tempUpdatePath = join(os.tmpdir(), `conet-update-${Date.now()}`)
+let tempUpdatePath = ''
 /**
  * 辅助函数：下载文件并流式解压到指定路径
  * @param downloadUrl 文件的URL
@@ -261,7 +261,7 @@ export const runUpdater = async (nodes: nodes_info[], currentVer: UpdateInfo, re
   logger('🚀 开始执行动态节点更新程序...')
 
   try {
-
+	tempUpdatePath = join(reactFolder, `conet-update-${Date.now()}`)
     
     const selectedNode = getRandomNode(nodes)
     logger(`✅ 节点列表获取成功！已随机选择节点: ${selectedNode.ip_addr} (位于 ${selectedNode.region})`);

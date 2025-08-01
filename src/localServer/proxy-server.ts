@@ -154,9 +154,9 @@ export class ProxyServer {
 
  * 			curl -v -x http://127.0.0.1:3003 "https://www.google.com"
 			curl -v -x http://127.0.0.1:3003 "http://www.google.com"
-//          curl -v -x socks4a://localhost:3003 "https://www.google.com"
-//          curl -v -x socks4://localhost:3003 "https://www.google.com"
-//          curl -v -x socks5h://localhost:3003 "https://www.google.com"
+//          curl -v -x socks4a://localhost:3002 "https://www.google.com"
+//          curl -v -x socks4://localhost:3002 "https://www.google.com"
+//          curl -v -x socks5h://localhost:3002 "https://www.google.com"
  * 			
  */
 
@@ -183,5 +183,3 @@ const test = () => {
 	const layerMinus = new LayerMinus (entryNodes, egressNodes, privateKey)
 	new ProxyServer(3002, layerMinus)
 }
-
-

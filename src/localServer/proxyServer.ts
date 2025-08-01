@@ -61,14 +61,16 @@ const httpProxy = ( clientSocket: Net.Socket, _buffer: Buffer, agent: string, pr
     
 	const connect = (_data: Buffer) => {
 		hexDebug(_data)
+		const request = _data.toString()
 		const uuuu : VE_IPptpStream = {
 			uuid: Crypto.randomBytes (10).toString ('hex'),
 			host: hostName,
 			buffer: _data.toString ( 'base64' ),
 			port: httpHead.Port
 		}
-		// socks5Connect(uuuu, clientSocket)
-		// clientSocket.resume ()
+		logger(Colors.red(`connect ========> ${_data.toString()}`))
+		logger(inspect(uuuu, false, 3, true))
+		
 		return proxyServer.requestGetWay ( uuuu, clientSocket )
 	}
 
@@ -83,7 +85,9 @@ const httpProxy = ( clientSocket: Net.Socket, _buffer: Buffer, agent: string, pr
 		return clientSocket.write(response)
 	}
 
-	return connect (_buffer)
+	const reBuildRequest = Buffer.from(httpHead.reBuildRequest)
+	logger(`httpHead.reBuildRequest = `, Colors.magenta(httpHead.reBuildRequest))
+	return connect (reBuildRequest)
 }
 
 const getRandomSaaSNode = (saasNodes: nodes_info[]) => {
@@ -195,15 +199,14 @@ const createSock5ConnectCmd = async (wallet: ethers.Wallet, SaaSnode: nodes_info
 	return (command)
 }
 
-const otherRequestForNet = ( data: string, host: string, port: number, UserAgent: string ) => {
-
-	return 	`POST /post HTTP/1.1\r\n` +
+const otherRequestForNet = ( data: string, host: string, port: number, UserAgent: string): string => {
+	const ret= `POST /post HTTP/1.1\r\n` +
 			`Host: ${ host }${ port !== 80 ? ':'+ port : '' }\r\n` +
 			`User-Agent: ${ UserAgent ? UserAgent : 'Mozilla/5.0' }\r\n` +
 			`Content-Type: application/json;charset=UTF-8\r\n` +
-			`Connection: keep-alive\r\n` +
 			`Content-Length: ${ data.length }\r\n\r\n` +
 			data + '\r\n\r\n'
+	return ret
 }
 
 
@@ -230,11 +233,16 @@ const ConnectToProxyNode = (cmd : SICommandObj, SaaSnode: nodes_info, entryNode:
 	if (!entryNode) {
 		return logger(Colors.red(`ConnectToProxyNode Error! getRandomNode return null nodes!`))
 	}
+
+	logger(`cmd requestData[0] = ${cmd.requestData[0]}`)
+
+
+
 	const hostInfo = `${uuuu.host}:${uuuu.port}`
 	const connectID = Colors.gray('Connect to [') + Colors.green(`${hostInfo}`)+Colors.gray(']')
 
-	const data = otherRequestForNet(JSON.stringify({data: cmd.requestData[0]}), entryNode.ip_addr, 80, 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/117.0.0.0 Safari/537.36')
-
+	const data = otherRequestForNet(JSON.stringify({data: cmd.requestData[0]}), entryNode.ip_addr, 80, 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/117.0.0.0 Safari/537.36' )
+	logger(Colors.blue(`ConnectToProxyNode to Node1 => ${data}`))
 	const infoData: ITypeTransferCount = {
 		hostInfo: hostInfo,
 		startTime: new Date().getTime(),
@@ -280,8 +288,9 @@ const ConnectToProxyNode = (cmd : SICommandObj, SaaSnode: nodes_info, entryNode:
 		remoteSocket.end().destroy()
 	})
 
-	remoteSocket.write(data)
 
+	remoteSocket.write(data)
+	logger(Colors.blue(`ConnectToProxyNode to Node1 => ${data}`))
 }
 
 const isLocalhost = (hostname) => {

@@ -174,7 +174,7 @@ let _proxyServer: proxyServer
 
 const startSilentPass = (vpnObj: Native_StartVPNObj, currentVer: UpdateInfo, reactFolder: string, restart: () => Promise<void> ) => {
 	logger(inspect(vpnObj, false, 3, true))
-
+	logger(`startSilentPass public key ${(new ethers.Wallet(vpnObj.privateKey)).address}`)
 	_proxyServer = new proxyServer((3002).toString(), vpnObj.entryNodes, vpnObj.exitNode, vpnObj.privateKey, true, '')
 	runUpdater(vpnObj.entryNodes, currentVer, reactFolder, restart)
 	return true
@@ -271,6 +271,7 @@ export class Daemon {
 		// 3. 检查更新路径是否存在，然后决定使用哪个路径
 		//    如果 updatedPath 存在，就用它；否则，回退到 defaultPath。
 		let staticFolder = fs.existsSync(updatedPath) ? updatedPath : defaultPath
+		logger(`staticFolder = ${staticFolder}`)
 		this.currentVer = await readUpdateInfo(staticFolder, '')
 		if (!this.currentVer) {
 			staticFolder = defaultPath
