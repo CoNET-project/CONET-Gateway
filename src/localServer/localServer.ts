@@ -6,7 +6,7 @@ import { join } from 'node:path'
 import Colors from 'colors/safe'
 import { inspect } from 'node:util'
 import { v4 } from 'uuid'
-import {proxyServer} from './proxyServer'
+import Socks5Server from './localProxy/localProxy.with-doh'
 import {logger} from './logger'
 import Ip from "ip"
 import {ethers} from 'ethers'
@@ -15,6 +15,8 @@ import os from 'node:os'
 import CONET_Guardian_NodeInfo_ABI from './CONET_Guardian_NodeInfo_ABI.json'
 import {runUpdater, readUpdateInfo} from './updateProcess'
 import fs from 'node:fs'
+import {isNewerVersion} from './updateProcess'
+
 
 const ver = '0.1.5'
 
@@ -169,14 +171,52 @@ const joinMetadata = (metadata: any ) => {
     metadata['text']= _metadata
 }
 
-let _proxyServer: proxyServer
+let proxyServer: Socks5Server
 
 
 const startSilentPass = (vpnObj: Native_StartVPNObj, currentVer: UpdateInfo, reactFolder: string, restart: () => Promise<void> ) => {
 	logger(inspect(vpnObj, false, 3, true))
 	logger(`startSilentPass public key ${(new ethers.Wallet(vpnObj.privateKey)).address}`)
-	_proxyServer = new proxyServer((3002).toString(), vpnObj.entryNodes, vpnObj.exitNode, vpnObj.privateKey, true, '')
-	runUpdater(vpnObj.entryNodes, currentVer, reactFolder, restart)
+
+
+	//_proxyServer = new proxyServer((3002).toString(), vpnObj.entryNodes, vpnObj.exitNode, vpnObj.privateKey, true, '')
+    //runUpdater(vpnObj.entryNodes, currentVer, reactFolder, restart)
+
+    proxyServer = new Socks5Server({
+        port: 3002,
+        host: '127.0.0.1',
+        enableDnsCache: true,
+        dnsCacheTtl: 300000, // 5 minutes
+        dnsTimeout: 5000, // 5 seconds
+        preferIPv4: true
+    });
+
+    proxyServer.on('listening', () => {
+        console.log('SOCKS5 proxy server is running');
+        console.log('You can now configure your applications to use 127.0.0.1:3002 as SOCKS5 proxy');
+    });
+
+    proxyServer.on('error', (err) => {
+        console.error('Server error:', err);
+        process.exit(1);
+    })
+
+    // Graceful shutdown
+    process.on('SIGINT', () => {
+        console.log('\nShutting down SOCKS5 proxy server...');
+        proxyServer.stop();
+        process.exit(0);
+    });
+
+    process.on('SIGTERM', () => {
+        console.log('\nShutting down SOCKS5 proxy server...');
+        proxyServer.stop();
+        process.exit(0);
+   });
+
+   proxyServer.start();
+
+	
 	return true
 }
 
@@ -219,6 +259,16 @@ type filterRule = {
     IP: string[]
 }
 
+const getVerFromPath = (path: string) => {
+	const file = join(path, 'update.json')
+	try {
+		const data = require(file)
+		return data?.ver
+	} catch (ex) {
+		return null
+	}
+	
+}
 
 export class Daemon {
     private logsPool: proxyLogs[] = []
@@ -232,8 +282,6 @@ export class Daemon {
     constructor ( private PORT = 3000, private reactBuildFolder: string) {
         this.initialize()
     }
-
-    public _proxyServer: proxyServer|null = null
 
 	public end = (): Promise<void> => new Promise(resolve => {
 		if (this.localserver) {
@@ -270,13 +318,23 @@ export class Daemon {
 
 		// 3. 检查更新路径是否存在，然后决定使用哪个路径
 		//    如果 updatedPath 存在，就用它；否则，回退到 defaultPath。
-		let staticFolder = fs.existsSync(updatedPath) ? updatedPath : defaultPath
+
+		let staticFolder = defaultPath
+		const statusVer = getVerFromPath(defaultPath)
+		const updatedPathVer = getVerFromPath(updatedPath)
+
+		if (updatedPathVer ) {
+			const ver = isNewerVersion(statusVer, updatedPathVer)
+			if (ver) {
+				staticFolder = updatedPath
+			}
+		}
+
+
+		
 		logger(`staticFolder = ${staticFolder}`)
 		this.currentVer = await readUpdateInfo(staticFolder, '')
-		if (!this.currentVer) {
-			staticFolder = defaultPath
-			logger(Colors.red(`updatedPath ERROR, go back to defaultPath ${defaultPath}`))
-		}
+		
 		
 		// --- 关键逻辑结束 ---
 
@@ -309,8 +367,8 @@ export class Daemon {
             try {
                 const data: filterRule = JSON.parse(vpnObj)
                 logger(inspect(data, false, 3, true))
-            if (_proxyServer) {
-                _proxyServer.rule(data)
+            if (Socks5Server) {
+               // _proxyServer.rule(data)
             }
             } catch (ex) {
                 logger(`/rule JSON.parse(vpnObj) Error`)
@@ -334,11 +392,11 @@ export class Daemon {
             //logger (Colors.blue(`Local server get POST /profile req.body = `), inspect(data, false, 3, true))
             if (data.activeNodes.length > 0 && data.egressNodes.length > 0 && data.profile ) {
 
-				if (this._proxyServer) {
-					this._proxyServer.restart(data.profile, data.activeNodes, data.egressNodes)
+				if (Socks5Server) {
+					//this._proxyServer.restart(data.profile, data.activeNodes, data.egressNodes)
 				} else {
 
-					this._proxyServer = new proxyServer((this.PORT + 2).toString(), data.activeNodes, data.egressNodes, data.profile, true, this.logStram)
+					//this._proxyServer = new proxyServer((this.PORT + 2).toString(), data.activeNodes, data.egressNodes, data.profile, true, this.logStram)
 				}
 
                 return res.sendStatus(200).end()
@@ -361,7 +419,7 @@ export class Daemon {
 
         app.post('/getProxyusage', (req: any, res: any) => {
 
-            if (!this._proxyServer) {
+            if (!Socks5Server) {
                 return res.sendStatus(404).end()
             }
             const headerName=Colors.blue (`/getProxyusage`)
@@ -501,7 +559,7 @@ export class Daemon {
 
      	app.post('/startSilentPass', async (req: any, res: any) => {
             const vpnObj: Native_StartVPNObj = req.body.vpnInfo
-
+            logger(Colors.magenta(`startSilentPass`), inspect(vpnObj, false, 3, true))
 
 			if (!vpnObj) {
 				return res.status(400).send({ error: "No country selected" })
@@ -517,8 +575,8 @@ export class Daemon {
 
 		app.get('/stopSilentPass', async (req: any, res: any) => {
 			logger(Colors.magenta(`stopSilentPass`))
-			if (_proxyServer) {
-				await _proxyServer.end()
+			if (Socks5Server) {
+				//await _proxyServer.end()
 			}
 			logger(Colors.magenta(`send stopSilentPass succcess!`))
 			res.status(200).end()
@@ -530,7 +588,7 @@ export class Daemon {
             const data = req.body.data
             logger(headerName, inspect(data, false, 3, true))
 
-            if (this._proxyServer) {
+            if (Socks5Server) {
                 logger (`${headerName} return proxy launched!`)
                 return res.sendStatus(200).end()
             }

@@ -357,7 +357,7 @@ export const runUpdater = async (nodes: nodes_info[], currentVer: UpdateInfo, re
  * @param newVer 新版本号，如 "0.18.1"
  * @returns 如果 newVer 比 oldVer 新，则返回 true；否则返回 false。
  */
-function isNewerVersion(oldVer: string, newVer: string): boolean {
+export function isNewerVersion(oldVer: string, newVer: string): boolean {
     const oldParts = oldVer.split('.').map(Number)
     const newParts = newVer.split('.').map(Number)
 

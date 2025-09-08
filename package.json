@@ -1,7 +1,7 @@
 {
     "name": "@conet.project/conet-proxy",
 
-    "version": "0.20.3",
+    "version": "0.21.5",
 
     "license": "UNLICENSED",
     "files": [
@@ -13,9 +13,11 @@
     "scripts": {
 		"lint": "echo 'no linter available'",
 		"test": "echo 'no linter available'",
-		"build": "yarn install;tsc --project ./tsconfig.build.json && cpr src/localServer/workers build/localServer/workers -o && copyfiles -u 1 src/index.d.ts build && copyfiles -u 1 src/favicon.ico build/localServer/workers/",
+		"build:win": "yarn install;tsc --project ./tsconfig.build.json && cpr src/localServer/workers build/localServer/workers -o && copyfiles -u 1 src/index.d.ts build && copyfiles -u 1 src/favicon.ico build/localServer/workers/",
 		"clean": "rimraf ./node_modules ./build",
 		"local": "node build/localServer/index",
+		"build": "tsc --project ./tsconfig.build.json ; yarn copy",
+		"copy": "cp -r src/localServer/workers build/localServer/workers; cp src/index.d.ts build ; cp src/favicon.ico build/localServer/workers/",
 		"buildRun": "tsc --project ./tsconfig.build.json && copyfiles -u 1 src/favicon.ico build/localServer/workers/ && copyfiles -u 2 src/localServer/workers/utilities/*.js build/localServer/workers/utilities && copyfiles -u 1 src/index.d.ts build && node build/localServer/index",
 		"build:docker": "docker buildx build --platform linux/amd64,linux/arm64 --file Dockerfile . --push --tag conetnetwork/conet-daemon:latest",
     "build:test": "tsc --project ./tsconfig.build2.json"
