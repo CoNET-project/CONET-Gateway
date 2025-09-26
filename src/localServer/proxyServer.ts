@@ -4,17 +4,15 @@ import {getRandomValues} from 'node:crypto'
 import { Transform, pipeline, Writable} from 'node:stream'
 import { inspect } from 'node:util'
 import * as Socks from './socks'
-import { request as requestHttps } from 'node:https'
 import HttpProxyHeader from './httpProxy'
-import {request as requestHttp} from 'node:http'
 import {logger, hexDebug, loggerToStream} from './logger'
 import * as res from './res'
-import type {RequestOptions} from 'node:https'
 import * as openpgp from 'openpgp'
 import { TransformCallback } from 'stream'
 import { ethers } from 'ethers'
 import * as Crypto from 'crypto'
 import IP from 'ip'
+import {v4} from 'uuid'
 import {resolve4} from 'node:dns'
 import OS from 'node:os'
 import {createConnection} from 'node:net'
@@ -62,21 +60,31 @@ const httpProxy = ( clientSocket: Net.Socket, _buffer: Buffer, agent: string, pr
 	const connect = (_data: Buffer) => {
 		hexDebug(_data)
 		const request = _data.toString()
-		const uuuu : VE_IPptpStream = {
-			uuid: Crypto.randomBytes (10).toString ('hex'),
-			host: hostName,
-			buffer: _data.toString ( 'base64' ),
-			port: httpHead.Port
-		}
-		logger(Colors.red(`connect ========> ${_data.toString()}`))
-		logger(inspect(uuuu, false, 3, true))
+		const uuuu : VE_IPptpStream[] = [
+			{
+				host: hostName,
+				buffer: _data.toString ( 'base64' ),
+				port: httpHead.Port,
+				order: 0
+			},
+            {
+                host: hostName,
+                buffer: "",
+                port: httpHead.Port,
+                order: 1
+            }
+		]
+		//logger(Colors.red(`connect ========> ${_data.toString()}`))
+		//logger(inspect(uuuu, false, 3, true))
 		
 		return proxyServer.requestGetWay ( uuuu, clientSocket )
 	}
 
 	const reqtest = _buffer.toString()
+
 	if (/^CONNECT /.test(reqtest)) {
 		hexDebug(_buffer)
+
 		clientSocket.once ('data', data => {
 			return connect (data)
 		})
@@ -86,8 +94,8 @@ const httpProxy = ( clientSocket: Net.Socket, _buffer: Buffer, agent: string, pr
 	}
 
 	const reBuildRequest = Buffer.from(httpHead.reBuildRequest)
-	logger(`httpHead.reBuildRequest = `, Colors.magenta(httpHead.reBuildRequest))
-	return connect (reBuildRequest)
+	logger(`httpProxy httpHead.reBuildRequest = `, Colors.magenta(httpHead.reBuildRequest))
+	
 }
 
 const getRandomSaaSNode = (saasNodes: nodes_info[]) => {
@@ -176,27 +184,40 @@ const createSock5ConnectCmd = async (wallet: ethers.Wallet, SaaSnode: nodes_info
 		SaaSnode.publicKeyObj = await openpgp.readKey ({ armoredKey: SaaSnode.armoredPublicKey })
 	}
 
+    
 	
-	const key = Buffer.from(getRandomValues(new Uint8Array(16))).toString('base64')
-	const command: SICommandObj = {
+	const key = v4().replace(/-/g, '').substring(0, 32)
+	const commandReq: SICommandObj = {
 		command: 'SaaS_Sock5',
 		algorithm: 'aes-256-cbc',
 		Securitykey: key,
-		requestData,
+		requestData: [requestData[0][0]],
 		walletAddress: wallet.address.toLowerCase()
 	}
 
+    const commandRes: SICommandObj = {
+		command: 'SaaS_Sock5',
+		algorithm: 'aes-256-cbc',
+		Securitykey: key,
+		requestData: [requestData[0][1]],
+		walletAddress: wallet.address.toLowerCase()
+	}
 
-	logger(Colors.blue(`createSock5ConnectCmd data = ${inspect(requestData, false, 3, true)}`))
-	logger(Colors.blue(`createSock5ConnectCmd data length = ${requestData[0].buffer.length}`))
+	const messageReq =JSON.stringify(commandReq)
+    const messageRes =JSON.stringify(commandRes)
+	const signReq = await wallet.signMessage(messageReq)
+    const signRes = await wallet.signMessage(messageRes)
 
-	const message =JSON.stringify(command)
-	const signMessage = await wallet.signMessage(message)
+logger("createSock5ConnectCmd requestData ====> ",inspect(commandReq, false, 3, true),inspect(commandRes, false, 3, true))
 
-	const encryptedCommand = await encrypt_Message( SaaSnode.publicKeyObj, { message, signMessage })
-	logger(inspect({message, signMessage}, false, 3, true))
-	command.requestData = [encryptedCommand, '', key]
-	return (command)
+	const reqCommand = await encrypt_Message( SaaSnode.publicKeyObj, { message: messageReq, signMessage: signReq })
+    const resCommand = await encrypt_Message( SaaSnode.publicKeyObj, { message: messageRes, signMessage: signRes })
+	
+	commandReq.requestData = [reqCommand, resCommand, '', key]
+
+    
+
+	return ( commandReq)
 }
 
 const otherRequestForNet = ( data: string, host: string, port: number, UserAgent: string): string => {
@@ -227,22 +248,26 @@ class transferCount extends Transform {
 }
 
 
-const ConnectToProxyNode = (cmd : SICommandObj, SaaSnode: nodes_info, entryNode: nodes_info, socket: Net.Socket, uuuu: VE_IPptpStream, server: proxyServer) => {
+const ConnectToProxyNode = (cmd : SICommandObj, SaaSnode: nodes_info, entryNode: nodes_info[], socket: Net.Socket, uuuu: VE_IPptpStream[], server: proxyServer) => {
 
 	
 	if (!entryNode) {
 		return logger(Colors.red(`ConnectToProxyNode Error! getRandomNode return null nodes!`))
 	}
 
+    const reqNode = entryNode[0]
+    const resNode = entryNode[1]
+
+
 	logger(`cmd requestData[0] = ${cmd.requestData[0]}`)
 
-
-
-	const hostInfo = `${uuuu.host}:${uuuu.port}`
+	const hostInfo = `${uuuu[0].host}:${uuuu[0].port}`
 	const connectID = Colors.gray('Connect to [') + Colors.green(`${hostInfo}`)+Colors.gray(']')
 
-	const data = otherRequestForNet(JSON.stringify({data: cmd.requestData[0]}), entryNode.ip_addr, 80, 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/117.0.0.0 Safari/537.36' )
-	logger(Colors.blue(`ConnectToProxyNode to Node1 => ${data}`))
+	const reqData = otherRequestForNet(JSON.stringify({data: cmd.requestData[0]}), reqNode.ip_addr, 80, 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/117.0.0.0 Safari/537.36' )
+    //const resData = otherRequestForNet(JSON.stringify({data: cmd.requestData[1]}), resNode.ip_addr, 80, 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/117.0.0.0 Safari/537.36' )
+
+
 	const infoData: ITypeTransferCount = {
 		hostInfo: hostInfo,
 		startTime: new Date().getTime(),
@@ -252,45 +277,55 @@ const ConnectToProxyNode = (cmd : SICommandObj, SaaSnode: nodes_info, entryNode:
 		endTime: 0
 	}
 
-	const upload = new transferCount (true, infoData)
-	const download = new transferCount (false, infoData)
-	const remoteSocket = Net.createConnection(80, entryNode.ip_addr, () => {
+	const reqSocket = Net.createConnection(80, reqNode.ip_addr, () => {
 		//	remoteSocket.setNoDelay(true)
 		
 		logger(Colors.blue(`ConnectToProxyNode connect to ${connectID}`))
-		remoteSocket.pipe(download).pipe(socket).pipe(upload).pipe(remoteSocket)
+        reqSocket.write(reqData)
+		socket.pipe(reqSocket)
+        reqSocket.pipe(socket)
 
 	})
 
-	remoteSocket.on('error', err => {
-		logger (Colors.red(`ConnectToProxyNode entry node [${entryNode.ip_addr}:${80}] on Error ${err.message} `))
+    // const resSocket = Net.createConnection(80, resNode.ip_addr, () => {
+	// 	//	remoteSocket.setNoDelay(true)
+		
+	// 	logger(Colors.blue(`ConnectToProxyNode connect to ${connectID}`))
+    //     resSocket.write(resData)
+	// 	resSocket.pipe(socket)
+
+	// })
+
+	reqSocket.on('error', err => {
+		//logger (Colors.red(`ConnectToProxyNode entry node [${entryNode.ip_addr}:${80}] on Error ${err.message} `))
 	})
 
-	remoteSocket.once('close', async () => {
-		logger (Colors.magenta(`ConnectToProxyNode entry node [${entryNode.ip_addr}:${80}] on Close `))
-		//await sendTransferDataToLocalHost(infoData)
+	reqSocket.once('close', async () => {
+		// resSocket.end().destroy()
 	})
+
+    // resSocket.on('error', err => {
+	// 	//logger (Colors.red(`ConnectToProxyNode entry node [${entryNode.ip_addr}:${80}] on Error ${err.message} `))
+	// })
+
+	// resSocket.once('close', async () => {
+	// 	reqSocket.end().destroy()
+	// })
 
 	socket.once ('close', () => {
-		const res = download.data
-		if (/^HTTP\/1\.1\ 402\ Payment/i.test(res)) {
-			logger(Colors.red(`Proxy Payment`))
-			// server.SaaS_payment = false
-		}
-
-		remoteSocket.end().destroy()
+		
+	
+        // resSocket.end().destroy()
+		reqSocket.end().destroy()
 		infoData.endTime=new Date().getTime()
 		
 	})
 
-	socket.once ('error', err => {
+	socket.on ('error', err => {
 		logger(Colors.magenta(`Proxy client on Error [${err.message}]! STOP connecting`))
-		remoteSocket.end().destroy()
+		reqSocket.end().destroy()
 	})
 
-
-	remoteSocket.write(data)
-	logger(Colors.blue(`ConnectToProxyNode to Node1 => ${data}`))
 }
 
 const isLocalhost = (hostname) => {
@@ -333,6 +368,7 @@ const ConnectViaLocal = (uuuu : VE_IPptpStream, resoestSocket: Net.Socket ) => {
         
         const data = Buffer.from(uuuu.buffer, 'base64')
         if (data) {
+            //@ts-ignore
             socket.write (data)
         }
         
@@ -484,14 +520,15 @@ export class proxyServer {
     }
 
 
-	public requestGetWay = async (uuuu : VE_IPptpStream, socket: Net.Socket ) => {
+	public requestGetWay = async (uuuu : VE_IPptpStream[], socket: Net.Socket ) => {
 
 
-        if (this.checkRule(uuuu.host)) {
-            logger(`Direct to connect ${uuuu.host}:${uuuu.port} Server!`)
-            return ConnectViaLocal(uuuu, socket)
+        if (this.checkRule(uuuu[0].host)) {
+            logger(`Direct to connect ${uuuu[0].host}:${uuuu[0].port} Server!`)
+            return ConnectViaLocal(uuuu[0], socket)
         }
-        logger(`package ${uuuu.host}:${uuuu.port} to Layer Minus Protocol!`)
+        
+        logger(`package ${uuuu[0].host}:${uuuu[0].port} to Layer Minus Protocol!`)
         
 		const upChannel_SaaS_node  = getRandomSaaSNode(this._egressNodes)
 
@@ -507,15 +544,11 @@ export class proxyServer {
 			return logger (Colors.red(`requestGetWay createSock5Connect return Null Error!`))
 		}
 
-		const entryNode = getRandomNode(this._entryNodes, upChannel_SaaS_node) 
-
-		const streamString = Colors.blue (`Create gateway request, Layer minus random SaaS node [${Colors.magenta(upChannel_SaaS_node.ip_addr)}] entry node [${Colors.magenta(entryNode.ip_addr)}]\n`)
-
 		// loggerToStream(this.logStream, streamString)
 		// logger(streamString)
 		// logger(Colors.blue(`entryNode [${entryNode.ip_addr}] => Saas[${upChannel_SaaS_node.ip_addr}]`))
 		
-		ConnectToProxyNode (cmd, upChannel_SaaS_node, entryNode, socket, uuuu, this)
+		ConnectToProxyNode (cmd, upChannel_SaaS_node, this._entryNodes, socket, uuuu, this)
 	}
 
 	public restart = (privateKey: string, entryNodes: nodes_info[], egressNodes: nodes_info[]) => {
@@ -544,8 +577,9 @@ export class proxyServer {
 	public end = () => new Promise(resolve=> {
 		if (this.server !== null) {
 			this.server.close(err => {
-				
+				resolve (true)
 			})
+            
 			setTimeout(() => {
 				resolve (true)
 			}, 6000)
@@ -559,7 +593,10 @@ export class proxyServer {
     }
 }
 
-//		curl -v -x http://127.0.0.1:3002 "https://www.google.com"
+//		curl -v -x http://127.0.0.1:3003 "https://www.google.com"
+//      curl -v -x http://127.0.0.1:3003 "http://www.google.com"
+//      curl -sock5 http://127.0.0.1:3003 "http://www.google.com"
+//      curl  http://127.0.0.1:3003 "http://www.google.com"
 
 const test = () => {
 	const entryNodes: nodes_info[] = [{
@@ -570,7 +607,17 @@ const test = () => {
 		"last_online": false,
 		"nftNumber": 100,
 		"domain": "9977E9A45187DD80.conet.network"
-	}]
+	},
+    // {
+    //     "region": "MD.ES",
+    //     "country": "ES",
+    //     "ip_addr": "82.165.208.58",
+    //     "armoredPublicKey": "-----BEGIN PGP PUBLIC KEY BLOCK-----\n\nxjMEZo9u8xYJKwYBBAHaRw8BAQdAhkOA9BSN0JHlwv6DteiKYiHq/fkJeeKq\npJH2GV02RDvNKjB4ZTJFN0E2OEUzRDFlNTBGMEFmMTVkNzEzRjkwZjQ5OTJD\nRDE5RGZjOMKMBBAWCgA+BYJmj27zBAsJBwgJkK3nyMY0cs4UAxUICgQWAAIB\nAhkBApsDAh4BFiEEgBIRfR6KNXDnIkoyrefIxjRyzhQAAPWNAPsFKlIV58gy\n8aWkFOSVaQWmruBgqDxPAi9klhc/QAFj8gD+P5zTkZa199PonfrB4ezn2Mac\nPQQaRLRtWTIBHn0WvAXOOARmj27zEgorBgEEAZdVAQUBAQdAvRYB8A9xiU76\nOi6LOOLaHvOGvJHCa8zWAkx9m0kPFi4DAQgHwngEGBYKACoFgmaPbvMJkK3n\nyMY0cs4UApsMFiEEgBIRfR6KNXDnIkoyrefIxjRyzhQAAFxmAQDgT7yXX8Zl\nYLzxKbEeZY+Rx1bdNLxPPRJmjcFFcbL2UQD6AxYNoome/I1FKplyFQsGjJGq\nWO5g9bt+Cjir2/yzIgk=\n=GfRj\n-----END PGP PUBLIC KEY BLOCK-----\n",
+    //     "last_online": false,
+    //     "nftNumber": 101,
+    //     "domain": "B4CB0A41352E9BDF.conet.network"
+    // }
+    ]
 	const egressNodes: nodes_info[] = [{
 		"region": "MD.ES",
 		"country": "ES",
@@ -580,7 +627,9 @@ const test = () => {
 		"nftNumber": 101,
 		"domain": "B4CB0A41352E9BDF.conet.network"
 	}]
-	const privateKey = '0xc3c55e163fa1ad5a08101b21eeb56756fb68605b0c8ce7b2bbbfa336f01b32c0'
+
+	const privateKey = '0xa64aa6631f218150c1810f4856c12940e209ac3d4060fa24395d74a0754a2773'
 	
 	new proxyServer('3003',entryNodes, egressNodes, privateKey, true, '')
 }
+test()

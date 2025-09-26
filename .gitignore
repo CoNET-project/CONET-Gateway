@@ -11,3 +11,4 @@ test.*
 tsconfig2.json
 
 **/*.Identifier
+/temp

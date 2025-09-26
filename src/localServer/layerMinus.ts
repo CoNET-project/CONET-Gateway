@@ -49,6 +49,7 @@ const otherRequestForNet = ( data: string, host: string, port: number, UserAgent
 			data + '\r\n\r\n'
 }
 
+
 export class LayerMinus {
 
 	private wallet: ethers.Wallet
@@ -57,6 +58,46 @@ export class LayerMinus {
 		entryNodes.forEach(async n => n.publicKeyObj = await openpgp.readKey ({ armoredKey: n.armoredPublicKey }))
 		egressNodes.forEach(async n => n.publicKeyObj = await openpgp.readKey ({ armoredKey: n.armoredPublicKey }))
 	}
+
+
+    public makeConnect: (host: string, port: number, initialData: Buffer|null) => Promise<makeConnectResult> = async (host, port, initialData) => {
+        logger(Colors.blue(`LayerMinus makeConnect ${host}:${port}`))
+		const entryNode = getRamdomNode(this.entryNodes)
+		const egressNode = getRamdomNode(this.egressNodes)
+		const requestData : VE_IPptpStream[] = [{
+			order: 0,
+			host,
+			port,
+			buffer: initialData?.toString ( 'base64' )||''
+		}]
+
+		const command: SICommandObj = {
+			command: 'SaaS_Sock5',
+			algorithm: 'aes-256-cbc',
+			Securitykey: Buffer.from(getRandomValues(new Uint8Array(16))).toString('base64'),
+			requestData,
+			walletAddress: this.wallet.address.toLowerCase()
+		}
+
+        const hostInfo = `${host}:${port}`
+
+		const infoData: ITypeTransferCount = {
+			hostInfo: hostInfo,
+			startTime: new Date().getTime(),
+			download: 0,
+			upload: 0,
+			nodeIpaddress: egressNode.ip_addr,
+			endTime: 0
+		}
+
+        const message =JSON.stringify(command)
+		const signMessage = await this.wallet.signMessage(message)
+		const encryptedCommand = await encrypt_Message( egressNode.publicKeyObj, { message, signMessage })
+		const data = otherRequestForNet(JSON.stringify({data: encryptedCommand}), entryNode.ip_addr, 80, 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/117.0.0.0 Safari/537.36')
+		
+
+        return {entryNode: entryNode.ip_addr, egressNode: egressNode.ip_addr, initialData: data}
+    }
 	
 	public connectToLayerMinus = async (
 		client: Socket,
@@ -66,14 +107,14 @@ export class LayerMinus {
 		const entryNode = getRamdomNode(this.entryNodes)
 		const egressNode = getRamdomNode(this.egressNodes)
 		const requestData : VE_IPptpStream[] = [{
-			uuid: randomBytes(10).toString ('hex'),
+			order: 0,
 			host,
 			port,
 			buffer: ''
 		}]
 
 		const command: SICommandObj = {
-			command: 'SilentPass',
+			command: 'SaaS_Sock5',
 			algorithm: 'aes-256-cbc',
 			Securitykey: Buffer.from(getRandomValues(new Uint8Array(16))).toString('base64'),
 			requestData,
@@ -98,7 +139,8 @@ export class LayerMinus {
 		
 		const remoteSocket = createConnection(80, entryNode.ip_addr, () => {
 			remoteSocket.write(data)
-			logger(Colors.blue(`ConnectToProxyNode connect to entryNode ${entryNode.ip_addr}`))
+			logger(Colors.blue(`ConnectToProxyNode connect to entryNode ${entryNode.ip_addr}=>${egressNode.ip_addr} `))
+            logger(data)
 			client.pipe(upload).pipe(remoteSocket).pipe(download).pipe(client)
 			
 		})

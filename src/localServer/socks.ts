@@ -49,6 +49,7 @@ export class socks5 {
 
 	private stopConnection (req: Rfc1928.Requests) {
 		req.REP = Rfc1928.Replies.COMMAND_NOT_SUPPORTED_or_PROTOCOL_ERROR
+        //@ts-ignore
 		this.socket.write ( req.buffer )
 		this.socket.end()
 	}
@@ -56,6 +57,7 @@ export class socks5 {
 	private stopIP_V6Connection (req: Rfc1928.Requests) {
 		logger(colors.red(`stopIP_V6Connection!!`))
 		req.REP = Rfc1928.Replies.ADDRESS_TYPE_NOT_SUPPORTED
+        //@ts-ignore
 		this.socket.write ( req.buffer )
 		this.socket.end()
 	}
@@ -64,6 +66,7 @@ export class socks5 {
 		//console.log (`close proxy socket!`)
 		if ( this.socket ) {
 			if ( this.socket.writable ) {
+                //@ts-ignore
 				this.socket.end ( buffer )
 			}
 
@@ -76,6 +79,7 @@ export class socks5 {
 
 		if (!this.proxyServer.SaaS_payment) {
 			req.REP = Rfc1928.Replies.NETWORK_UNREACHABLE
+            // @ts-ignore
 			return this.socket.write ( req.buffer )
 		}
 
@@ -112,12 +116,17 @@ export class socks5 {
                 return this.stopConnection(req)
             }
 
-			const uuuu : VE_IPptpStream = {
-				uuid: this.uuid,
+			const uuuu : VE_IPptpStream[] = [{
 				host: req.host,
 				buffer:  _data.toString ( 'base64' ),
-				port: req.port
-			}
+				port: req.port,
+				order: 0
+			},{
+                host: req.host,
+                buffer:  "",
+                port: req.port,
+                order: 1
+            }]
 
 
 			
@@ -126,11 +135,13 @@ export class socks5 {
 
 
 		req.REP = Rfc1928.Replies.GRANTED
+        // @ts-ignore
 		return this.socket.write ( req.buffer )
 	}
 	
 	private udpProcess ( data: Rfc1928.Requests ) {
 		data.REP = Rfc1928.Replies.GRANTED
+        // @ts-ignore
 		return this.socket.write ( data.buffer )
 	}
 	
@@ -200,7 +211,7 @@ export class socks5 {
 		this.socket.once ( 'data', ( chunk: Buffer ) => {
 			return this.connectStat2 ( chunk )
 		})
-
+        // @ts-ignore
 		this.socket.write ( server_res.NO_AUTHENTICATION_REQUIRED )
 
 	}
@@ -293,12 +304,17 @@ export class sockt4 {
 
 	public connect ( buffer: Buffer) {
 		
-		const uuuu : VE_IPptpStream = {
-			uuid: this.uuid,
+		const uuuu : VE_IPptpStream[] = [{
 			host: this.req.domainName||this.req.targetIp,
 			buffer: buffer.toString ( 'base64' ),
-			port: this.req.port
-		}
+			port: this.req.port,
+            order: 0
+		},{
+            host: this.req.domainName||this.req.targetIp,
+            buffer:  "",
+            port: this.req.port,
+            order: 1
+        }]
 		
 		return this.proxyServer.requestGetWay ( uuuu, this.socket )
 		

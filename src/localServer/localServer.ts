@@ -6,7 +6,7 @@ import { join } from 'node:path'
 import Colors from 'colors/safe'
 import { inspect } from 'node:util'
 import { v4 } from 'uuid'
-import {proxyServer} from './proxyServer'
+import {ProxyServer} from './proxy-server'
 import {logger} from './logger'
 import Ip from "ip"
 import {ethers} from 'ethers'
@@ -15,6 +15,7 @@ import os from 'node:os'
 import CONET_Guardian_NodeInfo_ABI from './CONET_Guardian_NodeInfo_ABI.json'
 import {runUpdater, readUpdateInfo} from './updateProcess'
 import fs from 'node:fs'
+import {LayerMinus} from './layerMinus'
 
 const ver = '0.1.5'
 
@@ -169,15 +170,17 @@ const joinMetadata = (metadata: any ) => {
     metadata['text']= _metadata
 }
 
-let _proxyServer: proxyServer
+let _proxyServer: ProxyServer
 
 
 const startSilentPass = (vpnObj: Native_StartVPNObj, currentVer: UpdateInfo, reactFolder: string, restart: () => Promise<void> ) => {
 	logger(inspect(vpnObj, false, 3, true))
 	logger(`startSilentPass public key ${(new ethers.Wallet(vpnObj.privateKey)).address}`)
-	_proxyServer = new proxyServer((3002).toString(), vpnObj.entryNodes, vpnObj.exitNode, vpnObj.privateKey, true, '')
+    const layerMinus = new LayerMinus(vpnObj.entryNodes, vpnObj.exitNode, vpnObj.privateKey)
+	_proxyServer = new ProxyServer(3002, layerMinus)
+    _proxyServer.start()
 	runUpdater(vpnObj.entryNodes, currentVer, reactFolder, restart)
-	return true
+	return _proxyServer
 }
 
 
@@ -233,7 +236,7 @@ export class Daemon {
         this.initialize()
     }
 
-    public _proxyServer: proxyServer|null = null
+    public _proxyServer: ProxyServer|null = null
 
 	public end = (): Promise<void> => new Promise(resolve => {
 		if (this.localserver) {
@@ -309,9 +312,10 @@ export class Daemon {
             try {
                 const data: filterRule = JSON.parse(vpnObj)
                 logger(inspect(data, false, 3, true))
-            if (_proxyServer) {
-                _proxyServer.rule(data)
+            if (this._proxyServer) {
+                this._proxyServer.ruleGet(data)
             }
+
             } catch (ex) {
                 logger(`/rule JSON.parse(vpnObj) Error`)
             }
@@ -328,25 +332,6 @@ export class Daemon {
             return res.end ()
         })
 
-        app.post ( '/conet-profile', ( req: any, res: any ) => {
-            const data: { profile, activeNodes, egressNodes } = req.body
-
-            //logger (Colors.blue(`Local server get POST /profile req.body = `), inspect(data, false, 3, true))
-            if (data.activeNodes.length > 0 && data.egressNodes.length > 0 && data.profile ) {
-
-				if (this._proxyServer) {
-					this._proxyServer.restart(data.profile, data.activeNodes, data.egressNodes)
-				} else {
-
-					this._proxyServer = new proxyServer((this.PORT + 2).toString(), data.activeNodes, data.egressNodes, data.profile, true, this.logStram)
-				}
-
-                return res.sendStatus(200).end()
-            }
-			logger (`/conet-profile Error data.activeNodes [${data.activeNodes.length}] data.activeNodes.length > 0[${data.activeNodes.length > 0}]`, inspect(data.profile, false, 3, true))
-			res.sendStatus(404).end()
-
-        })
 
 		app.get('/ipaddress', (req: any, res: any) => {
 			
@@ -507,7 +492,7 @@ export class Daemon {
 				return res.status(400).send({ error: "No country selected" })
 			}
 			if (this.currentVer) {
-				startSilentPass (vpnObj, this.currentVer, this.reactBuildFolder, this.restart)
+				this._proxyServer = startSilentPass (vpnObj, this.currentVer, this.reactBuildFolder, this.restart)
 			}
 			
 

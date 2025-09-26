@@ -53,8 +53,6 @@ export default class httpProxy {
 
 		try {
 			const url = new URL(com[1])
-			
-			
 			this.requestWithoutHostName = com[1]
 			if (!/CONNECT /i.test(com[0])) {
 				this.requestWithoutHostName = (url.pathname || '/') + (url.search || '')
