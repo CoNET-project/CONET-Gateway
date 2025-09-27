@@ -483,6 +483,13 @@ export class Daemon {
             res.json(regions?? [])
         })
 
+        app.get('/switch',async (req, res) => {
+            if (this._proxyServer) {
+                this._proxyServer.protocolNew = !this._proxyServer.protocolNew
+            }
+            res.status(200).end()
+        })
+
 
      	app.post('/startSilentPass', async (req: any, res: any) => {
             const vpnObj: Native_StartVPNObj = req.body.vpnInfo

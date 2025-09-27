@@ -13,9 +13,19 @@ export class BandwidthCount extends Transform {
 
     constructor(private tab: string){
         super({
-            readableHighWaterMark: 64 * 1024,
-            writableHighWaterMark: 64 * 1024
+            readableHighWaterMark: 8 * 1024,
+            writableHighWaterMark: 8 * 1024
         })
+    }
+
+    /**
+        * 直接累加字节数（不经过 Transform 管道）。
+        * 适用于你在自建泵里手工统计：counter.add(len)。
+    */
+    public add(n: number): void {
+        if (!n || n <= 0) return
+        if (!this.startTime) this.startTime = Date.now()
+        this.count += n
     }
 
     public _transform(chunk: Buffer, encoding: BufferEncoding, callback: TransformCallback): void {
@@ -23,9 +33,8 @@ export class BandwidthCount extends Transform {
             this.startTime = Date.now()
         }
         this.count += chunk.length
-        // logger(`${this.tab} start at ${this.startTime} BandwidthCount ${this.count} bytes`)
-        this.push(chunk)
-        callback()
+        //logger(`${this.tab} start at ${this.startTime} BandwidthCount ${this.count} bytes`)
+        callback(null, chunk)
     }
 
     public _final(callback: (error?: Error | null | undefined) => void): void {
@@ -46,7 +55,7 @@ export class BandwidthCount extends Transform {
         return this.count
     }
 
-    private finishIfNeeded(kind: 'normal' | 'abnormal', reason?: string) {
+    private finishIfNeeded(kind: 'normal' | 'abnormal' | '_flush', reason?: string) {
         if (this.printed) return
         this.printed = true
 
@@ -63,7 +72,7 @@ export class BandwidthCount extends Transform {
         const avgHumanBytes = BandwidthCount.formatBytes(avgBytesPerSec)
         const avgMbps = (avgBitsPerSec / 1e6).toFixed(3)
 
-        const head = `${this.tab} ${kind === 'normal' ? 'end' : 'end(abnormal)'} at ${endTs}` +
+        const head = `${this.tab} ${kind === 'normal'|| '_flush' ? kind : 'end(abnormal)'} at ${endTs}` +
             (reason ? ` reason=${reason}` : '')
 
         if (!this.count) {

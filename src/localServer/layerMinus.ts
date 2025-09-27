@@ -59,11 +59,72 @@ export class LayerMinus {
 		egressNodes.forEach(async n => n.publicKeyObj = await openpgp.readKey ({ armoredKey: n.armoredPublicKey }))
 	}
 
+    private getRandomEntryNodes = (node: nodes_info|null = null):nodes_info =>  {
+        const randomIndex = Math.floor (Math.random() * (this.entryNodes.length))
+        const retNode = this.entryNodes[randomIndex]
+        if (!node || node.ip_addr !== retNode.ip_addr) {
+            return retNode
+        }
+        
+        return this.getRandomEntryNodes(node)
+    }
+
+    private getRandomeEressNodes = (node: nodes_info|null = null):nodes_info => {
+        const randomIndex = Math.floor (Math.random() * (this.egressNodes.length))
+        const retNode = this.egressNodes[randomIndex]
+        if (!node || node.ip_addr !== retNode.ip_addr) {
+            return retNode
+        }
+        
+        return this.getRandomeEressNodes(node)
+    }
+
+    public makeConnectNew: (host: string, port: number, initialData: Buffer|null) => Promise<makeConnectResult> = async (host, port, initialData) => {
+        logger(Colors.blue(`LayerMinus makeConnect ${host}:${port}`))
+		const entryNode1 = this.getRandomEntryNodes()
+		const entryNode2 = this.getRandomEntryNodes(entryNode1)
+        const egressNode = this.getRandomeEressNodes()
+
+		const requestData : VE_IPptpStream[] = [{
+			order: 0,
+			host,
+			port,
+			buffer: initialData?.toString ( 'base64' )||''
+		}]
+
+		const command: SICommandObj = {
+			command: 'SaaS_Sock5_v2',
+			algorithm: 'aes-256-cbc',
+			Securitykey: Buffer.from(getRandomValues(new Uint8Array(16))).toString('base64'),
+			requestData,
+			walletAddress: this.wallet.address.toLowerCase()
+		}
+
+        const hostInfo = `${host}:${port}`
+
+		const infoData: ITypeTransferCount = {
+			hostInfo: hostInfo,
+			startTime: new Date().getTime(),
+			download: 0,
+			upload: 0,
+			nodeIpaddress: egressNode.ip_addr,
+			endTime: 0
+		}
+
+        const message =JSON.stringify(command)
+		const signMessage = await this.wallet.signMessage(message)
+		const encryptedCommand = await encrypt_Message( egressNode.publicKeyObj, { message, signMessage })
+		const data = otherRequestForNet(JSON.stringify({data: encryptedCommand}), entryNode1.ip_addr, 80, 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/117.0.0.0 Safari/537.36')
+		const data1 = otherRequestForNet(JSON.stringify({data: encryptedCommand}), entryNode1.ip_addr, 80, 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/117.0.0.0 Safari/537.36')
+
+        return {entryNode: entryNode1.ip_addr, egressNode: egressNode.ip_addr, initialData: data, entryNode1: entryNode2.ip_addr, initialData1: data1}
+    }
 
     public makeConnect: (host: string, port: number, initialData: Buffer|null) => Promise<makeConnectResult> = async (host, port, initialData) => {
         logger(Colors.blue(`LayerMinus makeConnect ${host}:${port}`))
-		const entryNode = getRamdomNode(this.entryNodes)
-		const egressNode = getRamdomNode(this.egressNodes)
+		const entryNode = this.getRandomEntryNodes()
+		const egressNode = this.getRandomeEressNodes()
+
 		const requestData : VE_IPptpStream[] = [{
 			order: 0,
 			host,

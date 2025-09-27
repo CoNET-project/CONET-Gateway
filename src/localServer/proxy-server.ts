@@ -12,6 +12,48 @@ declare function CreateRuleMatcher(
   rules: filterRule
 ): { match: (host: string) => boolean; pac: (proxy?: string) => string }
 
+
+
+
+/**
+ * 等写缓冲刷空后再优雅 half-close（发送 FIN）
+ * - 若还有待发字节（writableLength>0 或需要 drain），等待 'drain' 再 end()
+ * - 多次触发也安全（幂等）
+ */
+function flushThenEnd(s: Socket, tag = '') {
+
+    if (!s || s.destroyed || s.writableEnded) return
+    logger(`flushThenEnd for ${tag}`)
+    const tryEnd = () => {
+        if (s.destroyed || s.writableEnded) return
+        if (s.writableLength === 0 && !s.writableNeedDrain) {
+            logger(`${tag} at s.writableLength === 0 && !s.writableNeedDrain`)
+            try { s.end() } catch {}
+        } else {
+            logger(`${tag} at drain`)
+            s.once('drain', tryEnd)
+        }
+    }
+    tryEnd()
+}
+
+/**
+ * 建立带背压的单向泵：src(readable) -> dst(writable)
+ * - write() 返回 false 时暂停 src，等 dst 'drain' 后恢复
+ * - src 'end' 时，不立刻 destroy，对 dst 执行 flushThenEnd（半关闭）
+ * - 错误交给外层 cleanup
+ */
+function linkPump(src: Socket, dst: Socket, onBytes: (n: number)=>void) {
+  const onData = (buf: Buffer) => {
+    onBytes(buf.length);
+    const ok = dst.write(buf);
+    if (!ok) { try{src.pause()}catch{}; dst.once('drain', () => { try{src.resume()}catch{}; }); }
+  };
+  src.on('data', onData);
+  src.on('end', () => { /* 半关闭交给外层策略，不在这里收尾 */ });
+  return () => { src.off('data', onData); src.removeAllListeners('end'); };
+}
+
 /**
  * 优雅关闭：
  * 1) 先 end() 发送 FIN
@@ -22,6 +64,8 @@ declare function CreateRuleMatcher(
  * - PROTECT_MS：保护观察窗口，总时长（默认 300ms）
  * - IDLE_STEP_MS：每次 idle 检查间隔（默认 50ms）
  */
+
+
 const safeClose = (s: Socket) => {
   const PROTECT_MS = 450
   const IDLE_STEP_MS = 50
@@ -131,6 +175,7 @@ export class ProxyServer {
   private ruleMatcher
   private pacPath = '/pac'
   private pacProxy?: string   // 可选：外部显式指定返回的代理串（否则用本地端口推断）
+  public protocolNew = false
 
     private tryHandlePacOnSamePort(socket: Socket, firstChunk: Buffer): boolean {
         // 尝试解析首行
@@ -457,15 +502,30 @@ export class ProxyServer {
     
   }
 
+
+
   /* -------------- Upstream dialing -------------- */
   private async proxyConnection(client: Socket, host: string, port: number, initialData: Buffer|null, protocol: string) {
     if (!host || !port) { try{client.destroy()}catch{}; return }
     const connectInof = await this.shouldUseLayerMinus(host, port, initialData, this.layerMinus )
 
     if (connectInof) {
-       
+        if (connectInof.entryNode1 && connectInof.initialData1) {
 
-         try {
+            try {
+                logger(`[proxyConnection ${protocol}] shouldUseLayerMinus protocolNew -> ${host}:${port} `)
+                const remoteReq = await connectWithTimeout(connectInof.entryNode, 80, 3000)
+                const remoteRes = await connectWithTimeout(connectInof.entryNode1, 80, 3000)
+                this.bindAndPipeNew(client, remoteReq, remoteRes, protocol, Buffer.from(connectInof.initialData), Buffer.from(connectInof.initialData1))
+                logger(`[proxyConnection] ${protocol}] shouldUseLayerMinus protocolNew -> ${host}:${port}  established`)
+            } catch (e) {
+                logger(`[proxyConnection] ${protocol}] shouldUseLayerMinus failed *****************: ${String(e)}`)
+            }
+            return
+        }
+
+
+        try {
             logger(`[proxyConnection ${protocol}] shouldUseLayerMinus -> ${host}:${port} `)
             const remote = await connectWithTimeout(connectInof.entryNode, 80, 3000)
             this.bindAndPipe(client, remote, protocol, Buffer.from(connectInof.initialData))
@@ -473,6 +533,7 @@ export class ProxyServer {
         } catch (e) {
             logger(`[proxyConnection] ${protocol}] shouldUseLayerMinus failed *****************: ${String(e)}`)
         }
+
         return
     }
 
@@ -486,9 +547,119 @@ export class ProxyServer {
     } catch (e) {
       logger(`[proxyConnection] ${protocol}] DIRECT failed *****************: ${String(e)}`)
     }
-
-
   }
+
+
+  private bindAndPipeNew(client: Socket, remoteReq: Socket, remoteRes: Socket, info: string, initialDataReq: Buffer, initialDataRes: Buffer) {
+    const cleanup = (info: string) => {
+
+        logger(`cleanup ${info}`)
+      // 先尝试优雅半关，再兜底强关
+      try { flushThenEnd(remoteRes, '[cleanup remoteRes]') } catch {}
+      try { flushThenEnd(remoteReq, '[cleanup remoteReq]') } catch {}
+      try { flushThenEnd(client,    '[cleanup client]')    } catch {}
+      // 兜底定时强拆（避免悬挂）
+      setTimeout(() => {
+        try { if (!remoteRes.destroyed) remoteRes.destroy() } catch {}
+        try { if (!remoteReq.destroyed) remoteReq.destroy() } catch {}
+        try { if (!client.destroyed)    client.destroy()    } catch {}
+      }, 2000)
+    }
+    info = `[bindAndPipeNew] ${info}`
+    let downBytes = 0
+    let upBytes   = 0
+
+
+    const uploadCount = new BandwidthCount(`[${info}] ==> UPLOAD`)
+    const downloadCount = new BandwidthCount(`[${info}] <== DOWNLOAD`)
+
+
+    remoteReq.on('error', (e) => cleanup('[upstream req] '+String(e)))
+    remoteRes.on('error', (e) => cleanup('[upstream res] '+String(e)))
+    client.on('error', (e) =>  cleanup('[client] '+String(e)))
+
+    remoteReq.setTimeout?.(120_000, () => cleanup(`remoteReq on timeout ${info}`))
+    remoteRes.setTimeout?.(120_000, () => cleanup(`remoteRes on timeout ${info}`))
+    client.setTimeout?.(300_000, () => cleanup(`client on timeout ${info}`))
+
+
+    // remoteReq.setNoDelay(true)
+    // remoteRes.setNoDelay(true)
+    // client.setNoDelay(true)
+
+    let connectSuccess = false
+
+    const pipeConnect = (req: Socket, res: Socket, chunk: Buffer) => {
+        if (connectSuccess) {
+            logger(`connectSuccess already true`)
+            return
+        }
+        connectSuccess = true
+        logger(`bindAndPipeNew pipeConnect success! chunk = ${chunk.length}`)
+        client.pipe(uploadCount).pipe(req)
+            .on('error', err => cleanup(`client.pipe(uploadCount).pipe(req).on('error') ${info}`))
+            .on('close', ()=> {
+                logger(`CLIENT ==> REMOTE on close`)
+                
+            })
+
+        res.pipe(downloadCount).pipe(client)
+            .on('error', err => cleanup(`res.pipe(downloadCount).pipe(client).on('error') ${info}`))
+            .on('close', ()=> {
+                logger(`REMOTE ==> CLIENT on close`)
+                
+            })
+
+        // res.on('end',() => {
+        //     flushThenEnd(res,`REMOTE ==> CLIENT cleanup res`)
+        //     flushThenEnd(client,`REMOTE ==> CLIENT cleanup client`)
+        // })
+
+        // client.on('end', () => {
+        //     logger(`CLIENT on close`)
+        //     flushThenEnd(remoteReq)
+        // })
+
+        // remoteRes.on('end', () => {
+        //     try { downloadCount.end() } catch {}
+        //     flushThenEnd(client)
+        // })
+
+        downloadCount.write(chunk)
+    }
+
+    const listenReq = (data: Buffer) => {
+        pipeConnect(remoteRes, remoteReq, data)
+        remoteRes.removeListener('data', listenRes)
+    }
+
+    const listenRes = (data: Buffer) => {
+        pipeConnect(remoteReq, remoteRes, data)
+        remoteReq.removeListener('data', listenReq)
+    }
+
+    try {
+        if (remoteReq.write(initialDataReq)) {
+            remoteReq.once ('data', listenReq)
+        } else {
+            logger(`remoteReq write on drain`)
+            remoteReq.once('drain', () => remoteReq.once ('data', listenReq))
+        }
+    } catch (e) { cleanup('[remoteReq] initial write error: '+String(e)); return }
+
+    try { 
+        if (remoteRes.write(initialDataRes)) {
+            remoteRes.once ('data', listenRes)
+        } else {
+            logger(`remoteRes write on drain`)
+            return remoteRes.once('drain', () => remoteRes.once ('data', listenRes))
+        }
+    } catch (e) { cleanup('[remoteRes] initial write error: '+String(e)); return }
+    
+    
+  }
+
+
 
   private bindAndPipe(client: Socket, remote: Socket, info: string, initialData: Buffer|null) {
     const cleanup = () => {
@@ -532,8 +703,10 @@ export class ProxyServer {
         return null
     }
 
-    return await layerMinus.makeConnect(host, port, initialData)
+    return this.protocolNew ? await layerMinus.makeConnectNew(host, port, initialData) : await layerMinus.makeConnect(host, port, initialData)
   }
+
+
 
   public ruleGet = (data: filterRule) => {
     this.rule = data
@@ -595,15 +768,15 @@ const test = () => {
 		"nftNumber": 100,
 		"domain": "9977E9A45187DD80.conet.network"
 	},
-    // {
-    //     "region": "MD.ES",
-    //     "country": "ES",
-    //     "ip_addr": "82.165.208.58",
-    //     "armoredPublicKey": "-----BEGIN PGP PUBLIC KEY BLOCK-----\n\nxjMEZo9u8xYJKwYBBAHaRw8BAQdAhkOA9BSN0JHlwv6DteiKYiHq/fkJeeKq\npJH2GV02RDvNKjB4ZTJFN0E2OEUzRDFlNTBGMEFmMTVkNzEzRjkwZjQ5OTJD\nRDE5RGZjOMKMBBAWCgA+BYJmj27zBAsJBwgJkK3nyMY0cs4UAxUICgQWAAIB\nAhkBApsDAh4BFiEEgBIRfR6KNXDnIkoyrefIxjRyzhQAAPWNAPsFKlIV58gy\n8aWkFOSVaQWmruBgqDxPAi9klhc/QAFj8gD+P5zTkZa199PonfrB4ezn2Mac\nPQQaRLRtWTIBHn0WvAXOOARmj27zEgorBgEEAZdVAQUBAQdAvRYB8A9xiU76\nOi6LOOLaHvOGvJHCa8zWAkx9m0kPFi4DAQgHwngEGBYKACoFgmaPbvMJkK3n\nyMY0cs4UApsMFiEEgBIRfR6KNXDnIkoyrefIxjRyzhQAAFxmAQDgT7yXX8Zl\nYLzxKbEeZY+Rx1bdNLxPPRJmjcFFcbL2UQD6AxYNoome/I1FKplyFQsGjJGq\nWO5g9bt+Cjir2/yzIgk=\n=GfRj\n-----END PGP PUBLIC KEY BLOCK-----\n",
-    //     "last_online": false,
-    //     "nftNumber": 101,
-    //     "domain": "B4CB0A41352E9BDF.conet.network"
-    // }
+    {
+        "region": "MD.ES",
+        "country": "ES",
+        "ip_addr": "82.165.208.58",
+        "armoredPublicKey": "-----BEGIN PGP PUBLIC KEY BLOCK-----\n\nxjMEZo9u8xYJKwYBBAHaRw8BAQdAhkOA9BSN0JHlwv6DteiKYiHq/fkJeeKq\npJH2GV02RDvNKjB4ZTJFN0E2OEUzRDFlNTBGMEFmMTVkNzEzRjkwZjQ5OTJD\nRDE5RGZjOMKMBBAWCgA+BYJmj27zBAsJBwgJkK3nyMY0cs4UAxUICgQWAAIB\nAhkBApsDAh4BFiEEgBIRfR6KNXDnIkoyrefIxjRyzhQAAPWNAPsFKlIV58gy\n8aWkFOSVaQWmruBgqDxPAi9klhc/QAFj8gD+P5zTkZa199PonfrB4ezn2Mac\nPQQaRLRtWTIBHn0WvAXOOARmj27zEgorBgEEAZdVAQUBAQdAvRYB8A9xiU76\nOi6LOOLaHvOGvJHCa8zWAkx9m0kPFi4DAQgHwngEGBYKACoFgmaPbvMJkK3n\nyMY0cs4UApsMFiEEgBIRfR6KNXDnIkoyrefIxjRyzhQAAFxmAQDgT7yXX8Zl\nYLzxKbEeZY+Rx1bdNLxPPRJmjcFFcbL2UQD6AxYNoome/I1FKplyFQsGjJGq\nWO5g9bt+Cjir2/yzIgk=\n=GfRj\n-----END PGP PUBLIC KEY BLOCK-----\n",
+        "last_online": false,
+        "nftNumber": 101,
+        "domain": "B4CB0A41352E9BDF.conet.network"
+    }
     ]
 	const egressNodes: nodes_info[] = [{
 		"region": "MD.ES",
@@ -614,9 +787,11 @@ const test = () => {
 		"nftNumber": 101,
 		"domain": "B4CB0A41352E9BDF.conet.network"
 	}]
-	const privateKey = ''
+	const privateKey = ""
 	const layerMinus = new LayerMinus (entryNodes, egressNodes, privateKey)
 	const server = new ProxyServer(3002, layerMinus)
     server.start()
 }
+
+// test()
 

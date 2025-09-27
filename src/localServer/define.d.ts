@@ -878,6 +878,8 @@ interface UpdateInfo {
 
 type makeConnectResult = {
     entryNode: string
+    entryNode1?: string
     egressNode: string
     initialData: string
+    initialData1?: string
 }
