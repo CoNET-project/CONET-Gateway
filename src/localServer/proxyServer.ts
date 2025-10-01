@@ -411,6 +411,15 @@ export class proxyServer {
 		this.server = Net.createServer ( socket => {
 			const ip = socket.remoteAddress
 			this.clientSockets.add (socket)
+
+            socket.setTimeout(15_000)
+
+            socket.on('timeout', () => {
+                // 空闲太久，优雅结束；再给一点时间，不行就摧毁
+                socket.end();
+                socket.setTimeout(3_000, () => socket.destroy())
+            })
+
 			const isWhiteIp = this.whiteIpList.find ( n => { return n === ip }) ? true : false
 			let agent = 'Mozilla/5.0'
 				//	windows 7 GET PAC User-Agent: Mozilla/5.0 (compatible; IE 11.0; Win32; Trident/7.0)
@@ -576,13 +585,26 @@ export class proxyServer {
 
 	public end = () => new Promise(resolve=> {
 		if (this.server !== null) {
+            
 			this.server.close(err => {
 				resolve (true)
 			})
             
-			setTimeout(() => {
-				resolve (true)
-			}, 6000)
+            // 2) 尝试优雅结束现有连接
+            for (const socket of this.clientSockets) {
+                // 让对端尽快收 FIN，别再 keep-alive
+                socket.end();
+                // 给每个 socket 一个短兜底
+                socket.setTimeout(3_000, () => socket.destroy());
+            }
+
+            // 3) 总兜底：到点还没关完就全毁
+            setTimeout(() => {
+                for (const socket of this.clientSockets) {
+                    // 仍未关闭的连接强制销毁
+                    socket.destroy()
+                }
+            }, 10_000)
 			
 		}
 	})
@@ -628,8 +650,7 @@ const test = () => {
 		"domain": "B4CB0A41352E9BDF.conet.network"
 	}]
 
-	const privateKey = '0xa64aa6631f218150c1810f4856c12940e209ac3d4060fa24395d74a0754a2773'
+	const privateKey = ''
 	
 	new proxyServer('3003',entryNodes, egressNodes, privateKey, true, '')
 }
-test()

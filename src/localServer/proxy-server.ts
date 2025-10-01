@@ -725,6 +725,7 @@ export class ProxyServer {
         }, 10_000)
     }
 
+    executor(true)
   })
 }
 

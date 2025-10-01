@@ -604,7 +604,7 @@ export class Daemon {
 		app.get('/stopSilentPass', async (req: any, res: any) => {
 			logger(Colors.magenta(`stopSilentPass`))
 			if (_proxyServer) {
-				await _proxyServer.end()
+			     _proxyServer.end()
 			}
 			logger(Colors.magenta(`send stopSilentPass succcess!`))
 			res.status(200).end()
