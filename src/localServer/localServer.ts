@@ -14,11 +14,93 @@ import * as openpgp from 'openpgp'
 import os from 'node:os'
 import CONET_Guardian_NodeInfo_ABI from './CONET_Guardian_NodeInfo_ABI.json'
 import {runUpdater, readUpdateInfo} from './updateProcess'
+import allNodes from './nodes.json'
 import fs from 'node:fs'
 import {LayerMinus} from './layerMinus'
 
+
 const ver = '0.1.5'
 
+const deleteNodeFromList = (node: nodes_info) => {
+    const index = allNodes.findIndex(n => n.ip_addr === node.ip_addr)
+    if (index > -1) {
+        allNodes.splice(index, 1)
+    }
+}
+
+export const postToEndpoint = async <T = any> (
+  url: string,
+  post: boolean,
+  jsonData?: any,
+  timeoutMs = 5 * 1000
+): Promise<"" | boolean | T> => {
+  const ac = new AbortController();
+  
+
+  try {
+	const timer = setTimeout(() => ac.abort('TimeoutError'), timeoutMs);
+    const res = await fetch(url, {
+      method: post ? "POST" : "GET",
+      headers:
+        post && jsonData !== undefined
+          ? { "Content-Type": "application/json;charset=UTF-8" }
+          : undefined,
+      body: post ? (jsonData ? JSON.stringify(jsonData) : "") : undefined,
+      signal: ac.signal,
+    });
+
+    // 200 → resolve(false)
+    if (res.status < 200 || res.status >= 300) {
+      return false;
+    }
+	clearTimeout(timer);
+    const text = await res.text();
+    if (!text.length) {
+      return "";
+    }
+
+    // 优先依据 Content-Type
+    const ct = (res.headers.get("Content-Type") || "").toLowerCase();
+    if (ct.includes("application/json") || ct.includes("+json")) {
+      return JSON.parse(text) as T;
+    }
+
+    // 回落：尝试 JSON 解析；失败时保持原规则（POST→""，GET→true）
+    try {
+      return JSON.parse(text) as T;
+    } catch {
+      return (post ? "" : true) as any;
+    }
+  } catch (err) {
+    // AbortError/网络错误 → reject
+    throw err;
+  }
+}
+
+
+const testNode = (node: nodes_info): Promise<boolean> => new Promise (async executor => {
+	try {
+		const url = `http://${node.ip_addr}`
+		await postToEndpoint(url, false, false, 1000)
+		// 只有在“计入结果”的时候才判断是否够数
+		executor(true)
+	} catch (e) {
+		// 失败再次测试
+		deleteNodeFromList(node)
+		executor(false)
+	}
+})
+
+const getRandomNode = async () => {
+    const index = Math.floor(Math.random() * allNodes.length)
+    const node = allNodes[index]
+    const isWorking = await testNode(node)
+    if (!isWorking) {
+        return await getRandomNode ()
+    }
+    return node
+
+}
 const getLocalNetworkIpaddress = () => {
 	const interfaceAll = os.networkInterfaces()
 	let ipv4: string[] = []
@@ -179,7 +261,7 @@ const startSilentPass = (vpnObj: Native_StartVPNObj, currentVer: UpdateInfo, rea
     const layerMinus = new LayerMinus(vpnObj.entryNodes, vpnObj.exitNode, vpnObj.privateKey)
 	_proxyServer = new ProxyServer(3002, layerMinus)
     _proxyServer.start()
-	runUpdater(vpnObj.entryNodes, currentVer, reactFolder, restart)
+	//runUpdater(vpnObj.entryNodes, currentVer, reactFolder, restart)
 	return _proxyServer
 }
 
@@ -220,6 +302,15 @@ type Native_StartVPNObj = {
 type filterRule = {
     DOMAIN: string[]
     IP: string[]
+}
+
+
+const checkUpdateProcess = async (currentVer: UpdateInfo, reactFolder: string, restart: () => Promise<void>) => {
+    const node = await getRandomNode()
+    await runUpdater(node, currentVer, reactFolder, restart)
+    setTimeout(() => {
+        checkUpdateProcess (currentVer, reactFolder, restart)
+    }, 1000 * 60 * 10)
 }
 
 
@@ -279,7 +370,10 @@ export class Daemon {
 		if (!this.currentVer) {
 			staticFolder = defaultPath
 			logger(Colors.red(`updatedPath ERROR, go back to defaultPath ${defaultPath}`))
-		}
+		} else {
+            //  start check update process
+            checkUpdateProcess ( this.currentVer, this.reactBuildFolder, this.restart)
+        }
 		
 		// --- 关键逻辑结束 ---
 
@@ -563,6 +657,8 @@ export class Daemon {
 				{ 'Serving files from': staticFolder } 
 			])
         })
+
+        
     }
 
 	// 将 restart 方法改为箭头函数属性

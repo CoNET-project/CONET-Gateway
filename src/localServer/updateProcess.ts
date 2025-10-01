@@ -103,7 +103,7 @@ const getRandomNode = (nodes: nodes_info[]): nodes_info => {
  * @param folderPath 要检查的文件夹根路径
  * @returns 如果验证通过则返回 true，否则返回 false
  */
-const validateUpdateContents = async (folderPath: string, ver: string, nodes: nodes_info[]): Promise<boolean> => {
+const validateUpdateContents = async (folderPath: string, ver: string, randomNode: nodes_info): Promise<boolean> => {
 	logger('🔍 开始验证和修复更新内容...')
     const manifestPath = join(folderPath, 'asset-manifest.json')
 
@@ -112,7 +112,6 @@ const validateUpdateContents = async (folderPath: string, ver: string, nodes: no
         if (!fs.existsSync(manifestPath)) {
             logger('🔴 验证失败: 关键文件 asset-manifest.json 未找到！')
             // 如果清单都不存在，可以尝试下载它本身
-            const randomNode = getRandomNode(nodes)
             const manifestUrl = `http://${randomNode.ip_addr}/silentpass-rpc/asset-manifest.json`
             logger(`尝试下载缺失的 asset-manifest.json from ${manifestUrl}`)
             await downloadSingleFileHttp(manifestUrl, manifestPath)
@@ -138,7 +137,6 @@ const validateUpdateContents = async (folderPath: string, ver: string, nodes: no
             if (!fs.existsSync(fullPath)) {
                 logger(`🟡 文件缺失: ${localFilePath}。准备下载...`)
                 
-                const randomNode = getRandomNode(nodes)
                 const downloadUrl = `http://${randomNode.ip_addr}/silentpass-rpc/${localFilePath}`
                 
                 // 将下载任务的 Promise 添加到数组中
@@ -255,15 +253,14 @@ export const readUpdateInfo = async (staticFolder: string, ver: string): Promise
 /**
  * 主更新函数
  */
-export const runUpdater = async (nodes: nodes_info[], currentVer: UpdateInfo, reactFolder: string, restart: () => Promise<void> ) => {
+export const runUpdater = async (selectedNode: nodes_info, currentVer: UpdateInfo, reactFolder: string, restart: () => Promise<void> ) => {
 
 
-  logger('🚀 开始执行动态节点更新程序...')
+  logger(`🚀 开始执行动态节点更新程序... local version = ${currentVer.ver}`)
 
   try {
 	tempUpdatePath = join(reactFolder, `conet-update-${Date.now()}`)
     
-    const selectedNode = getRandomNode(nodes)
     logger(`✅ 节点列表获取成功！已随机选择节点: ${selectedNode.ip_addr} (位于 ${selectedNode.region})`);
 
     // --- 步骤 2: 使用选定节点的 IP 获取更新信息 ---
@@ -313,7 +310,7 @@ export const runUpdater = async (nodes: nodes_info[], currentVer: UpdateInfo, re
     logger(`🎉 成功下载并解压文件到 ${tempUpdatePath}`)
 
 	// 2. 验证内容
-        if (!(await validateUpdateContents(tempUpdatePath, updateInfo.ver, nodes))) {
+        if (!(await validateUpdateContents(tempUpdatePath, updateInfo.ver, selectedNode))) {
             throw new Error('下载的内容无效或不完整，已终止更新。')
         }
 
@@ -372,4 +369,6 @@ function isNewerVersion(oldVer: string, newVer: string): boolean {
 
     return false // 如果版本号完全相同，则不是更新的版本
 }
+
+
 
